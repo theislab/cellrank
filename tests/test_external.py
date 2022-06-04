@@ -5,9 +5,9 @@ import pytest
 import scanpy as sc
 import cellrank.external as cre
 from anndata import AnnData
-from cellrank.tl.kernels import ConnectivityKernel
+from cellrank.kernels import ConnectivityKernel
 from cellrank.external.kernels._utils import MarkerGenes
-from cellrank.tl.kernels._transport_map_kernel import SelfTransitions
+from cellrank.kernels._transport_map_kernel import SelfTransitions
 
 import numpy as np
 import pandas as pd

@@ -11,11 +11,12 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we create the kernel using the high-level function :func:`cellrank.tl.transition_matrix`, but any
-# instance of :class:`cellrank.tl.kernels.Kernel` would do.
-k = cr.tl.transition_matrix(
-    adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
+# First, we create the kernel.
+vk = cr.kernels.VelocityKernel(adata).compute_transition_matrix(
+    softmax_scale=4, show_progress_bar=False
 )
+ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+k = 0.8 * vk + 0.2 * ck
 k
 
 # %%

@@ -5,10 +5,10 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank.ul._docs import d
+from cellrank._utils import Lineage
 from cellrank.pl._utils import _position_legend, _get_categorical_colors
-from cellrank.tl._utils import save_fig, _unique_order_preserving
+from cellrank._utils._docs import d
+from cellrank._utils._utils import save_fig, _unique_order_preserving
 
 import numpy as np
 import pandas as pd
@@ -18,6 +18,8 @@ from seaborn import stripplot
 from matplotlib.cm import ScalarMappable
 from matplotlib.axes import Axes
 from matplotlib.colors import Normalize, to_hex
+
+__all__ = ["log_odds"]
 
 
 @d.dedent
@@ -102,7 +104,7 @@ def log_odds(
     The axes object(s), if ``show = False``.
     %(just_plots)s
     """
-    from cellrank.tl.kernels._utils import _ensure_numeric_ordered
+    from cellrank.kernels._utils import _ensure_numeric_ordered
 
     def decorate(
         ax: Axes, *, title: Optional[str] = None, show_ylabel: bool = True

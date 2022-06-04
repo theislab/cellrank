@@ -1,6 +1,6 @@
 import pytest
 
-from cellrank.tl._linear_solver import (
+from cellrank._utils._linear_solver import (
     _solve_lin_system,
     _petsc_direct_solve,
     _create_petsc_matrix,
@@ -304,7 +304,9 @@ class TestLinearSolverPETSc:
             A = A.A
             B = B.A
 
-        np.testing.assert_allclose(((A @ X).squeeze()), B.squeeze(), rtol=1e-6)
+        np.testing.assert_allclose(
+            ((A @ X).squeeze()), B.squeeze(), rtol=1e-6, atol=1e-6
+        )
 
     @pytest.mark.parametrize(
         "seed,sparse", zip(range(10, 20), [False] * 5 + [True] * 5)

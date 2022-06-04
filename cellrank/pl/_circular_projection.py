@@ -8,15 +8,14 @@ from pathlib import Path
 import scvelo as scv
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank._key import Key
 from scanpy._utils import deprecated_arg_names
-from cellrank.tl._enum import ModeEnum
-from cellrank.ul._docs import d
+from cellrank._utils import Lineage
 from cellrank.pl._utils import _held_karp
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _check_collection
-from cellrank.tl._lineage import PrimingDegree
+from cellrank._utils._key import Key
+from cellrank._utils._docs import d
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._utils import save_fig, _check_collection, _unique_order_preserving
+from cellrank._utils._lineage import PrimingDegree
 
 import numpy as np
 import pandas as pd
@@ -26,13 +25,15 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm, LinearSegmentedColormap
 from matplotlib.collections import LineCollection
 
+__all__ = ["circular_projection"]
 
-class LineageOrder(ModeEnum):  # noqa: D101
+
+class LineageOrder(ModeEnum):
     DEFAULT = auto()
     OPTIMAL = auto()
 
 
-class LabelRot(ModeEnum):  # noqa: D101
+class LabelRot(ModeEnum):
     DEFAULT = auto()
     BEST = auto()
 

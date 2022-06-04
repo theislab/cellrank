@@ -1,11 +1,13 @@
 from typing import Any, Optional
 
+__all__ = ["ImportErrorMixin"]
+
 
 class ImportErrorMixin:
     """
     Mixin class which always raises :class:`ImportError`.
 
-    Subclasses can modify the message by overriding `__import_error_message__`.
+    Subclasses can modify the message by overriding class attribute ``__import_error_message__``.
 
     Parameters
     ----------

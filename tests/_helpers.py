@@ -9,7 +9,7 @@ import scanpy as sc
 import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, PrecomputedKernel, ConnectivityKernel
+from cellrank.kernels import VelocityKernel, PrecomputedKernel, ConnectivityKernel
 
 import numpy as np
 import pandas as pd
@@ -143,13 +143,13 @@ def create_kernels(
 
 
 # TODO: make it a fixture
-def create_model(adata: AnnData) -> cr.ul.models.SKLearnModel:
-    return cr.ul.models.SKLearnModel(adata, SVR(kernel="rbf"))
+def create_model(adata: AnnData) -> cr.models.SKLearnModel:
+    return cr.models.SKLearnModel(adata, SVR(kernel="rbf"))
 
 
 # TODO: make it a fixture
-def create_failed_model(adata: AnnData) -> cr.ul.models.FailedModel:
-    return cr.ul.models.FailedModel(create_model(adata), exc="foobar")
+def create_failed_model(adata: AnnData) -> cr.models.FailedModel:
+    return cr.models.FailedModel(create_model(adata), exc="foobar")
 
 
 def resize_images_to_same_sizes(
@@ -190,8 +190,7 @@ def assert_array_nan_equal(
 
     Returns
     -------
-    None
-        Nothing, but raises an exception if arrays are not equal, including the locations of NaN values.
+    Nothing, but raises an exception if arrays are not equal, including the locations of NaN values.
     """
 
     mask1 = ~(pd.isnull(actual) if isinstance(actual, pd.Series) else np.isnan(actual))
@@ -203,8 +202,8 @@ def assert_array_nan_equal(
 
 
 def assert_models_equal(
-    expected: cr.ul.models.BaseModel,
-    actual: cr.ul.models.BaseModel,
+    expected: cr.models.BaseModel,
+    actual: cr.models.BaseModel,
     pickled: bool = False,
     deepcopy: bool = True,
 ) -> None:
@@ -228,7 +227,7 @@ def assert_models_equal(
             else:
                 assert not val2
                 assert val1
-        elif isinstance(val1, cr.tl.Lineage):
+        elif isinstance(val1, cr._utils.Lineage):
             if deepcopy or pickled:
                 assert val2 is not val1
                 assert_array_nan_equal(val2.X, val1.X)
@@ -257,8 +256,8 @@ def assert_models_equal(
 
 
 def assert_estimators_equal(
-    expected: cr.tl.estimators.BaseEstimator,
-    actual: cr.tl.estimators.BaseEstimator,
+    expected: cr.estimators.BaseEstimator,
+    actual: cr.estimators.BaseEstimator,
     copy: bool = False,
     deep: bool = False,
     from_adata: bool = False,
@@ -304,7 +303,7 @@ def assert_estimators_equal(
         if attr == "_invalid_n_states" and from_adata:
             continue
         actual_val, expected_val = getattr(actual, attr), getattr(expected, attr)
-        if isinstance(actual_val, cr.tl.Lineage):
+        if isinstance(actual_val, cr._utils.Lineage):
             assert actual_val is not expected_val, attr
             assert_array_nan_equal(actual_val.X, expected_val.X)
         elif isinstance(actual_val, (np.ndarray, pd.Series, pd.DataFrame, list, tuple)):
@@ -355,8 +354,7 @@ def random_transition_matrix(n: int) -> np.ndarray:
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        Row-normalized transition matrix.
+    Row-normalized transition matrix.
     """
 
     x = np.abs(np.random.normal(size=(n, n)))
@@ -377,8 +375,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 
     Returns
     -------
-    :class:`anndata.AnnData`
-        The created adata object.
+    The created adata object.
     """
 
     np.random.seed(42)

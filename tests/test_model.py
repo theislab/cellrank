@@ -7,10 +7,10 @@ from _helpers import gamr_skip, create_model, assert_models_equal
 from itertools import product
 
 from anndata import AnnData
-from cellrank.tl import Lineage
-from cellrank._key import Key
-from cellrank.ul.models import GAM, GAMR, FittedModel, SKLearnModel
-from cellrank.ul.models._utils import (
+from cellrank._utils import Lineage
+from cellrank.models import GAM, GAMR, FittedModel, SKLearnModel
+from cellrank._utils._key import Key
+from cellrank.models._utils import (
     _OFFSET_KEY,
     NormMode,
     _rankdata,
@@ -18,8 +18,8 @@ from cellrank.ul.models._utils import (
     _extract_data,
     _get_knotlocs,
 )
-from cellrank.ul.models._base_model import FailedModel, UnknownModelError
-from cellrank.ul.models._pygam_model import GamDistribution, GamLinkFunction, _gams
+from cellrank.models._base_model import FailedModel, UnknownModelError
+from cellrank.models._pygam_model import GamDistribution, GamLinkFunction, _gams
 
 import numpy as np
 from pygam import ExpectileGAM

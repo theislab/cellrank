@@ -18,13 +18,13 @@ from collections import namedtuple, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl._enum import _DEFAULT_BACKEND
-from cellrank.ul._docs import d
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul.models import GAMR, BaseModel, FailedModel, SKLearnModel
-from cellrank.tl._colors import _create_categorical_colors
-from cellrank.ul._parallelize import parallelize
-from cellrank.ul.models._base_model import ColorType
+from cellrank.models import GAMR, BaseModel, FailedModel, SKLearnModel
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND
+from cellrank._utils._utils import save_fig, _unique_order_preserving
+from cellrank._utils._colors import _create_categorical_colors
+from cellrank.models._base_model import ColorType
+from cellrank._utils._parallelize import parallelize
 
 import numpy as np
 import pandas as pd
@@ -35,6 +35,8 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+__all__ = ["composition"]
 
 Queue = TypeVar("Queue")
 Graph = TypeVar("Graph")
@@ -50,138 +52,6 @@ _input_model_type = Union[BaseModel, _return_model_type]
 _callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
 
 BulkRes = namedtuple("BulkRes", ["x_test", "y_test"])
-
-
-def _curved_edges(
-    G: Graph,
-    pos: Mapping,
-    radius_fraction: float,
-    dist_ratio: float = 0.2,
-    bezier_precision: int = 20,
-    polarity: str = "directed",
-) -> np.ndarray:
-    """
-    Create curved edges from a graph. Modified from: https://github.com/beyondbeneath/bezier-curved-edges-networkx.
-
-    Parameters
-    ----------
-    G: :class:`networkx.Graph`
-        Graph for which to create curved edges.
-    pos
-        Mapping of nodes to positions.
-    radius_fraction
-        Fraction of a unit circle when self loops are present.
-    dist_ratio
-        Distance of control points of bezier curves.
-    bezier_precision
-        Number of points in the curves.
-    polarity
-        Polarity of curves, one of `'random', 'directed' or 'fixed'`.
-        If using `'random'`, incoming and outgoing edges may overlap.
-
-    Returns
-    -------
-    Array of shape ``(n_edges, bezier_precision, 2)`` containing the curved edges.
-    """
-
-    try:
-        import bezier
-    except ImportError as e:
-        raise ImportError("Please install `bezier` as `pip install bezier`.") from e
-
-    # Get nodes into np array
-    edges = np.array(G.edges())
-    n_edges = edges.shape[0]
-
-    self_loop_mask = edges[:, 0] == edges[:, 1]
-    pos_sl = {edge[0]: pos[edge[0]] for edge in edges[self_loop_mask, ...]}
-
-    if polarity == "random":
-        # Random polarity of curve
-        rnd = np.where(np.random.randint(2, size=n_edges) == 0, -1, 1)
-    elif polarity == "directed":
-        rnd = np.where(edges[:, 0] > edges[:, 1], -1, 1)
-    elif polarity == "fixed":
-        # Create a fixed (hashed) polarity column in the case we use fixed polarity
-        # This is useful, e.g., for animations
-        rnd = np.where(
-            np.mod(np.vectorize(hash)(edges[:, 0]) + np.vectorize(hash)(edges[:, 1]), 2)
-            == 0,
-            -1,
-            1,
-        )
-    else:
-        raise ValueError(
-            f"Polarity `{polarity!r}` is not a valid option. "
-            f"Valid options are: `'random', 'directed' or 'fixed'`."
-        )
-
-    # Coordinates (x, y) of both nodes for each edge
-    # Note the np.vectorize method doesn't work for all node position dictionaries for some reason
-    u, inv = np.unique(edges, return_inverse=True)
-    coords = np.array([pos[x] for x in u])[inv].reshape(
-        [edges.shape[0], 2, edges.shape[1]]
-    )
-    coords_node1 = coords[:, 0, :]
-    coords_node2 = coords[:, 1, :]
-
-    # Swap node1/node2 allocations to make sure the directionality works correctly
-    should_swap = coords_node1[:, 0] > coords_node2[:, 0]
-    coords_node1[should_swap], coords_node2[should_swap] = (
-        coords_node2[should_swap],
-        coords_node1[should_swap],
-    )
-
-    # Distance for control points
-    dist = dist_ratio * np.sqrt(np.sum((coords_node1 - coords_node2) ** 2, axis=1))
-
-    # Gradients of line connecting node & perpendicular
-    m1 = (coords_node2[:, 1] - coords_node1[:, 1]) / (
-        coords_node2[:, 0] - coords_node1[:, 0]
-    )
-    m2 = -1 / m1
-
-    # Temporary points along the line which connects two nodes
-    t1 = dist / np.sqrt(1 + m1**2)
-    v1 = np.array([np.ones(n_edges), m1])
-    coords_node1_displace = coords_node1 + (v1 * t1).T
-    coords_node2_displace = coords_node2 - (v1 * t1).T
-
-    # Control points, same distance but along perpendicular line
-    # rnd gives the 'polarity' to determine which side of the line the curve should arc
-    t2 = dist / np.sqrt(1 + m2**2)
-    v2 = np.array([np.ones(len(edges)), m2])
-    coords_node1_ctrl = coords_node1_displace + (rnd * v2 * t2).T
-    coords_node2_ctrl = coords_node2_displace + (rnd * v2 * t2).T
-
-    # Combine all these four (x,y) columns into a 'node matrix'
-    node_matrix = np.array(
-        [coords_node1, coords_node1_ctrl, coords_node2_ctrl, coords_node2]
-    )
-
-    nums = np.linspace(0, 2 * np.pi, bezier_precision)
-
-    # Create the Bezier curves and store them in a list
-
-    self_loops = []
-    for p in pos_sl.values():
-        self_loops.append(np.c_[np.cos(nums), np.sin(nums)] * radius_fraction + p)
-
-    curveplots = []
-    for i in range(len(edges)):
-        nodes = node_matrix[:, i, :].T
-        curveplots.append(
-            bezier.Curve(nodes, degree=3)
-            .evaluate_multi(np.linspace(0, 1, bezier_precision))
-            .T
-        )
-
-    # Return an array of these curves
-    curves = np.array(curveplots)
-    if np.any(self_loop_mask):
-        curves[self_loop_mask, ...] = self_loops
-
-    return curves
 
 
 def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
@@ -352,13 +222,13 @@ def _fit_bulk_helper(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.ul.models.BaseModel.prepare`.
+        Keyword arguments for :func:`cellrank.models.BaseModel.prepare`.
 
     Returns
     -------
     The fitted models, optionally containing the confidence interval in the form of
     `{'gene1': {'lineage1': <model11>, ...}, ...}`.
-    If any step has failed, the model will be of type :class:`cellrank.ul.models.FailedModel`.
+    If any step has failed, the model will be of type :class:`cellrank.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
         raise ValueError(
@@ -428,7 +298,7 @@ def _fit_bulk(
     time_range
         Possibly ``lineages`` specific start- and endtimes.
     parallel_kwargs
-        Keyword arguments for :func:`cellrank.ul._utils.parallelize`.
+        Keyword arguments for :func:`cellrank._utils._parallelize.parallelize`.
     return_models
         Whether to return the full models or just a dictionary of dictionaries of :class:`collections.namedtuple`,
         `(x_test, y_test)`. This is highly discouraged because no meaningful error messages will be produced.
@@ -610,7 +480,7 @@ def _trends_helper(
     ax
         Ax to use.
     kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
+        Keyword arguments for :meth:`cellrank.models.BaseModel.plot`.
 
     Returns
     -------

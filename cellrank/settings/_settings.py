@@ -4,6 +4,8 @@ from copy import copy
 from scanpy import settings
 from cellrank.logging._logging import _RootLogger, _LogFormatter
 
+__all__ = ["settings"]
+
 
 def _set_log_file(settings):
     file = settings.logfile

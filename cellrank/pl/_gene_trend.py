@@ -5,9 +5,7 @@ from pathlib import Path
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank.tl._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank.ul._docs import d
+from cellrank._utils import Lineage
 from cellrank.pl._utils import (
     _fit_bulk,
     _get_backend,
@@ -19,8 +17,15 @@ from cellrank.pl._utils import (
     _input_model_type,
     _return_model_type,
 )
-from cellrank.tl._utils import save_fig, _unique_order_preserving
-from cellrank.ul._utils import _genesymbols, _get_n_cores, _check_collection
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._utils import (
+    save_fig,
+    _genesymbols,
+    _check_collection,
+    _unique_order_preserving,
+)
+from cellrank._utils._parallelize import _get_n_cores
 
 import numpy as np
 import pandas as pd
@@ -28,6 +33,8 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
+__all__ = ["gene_trends"]
 
 
 @d.dedent
@@ -77,9 +84,9 @@ def gene_trends(
     """
     Plot gene expression trends along lineages.
 
-    Each lineage is defined via it's lineage weights which we compute using :func:`cellrank.tl.lineages`. This
-    function accepts any model based off :class:`cellrank.ul.models.BaseModel` to fit gene expression,
-    where we take the lineage weights into account in the loss function.
+    Each lineage is defined via it's lineage weights. This function accepts any model based off
+    :class:`cellrank.models.BaseModel` to fit gene expression, where we take the lineage weights
+    into account in the loss function.
 
     Parameters
     ----------
@@ -103,7 +110,7 @@ def gene_trends(
         If ``same_plot = False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.ul.models.GAMR`,
+        Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.models.GAMR`,
         it can also specify the confidence level, the default is `0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.
@@ -153,9 +160,9 @@ def gene_trends(
     %(parallel)s
     %(plotting)s
     plot_kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.plot`.
+        Keyword arguments for :meth:`cellrank.models.BaseModel.plot`.
     kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
+        Keyword arguments for :meth:`cellrank.models.BaseModel.prepare`.
 
     Returns
     -------

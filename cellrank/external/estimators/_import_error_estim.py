@@ -1,17 +1,17 @@
 from typing import Any
 
 from anndata import AnnData
-from cellrank.tl.estimators import BaseEstimator
+from cellrank.estimators import BaseEstimator
 from cellrank.external._error_mixin import ImportErrorMixin
 
-__all__ = ("ErroredEstimator",)
+__all__ = ["ErroredEstimator"]
 
 
 class ErroredEstimator(ImportErrorMixin, BaseEstimator):
     """
     Utility estimator class which always throw :class:`ImportError` when instantiated.
 
-    Subclasses can modify the message by overriding `__import_error_message__`.
+    Subclasses can modify the message by overriding the class attribute ``__import_error_message__``.
     """
 
     __import_error_message__ = "Unable to import external estimator."

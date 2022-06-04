@@ -1,18 +1,9 @@
-# TODO: in 2.0, remove .tl
-import cellrank.pl
-import cellrank.tl
-import cellrank.ul
-import cellrank.models
-import cellrank.kernels
-import cellrank.logging
-import cellrank.datasets
-import cellrank.external
-import cellrank.estimators
+from cellrank import pl, models, kernels, logging, datasets, external, estimators
 from cellrank.settings import settings
-from cellrank.tl._read import read
+from cellrank._utils._lineage import Lineage
 
-__author__ = ", ".join(["Marius Lange", "Michal Klein"])
-__maintainer__ = ", ".join(["Marius Lange", "Michal Klein"])
+__author__ = ", ".join(["Marius Lange", "Michal Klein", "Philipp Weiler"])
+__maintainer__ = ", ".join(["Marius Lange", "Michal Klein", "Philipp Weiler"])
 __version__ = "1.5.1"
 __email__ = "info@cellrank.org"
 

@@ -8,9 +8,9 @@ from _helpers import assert_array_nan_equal, assert_estimators_equal
 
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl import Lineage
-from cellrank._key import Key
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank._utils import Lineage
+from cellrank.kernels import VelocityKernel, ConnectivityKernel
+from cellrank._utils._key import Key
 
 import numpy as np
 import pandas as pd
@@ -129,7 +129,7 @@ def shares_mem(x, y) -> bool:
     return np.shares_memory(x, y)
 
 
-def _check_eigdecomposition(mc: cr.tl.estimators.GPCCA) -> None:
+def _check_eigdecomposition(mc: cr.estimators.GPCCA) -> None:
     assert isinstance(mc.eigendecomposition, dict)
     assert set(mc.eigendecomposition.keys()) == {
         "D",
@@ -143,12 +143,12 @@ def _check_eigdecomposition(mc: cr.tl.estimators.GPCCA) -> None:
     assert Key.uns.eigen(mc.backward) in mc.adata.uns
 
 
-def _check_compute_macro(mc: cr.tl.estimators.GPCCA) -> None:
+def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
     assert isinstance(mc.macrostates, pd.Series)
     assert len(mc._macrostates_colors) == len(mc.macrostates.cat.categories)
 
     if "stationary_dist" in mc.eigendecomposition:  # one state
-        assert isinstance(mc.macrostates_memberships, cr.tl.Lineage)
+        assert isinstance(mc.macrostates_memberships, cr.Lineage)
         assert mc.macrostates_memberships.shape[1] == 1
         np.testing.assert_allclose(mc.macrostates_memberships.X.sum(), 1.0)
 
@@ -158,7 +158,7 @@ def _check_compute_macro(mc: cr.tl.estimators.GPCCA) -> None:
         assert mc.coarse_stationary_distribution is None
         assert mc.coarse_T is None
     else:
-        assert isinstance(mc.macrostates_memberships, cr.tl.Lineage)
+        assert isinstance(mc.macrostates_memberships, cr.Lineage)
         if mc.macrostates_memberships.shape[1] > 1:
             np.testing.assert_allclose(mc.macrostates_memberships.sum(1), 1.0)
 
@@ -177,7 +177,7 @@ def _check_compute_macro(mc: cr.tl.estimators.GPCCA) -> None:
             )
 
 
-def _check_renaming_no_write_terminal(mc: cr.tl.estimators.GPCCA) -> None:
+def _check_renaming_no_write_terminal(mc: cr.estimators.GPCCA) -> None:
     assert mc.terminal_states is None
     assert mc.terminal_states_probabilities is None
     assert mc.terminal_states_memberships is None
@@ -188,11 +188,11 @@ def _check_renaming_no_write_terminal(mc: cr.tl.estimators.GPCCA) -> None:
     assert Key.uns.colors(key) not in mc.adata.uns
 
 
-def _check_abs_probs(mc: cr.tl.estimators.GPCCA) -> None:
+def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     # fmt: off
     # macrostates
     assert isinstance(mc.macrostates, pd.Series)
-    assert isinstance(mc.macrostates_memberships, cr.tl.Lineage)
+    assert isinstance(mc.macrostates_memberships, cr.Lineage)
     np.testing.assert_array_equal(mc._macrostates_colors, mc.macrostates_memberships.colors)
 
     # term states
@@ -207,9 +207,9 @@ def _check_abs_probs(mc: cr.tl.estimators.GPCCA) -> None:
 
     # abs probs
     key = Key.obsm.abs_probs(mc.backward)
-    assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
+    assert isinstance(mc.absorption_probabilities, cr.Lineage)
     np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1.0)
-    assert isinstance(mc.adata.obsm[key], cr.tl.Lineage)
+    assert isinstance(mc.adata.obsm[key], cr.Lineage)
     np.testing.assert_array_equal(mc.adata.obsm[key], mc.absorption_probabilities.X)
 
     # priming
@@ -226,7 +226,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
     ck = ConnectivityKernel(adata).compute_transition_matrix()
     terminal_kernel = 0.8 * vk + 0.2 * ck
 
-    mc = cr.tl.estimators.GPCCA(terminal_kernel)
+    mc = cr.estimators.GPCCA(terminal_kernel)
     mc.compute_eigendecomposition()
     mc.compute_schur(n_components=10, method="krylov")
     if state == State.SCHUR:
@@ -249,7 +249,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
 
 
 def _assert_params(
-    g: cr.tl.estimators.GPCCA,
+    g: cr.estimators.GPCCA,
     state: Optional[State],
     fwd: bool = False,
     init: bool = True,
@@ -293,7 +293,7 @@ def _assert_adata(
 
 
 def _assert_gpcca_attrs(
-    g: cr.tl.estimators.GPCCA,
+    g: cr.estimators.GPCCA,
     state: Optional[State] = None,
     fwd: bool = False,
     init: bool = True,
@@ -323,7 +323,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_eigendecomposition(k=2, only_evals=True)
 
         _check_eigdecomposition(mc)
@@ -333,7 +333,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=1, method="krylov")
 
         assert mc.schur_vectors.shape[1] == 2
@@ -343,7 +343,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         with pytest.raises(ValueError):
             mc.compute_schur(method="foobar")
 
@@ -352,7 +352,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         with pytest.raises(ValueError):
             mc.compute_schur(which="foobar", method="krylov")
 
@@ -361,7 +361,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         _check_eigdecomposition(mc)
@@ -373,7 +373,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_eigendecomposition(k=10, only_evals=True)
 
         _check_eigdecomposition(mc)
@@ -400,7 +400,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_macrostates(n_states=None)
 
@@ -409,7 +409,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_macrostates(n_states=1)
 
     def test_compute_macro_none_states(self, adata_large: AnnData):
@@ -417,7 +417,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_eigendecomposition(only_evals=True)
         mc.compute_macrostates(n_states=None)
 
@@ -428,7 +428,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
 
@@ -439,7 +439,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=[1, 1])
 
@@ -450,7 +450,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=[4, 2])
 
@@ -461,7 +461,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=[2, 2])
 
@@ -472,7 +472,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=[2, 4])
 
@@ -483,7 +483,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         with pytest.raises(KeyError):
             mc.compute_macrostates(n_states=2, cluster_key="foobar")
@@ -493,7 +493,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=11, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -508,7 +508,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -533,7 +533,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         with pytest.raises(RuntimeError):
@@ -547,7 +547,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -563,7 +563,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -579,7 +579,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -595,7 +595,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -620,7 +620,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -637,7 +637,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -652,7 +652,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=3, n_cells=5)
@@ -667,7 +667,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=3, n_cells=5)
@@ -682,7 +682,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
@@ -702,7 +702,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=3, n_cells=5)
@@ -722,7 +722,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=None)
@@ -736,7 +736,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=None)
@@ -750,7 +750,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -771,7 +771,7 @@ class TestGPCCA:
         )
         expected = adata_large.obs["clusters"].cat.remove_categories(to_remove)
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
 
         mc.set_terminal_states({"clusters": values})
         pd.testing.assert_series_equal(
@@ -783,7 +783,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -795,7 +795,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -807,7 +807,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -819,7 +819,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -834,7 +834,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -850,7 +850,7 @@ class TestGPCCA:
         terminal_kernel = 0.8 * vk + 0.2 * ck
         thresh = 0.5
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=5)
@@ -874,7 +874,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -888,7 +888,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -900,7 +900,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
@@ -915,7 +915,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -929,7 +929,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -945,7 +945,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -965,7 +965,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -979,7 +979,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -994,7 +994,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -1009,7 +1009,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -1023,7 +1023,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -1049,7 +1049,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.GPCCA(terminal_kernel)
+        mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states_from_macrostates()
@@ -1069,7 +1069,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        g = cr.tl.estimators.GPCCA(terminal_kernel)
+        g = cr.estimators.GPCCA(terminal_kernel)
         tmp = g.fit(n_states=2)
 
         assert tmp is g
@@ -1092,7 +1092,7 @@ class TestGPCCA:
         gene = adata_large.var_names[ix]
         adata_large.X[:, ix] = 0
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        g = cr.tl.estimators.GPCCA(ck)
+        g = cr.estimators.GPCCA(ck)
         g.fit(n_states=2)
         g.predict()
         g.compute_absorption_probabilities()
@@ -1152,7 +1152,7 @@ class TestGPCCASerialization:
     def test_from_adata(self, adata_large: AnnData, state: State):
         g1 = _fit_gpcca(adata_large, state)
         adata = g1.to_adata()
-        g2 = cr.tl.estimators.GPCCA.from_adata(adata, obsp_key="T_fwd")
+        g2 = cr.estimators.GPCCA.from_adata(adata, obsp_key="T_fwd")
 
         _assert_adata(g2.adata, state, fwd=False)
         _assert_adata(g2.adata, state, fwd=True)
@@ -1169,7 +1169,7 @@ class TestGPCCASerialization:
             obj = getattr(adata, attr)
             del obj[key]
 
-        g = cr.tl.estimators.GPCCA.from_adata(adata, obsp_key="T_fwd")
+        g = cr.estimators.GPCCA.from_adata(adata, obsp_key="T_fwd")
         _assert_gpcca_attrs(g, state, fwd=True, init=False)
         _assert_gpcca_attrs(g, state.prev, fwd=False)
         _assert_adata(g._shadow_adata, state, fwd=True, init=False)
@@ -1196,7 +1196,7 @@ class TestGPCCASerialization:
             adata.obsm[key] = np.array(adata.obsm[key])
             assert isinstance(adata.obsm[key], np.ndarray)
 
-        g = cr.tl.estimators.GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(bwd))
+        g = cr.estimators.GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(bwd))
         for attr, key in zip(attrs, keys):
             obj = getattr(g, attr)
             assert isinstance(obj, Lineage)
@@ -1210,7 +1210,7 @@ class TestGPCCASerialization:
 class TestGPCCAIO:
     @pytest.mark.parametrize("deep", [False, True])
     def test_copy(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], deep: bool
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], deep: bool
     ):
         _, mc1 = adata_gpcca_fwd
         mc2 = mc1.copy(deep=deep)
@@ -1218,7 +1218,7 @@ class TestGPCCAIO:
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
     def test_write_ext(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir
     ):
         _, mc = adata_gpcca_fwd
 
@@ -1229,7 +1229,7 @@ class TestGPCCAIO:
 
     def test_write_no_ext(
         self,
-        adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA],
+        adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA],
         tmpdir,
     ):
         _, mc = adata_gpcca_fwd
@@ -1240,7 +1240,7 @@ class TestGPCCAIO:
 
     def test_write_ext_with_dot(
         self,
-        adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA],
+        adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA],
         tmpdir,
     ):
         _, mc = adata_gpcca_fwd
@@ -1250,27 +1250,25 @@ class TestGPCCAIO:
 
         assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
 
-    def test_read(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
-    ):
+    def test_read(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo"))
-        mc2 = cr.tl.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
+        mc2 = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
 
         assert_estimators_equal(mc1, mc2)
 
     @pytest.mark.parametrize("copy", [False, True])
     def test_write_no_adata(
         self,
-        adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA],
+        adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA],
         copy: bool,
         tmpdir,
     ):
         adata, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
-        mc2 = cr.tl.estimators.GPCCA.read(
+        mc2 = cr.estimators.GPCCA.read(
             os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy
         )
 
@@ -1281,24 +1279,22 @@ class TestGPCCAIO:
         assert_estimators_equal(mc1, mc2)
 
     def test_write_no_adata_read_none_supplied(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir
     ):
         _, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
         with pytest.raises(TypeError, match="This object was saved without"):
-            _ = cr.tl.estimators.GPCCA.read(
-                os.path.join(tmpdir, "foo.pickle"), adata=None
-            )
+            _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=None)
 
     def test_write_no_adata_read_wrong_length(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.tl.estimators.GPCCA], tmpdir
+        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir
     ):
         _, mc1 = adata_gpcca_fwd
         adata = AnnData(np.random.normal(size=(len(mc1) + 1, 1)))
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
         with pytest.raises(ValueError, match="Expected `adata` to be of length"):
-            _ = cr.tl.estimators.GPCCA.read(
+            _ = cr.estimators.GPCCA.read(
                 os.path.join(tmpdir, "foo.pickle"), adata=adata
             )

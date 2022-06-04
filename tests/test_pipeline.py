@@ -1,9 +1,7 @@
-import pytest
-
 import cellrank as cr
 from anndata import AnnData
-from cellrank._key import Key
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.kernels import VelocityKernel, ConnectivityKernel
+from cellrank._utils._key import Key
 
 import numpy as np
 import pandas as pd
@@ -20,7 +18,7 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
 
     # lineages
     abs_probs = adata.obsm[Key.obsm.abs_probs(bwd)]
-    assert isinstance(abs_probs, cr.tl.Lineage)
+    assert isinstance(abs_probs, cr._utils.Lineage)
     np.testing.assert_array_equal(abs_probs.names, adata.obs[key].cat.categories)
     np.testing.assert_array_equal(abs_probs.colors, adata.uns[Key.uns.colors(key)])
     np.testing.assert_allclose(abs_probs.X.sum(1), 1.0, rtol=1e-3)
@@ -30,189 +28,13 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
     # fmt: on
 
 
-class TestHighLevelPipeline:
-    def test_plot_states_not_computed(self, adata: AnnData):
-        with pytest.raises(KeyError):
-            cr.pl.initial_states(adata)
-        with pytest.raises(KeyError):
-            cr.pl.terminal_states(adata)
-
-    def test_write_transition_matrix(self, adata: AnnData):
-        cr.tl.transition_matrix(adata, key="foo")
-
-        assert "foo" in adata.obsp
-        np.testing.assert_allclose(adata.obsp["foo"].A.sum(1), 1.0)
-        assert "foo_params" in adata.uns
-
-    def test_states_no_precomputed_transition_matrix(self, adata: AnnData):
-        cr.tl.terminal_states(adata, key="foo")
-
-        np.testing.assert_allclose(adata.obsp[Key.uns.kernel(False)].A.sum(1), 1.0)
-
-    def test_states_use_precomputed_transition_matrix(self, adata: AnnData):
-        cr.tl.transition_matrix(adata, key="foo")
-        obsp_keys = set(adata.obsp.keys())
-
-        cr.tl.terminal_states(adata, key="foo")
-
-        assert obsp_keys == set(adata.obsp.keys())
-
-    def test_fwd_pipeline_cflare(self, adata: AnnData):
-        cr.tl.terminal_states(
-            adata,
-            estimator=cr.tl.estimators.CFLARE,
-            cluster_key="clusters",
-            method="kmeans",
-            show_plots=True,
-        )
-        cr.pl.terminal_states(adata)
-        cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
-
-        ln = adata.obsm[Key.obsm.abs_probs(False)].names[0]
-        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
-
-        _assert_has_all_keys(adata)
-
-    def test_fwd_pipeline_invalid_raw_requested(self, adata: AnnData):
-        cr.tl.terminal_states(
-            adata,
-            estimator=cr.tl.estimators.CFLARE,
-            cluster_key="clusters",
-            method="kmeans",
-            show_plots=True,
-        )
-        cr.pl.terminal_states(adata)
-        cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
-
-        ln = adata.obsm[Key.obsm.abs_probs(False)].names[0]
-        with pytest.raises(RuntimeError):
-            cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
-
-    def test_bwd_pipeline_cflare(self, adata: AnnData):
-        cr.tl.initial_states(
-            adata,
-            estimator=cr.tl.estimators.CFLARE,
-            cluster_key="clusters",
-            method="leiden",
-            show_plots=True,
-        )
-        cr.pl.initial_states(adata)
-        cr.tl.lineages(adata, backward=True)
-        cr.pl.lineages(adata, backward=True)
-        cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
-
-        ln = adata.obsm[Key.obsm.abs_probs(True)].names[0]
-        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
-
-        _assert_has_all_keys(adata, bwd=True)
-
-    def test_fwd_pipeline_gpcca(self, adata: AnnData):
-        cr.tl.terminal_states(
-            adata,
-            estimator=cr.tl.estimators.GPCCA,
-            cluster_key="clusters",
-            method="brandts",
-            show_plots=True,
-        )
-        cr.pl.terminal_states(adata)
-        cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
-        ln = adata.obsm[Key.obsm.abs_probs(False)].names[0]
-        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=False)
-
-        _assert_has_all_keys(adata)
-
-    def test_fwd_pipeline_gpcca_invalid_raw_requested(self, adata: AnnData):
-        cr.tl.terminal_states(
-            adata,
-            estimator=cr.tl.estimators.GPCCA,
-            cluster_key="clusters",
-            method="brandts",
-            show_plots=True,
-        )
-        cr.pl.terminal_states(adata)
-        cr.tl.lineages(adata)
-        cr.pl.lineages(adata)
-        cr.tl.lineage_drivers(adata, use_raw=False)
-        ln = adata.obsm[Key.obsm.abs_probs(False)].names[0]
-        with pytest.raises(RuntimeError):
-            cr.pl.lineage_drivers(adata, ln, use_raw=True, backward=False)
-
-    def test_bwd_pipeline_gpcca(self, adata: AnnData):
-        cr.tl.initial_states(
-            adata,
-            estimator=cr.tl.estimators.GPCCA,
-            cluster_key="clusters",
-            method="brandts",
-            show_plots=True,
-        )
-        cr.pl.initial_states(adata)
-        cr.tl.lineages(adata, backward=True)
-        cr.pl.lineages(adata, backward=True)
-        cr.tl.lineage_drivers(adata, use_raw=False, backward=True)
-        ln = adata.obsm[Key.obsm.abs_probs(True)].names[0]
-        cr.pl.lineage_drivers(adata, ln, use_raw=False, backward=True)
-
-        _assert_has_all_keys(adata, bwd=True)
-
-    def test_multiple_read_write_diff(self, adata: AnnData):
-        for n_states in range(2, 5):
-            e = cr.tl.terminal_states(
-                adata,
-                estimator=cr.tl.estimators.GPCCA,
-                cluster_key="clusters",
-                method="brandts",
-                show_plots=True,
-                n_states=n_states,
-                fit_kwargs={"n_cells": 5},
-                return_estimator=True,
-            )
-            assert e.absorption_probabilities is None
-
-            cr.tl.lineages(adata, backward=False)
-            cr.pl.lineages(adata)
-            cr.tl.lineage_drivers(adata)
-
-            _assert_has_all_keys(adata)
-            probs = adata.obsm[Key.obsm.abs_probs(False)]
-
-            assert probs.shape[1] == n_states
-            for name in probs.names:
-                assert "Lineage" not in name, probs.names
-
-    def test_multiple_read_write_same(self, adata: AnnData):
-        e = cr.tl.terminal_states(
-            adata,
-            estimator=cr.tl.estimators.GPCCA,
-            cluster_key="clusters",
-            method="brandts",
-            show_plots=True,
-            n_states=2,
-            fit_kwargs={"n_cells": 5},
-            return_estimator=True,
-        )
-        cr.tl.lineages(adata, backward=False)
-        cr.pl.lineages(adata)
-
-        e.set_terminal_states({"foo": adata.obs_names[:20]})
-
-        e = cr.tl.estimators.GPCCA(adata, obsp_key="T_fwd")
-        assert e.macrostates is None
-        assert e.absorption_probabilities is None
-
-
 class TestLowLevelPipeline:
     def test_fwd_pipeline_cflare(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_fwd = cr.tl.estimators.CFLARE(final_kernel)
+        estimator_fwd = cr.estimators.CFLARE(final_kernel)
 
         estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
@@ -235,7 +57,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_bwd = cr.tl.estimators.CFLARE(final_kernel)
+        estimator_bwd = cr.estimators.CFLARE(final_kernel)
 
         estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()
@@ -256,7 +78,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_fwd = cr.tl.estimators.GPCCA(final_kernel)
+        estimator_fwd = cr.estimators.GPCCA(final_kernel)
 
         estimator_fwd.compute_eigendecomposition()
         estimator_fwd.plot_spectrum()
@@ -297,7 +119,7 @@ class TestLowLevelPipeline:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
-        estimator_bwd = cr.tl.estimators.GPCCA(final_kernel)
+        estimator_bwd = cr.estimators.GPCCA(final_kernel)
 
         estimator_bwd.compute_eigendecomposition()
         estimator_bwd.plot_spectrum()

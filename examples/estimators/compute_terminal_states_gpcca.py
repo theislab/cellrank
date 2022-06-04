@@ -2,7 +2,7 @@
 Compute terminal states using GPCCA
 -----------------------------------
 
-This example shows how to compute and plot the terminal states using the :class:`cellrank.tl.estimators.GPCCA`.
+This example shows how to compute and plot the terminal states using the :class:`cellrank.estimators.GPCCA`.
 
 This estimator makes use of Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` :cite:`reuter:19`
 as implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
@@ -14,11 +14,13 @@ adata = cr.datasets.pancreas_preprocessed("../example.h5ad")
 adata
 
 # %%
-# First, we prepare the kernel using the high-level pipeline and the :class:`cellrank.tl.estimators.GPCCA` estimator.
-k = cr.tl.transition_matrix(
-    adata, weight_connectivities=0.2, softmax_scale=4, show_progress_bar=False
+# First, we prepare the kernel and the :class:`cellrank.estimators.GPCCA` estimator.
+vk = cr.kernels.VelocityKernel(adata).compute_transition_matrix(
+    softmax_scale=4, show_progress_bar=False
 )
-g = cr.tl.estimators.GPCCA(k)
+ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
+k = 0.8 * vk + 0.2 * ck
+g = cr.estimators.GPCCA(k)
 
 # %%
 # Next, we need to compute the Schur vectors and the macrostates. We refer the reader to
@@ -27,11 +29,11 @@ g.compute_schur(n_components=4)
 g.compute_macrostates(cluster_key="clusters")
 
 # %%
-# For :class:`cellrank.tl.estimators.GPCCA`, there are 3 methods for choosing the terminal states:
+# For :class:`cellrank.estimators.GPCCA`, there are 3 methods for choosing the terminal states:
 #
-#     1. :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states`
-#     2. :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_macrostates`
-#     3. :meth:`cellrank.tl.estimators.GPCCA.compute_terminal_states`
+#     1. :meth:`cellrank.estimators.GPCCA.set_terminal_states`
+#     2. :meth:`cellrank.estimators.GPCCA.set_terminal_states_from_macrostates`
+#     3. :meth:`cellrank.estimators.GPCCA.compute_terminal_states`
 #
 # We will cover each of these methods below. In the last 2 cases, parameter ``n_cells`` controls how many cells to take
 # from each terminal state we take as a categorical annotation.
@@ -39,7 +41,7 @@ g.compute_macrostates(cluster_key="clusters")
 # %%
 # Set terminal states
 # ^^^^^^^^^^^^^^^^^^^
-# :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states` simply sets the terminal states manually - this
+# :meth:`cellrank.estimators.GPCCA.set_terminal_states` simply sets the terminal states manually - this
 # can be useful when the terminal states are known beforehand. In this case, we don't need to compute the macrostates.
 #
 # The states can be specified either as a categorical :class:`pandas.Series` where `NaN` values mark cells
@@ -53,7 +55,7 @@ g.set_terminal_states({"Alpha": adata[adata.obs["clusters"] == "Alpha"].obs_name
 # %%
 # Set terminal states from macrostates
 # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# :meth:`cellrank.tl.estimators.GPCCA.set_terminal_states_from_macrostates` sets the terminal states by subsetting
+# :meth:`cellrank.estimators.GPCCA.set_terminal_states_from_macrostates` sets the terminal states by subsetting
 # the macrostates. Note that multiple states can also be combined into new, joint states, as shown below,
 # where we combine `"Alpha"` and `"Beta"` states into a new one.
 g.set_terminal_states_from_macrostates(["Alpha, Beta", "Epsilon"])
@@ -61,8 +63,8 @@ g.set_terminal_states_from_macrostates(["Alpha, Beta", "Epsilon"])
 # %%
 # Compute terminal states
 # ^^^^^^^^^^^^^^^^^^^^^^^
-# Lastly, :meth:`cellrank.tl.estimators.GPCCA.compute_terminal_states` which also makes use of the coarse-grained
-# transition matrix :attr:`cellrank.tl.estimators.GPCCA.coarse_T` of the macrostates or the `eigengap`
+# Lastly, :meth:`cellrank.estimators.GPCCA.compute_terminal_states` which also makes use of the coarse-grained
+# transition matrix :attr:`cellrank.estimators.GPCCA.coarse_T` of the macrostates or the `eigengap`
 # statistic.
 #
 # In the example below, we use ``method='eigenap'`` which selects the number of states based on the `eigengap`. The

@@ -1,23 +1,18 @@
 from typing import Tuple, Optional
 
-import os
+import pytest
 import warnings
 from sys import version_info
 from pathlib import Path
-from filelock import FileLock
-
-from cellrank.ul.models import GAM, GAMR, SKLearnModel
-
-os.environ["NUMBA_NUM_THREADS"] = "2"
-
-import pytest
 from _helpers import create_model
+from filelock import FileLock
 
 import scanpy as sc
 import cellrank as cr
 from anndata import AnnData
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.tl.estimators import GPCCA, CFLARE
+from cellrank.models import GAM, GAMR, SKLearnModel
+from cellrank.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.estimators import GPCCA, CFLARE
 
 import numpy as np
 from numba.core.errors import NumbaPerformanceWarning
@@ -29,7 +24,7 @@ _adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
 _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
 
 
-def pytest_sessionstart(session) -> None:
+def pytest_sessionstart(session: pytest.Session) -> None:
     matplotlib.use("Agg")
     matplotlib.rcParams["figure.max_open_warning"] = 0
     np.random.seed(42)
@@ -40,7 +35,7 @@ def pytest_sessionstart(session) -> None:
 
 # removes overly verbose and useless logging errors for rpy2
 # see: https://github.com/pytest-dev/pytest/issues/5502#issuecomment-647157873
-def pytest_sessionfinish(session, exitstatus) -> None:
+def pytest_sessionfinish(session: pytest.Session, exitstatus) -> None:
     import logging
 
     loggers = [logging.getLogger()] + list(logging.Logger.manager.loggerDict.values())
@@ -147,6 +142,11 @@ def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
 
+@pytest.fixture
+def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
+    return adata_gpcca[1].copy()
+
+
 @pytest.fixture(scope="session")
 def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
@@ -175,7 +175,7 @@ def gamr_model(
                     model.write(fn)
 
     if model is None:
-        pytest.skip("Unable to create `cellrank.ul.models.GAMR`.")
+        pytest.skip("Unable to create `cellrank.models.GAMR`.")
 
     return model
 
@@ -204,7 +204,7 @@ def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
 
 @pytest.fixture
 def lineage():
-    x = cr.tl.Lineage(
+    x = cr._utils.Lineage(
         np.array(
             [
                 [1.23459664e-01, 1.29965675e-01, 1.92828002e-01, 9.39402664e-01],

@@ -1,6 +1,6 @@
 import pytest
 
-from cellrank.tl._colors import _map_names_and_colors, _create_categorical_colors
+from cellrank._utils._colors import _map_names_and_colors, _create_categorical_colors
 
 import numpy as np
 import pandas as pd

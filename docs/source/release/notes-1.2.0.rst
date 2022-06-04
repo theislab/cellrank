@@ -23,8 +23,7 @@ Features
   ensure that one of the "engines" of CellRank is also easy to maintain to extend. Further, this will make CellRank's
   installation more convenient by not needing to vendorize additional dependencies
   `PR 472 <https://github.com/theislab/cellrank/pull/472>`__.
-- Add :func:`cellrank.pl.circular_projection` visualizing computed fate probabilities as done in :cite:`velten:17`,
-  see :ref:`sphx_glr_auto_examples_plotting_plot_circular_embedding.py`.
+- Add :func:`cellrank.pl.circular_projection` visualizing computed fate probabilities as done in :cite:`velten:17`.
   `PR 459 <https://github.com/theislab/cellrank/pull/459>`_.
 - Allow legends not to be plotted by passing ``legend_loc="none"``, as done in `scVelo <https://scvelo.org>`_
   `PR 470 <https://github.com/theislab/cellrank/pull/470>`_.

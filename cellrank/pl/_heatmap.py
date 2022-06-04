@@ -9,9 +9,7 @@ from collections import Iterable, defaultdict
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.tl import Lineage
-from cellrank.tl._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
-from cellrank.ul._docs import d, inject_docs
+from cellrank._utils import Lineage
 from cellrank.pl._utils import (
     _fit_bulk,
     _get_backend,
@@ -23,13 +21,17 @@ from cellrank.pl._utils import (
     _return_model_type,
     _get_categorical_colors,
 )
-from cellrank.tl._utils import save_fig, _min_max_scale, _unique_order_preserving
-from cellrank.ul._utils import (
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
+from cellrank._utils._utils import (
+    save_fig,
     _genesymbols,
-    _get_n_cores,
     valuedispatch,
+    _min_max_scale,
     _check_collection,
+    _unique_order_preserving,
 )
+from cellrank._utils._parallelize import _get_n_cores
 
 import numpy as np
 import pandas as pd
@@ -43,10 +45,12 @@ from matplotlib import cm
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
+__all__ = ["heatmap"]
+
 _N_XTICKS = 10
 
 
-class HeatmapMode(ModeEnum):  # noqa: D101
+class HeatmapMode(ModeEnum):
     GENES = auto()
     LINEAGES = auto()
 
@@ -150,7 +154,7 @@ def heatmap(
     %(parallel)s
     %(plotting)s
     kwargs
-        Keyword arguments for :meth:`cellrank.ul.models.BaseModel.prepare`.
+        Keyword arguments for :meth:`cellrank.models.BaseModel.prepare`.
 
     Returns
     -------
@@ -474,11 +478,11 @@ def heatmap(
             g.ax_heatmap.yaxis.tick_left()
             g.ax_heatmap.yaxis.set_label_position("right")
 
+            # fmt: off
             g.ax_heatmap.set_xlabel(xlabel)
             g.ax_heatmap.set_xticks(np.linspace(0, len(df.columns), _N_XTICKS))
-            g.ax_heatmap.set_xticklabels(
-                list(map(lambda n: round(n, 3), np.linspace(x_min, x_max, _N_XTICKS)))
-            )
+            g.ax_heatmap.set_xticklabels([round(n, 3) for n in np.linspace(x_min, x_max, _N_XTICKS)])
+            # fmt: on
 
             if show_clust:
                 # robustly show dendrogram, because gene names can be long

@@ -6,8 +6,8 @@ from _helpers import assert_estimators_equal
 
 import cellrank as cr
 from anndata import AnnData
-from cellrank._key import Key
-from cellrank.tl.kernels import VelocityKernel, ConnectivityKernel
+from cellrank.kernels import VelocityKernel, ConnectivityKernel
+from cellrank._utils._key import Key
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
 
         assert isinstance(mc.eigendecomposition, dict)
@@ -41,7 +41,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_terminal_states(use=2)
 
@@ -50,7 +50,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
         with pytest.raises(ValueError):
             mc.compute_terminal_states(use=1000)
@@ -60,7 +60,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
@@ -77,7 +77,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         with pytest.raises(RuntimeError):
             mc.rename_terminal_states({"foo": "bar"})
@@ -87,7 +87,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         with pytest.raises(ValueError):
@@ -98,7 +98,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2, method="kmeans")
         with pytest.raises(ValueError):
@@ -109,7 +109,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         with pytest.raises(ValueError):
@@ -120,7 +120,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
@@ -134,7 +134,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2, method="kmeans")
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
@@ -150,7 +150,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
             mc.compute_absorption_probabilities()
 
@@ -159,7 +159,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
@@ -171,10 +171,10 @@ class TestCFLARE:
         np.testing.assert_array_equal(mc.priming_degree, mc.adata.obs[key])
 
         key = Key.obsm.abs_probs(mc.backward)
-        assert isinstance(mc.absorption_probabilities, cr.tl.Lineage)
+        assert isinstance(mc.absorption_probabilities, cr.Lineage)
         assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
         assert key in mc.adata.obsm
-        assert isinstance(mc.adata.obsm[key], cr.tl.Lineage)
+        assert isinstance(mc.adata.obsm[key], cr.Lineage)
         np.testing.assert_array_equal(mc.absorption_probabilities.X, mc.adata.obsm[key])
 
         np.testing.assert_array_equal(
@@ -196,7 +196,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
@@ -217,7 +217,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2, method="kmeans")
 
@@ -240,7 +240,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
@@ -265,7 +265,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
@@ -287,7 +287,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
         tol = 1e-6
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
 
@@ -307,7 +307,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         with pytest.raises(RuntimeError):
@@ -318,7 +318,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
@@ -330,7 +330,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
@@ -344,7 +344,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
@@ -363,7 +363,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
@@ -376,7 +376,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
@@ -390,7 +390,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
@@ -404,7 +404,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.compute_terminal_states(use=2)
         mc.compute_absorption_probabilities()
@@ -417,7 +417,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc_fwd = cr.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_eigendecomposition()
         mc_fwd.compute_terminal_states(use=3, method="kmeans")
 
@@ -470,7 +470,7 @@ class TestCFLARE:
             ]
         )
 
-        c = cr.tl.estimators.CFLARE(cr.tl.kernels.PrecomputedKernel(transition_matrix))
+        c = cr.estimators.CFLARE(cr.kernels.PrecomputedKernel(transition_matrix))
 
         state_annotation = pd.Series(index=range(len(c)))
         state_annotation[7] = "terminal_1"
@@ -493,7 +493,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc_fwd = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc_fwd = cr.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_eigendecomposition()
         key = Key.obs.term_states(mc_fwd.backward)
 
@@ -512,7 +512,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.set_terminal_states(
             {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
@@ -523,7 +523,7 @@ class TestCFLARE:
         abs_prob[:, 0] = 1.0
         abs_prob[0, 0] = 1.01
         mocker.patch(
-            "cellrank.tl.estimators.mixins._absorption_probabilities._solve_lin_system",
+            "cellrank.estimators.mixins._absorption_probabilities._solve_lin_system",
             return_value=abs_prob,
         )
 
@@ -537,7 +537,7 @@ class TestCFLARE:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = cr.tl.estimators.CFLARE(terminal_kernel)
+        mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.set_terminal_states(
             {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
@@ -549,7 +549,7 @@ class TestCFLARE:
         abs_prob[0, 0] = -0.5
         abs_prob[0, 1] = -1.5
         mocker.patch(
-            "cellrank.tl.estimators.mixins._absorption_probabilities._solve_lin_system",
+            "cellrank.estimators.mixins._absorption_probabilities._solve_lin_system",
             return_value=abs_prob,
         )
 
@@ -560,19 +560,17 @@ class TestCFLARE:
 class TestCFLAREIO:
     @pytest.mark.parametrize("deep", [False, True])
     def test_copy(
-        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE], deep: bool
+        self, adata_cflare_fwd: Tuple[AnnData, cr.estimators.CFLARE], deep: bool
     ):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy(deep=deep)
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_read(
-        self, adata_cflare_fwd: Tuple[AnnData, cr.tl.estimators.CFLARE], tmpdir
-    ):
+    def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.estimators.CFLARE], tmpdir):
         _, mc1 = adata_cflare_fwd
 
         mc1.write(os.path.join(tmpdir, "foo.pickle"))
-        mc2 = cr.tl.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
+        mc2 = cr.estimators.CFLARE.read(os.path.join(tmpdir, "foo.pickle"))
 
         assert_estimators_equal(mc1, mc2)
