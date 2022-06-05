@@ -335,7 +335,8 @@ class EigenMixin:
 
         ax.set_xlabel("index")
         if show_all_xticks:
-            ax.set_xticks(np.arange(1, len(D) + 1))
+            ax.set_xticks(np.arange(len(D)))
+            ax.set_xticklabels(np.arange(1, len(D) + 1))
         else:
             ax.xaxis.set_major_locator(MultipleLocator(2.0))
             ax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
