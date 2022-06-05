@@ -156,7 +156,7 @@ class EigenMixin:
     def plot_spectrum(
         self,
         n: Optional[int] = None,
-        real_only: bool = False,
+        real_only: Optional[bool] = None,
         show_eigengap: bool = True,
         show_all_xticks: bool = True,
         legend_loc: Optional[str] = None,
@@ -176,9 +176,9 @@ class EigenMixin:
             Number of eigenvalues to show. If `None`, show all that have been computed.
         real_only
             Whether to plot only the real part of the spectrum.
+            If `None`, plot real spectrum if no complex eigenvalues are present.
         show_eigengap
-            When ``real_only = True``, this determines whether to show the inferred eigengap as
-            a dotted line.
+            When ``real_only = True``, this determines whether to show the inferred eigengap as a dotted line.
         show_all_xticks
             When ``real_only = True``, this determines whether to show the indices of all eigenvalues on the x-axis.
         legend_loc
@@ -206,6 +206,8 @@ class EigenMixin:
             n = len(eig["D"])
         if n <= 0:
             raise ValueError(f"Expected `n` to be > 0, found `{n}`.")
+        if real_only is None:
+            real_only = np.any(np.iscomplex(eig["D"][:n]))
 
         if real_only:
             fig = self._plot_real_spectrum(
@@ -242,9 +244,9 @@ class EigenMixin:
         title: Optional[str] = None,
         marker: str = ".",
         **kwargs: Any,
-    ):
+    ) -> plt.Figure:
         # define a function to make the data limits rectangular
-        def adapt_range(min_, max_, range_):
+        def adapt_range(min_: float, max_: float, range_: float) -> Tuple[float, float]:
             return (
                 min_ + (max_ - min_) / 2 - range_ / 2,
                 min_ + (max_ - min_) / 2 + range_ / 2,
@@ -299,8 +301,8 @@ class EigenMixin:
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         marker: str = ".",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> plt.Figure:
         eig = self.eigendecomposition
         D, params = eig["D"][:n], eig["params"]
 
@@ -334,6 +336,7 @@ class EigenMixin:
         ax.set_xlabel("index")
         if show_all_xticks:
             ax.set_xticks(np.arange(len(D)))
+            ax.set_xticklabels(np.arange(1, len(D) + 1))
         else:
             ax.xaxis.set_major_locator(MultipleLocator(2.0))
             ax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
