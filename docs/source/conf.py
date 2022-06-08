@@ -4,9 +4,6 @@ import sys
 import logging
 from pathlib import Path
 from datetime import datetime
-from urllib.parse import urljoin
-from urllib.request import urlretrieve
-from jinja2.defaults import DEFAULT_FILTERS
 
 HERE = Path(__file__).parent
 sys.path.insert(0, str(HERE))
@@ -30,21 +27,6 @@ logger = logging.getLogger(__name__)
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 needs_sphinx = "5.0"
-
-notebooks_url = "https://github.com/theislab/cellrank_notebooks/raw/master/tutorials/"
-for nb in [
-    "cellrank_basics.ipynb",
-    "kernels_and_estimators.ipynb",
-    "beyond_rna_velocity.ipynb",
-    "real_time.ipynb",
-    "creating_new_kernel.ipynb",
-]:
-    try:
-        url = urljoin(notebooks_url, nb)
-        urlretrieve(url, nb)
-    except Exception as e:
-        logger.error(f"Unable to retrieve notebook: `{url}`. Reason: `{e}`")
-
 
 # -- Project information -----------------------------------------------------
 
@@ -151,6 +133,7 @@ html_theme_options = {
 
 # nbsphinx
 nbsphinx_execute = "never"
+# TODO(michalk8): check this
 nbsphinx_prolog = r"""
 .. raw:: html
 {{% set docname = env.doc2path(env.docname, base=None).split("/")[-1] %}}
@@ -180,9 +163,9 @@ nbsphinx_prolog = r"""
         <p class="admonition-title">Note</p>
         <p>
         This page was generated from
-        <a class="reference external" href="https://github.com/scverse/scvi-tutorials/tree/{version}/">{docname}</a>.
+        <a class="reference external" href="https://github.com/theislab/cellrank_notebooks/tree/{version}/">{docname}</a>.
         Interactive online version:
-        <span style="white-space: nowrap;"><a href="https://colab.research.google.com/github/scverse/scvi-tutorials/blob/{version}/{docname}"><img alt="Colab badge" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>.</span>
+        <span style="white-space: nowrap;"><a href="https://colab.research.google.com/github/theislab/cellrank_notebooks/blob/{version}/{docname}"><img alt="Colab badge" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>.</span>
         Some tutorial content may look better in light mode.
         </p>
     </div>

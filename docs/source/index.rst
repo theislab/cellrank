@@ -85,11 +85,11 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    :maxdepth: 3
    :hidden:
 
-   cellrank_basics
-   kernels_and_estimators
-   beyond_rna_velocity
-   real_time
-   creating_new_kernel
+   notebooks/tutorials/cellrank_basics
+   notebooks/tutorials/kernels_and_estimators
+   notebooks/tutorials/beyond_rna_velocity
+   notebooks/tutorials/real_time
+   notebooks/tutorials/creating_new_kernel
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
     :target: https://pypi.org/project/cellrank
