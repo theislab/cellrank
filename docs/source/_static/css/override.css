@@ -79,3 +79,7 @@ li.toctree-l3 {
 li.toctree-l4 {
     font-size: 75% !important;
 }
+
+.sidebar-tree .reference {
+    height: inherit;
+}

@@ -1,33 +1,65 @@
-:github_url: {{ fullname | modurl }}
+.. taken from https://github.com/scverse/scvi-tools/blob/master/docs/_templates/autosummary/class.rst
 
-{{ fullname | escape | underline}}
+{{ fullname | escape | underline }}
 
 .. currentmodule:: {{ module }}
-
 .. autoclass:: {{ objname }}
 
-   {% block attributes %}
-   {% if attributes %}
-   .. rubric:: Attributes
+{% block attributes %}
+{% if attributes %}
 
-   .. autosummary::
-      :toctree: .
-   {% for item in attributes %}
-      ~{{ fullname }}.{{ item }}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
+Attributes table
+~~~~~~~~~~~~~~~~
+.. autosummary::
+{% for item in attributes %}
+    ~{{ fullname }}.{{ item }}
+{% endfor %}
+{% endif %}
+{% endblock %}
 
-   {% block methods %}
-   {% if methods %}
-   .. rubric:: Methods
+{% block methods %}
+{% if methods %}
 
-   .. autosummary::
-      :toctree: .
-   {% for item in methods %}
-      {%- if item != '__init__' %}
-      ~{{ fullname }}.{{ item }}
-      {%- endif -%}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
+Methods table
+~~~~~~~~~~~~~
+.. autosummary::
+{% for item in methods %}
+    {%- if item != '__init__' %}
+    ~{{ fullname }}.{{ item }}
+    {%- endif -%}
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block attributes_documentation %}
+{% if attributes %}
+
+Attributes
+~~~~~~~~~~
+{% for item in attributes %}
+
+{{ item | underline(line='^') }}
+.. autoattribute:: {{ [objname, item] | join(".") }}
+
+{%- endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block methods_documentation %}
+{% if methods %}
+
+Methods
+~~~~~~~
+
+{% for item in methods %}
+{%- if item != '__init__' %}
+
+{{ item | underline(line='^') }}
+.. automethod:: {{ [objname, item] | join(".") }}
+
+{%- endif -%}
+{%- endfor %}
+
+{% endif %}
+{% endblock %}

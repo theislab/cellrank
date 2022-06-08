@@ -51,8 +51,8 @@ for nb in [
 project = "CellRank"
 author = cellrank.__author__
 copyright = f"{datetime.now():%Y}, {author}"
-release = "master"
-version = f"master ({cellrank.__version__})"
+release = cellrank.__version__
+version = cellrank.__version__
 github_repo = "cellrank"
 
 
@@ -98,7 +98,7 @@ intersphinx_mapping = {
 }
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates", "_build"]
+templates_path = ["_templates"]
 source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
 # syntax highlight
@@ -108,7 +108,7 @@ pygments_dark_style = "native"
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["release/changelog/*", "**.ipynb_checkpoints"]
+exclude_patterns = ["release/changelog/*", "_build", "**.ipynb_checkpoints"]
 
 # bibliography
 bibtex_bibfiles = ["references.bib"]
