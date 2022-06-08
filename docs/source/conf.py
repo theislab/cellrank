@@ -15,8 +15,6 @@ sys.path.insert(0, os.path.abspath("_ext"))
 
 import cellrank
 
-from docs.source.modurl import modurl
-
 logger = logging.getLogger(__name__)
 
 # Configuration file for the Sphinx documentation builder.
@@ -191,5 +189,3 @@ nbsphinx_prolog = r"""
 """.format(
     version=version, docname="{{ docname|e }}"
 )
-
-DEFAULT_FILTERS.update(modurl=modurl)
