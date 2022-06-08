@@ -11,8 +11,10 @@
 Attributes table
 ~~~~~~~~~~~~~~~~
 .. autosummary::
+
 {% for item in attributes %}
     ~{{ fullname }}.{{ item }}
+
 {% endfor %}
 {% endif %}
 {% endblock %}
@@ -23,10 +25,12 @@ Attributes table
 Methods table
 ~~~~~~~~~~~~~
 .. autosummary::
+
 {% for item in methods %}
-    {%- if item != '__init__' %}
+    {% if item != '__init__' %}
     ~{{ fullname }}.{{ item }}
-    {%- endif -%}
+    {% endif %}
+
 {% endfor %}
 {% endif %}
 {% endblock %}
@@ -41,7 +45,7 @@ Attributes
 {{ item | underline(line='^') }}
 .. autoattribute:: {{ [objname, item] | join(".") }}
 
-{%- endfor %}
+{% endfor %}
 
 {% endif %}
 {% endblock %}
@@ -53,13 +57,13 @@ Methods
 ~~~~~~~
 
 {% for item in methods %}
-{%- if item != '__init__' %}
+{% if item != '__init__' %}
 
 {{ item | underline(line='^') }}
 .. automethod:: {{ [objname, item] | join(".") }}
 
-{%- endif -%}
-{%- endfor %}
+{% endif %}
+{% endfor %}
 
 {% endif %}
 {% endblock %}
