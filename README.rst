@@ -1,4 +1,4 @@
-|PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
+|PyPI| |Bioconda| |Downloads| |Discourse| |CI| |Notebooks| |Docs| |Codecov|
 
 CellRank for directed single-cell fate mapping
 ==============================================
@@ -6,6 +6,16 @@ CellRank for directed single-cell fate mapping
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
    :width: 600px
    :align: center
+
+.. sidebar:: Key Contributors
+
+    * `Marius Lange`_: lead developer, initial CellRank conception, maintainer
+    * `Michal Klein`_: senior developer, design & architecture, maintainer
+    * `Philipp Weiler`_: developer
+
+.. _Marius Lange: https://twitter.com/MariusLange8
+.. _Michal Klein: https://github.com/michalk8
+.. _Philipp Weiler: https://twitter.com/PhilippWeiler7
 
 **CellRank** is a toolkit to uncover cellular dynamics based on Markov state modeling of single-cell data. It contains
 two main modules: `kernels`_ compute cell-cell transition probabilities and `estimators`_ generate hypothesis based on
@@ -89,6 +99,14 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://bioconda.github.io/recipes/cellrank/README.html
     :alt: Bioconda
 
+.. |Downloads| image:: https://pepy.tech/badge/cellrank
+    :target: https://pepy.tech/project/cellrank
+    :alt: Downloads
+
+.. |Discourse| image:: https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org
+    :target: https://discourse.scverse.org/
+    :alt: Discourse
+
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/master
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
@@ -100,10 +118,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
     :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
-
-.. |Downloads| image:: https://pepy.tech/badge/cellrank
-    :target: https://pepy.tech/project/cellrank
-    :alt: Downloads
 
 .. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
