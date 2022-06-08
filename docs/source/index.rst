@@ -1,4 +1,4 @@
-|PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
+|PyPI| |Bioconda| |Downloads| |Discourse| |CI| |Notebooks| |Docs| |Codecov|
 
 CellRank for directed single-cell fate mapping
 ==============================================
@@ -107,6 +107,14 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://bioconda.github.io/recipes/cellrank/README.html
     :alt: Bioconda
 
+.. |Downloads| image:: https://pepy.tech/badge/cellrank
+    :target: https://pepy.tech/project/cellrank
+    :alt: Downloads
+
+.. |Discourse| image:: https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org
+    :target: https://discourse.scverse.org/
+    :alt: Discourse
+
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/master
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
@@ -119,14 +127,9 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
 
-.. |Downloads| image:: https://pepy.tech/badge/cellrank
-    :target: https://pepy.tech/project/cellrank
-    :alt: Downloads
-
 .. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
-
 
 .. _kernels: https://cellrank.readthedocs.io/en/stable/classes.html#kernels
 .. _estimators: https://cellrank.readthedocs.io/en/stable/classes.html#estimators
