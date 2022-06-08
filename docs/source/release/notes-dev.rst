@@ -1,4 +1,4 @@
-CellRank dev (2022-05-18)
+CellRank dev (2022-06-08)
 =========================
 
 Features
@@ -65,3 +65,10 @@ Miscellaneous
 
 - Fix PETSc/SLEPc in CI for Linux. For now, macOS PETSc/SLEPc remains disabled.
   `#850 <https://github.com/theislab/cellrank/pull/850>`__
+
+
+Documentation
+-------------
+
+- Add *Discourse* badge for questions and discussions.
+  `#880 <https://github.com/theislab/cellrank/pull/880>`__
