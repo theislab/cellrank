@@ -83,6 +83,7 @@ intersphinx_mapping = {
 templates_path = ["_templates"]
 source_suffix = [".rst", ".ipynb"]
 master_doc = "index"
+
 # syntax highlight
 pygments_style = "default"
 pygments_dark_style = "native"
@@ -130,6 +131,20 @@ html_theme_options = {
         "code-font-size": "var(--font-size--small)",
     },
 }
+
+# spelling
+spelling_lang = "en_US"
+spelling_warning = True
+spelling_word_list_filename = "spelling_wordlist.txt"
+spelling_add_pypi_package_names = True
+spelling_show_suggestions = True
+spelling_exclude_patterns = ["references.rst"]
+# see: https://pyenchant.github.io/pyenchant/api/enchant.tokenize.html
+spelling_filters = [
+    "enchant.tokenize.URLFilter",
+    "enchant.tokenize.EmailFilter",
+    "enchant.tokenize.MentionFilter",
+]
 
 # nbsphinx
 nbsphinx_execute = "never"
