@@ -71,7 +71,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. toctree::
     :caption: General
-    :maxdepth: 2
+    :maxdepth: 3
     :hidden:
 
     installation
@@ -82,15 +82,8 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     references
 
 .. toctree::
-   :caption: Gallery
-   :maxdepth: 2
-   :hidden:
-
-   auto_examples/index.rst
-
-.. toctree::
    :caption: Tutorials
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
 
    cellrank_basics
