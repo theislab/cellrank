@@ -135,9 +135,9 @@ html_theme_options = {
 # spelling
 spelling_lang = "en_US"
 spelling_warning = True
-spelling_word_list_filename = "spelling_wordlist.txt"
+spelling_word_list_filename = ["spelling/general.txt", "spelling/autosummary.txt"]
 spelling_add_pypi_package_names = True
-spelling_show_suggestions = True
+spelling_show_suggestions = False
 spelling_exclude_patterns = ["references.rst"]
 # see: https://pyenchant.github.io/pyenchant/api/enchant.tokenize.html
 spelling_filters = [

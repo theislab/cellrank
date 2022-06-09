@@ -21,6 +21,7 @@ eigengap
 embryogenesis
 endocrinogenesis
 enums
+Expectile
 Galerkin
 GiB
 heatmap
@@ -29,12 +30,14 @@ Jupyter
 kNN
 kwargs
 Lanczos
+logits
 macOS
 macrostate
 macrostates
 microstates
 misassign
 misassigned
+multinomial
 NaN
 pluripotency
 pluripotent

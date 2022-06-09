@@ -99,7 +99,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
             Each terminal state will be given the name and color corresponding to the cluster it mostly overlaps with.
         add_to_existing
-            Whether the new terminal states should be added to pre-existing ones. Cells already assigned to a terminal
+            Whether the new terminal states should be added to the existing ones. Cells already assigned to a terminal
             state will be re-assigned to the new terminal state if there's a conflict between old and new annotations.
             This throws an error if no previous annotations corresponding to terminal states have been found.
 

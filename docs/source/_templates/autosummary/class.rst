@@ -42,7 +42,7 @@ Attributes
 ~~~~~~~~~~
 {% for item in attributes %}
 
-{{ item | underline(line='^') }}
+{{ item | escape | underline(line='^') }}
 .. autoattribute:: {{ [objname, item] | join(".") }}
 
 {% endfor %}
@@ -59,7 +59,7 @@ Methods
 {% for item in methods %}
 {% if item != '__init__' %}
 
-{{ item | underline(line='^') }}
+{{ item | escape | underline(line='^') }}
 .. automethod:: {{ [objname, item] | join(".") }}
 
 {% endif %}

@@ -84,11 +84,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
             Rows where all values are removed will have uniform distribution and a warning will be issued.
         copy
-            Whether to return a copy of the ``tmaps`` or modify inplace.
+            Whether to return a copy of the ``tmaps`` or modify in-place.
 
         Returns
         -------
-        If ``copy = True``, returns a thresholded transport maps. Otherwise, modifies ``tmaps`` inplace.
+        If ``copy = True``, returns a thresholded transport maps. Otherwise, modifies ``tmaps`` in-place.
         """
         if threshold == "auto":
             thresh = min(
