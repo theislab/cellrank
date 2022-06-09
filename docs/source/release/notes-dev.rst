@@ -1,4 +1,4 @@
-CellRank dev (2022-06-08)
+CellRank dev (2022-06-09)
 =========================
 
 Features
@@ -72,3 +72,6 @@ Documentation
 
 - Add *Discourse* badge for questions and discussions.
   `#880 <https://github.com/theislab/cellrank/pull/880>`__
+
+- Adds references to the ``bibtex`` file.
+  `#883 <https://github.com/theislab/cellrank/pull/883>`__
