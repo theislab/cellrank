@@ -1493,61 +1493,47 @@ def _calculate_lineage_absorption_time_means(
 
         return res
 
-    res = pd.DataFrame()
-    tmp_ixs, cnt = {}, 0
-    for k, ix in ixs.items():
-        # get the indices to B matrix
-        tmp_ixs[k] = np.arange(cnt, cnt + len(ix), dtype=np.int32)
-        cnt += len(ix)
-
-    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)  # noqa
+    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)  # noqa: E741
     N_inv = I - Q
 
     logg.debug("Solving equation for `B`")
     B = _solve_lin_system(Q, R, use_eye=True, **kwargs)
 
-    no_jobs_kwargs = kwargs.copy()
-    _ = no_jobs_kwargs.pop("n_jobs", None)
-
+    no_jobs_kwargs = {k: v for k, v in kwargs.items() if k != "n_jobs"}
+    name_to_ix = dict(zip(ixs.keys(), range(len(ixs))))
     for lns, moment in lineages.items():
         name = ", ".join(lns)
         ix = np.concatenate([ixs[ln] for ln in lns])
 
-        D_j = diags(np.sum(B[:, np.concatenate([tmp_ixs[ln] for ln in lns])], axis=1))
+        D_j = diags(np.sum(B[:, [name_to_ix[ln] for ln in lns]], axis=1))
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
 
+        # fmt: off
         logg.debug(f"Calculating mean time to absorption to `{name!r}`")
-        m = _solve_lin_system(
-            D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs
-        ).squeeze()
+        m = _solve_lin_system(D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs).squeeze()
+        # fmt: on
 
-        mean = np.empty(n, dtype=np.float64)
-        mean[:] = np.inf
+        mean = np.full(n, fill_value=np.inf, dtype=np.float64)
         mean[ix] = 0
         mean[trans_indices] = m
-
         res[f"{name} mean"] = mean
 
         if moment == "var":
+            # fmt: off
             logg.debug(f"Calculating variance of mean time to absorption to `{name!r}`")
 
-            logg.debug("Solving equation (1/2)")
             X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
             y = m - X @ (m**2)
 
-            logg.debug("Solving equation (2/2)")
-            v = _solve_lin_system(
-                X, y, use_eye=False, n_jobs=1, **no_jobs_kwargs
-            ).squeeze()
+            v = _solve_lin_system(X, y, use_eye=False, n_jobs=1, **no_jobs_kwargs).squeeze()
             assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
             var = np.full(n, fill_value=np.nan, dtype=np.float64)
             var[ix] = 0
             var[trans_indices] = v
-
             res[f"{name} var"] = var
-
+            # fmt: on
     return res
 
 
