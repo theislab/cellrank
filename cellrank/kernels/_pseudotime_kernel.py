@@ -32,9 +32,9 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     """
     Kernel which computes directed transition probabilities based on a KNN graph and pseudotime.
 
-    The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
+    The kNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime
-    :cite:`setty:19` or to downweight them :cite:`stassen:21`.
+    :cite:`setty:19` or to down-weight them :cite:`stassen:21`.
 
     Parameters
     ----------
@@ -89,7 +89,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         **kwargs: Any,
     ) -> "PseudotimeKernel":
         """
-        Compute transition matrix based on KNN graph and pseudotemporal ordering.
+        Compute transition matrix based on kNN graph and pseudotemporal ordering.
 
         Depending on the choice of the ``threshold_scheme``, it is based on ideas by either *Palantir*
         :cite:`setty:19` or *VIA* :cite:`stassen:21`.
@@ -103,8 +103,9 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
                   the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
                   remove all edges that point against the direction of increasing pseudotime, but keeps the ones
                   that point to cells inside a close radius. This radius is chosen according to the local cell density.
-                - `'soft'` - based on *VIA* :cite:`stassen:21` which downweights edges that points against the direction
-                  of increasing pseudotime. Essentially, the further "behind" a query cell is in pseudotime with respect
+                - `'soft'` - based on *VIA* :cite:`stassen:21` which down-weights edges that points against
+                  the direction of increasing pseudotime. Essentially, the further "behind"
+                  a query cell is in pseudotime with respect
                   to the current reference cell, the more penalized will be its graph-connectivity.
                 - :class:`callable` - any function conforming to the signature of
                   :func:`cellrank.kernels.utils.ThresholdSchemeABC.__call__`.
@@ -165,9 +166,9 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
 
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
-            logg.warning("Biased KNN graph is disconnected")
+            logg.warning("Biased kNN graph is disconnected")
         if check_irreducibility and not _irreducible(biased_conn):
-            logg.warning("Biased KNN graph is not irreducible")
+            logg.warning("Biased kNN graph is not irreducible")
 
         self.transition_matrix = biased_conn
         logg.info("    Finish", time=start)

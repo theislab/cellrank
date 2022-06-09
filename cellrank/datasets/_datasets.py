@@ -99,10 +99,10 @@ def pancreas(
     """
     Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
-    scRNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
+    sc-RNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
     to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
 
-    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as original
+    Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as original
     cluster annotations.
 
     Parameters
@@ -147,12 +147,12 @@ def lung(
     """
     Regeneration of murine lung epithelial cells at 13 time points from :cite:`strunz:20`.
 
-    scRNA-seq dataset comprising `24 051` cells recorded using Dropseq :cite:`macosko:15` at 13 time points spanning
+    sc-RNA-seq dataset comprising `24 051` cells recorded using Drop-seq :cite:`macosko:15` at 13 time points spanning
     days 2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which
     are more spaced out. We wanted to focus on the densely sampled days where RNA velocity :cite:`manno:18`
     :cite:`bergen:20` can be used to predict the future cellular state.
 
-    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as original
+    Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as original
     cluster annotations.
 
     Parameters
@@ -177,10 +177,10 @@ def reprogramming_morris(
     Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors at 8 time points from \
     :cite:`morris:18`.
 
-    scRNA-seq dataset comprising `104 887` cell recorded using 10X Chromium and Dropseq :cite:`macosko:15`
+    sc-RNA-seq dataset comprising `104 887` cell recorded using 10X Chromium and Drop-seq :cite:`macosko:15`
     at 8 time points spanning days 0-28 past reprogramming initiation.
 
-    Contains raw spliced and un-spliced count data, low-dimensional embedding coordinates as well as clonal information
+    Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as clonal information
     from CellTagging :cite:`morris:18`. Moreover, it contains the following :attr:`anndata.AnnData.obs` annotations:
 
         - `'reprogramming_day'` - time-point information.
@@ -227,7 +227,7 @@ def reprogramming_schiebinger(
     Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells at 39 time points from \
     :cite:`schiebinger:19`.
 
-    scRNA-seq dataset comprising `236 285` cell recorded using 10X Chromium
+    sc-RNA-seq dataset comprising `236 285` cell recorded using 10X Chromium
     at 39 time points spanning days 0-18 past reprogramming initiation.
 
     Contains total-counts normalized, log-transformed counts and low-dimensional embedding coordinates (force-directed).
@@ -262,7 +262,7 @@ def zebrafish(
     """
     Zebrafish embryogenesis assayed using drop-seq, restricted to the axial mesoderm lineage from :cite:`farrell:18`.
 
-    scRNA-seq time-series dataset comprising `2434` cells which contains 12 time-points spanning 3.3-12 hours
+    sc-RNA-seq time-series dataset comprising `2434` cells which contains 12 time-points spanning 3.3-12 hours
     past fertilization.
 
     Parameters

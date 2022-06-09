@@ -58,9 +58,10 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @property
     @d.get_summary(base="tse_term_states")
     def terminal_states(self) -> Optional[pd.Series]:
-        """Categorical annotation of terminal states.
+        """
+        Categorical annotation of terminal states.
 
-        By default, all cells in transient cells will be labelled as `NaN`.
+        By default, all cells in transient cells will be labeled as `NaN`.
         """
         return self._term_states
 

@@ -144,6 +144,7 @@ spelling_filters = [
     "enchant.tokenize.URLFilter",
     "enchant.tokenize.EmailFilter",
     "enchant.tokenize.MentionFilter",
+    "docs.source.utils.ModnameFilter",
 ]
 
 # nbsphinx

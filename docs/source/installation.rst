@@ -2,7 +2,7 @@ Installation
 ============
 CellRank requires Python version >= 3.7 to run. We recommend using Miniconda_ to manage the environments.
 
-Bioconda
+Anaconda
 ~~~~~~~~
 CellRank can be installed via::
 
@@ -42,7 +42,7 @@ CellRank works without these as well, however, if you would like to apply it to 
 we recommend you install them.
 
 Below, we give details for installing both `PETSc`_ and `SLEPc`_, in case you've had any issues when installing them
-through `PyPI`_ or `Bioconda`_::
+through `PyPI`_ or `Anaconda`_::
 
     # note: conda alternatives are denoted by alt.
 
@@ -62,7 +62,7 @@ through `PyPI`_ or `Bioconda`_::
     pip install --user slepc  # alt.: conda install -c conda-forge slepc
     pip install --user slepc4py  # alt.: conda install -c conda-forge slepc4py
 
-During installation of petsc, petsc4py, slepc, and slepc4py the following
+During installation of *petsc*, *petsc4py*, *slepc*, and *slepc4py* the following
 error might appear several times::
 
     ERROR: Failed building wheel for [insert package name here]
@@ -84,7 +84,7 @@ To run the tutorials in a notebook locally, please install::
    pip install notebook
 
 and run ``jupyter notebook`` in the terminal. If you get the error ``Not a directory: 'xdg-settings'``,
-use ``jupyter notebook --no-browser`` instead and open the url manually (or use this
+use ``jupyter notebook --no-browser`` instead and open the URL manually (or use this
 `bugfix <https://github.com/jupyter/notebook/issues/3746#issuecomment-444957821>`_). Alternatively,
 you can run all tutorials interactively directly in your browser using `binder`_. Just click the
 binder button at the top of each tutorial.
