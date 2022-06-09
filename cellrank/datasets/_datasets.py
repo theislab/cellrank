@@ -268,7 +268,10 @@ def bone_marrow(
     **kwargs: Any,
 ) -> AnnData:
     """
-    TODO.
+    sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.
+
+    This dataset contains raw spliced and unspliced counts estimated using *velocyto* :cite:`manno:18`.
+    Furthermore, the dataset also contains a precomputed *Palantir* pseudotime :cite:`setty:19`.
 
     Parameters
     ----------
