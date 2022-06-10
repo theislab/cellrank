@@ -118,6 +118,7 @@ todo_include_todos = False
 # theme
 html_theme = "furo"
 html_static_path = ["_static"]
+html_logo = "_static/img/logo.png"
 html_css_files = ["css/override.css", "css/sphinx_gallery.css"]
 html_show_sphinx = False
 html_show_sourcelink = True
