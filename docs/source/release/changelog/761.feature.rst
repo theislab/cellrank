@@ -1,1 +1,1 @@
-Update CytoTRACE calculation to check inf vals
+Update CytoTRACE calculation to check infinite values.

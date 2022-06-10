@@ -21,7 +21,7 @@ Features
   `contributing guide <https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst>`_,
   `PR 522 <https://github.com/theislab/cellrank/pull/522>`_.
 - Rename ``cellrank.tl.kernels.PalantirKernel`` to :class:`cellrank.tl.kernels.PseudotimeKernel` and add
-  hard thresholding scheme inspired by :cite:`setty:19`, a soft thresholding scheme inspired by :cite:`stassen:21` and
+  hard threshold scheme inspired by :cite:`setty:19`, a soft threshold scheme inspired by :cite:`stassen:21` and
   a custom scheme when computing the transition matrix, see e.g. :class:`cellrank.tl.kernels.SoftThresholdScheme`
   `PR 514 <https://github.com/theislab/cellrank/pull/514>`_.
 - Add more flexibility to :class:`cellrank.tl.kernels.ConnectivityKernel`, allowing it to use any cell-cell similarities

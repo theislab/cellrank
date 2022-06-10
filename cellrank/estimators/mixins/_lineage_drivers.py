@@ -391,7 +391,7 @@ class LinDriversMixin(AbsProbsMixin):
         Notes
         -----
         This plot is based on the following
-        `notebook <https://github.com/theislab/gastrulation_analysis/blob/main/6_cellrank.ipynb>`_ by Maren Büttner.
+        `notebook <https://github.com/theislab/gastrulation_analysis/blob/main/6_cellrank.ipynb>`_ by *Maren Büttner*.
         """
         from cellrank.pl._utils import _position_legend
 
