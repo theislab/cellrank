@@ -228,10 +228,10 @@ def reprogramming_schiebinger(
 
     Parameters
     ----------
+    %(dataset.parameters)s
     subset_to_serum
         Whether to return the full object or subsetted to the serum condition.
-
-    %(dataset.parameters)s
+        This subset also contains the pre-computed transition matrix.
 
     Returns
     -------
@@ -239,16 +239,14 @@ def reprogramming_schiebinger(
 
     Notes
     -----
-    The dataset has approximately 1.4GiB.
+    The full dataset has approximately 1.4GiB.
     """
-    if subset_to_serum:
-        return _load_dataset_from_url(
-            path, *_datasets["reprogramming_schiebinger_serum_subset"], **kwargs
-        )
-    else:
-        return _load_dataset_from_url(
-            path, *_datasets["reprogramming_schiebinger"], **kwargs
-        )
+    key = (
+        "reprogramming_schiebinger_serum_subset"
+        if subset_to_serum
+        else "reprogramming_schiebinger"
+    )
+    return _load_dataset_from_url(path, *_datasets[key], **kwargs)
 
 
 @d.dedent
