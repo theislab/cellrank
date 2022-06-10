@@ -18,6 +18,7 @@ __all__ = (
     "reprogramming_morris",
     "reprogramming_schiebinger",
     "zebrafish",
+    "bone_marrow",
 )
 
 
@@ -27,32 +28,17 @@ class ReprogrammingSubset(ModeEnum):
     K85 = "85k"
 
 
+# fmt: off
 _datasets = {
-    "pancreas": (
-        "https://ndownloader.figshare.com/files/25060877",
-        (2531, 27998),
-    ),
-    "pancreas_preprocessed": (
-        "https://ndownloader.figshare.com/files/25030028",
-        (2531, 2000),
-    ),
-    "lung": (
-        "https://ndownloader.figshare.com/files/25038224",
-        (24882, 24051),
-    ),
-    "reprogramming_morris": (
-        "https://ndownloader.figshare.com/files/25503773",
-        (104679, 22630),
-    ),
-    "zebrafish": (
-        "https://ndownloader.figshare.com/files/27265280",
-        (2434, 23974),
-    ),
-    "reprogramming_schiebinger": (
-        "https://ndownloader.figshare.com/files/28618734",
-        (236285, 19089),
-    ),
+    "pancreas": ("https://figshare.com/ndownloader/files/25060877", (2531, 27998)),
+    "pancreas_preprocessed": ("https://figshare.com/ndownloader/files/25030028", (2531, 2000)),
+    "lung": ("https://figshare.com/ndownloader/files/25038224", (24882, 24051)),
+    "reprogramming_morris": ("https://figshare.com/ndownloader/files/25503773", (104679, 22630)),
+    "zebrafish": ("https://figshare.com/ndownloader/files/27265280", (2434, 23974)),
+    "reprogramming_schiebinger": ("https://figshare.com/ndownloader/files/28618734", (236285, 19089)),
+    "bone_marrow": ("https://figshare.com/ndownloader/files/35826944", (5780, 27876)),
 }
+# fmt: on
 
 
 def _load_dataset_from_url(
@@ -274,3 +260,25 @@ def zebrafish(
     %(adata)s
     """
     return _load_dataset_from_url(path, *_datasets["zebrafish"], **kwargs)
+
+
+@d.dedent
+def bone_marrow(
+    path: Union[str, Path] = "datasets/bone_marrow.h5ad",
+    **kwargs: Any,
+) -> AnnData:
+    """
+    sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.
+
+    This dataset contains raw spliced and unspliced counts estimated using *velocyto* :cite:`manno:18`.
+    Furthermore, the dataset also contains a precomputed *Palantir* pseudotime :cite:`setty:19`.
+
+    Parameters
+    ----------
+    %(dataset.parameters)s
+
+    Returns
+    -------
+    %(adata)s
+    """
+    return _load_dataset_from_url(path, *_datasets["bone_marrow"], **kwargs)
