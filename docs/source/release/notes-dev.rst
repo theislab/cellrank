@@ -1,4 +1,4 @@
-CellRank dev (2022-06-09)
+CellRank dev (2022-06-10)
 =========================
 
 Features
@@ -33,6 +33,9 @@ Features
 
 - Allow local block-diagonal connectivities in :class:`cellrank.tl.kernels.TransportMapKernel`. Rename ``last_time_point`` argument to ``self_transitions`` and add ``conn_weight``. ``self_transitions`` can also be applied to specific diagonal blocks only.
   `#828 <https://github.com/theislab/cellrank/pull/828>`__
+
+- Add :func:`cellrank.datasets.bone_marrow`.
+  `#886 <https://github.com/theislab/cellrank/pull/886>`__
 
 
 Bugfixes
