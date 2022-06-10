@@ -4,7 +4,7 @@ CellRank dev (2022-06-10)
 Features
 --------
 
-- Update CytoTRACE calculation to check inf values.
+- Update CytoTRACE calculation to check infinite values.
   `#761 <https://github.com/theislab/cellrank/pull/761>`__
 
 - Refactor :class:`cellrank.tl.kernels.TransportMapKernel` for easier definition of extensions.
@@ -78,3 +78,6 @@ Documentation
 
 - Adds references to the ``bibtex`` file.
   `#883 <https://github.com/theislab/cellrank/pull/883>`__
+
+- Add ``furo`` theme based on ``scvi-tools``.
+  `#885 <https://github.com/theislab/cellrank/pull/885>`__
