@@ -75,7 +75,7 @@ def cluster_trends(
     """
     Cluster and plot gene expression trends within a lineage.
 
-    This function is based on Palantir, see :cite:`setty:19`. It can be used to discover modules of genes that drive
+    This function is based on *Palantir* :cite:`setty:19`. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential
     lineage drivers.
 

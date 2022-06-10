@@ -1,39 +1,69 @@
-:github_url: {{ fullname | modurl }}
+.. taken from https://github.com/scverse/scvi-tools/blob/master/docs/_templates/autosummary/class.rst
 
-{{ fullname | escape | underline}}
+{{ fullname | escape | underline }}
 
 .. currentmodule:: {{ module }}
-
 .. autoclass:: {{ objname }}
 
-   {% block attributes %}
-   {% if attributes %}
-   .. rubric:: Attributes
+{% block attributes %}
+{% if attributes %}
 
-   .. autosummary::
-      :toctree: .
-   {% for item in attributes %}
-      ~{{ fullname }}.{{ item }}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
+Attributes table
+~~~~~~~~~~~~~~~~
+.. autosummary::
 
-   {% block methods %}
-   {% if methods %}
-   .. rubric:: Methods
+{% for item in attributes %}
+    ~{{ fullname }}.{{ item }}
 
-   .. autosummary::
-      :toctree: .
-   {% for item in methods %}
-      {%- if item != '__init__' %}
-      ~{{ fullname }}.{{ item }}
-      {%- endif -%}
-   {%- endfor %}
-   {% endif %}
-   {% endblock %}
+{% endfor %}
+{% endif %}
+{% endblock %}
 
-   .. _sphx_glr_backref_{{fullname}}:
+{% block methods %}
+{% if methods %}
 
-.. minigallery:: {{ fullname }}
-   :add-heading: Examples
-   :heading-level: -
+Methods table
+~~~~~~~~~~~~~
+.. autosummary::
+
+{% for item in methods %}
+    {% if item != '__init__' %}
+    ~{{ fullname }}.{{ item }}
+    {% endif %}
+
+{% endfor %}
+{% endif %}
+{% endblock %}
+
+{% block attributes_documentation %}
+{% if attributes %}
+
+Attributes
+~~~~~~~~~~
+{% for item in attributes %}
+
+{{ item | escape | underline(line='^') }}
+.. autoattribute:: {{ [objname, item] | join(".") }}
+
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block methods_documentation %}
+{% if methods %}
+
+Methods
+~~~~~~~
+
+{% for item in methods %}
+{% if item != '__init__' %}
+
+{{ item | escape | underline(line='^') }}
+.. automethod:: {{ [objname, item] | join(".") }}
+
+{% endif %}
+{% endfor %}
+
+{% endif %}
+{% endblock %}

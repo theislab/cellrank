@@ -1,4 +1,4 @@
-|PyPI| |Bioconda| |Downloads| |Discourse| |CI| |Notebooks| |Docs| |Codecov|
+|PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
 
 CellRank for directed single-cell fate mapping
 ==============================================
@@ -7,7 +7,15 @@ CellRank for directed single-cell fate mapping
    :width: 600px
    :align: center
 
-.. include:: contributors.rst
+.. sidebar:: Key Contributors
+
+    * `Marius Lange`_: lead developer, initial CellRank conception, maintainer
+    * `Michal Klein`_: senior developer, design & architecture, maintainer
+    * `Philipp Weiler`_: developer
+
+.. _Marius Lange: https://twitter.com/MariusLange8
+.. _Michal Klein: https://github.com/michalk8
+.. _Philipp Weiler: https://twitter.com/PhilippWeiler7
 
 **CellRank** is a toolkit to uncover cellular dynamics based on Markov state modeling of single-cell data. It contains
 two main modules: `kernels`_ compute cell-cell transition probabilities and `estimators`_ generate hypothesis based on
@@ -25,11 +33,11 @@ or fate-informed `circular embeddings`_, to name just a few.
 CellRank scales to large cell numbers, is fully compatible with `scanpy`_ and `scvelo`_ and is easy to use.
 
 Manuscript
-^^^^^^^^^^
+----------
 Please check out our manuscript :cite:`lange:22` in **Nature Methods** to learn more.
 
 Getting started with CellRank
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------
 If you're new to CellRank, make sure to go though the `basic tutorial`_ which introduces you to CellRank's high-level
 API. Most biological systems require a bit more control, so be sure to check out the `kernels and estimators tutorial`_
 which allows to unlock the full power of CellRank. If you want to see individual functions in action, visit our
@@ -39,7 +47,7 @@ To use CellRank without RNA velocity information, check out the `beyond RNA velo
 `time-series tutorial`_.
 
 CellRank's key applications
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 - compute initial & terminal as well as intermediate `macrostates`_ of your biological system
 - infer `fate probabilities`_ towards the terminal states for each individual cell
 - visualize `gene expression trends`_ along specific lineages while accounting for the continuous nature of
@@ -47,20 +55,20 @@ CellRank's key applications
 - identify potential `driver genes`_ for each identified cellular trajectory
 
 Why is it called "CellRank"?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+----------------------------
 CellRank **does not** rank cells, we gave the package this name because just like Google's original `PageRank`_
 algorithm, it works with Markov chains to aggregate relationships between individual objects (cells vs. websites)
 to learn about more global properties of the underlying dynamics (initial & terminal states and fate probabilities vs.
 website relevance).
 
 Support
-^^^^^^^
+-------
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_, send
 us an `email <mailto:info@cellrank.org>`_ or `tweet`_ if you encounter a bug, need our help or just want to make a
 comment/suggestion.
 
 Contributing
-^^^^^^^^^^^^
+------------
 We actively encourage any contribution! To get started, please check out both the `contribution guide`_ as well as the
 `external API`_. CellRank's modular structure makes it easy to contribute, be it a new method to compute cell-cell
 transition probabilities (`kernels`_), a new way to analyze a transition matrix (`estimators`_) or an addition to the
@@ -71,33 +79,29 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
 .. toctree::
     :caption: General
-    :maxdepth: 2
+    :maxdepth: 3
     :hidden:
 
     installation
     api
-    external_api
-    classes
+    developer_api
     release_notes
+    contributing
     references
-
-.. toctree::
-   :caption: Gallery
-   :maxdepth: 2
-   :hidden:
-
-   auto_examples/index.rst
+    GitHub <https://github.com/theislab/cellrank>
+    Discourse <https://discourse.scverse.org/c/ecosytem/cellrank/40>
 
 .. toctree::
    :caption: Tutorials
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
 
-   cellrank_basics
-   kernels_and_estimators
-   beyond_rna_velocity
-   real_time
-   creating_new_kernel
+   notebooks/tutorials/cellrank_basics
+   notebooks/tutorials/cellrank_meets_pseudotime
+   notebooks/tutorials/kernels_and_estimators
+   notebooks/tutorials/beyond_rna_velocity
+   notebooks/tutorials/real_time
+   notebooks/tutorials/creating_new_kernel
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
     :target: https://pypi.org/project/cellrank
@@ -110,10 +114,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. |Downloads| image:: https://pepy.tech/badge/cellrank
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
-
-.. |Discourse| image:: https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org
-    :target: https://discourse.scverse.org/
-    :alt: Discourse
 
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/master
     :target: https://github.com/theislab/cellrank/actions

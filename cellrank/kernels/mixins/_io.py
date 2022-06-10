@@ -91,7 +91,7 @@ class IOMixin:
         fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False
     ) -> "IOMixin":
         """
-        Deserialize self from a file.
+        De-serialize self from a file.
 
         Parameters
         ----------
@@ -105,7 +105,7 @@ class IOMixin:
 
         Returns
         -------
-        The deserialized object.
+        The de-serialized object.
         """
 
         with open(fname, "rb") as fin:
