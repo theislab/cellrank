@@ -35,14 +35,13 @@ p.rubric {
 }
 
 
-  /* adapted from https://github.com/dask/dask-sphinx-theme/blob/main/dask_sphinx_theme/static/css/nbsphinx.css */
-
+/* adapted from https://github.com/dask/dask-sphinx-theme/blob/main/dask_sphinx_theme/static/css/nbsphinx.css */
 .nbinput .prompt,
 .nboutput .prompt {
-      display: none;
+    display: none;
 }
 .nboutput .stderr{
-      display: none;
+    display: none;
 }
 
 div.nblast.container {
@@ -68,7 +67,11 @@ div.nbinput.container div.input_area div[class*="highlight"] > pre {
 }
 
 p.topic-title {
-  margin-top: 0;
+    margin-top: 0;
+}
+
+div.output_area > img {
+    height: auto !important;
 }
 
 
@@ -76,6 +79,7 @@ p.topic-title {
 li.toctree-l3 {
     font-size: 81.25% !important;
 }
+
 li.toctree-l4 {
     font-size: 75% !important;
 }
