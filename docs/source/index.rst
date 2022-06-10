@@ -86,7 +86,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
    :hidden:
 
    notebooks/tutorials/cellrank_basics
-   notebooks/tutorials/cellrank_meets_pseudotime2
+   notebooks/tutorials/cellrank_meets_pseudotime
    notebooks/tutorials/kernels_and_estimators
    notebooks/tutorials/beyond_rna_velocity
    notebooks/tutorials/real_time
