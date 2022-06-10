@@ -3,7 +3,7 @@ Installation
 CellRank requires Python version >= 3.7 to run. We recommend using Miniconda_ to manage the environments.
 
 Anaconda
-~~~~~~~~
+--------
 CellRank can be installed via::
 
     conda install -c conda-forge -c bioconda cellrank
@@ -14,7 +14,7 @@ If an error occurs during ``conda install -c conda-forge -c bioconda cellrank-kr
 Dependencies_ section below.
 
 PyPI
-~~~~
+----
 CellRank is also available on PyPI::
 
     pip install cellrank
@@ -26,13 +26,13 @@ CellRank is also available on PyPI::
 If an error occurs during ``pip install 'cellrank[krylov]'``, please consult the Dependencies_ section below.
 
 Development Version
-~~~~~~~~~~~~~~~~~~~
+-------------------
 To stay up-to-date with the newest version, run::
 
     pip install git+https://github.com/theislab/cellrank@master
 
 Dependencies
-~~~~~~~~~~~~
+------------
 Some of the inference tasks that CellRank performs can be broken down to linear algebra problems.
 For example, we solve linear systems to compute fate probabilities and we compute partial Schur decompositions and
 find metastable states. For these computations to be scalable, we rely on highly optimized libraries which make use
@@ -78,7 +78,7 @@ tutorial explaining the installation.
 If after reading this, you still can't proceed with the installation, feel free to open a `GitHub issue`_.
 
 Jupyter Notebook
-~~~~~~~~~~~~~~~~
+----------------
 To run the tutorials in a notebook locally, please install::
 
    pip install notebook

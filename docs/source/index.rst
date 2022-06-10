@@ -1,4 +1,4 @@
-|PyPI| |Bioconda| |Downloads| |Discourse| |CI| |Notebooks| |Docs| |Codecov|
+|PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
 
 CellRank for directed single-cell fate mapping
 ==============================================
@@ -7,7 +7,15 @@ CellRank for directed single-cell fate mapping
    :width: 600px
    :align: center
 
-.. include:: contributors.rst
+.. sidebar:: Key Contributors
+
+    * `Marius Lange`_: lead developer, initial CellRank conception, maintainer
+    * `Michal Klein`_: senior developer, design & architecture, maintainer
+    * `Philipp Weiler`_: developer
+
+.. _Marius Lange: https://twitter.com/MariusLange8
+.. _Michal Klein: https://github.com/michalk8
+.. _Philipp Weiler: https://twitter.com/PhilippWeiler7
 
 **CellRank** is a toolkit to uncover cellular dynamics based on Markov state modeling of single-cell data. It contains
 two main modules: `kernels`_ compute cell-cell transition probabilities and `estimators`_ generate hypothesis based on
@@ -76,9 +84,12 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 
     installation
     api
-    external_api
+    developer_api
     release_notes
+    contributing
     references
+    GitHub <https://github.com/theislab/cellrank>
+    Discourse <https://discourse.scverse.org/c/ecosytem/cellrank/40>
 
 .. toctree::
    :caption: Tutorials
@@ -103,10 +114,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. |Downloads| image:: https://pepy.tech/badge/cellrank
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
-
-.. |Discourse| image:: https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org
-    :target: https://discourse.scverse.org/
-    :alt: Discourse
 
 .. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/master
     :target: https://github.com/theislab/cellrank/actions
