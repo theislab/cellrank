@@ -91,6 +91,7 @@ Datasets
     datasets.reprogramming_schiebinger
     datasets.zebrafish
     datasets.pancreas_preprocessed
+    datasets.bone_marrow
 
 .. _scvelo: https://scvelo.readthedocs.io/
 .. _velocyto: http://velocyto.org/
