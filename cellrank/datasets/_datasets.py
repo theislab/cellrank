@@ -36,6 +36,7 @@ _datasets = {
     "reprogramming_morris": ("https://figshare.com/ndownloader/files/25503773", (104679, 22630)),
     "zebrafish": ("https://figshare.com/ndownloader/files/27265280", (2434, 23974)),
     "reprogramming_schiebinger": ("https://figshare.com/ndownloader/files/28618734", (236285, 19089)),
+    "reprogramming_schiebinger_serum_subset": ("https://figshare.com/ndownloader/files/35858033", (165892, 19089)),
     "bone_marrow": ("https://figshare.com/ndownloader/files/35826944", (5780, 27876)),
 }
 # fmt: on
@@ -207,7 +208,9 @@ def reprogramming_morris(
 
 @d.dedent
 def reprogramming_schiebinger(
-    path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad", **kwargs: Any
+    path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad",
+    subset_to_serum: bool = False,
+    **kwargs: Any,
 ) -> AnnData:
     """
     Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells at 39 time points from \
@@ -226,6 +229,9 @@ def reprogramming_schiebinger(
     Parameters
     ----------
     %(dataset.parameters)s
+    subset_to_serum
+        Whether to return the full object or subsetted to the serum condition.
+        This subset also contains the pre-computed transition matrix.
 
     Returns
     -------
@@ -233,11 +239,14 @@ def reprogramming_schiebinger(
 
     Notes
     -----
-    The dataset has approximately 1.4GiB.
+    The full dataset has approximately 1.4GiB.
     """
-    return _load_dataset_from_url(
-        path, *_datasets["reprogramming_schiebinger"], **kwargs
+    key = (
+        "reprogramming_schiebinger_serum_subset"
+        if subset_to_serum
+        else "reprogramming_schiebinger"
     )
+    return _load_dataset_from_url(path, *_datasets[key], **kwargs)
 
 
 @d.dedent
