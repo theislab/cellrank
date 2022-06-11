@@ -49,8 +49,8 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     def __init__(
         self,
         adata: AnnData,
+        time_key: str,
         backward: bool = False,
-        time_key: str = "dpt_pseudotime",
         **kwargs: Any,
     ):
         super().__init__(
@@ -60,7 +60,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
             **kwargs,
         )
 
-    def _read_from_adata(self, time_key: str = "dpt_pseudotime", **kwargs: Any) -> None:
+    def _read_from_adata(self, time_key: str, **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
         # fmt: off
         self._time_key = time_key

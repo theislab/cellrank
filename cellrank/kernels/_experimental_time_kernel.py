@@ -37,8 +37,8 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
     def __init__(
         self,
         adata: AnnData,
+        time_key: str,
         backward: bool = False,
-        time_key: str = "exp_time",
         **kwargs: Any,
     ):
         super().__init__(
@@ -49,7 +49,7 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
         )
 
     def _read_from_adata(
-        self, time_key: str = "exp_time", cmap: str = "gnuplot", **kwargs: Any
+        self, time_key: str, cmap: str = "gnuplot", **kwargs: Any
     ) -> None:
         super()._read_from_adata(**kwargs)
 

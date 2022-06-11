@@ -91,14 +91,14 @@ class WOTKernel(Kernel, error=_error):
     def __init__(
         self,
         adata: AnnData,
+        time_key: str,
         backward: bool = False,
-        time_key: str = "exp_time",
         **kwargs: Any,
     ):
         super().__init__(
             adata,
-            backward=backward,
             time_key=time_key,
+            backward=backward,
             **kwargs,
         )
 
