@@ -1,4 +1,4 @@
-CellRank dev (2022-06-10)
+CellRank dev (2022-06-11)
 =========================
 
 Features
@@ -36,6 +36,9 @@ Features
 
 - Add :func:`cellrank.datasets.bone_marrow`.
   `#886 <https://github.com/theislab/cellrank/pull/886>`__
+
+- Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
+  `#890 <https://github.com/theislab/cellrank/pull/890>`__
 
 
 Bugfixes
