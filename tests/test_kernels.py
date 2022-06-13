@@ -790,7 +790,9 @@ class TestKernelCopy:
         assert ck1.backward == ck2.backward
 
     def test_copy_palantir_kernel(self, adata: AnnData):
-        pk1 = PseudotimeKernel(adata).compute_transition_matrix()
+        pk1 = PseudotimeKernel(
+            adata, time_key="dpt_pseudotime"
+        ).compute_transition_matrix()
         pk2 = pk1.copy()
 
         np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)
@@ -1085,12 +1087,12 @@ class TestComputeProjection:
 
 class TestPseudotimeKernelScheme:
     def test_invalid_scheme(self, adata: AnnData):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         with pytest.raises(ValueError, match="foo"):
             pk.compute_transition_matrix(threshold_scheme="foo")
 
     def test_invalid_custom_scheme(self, adata: AnnData):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         with pytest.raises(ValueError, match="Expected row of shape"):
             pk.compute_transition_matrix(
                 threshold_scheme=lambda cpt, npt, ndist: np.ones(
@@ -1099,7 +1101,7 @@ class TestPseudotimeKernelScheme:
             )
 
     def test_custom_scheme(self, adata: AnnData):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         pk.compute_transition_matrix(
             threshold_scheme=lambda cpt, npt, ndist: np.ones(
                 (len(ndist)), dtype=np.float64
@@ -1112,7 +1114,7 @@ class TestPseudotimeKernelScheme:
 
     @pytest.mark.parametrize("scheme", ["hard", "soft"])
     def test_scheme(self, adata: AnnData, scheme: str):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         pk.compute_transition_matrix(
             threshold_scheme=scheme, frac_to_keep=0.3, b=10, nu=0.5
         )
