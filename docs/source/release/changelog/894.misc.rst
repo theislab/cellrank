@@ -1,0 +1,1 @@
+Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
