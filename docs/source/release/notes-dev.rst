@@ -1,4 +1,4 @@
-CellRank dev (2022-06-11)
+CellRank dev (2022-06-13)
 =========================
 
 Features
@@ -71,6 +71,9 @@ Miscellaneous
 
 - Fix PETSc/SLEPc in CI for Linux. For now, macOS PETSc/SLEPc remains disabled.
   `#850 <https://github.com/theislab/cellrank/pull/850>`__
+
+- Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
+  `#894 <https://github.com/theislab/cellrank/pull/894>`__
 
 
 Documentation
