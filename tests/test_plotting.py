@@ -3425,7 +3425,7 @@ class TestProjectionEmbedding:
     def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(
         self, adata: AnnData, fpath: str
     ):
-        ptk = PseudotimeKernel(adata)
+        ptk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         ptk.compute_transition_matrix(threshold_scheme="hard", frac_to_keep=0.3)
         ptk.plot_projection(dpi=DPI, save=fpath)
 
@@ -3433,7 +3433,7 @@ class TestProjectionEmbedding:
     def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(
         self, adata: AnnData, fpath: str
     ):
-        ptk = PseudotimeKernel(adata)
+        ptk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         ptk.compute_transition_matrix(threshold_scheme="soft", frac_to_keep=0.3)
         ptk.plot_projection(dpi=DPI, save=fpath)
 
