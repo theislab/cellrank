@@ -105,7 +105,7 @@ class SchurMixin:
         method: Literal["krylov", "brandts"] = "krylov",
         which: Literal["LR", "LM"] = "LR",
         alpha: float = 1.0,
-    ):
+    ) -> "SchurMixin":
         """
         Compute Schur decomposition.
 
@@ -127,7 +127,7 @@ class SchurMixin:
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and just updates the following fields:
 
             - :attr:`schur_vectors` - %(schur_vectors.summary)s
             - :attr:`schur_matrix` -  %(schur_matrix.summary)s
@@ -200,6 +200,7 @@ class SchurMixin:
             params=self._create_params(),
             time=start,
         )
+        return self
 
     @d.dedent
     def plot_schur_matrix(

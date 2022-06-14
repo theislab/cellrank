@@ -134,7 +134,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
-    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
+    def rename_terminal_states(
+        self, new_names: Mapping[str, str]
+    ) -> "TermStatesEstimator":
         """
         Rename categories in :attr:`terminal_states`.
 
@@ -146,7 +148,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the names of:
+        Self and updates the following field:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
         """
@@ -188,6 +190,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             self.terminal_states_probabilities,
             log=False,
         )
+        return self
 
     def _set_categorical_labels(
         self,
@@ -286,7 +289,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return sg.ok
 
     @d.dedent
-    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+    def compute_terminal_states(
+        self, *args: Any, **kwargs: Any
+    ) -> "TermStatesEstimator":
         """
         Compute terminal states of the process.
 

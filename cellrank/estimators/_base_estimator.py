@@ -73,6 +73,40 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__()
 
+    @abstractmethod
+    def fit(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
+        """
+        Fit an estimator.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Self.
+        """
+
+    @abstractmethod
+    def predict(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
+        """
+        Run a prediction.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Self.
+        """
+
     def _set(
         self,
         attr: Optional[str] = None,
@@ -445,37 +479,3 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def params(self) -> Dict[str, Any]:
         """Estimator parameters."""
         return self._params
-
-    @abstractmethod
-    def fit(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
-        """
-        Fit an estimator.
-
-        Parameters
-        ----------
-        args
-            Positional arguments.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        Self.
-        """
-
-    @abstractmethod
-    def predict(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Run a prediction.
-
-        Parameters
-        ----------
-        args
-            Positional arguments.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        Nothing.
-        """
