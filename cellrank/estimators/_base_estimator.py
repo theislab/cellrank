@@ -432,11 +432,14 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def __copy__(self) -> "BaseEstimator":
         return self.copy(deep=False)
 
+    def _format_params(self) -> str:
+        return f"n={len(self)}, kernel={self.kernel!r}"
+
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}[n={len(self)}, kernel={repr(self.kernel)}]"
+        return f"{self.__class__.__name__}[{self._format_params()}]"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}[n={len(self)}, kernel={str(self.kernel)}]"
+        return repr(self)
 
     @property
     def params(self) -> Dict[str, Any]:

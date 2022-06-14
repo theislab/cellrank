@@ -311,3 +311,12 @@ class TermStatesEstimator(BaseEstimator, ABC):
     plot_terminal_states = register_plotter(
         discrete="terminal_states", colors="_term_states_colors"
     )
+
+    def _format_params(self) -> str:
+        fmt = super()._format_params()
+        n_ts = (
+            None
+            if self.terminal_states is None
+            else len(self.terminal_states.cat.categories)
+        )
+        return fmt + f", term_states={n_ts}"

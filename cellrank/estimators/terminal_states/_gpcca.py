@@ -1252,3 +1252,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             f"Adding `adata.obs[{key!r}]`\n       `adata.obs[{Key.uns.colors(key)!r}]`\n",
             time=time,
         )
+
+    def _format_params(self) -> str:
+        fmt = super()._format_params()
+        n_macro = (
+            None if self.macrostates is None else len(self.macrostates.cat.categories)
+        )
+        return fmt + f", macrostates={n_macro}"
