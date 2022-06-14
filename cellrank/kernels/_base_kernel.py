@@ -570,15 +570,15 @@ class Kernel(KernelExpression, ABC):
         return 1
 
     def __repr__(self) -> str:
-        return f"{'~' if self.backward and self._parent is None else ''}{self.__class__.__name__}"
-
-    def __str__(self) -> str:
         params_fmt = self._format_params()
         if params_fmt:
             return (
                 f"{'~' if self.backward and self._parent is None else ''}"
                 f"{self.__class__.__name__}[{params_fmt}]"
             )
+        return f"{'~' if self.backward and self._parent is None else ''}{self.__class__.__name__}"
+
+    def __str__(self) -> str:
         return repr(self)
 
 
