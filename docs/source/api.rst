@@ -36,6 +36,17 @@ Kernels are part of the low-level API and are used to estimate cell-to-cell tran
     kernels.CytoTRACEKernel
     kernels.PrecomputedKernel
 
+External Kernels
+----------------
+.. module:: cellrank.external
+.. currentmodule:: cellrank
+
+.. autosummary::
+    :toctree: api
+
+    external.kernels.StationaryOTKernel
+    external.kernels.WOTKernel
+
 Estimators
 ----------
 Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
@@ -50,7 +61,7 @@ Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
     estimators.CFLARE
 
 Plotting
-~~~~~~~~
+--------
 .. module:: cellrank.pl
 .. currentmodule:: cellrank
 
@@ -65,8 +76,7 @@ Plotting
     pl.aggregate_absorption_probabilities
 
 Models
-~~~~~~
-
+------
 .. module:: cellrank.models
 .. currentmodule:: cellrank
 
@@ -91,6 +101,7 @@ Datasets
     datasets.reprogramming_schiebinger
     datasets.zebrafish
     datasets.pancreas_preprocessed
+    datasets.bone_marrow
 
 .. _scvelo: https://scvelo.readthedocs.io/
 .. _velocyto: http://velocyto.org/

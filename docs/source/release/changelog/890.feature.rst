@@ -1,0 +1,1 @@
+Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.

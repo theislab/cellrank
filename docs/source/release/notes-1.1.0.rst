@@ -4,7 +4,7 @@ CellRank 1.1.0 (2020-11-17)
 Bugfixes
 --------
 
-- Fix not vendorizing correct :mod:`msmtools` which sometimes caused densification of a sparse matrix.
+- Fix not vendorizing correct :mod:`msmtools` which sometimes densified sparse matrix.
 - Bump scanpy version requirement to 1.6 to fix plotting `PR 444 <https://github.com/theislab/cellrank/pull/444>`_.
 
 Features
