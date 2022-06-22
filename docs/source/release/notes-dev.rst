@@ -90,3 +90,6 @@ Documentation
 
 - Add ``furo`` theme based on ``scvi-tools``.
   `#885 <https://github.com/theislab/cellrank/pull/885>`__
+
+- Fix ``RTD`` build - submodules.
+  `#901 <https://github.com/theislab/cellrank/pull/901>`__
