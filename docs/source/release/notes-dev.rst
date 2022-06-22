@@ -1,4 +1,4 @@
-CellRank dev (2022-06-13)
+CellRank dev (2022-06-22)
 =========================
 
 Features
@@ -61,6 +61,9 @@ Bugfixes
 
 - Fix :class:`cellrank.tl.Lineage` subsetting (non-existent overlapping keys) and refactor the implementation.
   `#861 <https://github.com/theislab/cellrank/pull/861>`__
+
+- Adds references to the docs
+  `#887 <https://github.com/theislab/cellrank/pull/887>`__
 
 
 Miscellaneous
