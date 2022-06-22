@@ -19,5 +19,9 @@ python:
         extra_requirements:
         -   docs
 
+submodules:
+    include: docs/source/notebooks
+
+
 formats:
 -   htmlzip
