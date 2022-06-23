@@ -92,18 +92,12 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     Discourse <https://discourse.scverse.org/c/ecosytem/cellrank/40>
 
 .. toctree::
-   :caption: Tutorials
-   :maxdepth: 3
-   :hidden:
+    :caption: Gallery
+    :maxdepth: 3
+    :hidden:
 
-   notebooks/tutorials/cellrank_basics
-   notebooks/tutorials/cellrank_meets_rna_velocity
-   notebooks/tutorials/cellrank_meets_pseudotime
-   notebooks/tutorials/cellrank_meets_cytotrace
-   notebooks/tutorials/kernels_and_estimators
-   notebooks/tutorials/beyond_rna_velocity
-   notebooks/tutorials/real_time
-   notebooks/tutorials/creating_new_kernel
+    tutorials
+    examples
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
     :target: https://pypi.org/project/cellrank
