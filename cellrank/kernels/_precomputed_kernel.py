@@ -40,6 +40,11 @@ class PrecomputedKernel(UnidirectionalKernel):
     backward
         Hint whether this is a forward, backward or a unidirectional kernel. Only used when ``object`` is
         :class:`anndata.AnnData`.
+
+    Notes
+    -----
+    If ``object`` is :class:`anndata.AnnData` and neither ``obsp_key`` nor ``backward`` is specified,
+    default forward and backward are tried and first one is used.
     """
 
     _SENTINEL = object()
