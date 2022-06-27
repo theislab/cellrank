@@ -100,7 +100,7 @@ class SchurMixin:
     @d.dedent
     def compute_schur(
         self: SchurProtocol,
-        n_components: int = 10,
+        n_components: int = 20,
         initial_distribution: Optional[np.ndarray] = None,
         method: Literal["krylov", "brandts"] = "krylov",
         which: Literal["LR", "LM"] = "LR",
