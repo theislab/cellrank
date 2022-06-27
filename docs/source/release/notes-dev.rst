@@ -1,4 +1,4 @@
-CellRank dev (2022-06-13)
+CellRank dev (2022-06-22)
 =========================
 
 Features
@@ -62,6 +62,9 @@ Bugfixes
 - Fix :class:`cellrank.tl.Lineage` subsetting (non-existent overlapping keys) and refactor the implementation.
   `#861 <https://github.com/theislab/cellrank/pull/861>`__
 
+- Adds references to the docs
+  `#887 <https://github.com/theislab/cellrank/pull/887>`__
+
 
 Miscellaneous
 -------------
@@ -87,3 +90,6 @@ Documentation
 
 - Add ``furo`` theme based on ``scvi-tools``.
   `#885 <https://github.com/theislab/cellrank/pull/885>`__
+
+- Fix ``RTD`` build - submodules.
+  `#901 <https://github.com/theislab/cellrank/pull/901>`__
