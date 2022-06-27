@@ -467,7 +467,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         return self.copy(deep=False)
 
     def _format_params(self) -> str:
-        return f"n={len(self)}, kernel={self.kernel!r}"
+        return f"n_obs={len(self)}, kernel={self.kernel!r}"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}[{self._format_params()}]"
