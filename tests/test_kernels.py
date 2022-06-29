@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Union, Callable, Optional
+from typing import Any, Type, Tuple, Union, Callable, Optional
 
 import pickle
 import pytest
@@ -41,7 +41,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import eye as speye
 from scipy.sparse import random as sprandom
-from scipy.sparse import spmatrix, isspmatrix_csr
+from scipy.sparse import issparse, spmatrix, isspmatrix_csr
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 _rtol = 1e-6
@@ -467,7 +467,7 @@ class TestKernel:
     def test_kernel_reads_correct_connectivities(
         self, adata: AnnData, key_added: Optional[str], clazz: type
     ):
-        if clazz == VelocityKernel and key_added == "foo":
+        if clazz is VelocityKernel and key_added == "foo":
             pytest.skip("`get_moments` in scVelo doesn't support specifying key")
         del adata.uns["neighbors"]
         del adata.obsp["connectivities"]
@@ -476,9 +476,9 @@ class TestKernel:
         sc.pp.neighbors(adata, key_added=key_added)
         kwargs = {"adata": adata, "conn_key": key_added}
 
-        if clazz == PseudotimeKernel:
+        if clazz is PseudotimeKernel:
             kwargs["time_key"] = "latent_time"
-        elif clazz == PrecomputedKernel:
+        elif clazz is PrecomputedKernel:
             adata.obsp["foo"] = np.eye(adata.n_obs)
             kwargs["transition_matrix"] = "foo"
         conn = (
@@ -1509,3 +1509,39 @@ class TestKernelIO:
                 assert k.adata is kernel.adata
 
         np.testing.assert_array_equal(k.transition_matrix.A, kernel.transition_matrix.A)
+
+    @pytest.mark.parametrize(
+        "clazz",
+        [
+            ConnectivityKernel,
+            VelocityKernel,
+            PseudotimeKernel,
+            CytoTRACEKernel,
+            PrecomputedKernel,
+            CustomKernel,
+        ],
+    )
+    def test_from_adata(self, adata: AnnData, clazz: Type[Kernel]):
+        kwargs, key = {}, "foo"
+        if clazz is PseudotimeKernel:
+            kwargs["time_key"] = "latent_time"
+        elif clazz is PrecomputedKernel:
+            adata.obsp["tmat"] = np.eye(adata.n_obs)
+            kwargs["obsp_key"] = "tmat"
+
+        k1 = clazz(adata, **kwargs)
+        if isinstance(k1, CytoTRACEKernel):
+            k1 = k1.compute_cytotrace()
+        k1 = k1.compute_transition_matrix()
+        k1.write_to_adata(key=key)
+
+        k2 = clazz.from_adata(adata, key=key)
+
+        assert k1.backward == k2.backward
+        assert k1.params == k2.params
+        if issparse(k1.transition_matrix):
+            np.testing.assert_almost_equal(
+                k1.transition_matrix.A, k2.transition_matrix.A
+            )
+        else:
+            np.testing.assert_almost_equal(k1.transition_matrix, k2.transition_matrix)
