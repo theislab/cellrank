@@ -1475,6 +1475,16 @@ class TestPrecomputedKernel:
 
         np.testing.assert_array_almost_equal(expected, actual.transition_matrix)
 
+    @pytest.mark.parametrize("backward", [False, True])
+    def test_precomputed_autodetection(self, adata: AnnData, backward: bool):
+        key = Key.uns.kernel(backward)
+        adata.obsp[key] = mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(adata)
+
+        assert pk.backward == backward
+        assert key in pk.params["origin"]
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
+
 
 class TestKernelIO:
     @pytest.mark.parametrize("copy", [False, True])
