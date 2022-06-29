@@ -1,0 +1,1 @@
+Prefer plotting macrostates/terminal in a discrete way.

@@ -1,4 +1,4 @@
-CellRank dev (2022-06-22)
+CellRank dev (2022-06-29)
 =========================
 
 Features
@@ -77,6 +77,9 @@ Miscellaneous
 
 - Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
   `#894 <https://github.com/theislab/cellrank/pull/894>`__
+
+- Prefer plotting macrostates/terminal in a discrete way.
+  `#914 <https://github.com/theislab/cellrank/pull/914>`__
 
 
 Documentation
