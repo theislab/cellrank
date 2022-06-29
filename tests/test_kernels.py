@@ -1040,7 +1040,7 @@ class TestVelocityScheme:
 class TestComputeProjection:
     def test_no_transition_matrix(self, adata: AnnData):
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
-            _ = cr.kernels.ConnectivityKernel(adata).plot_projection()
+            cr.kernels.ConnectivityKernel(adata).plot_projection()
 
     def test_no_basis(self, adata: AnnData):
         ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
@@ -1062,7 +1062,7 @@ class TestComputeProjection:
             ck.write_to_adata()
 
         assert adata.uns[Key.uns.kernel(ck.backward) + "_params"] == {
-            "init": {},
+            "init": {"check_connectivity": False, "conn_key": "connectivities"},
             "params": ck.params,
             "embeddings": ["umap"],
         }
