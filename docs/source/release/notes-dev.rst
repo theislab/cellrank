@@ -78,6 +78,9 @@ Miscellaneous
 - Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
   `#894 <https://github.com/theislab/cellrank/pull/894>`__
 
+- Fix not being able to use ``minChi`` in :meth:`cellrank.estimators.GPCCA.fit`. Also compute 20 Schur vectors by default.
+  `#913 <https://github.com/theislab/cellrank/pull/913>`__
+
 - Prefer plotting macrostates/terminal in a discrete way.
   `#914 <https://github.com/theislab/cellrank/pull/914>`__
 
