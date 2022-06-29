@@ -433,8 +433,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if isinstance(n_states, int) and n_states == 1:
             self.compute_eigendecomposition()
 
+        n = n_states if isinstance(n_states, int) else max(n_states)
+        # call explicitly because `compute_macrostates` doesn't handle the case
+        # when `minChi` is used for `n_states` and `self._gpcca` is uninitialized
+        self.compute_schur(n, **kwargs)
         self.compute_macrostates(
-            n_states=n_states, cluster_key=cluster_key, n_cells=n_cells, **kwargs
+            n_states=n_states, cluster_key=cluster_key, n_cells=n_cells
         )
 
         return self
