@@ -113,6 +113,7 @@ class PrecomputedKernel(UnidirectionalKernel):
 
         self._from_matrix(tmat, adata=adata, backward=backward, copy=copy)
         self.params["origin"] = f"adata.obsp[{obsp_key!r}]"
+        self._init_kwargs = {"obsp_key": obsp_key, "backward": backward}
 
     def _from_kernel(self, kernel: KernelExpression, copy: bool = False) -> None:
         if kernel.transition_matrix is None:
