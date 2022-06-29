@@ -75,6 +75,7 @@ class BidirectionalMixin(ABC):
                 f"Expected `backward` to be `bool`, found `{type(backward).__name__}`."
             )
         self._backward = backward
+        self._init_kwargs["backward"] = backward
 
     @abstractmethod
     def __invert__(self) -> "BidirectionalMixin":
