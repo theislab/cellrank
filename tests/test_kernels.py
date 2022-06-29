@@ -1062,6 +1062,7 @@ class TestComputeProjection:
             ck.write_to_adata()
 
         assert adata.uns[Key.uns.kernel(ck.backward) + "_params"] == {
+            "init": {},
             "params": ck.params,
             "embeddings": ["umap"],
         }
@@ -1397,7 +1398,7 @@ class TestPrecomputedKernel:
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
         assert "T_fwd_params" in pk.adata.uns.keys()
-        assert pk.adata.uns["T_fwd_params"] == {"params": pk.params}
+        assert pk.adata.uns["T_fwd_params"] == {"init": {}, "params": pk.params}
         np.testing.assert_array_equal(pk.adata.obsp["T_fwd"], pk.transition_matrix)
 
     def test_precomputed_different_adata(self, adata: AnnData):
