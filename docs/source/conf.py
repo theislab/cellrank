@@ -189,3 +189,7 @@ nbsphinx_prolog = r"""
 """.format(
     version=version, docname="{{ docname|e }}"
 )
+nbsphinx_thumbnails = {
+    "notebooks/tutorials/cellrank_basics": "_static/img/logo.png",
+    "notebooks/tutorials/beyond_rna_velocity": "_images/notebooks_tutorials_beyond_rna_velocity_19_0.png",
+}
