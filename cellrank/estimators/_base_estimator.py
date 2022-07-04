@@ -85,7 +85,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         shadow_only: bool = False,
     ) -> None:
         """
-        Set an attribute and optionally update ``obj[{key}]``.
+        Set an attribute and optionally update ``obj['{key}']``.
 
         Parameters
         ----------
@@ -93,12 +93,13 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
             Attribute to set. Only updated when we're not in the shadow. If `None`, don't update anything.
             See :attr:`_in_shadow` and ``obj`` for more information.
         obj
-            Object which to update with ``value`` alongside the ``attr`.
+            Object which to update with ``value`` alongside the ``attr``.
             Usually, an attribute of :attr:`adata` is passed here.
         key
             Key in ``obj`` to update with ``value``. Only used when ``obj != None``.
         value
-            Value to set. If `None` and ``key != None``, it removes the values under ``obj[key]``, if present.
+            Value to set. If `None` and ``key != None``, it removes the values under ``obj['{key}']``, if present.
+
         copy
             Whether to copy the ``value`` before setting it in ``obj``.
         shadow_only
@@ -135,21 +136,21 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
     def _get(
         self,
-        attr: str,
+        attr: Optional[str],
         obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
         where: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
-    ) -> None:
+    ) -> Any:
         """
         Get data from an object and set an attribute.
 
         Parameters
         ----------
         attr
-            Attribute to set.
+            Attribute to set. If `None`, return the value.
         obj
             Object from which to extract the data.
         key
@@ -185,6 +186,8 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                 raise TypeError(
                     f"Expected `.{attr}` to be of type `{dtype}`, found `{type(data).__name__}`."
                 )
+            if attr is None:
+                return data
             if copy:
                 data = copy_(data)
             setattr(self, attr, data)

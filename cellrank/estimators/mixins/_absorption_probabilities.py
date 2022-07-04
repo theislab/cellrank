@@ -263,7 +263,7 @@ class AbsProbsMixin:
 
         # process the current annotations according to `keys`
         term_states, colors = _process_series(
-            series=self.terminal_states, keys=keys, colors=self._term_states_colors
+            series=self.terminal_states, keys=keys, colors=self._term_states.colors
         )
         # warn in case only one state is left
         keys = list(term_states.cat.categories)

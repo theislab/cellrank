@@ -43,7 +43,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_terminal_states(use=2)
+            mc.compute_states(use=2)
 
     def test_compute_terminal_states_too_large_use(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -53,7 +53,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(use=1000)
+            mc.compute_states(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -62,7 +62,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
 
         assert is_categorical_dtype(mc.terminal_states)
         assert mc.terminal_states_probabilities is not None
@@ -80,7 +80,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         with pytest.raises(RuntimeError):
-            mc.rename_terminal_states({"foo": "bar"})
+            mc.rename_states({"foo": "bar"})
 
     def test_rename_terminal_states_invalid_old_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -89,9 +89,9 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         with pytest.raises(ValueError):
-            mc.rename_terminal_states({"foo": "bar"})
+            mc.rename_states({"foo": "bar"})
 
     def test_rename_terminal_states_invalid_new_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -100,9 +100,9 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.compute_states(use=2, method="kmeans")
         with pytest.raises(ValueError):
-            mc.rename_terminal_states({"0": "1"})
+            mc.rename_states({"0": "1"})
 
     def test_rename_terminal_states_try_joining_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -111,9 +111,9 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         with pytest.raises(ValueError):
-            mc.rename_terminal_states({"0, 1": "foo"})
+            mc.rename_states({"0, 1": "foo"})
 
     def test_rename_terminal_states_empty_mapping(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -122,10 +122,10 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
 
         orig_cats = list(mc.terminal_states.cat.categories)
-        mc.rename_terminal_states({})
+        mc.rename_states({})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, orig_cats)
 
@@ -136,8 +136,8 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
-        mc.rename_terminal_states({"0": "foo", "1": "bar"})
+        mc.compute_states(use=2, method="kmeans")
+        mc.rename_states({"0": "foo", "1": "bar"})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(
@@ -161,7 +161,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.compute_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -198,7 +198,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
@@ -219,7 +219,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.compute_states(use=2, method="kmeans")
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
@@ -242,7 +242,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
@@ -267,7 +267,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
@@ -289,7 +289,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(
@@ -309,7 +309,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         with pytest.raises(RuntimeError):
             mc.compute_lineage_drivers()
 
@@ -320,7 +320,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
@@ -332,7 +332,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -346,7 +346,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.compute_states(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -365,7 +365,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         mc.compute_absorption_probabilities()
 
         with pytest.raises(RuntimeError):
@@ -378,7 +378,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -392,7 +392,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -406,7 +406,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.compute_states(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
         mc.plot_lineage_drivers("0", use_raw=False)
@@ -419,7 +419,7 @@ class TestCFLARE:
 
         mc_fwd = cr.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_eigendecomposition()
-        mc_fwd.compute_terminal_states(use=3, method="kmeans")
+        mc_fwd.compute_states(use=3, method="kmeans")
 
         arcs = ["0", "2"]
         arc_colors = [
@@ -497,12 +497,12 @@ class TestCFLARE:
         mc_fwd.compute_eigendecomposition()
         key = Key.obs.term_states(mc_fwd.backward)
 
-        mc_fwd.compute_terminal_states(use=3)
+        mc_fwd.compute_states(use=3)
         original = np.array(adata.obs[key].copy())
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
-        mc_fwd.set_terminal_states({"foo": cells})
+        mc_fwd.set_states({"foo": cells})
 
         assert (adata.obs[key][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[key][~zero_mask]).all()
@@ -514,9 +514,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.set_terminal_states(
-            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
-        )
+        mc.set_states({"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]})
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
@@ -539,9 +537,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.set_terminal_states(
-            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
-        )
+        mc.set_states({"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]})
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))

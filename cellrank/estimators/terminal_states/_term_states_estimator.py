@@ -1,4 +1,5 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence, NamedTuple
+from typing_extensions import Literal
 
 from abc import ABC
 from types import MappingProxyType
@@ -15,6 +16,7 @@ from cellrank._utils._colors import (
     _convert_to_hex_colors,
     _create_categorical_colors,
 )
+from cellrank._utils._lineage import Lineage
 from cellrank.kernels._base_kernel import KernelExpression
 from cellrank.estimators.mixins._utils import (
     SafeGetter,
@@ -34,6 +36,16 @@ from matplotlib.colors import to_hex
 __all__ = ["TermStatesEstimator"]
 
 
+class StatesHolder(NamedTuple):
+    assignment: Optional[pd.Series] = None
+    probs: Optional[pd.Series] = None
+    colors: Optional[np.ndarray] = None
+    memberships: Optional[Lineage] = None
+
+    def set(self, **kwargs: Any) -> "StatesHolder":
+        return self._replace(**kwargs)
+
+
 @d.dedent
 class TermStatesEstimator(BaseEstimator, ABC):
     """
@@ -50,10 +62,8 @@ class TermStatesEstimator(BaseEstimator, ABC):
         **kwargs: Any,
     ):
         super().__init__(object=object, **kwargs)
-
-        self._term_states: Optional[pd.Series] = None
-        self._term_states_probs: Optional[pd.Series] = None
-        self._term_states_colors: Optional[np.ndarray] = None
+        self._init_states = StatesHolder()
+        self._term_states = StatesHolder()
 
     @property
     @d.get_summary(base="tse_term_states")
@@ -61,22 +71,38 @@ class TermStatesEstimator(BaseEstimator, ABC):
         """
         Categorical annotation of terminal states.
 
-        By default, all cells in transient cells will be labeled as `NaN`.
+        By default, all transient cells will be labeled as `NaN`.
         """
-        return self._term_states
+        return self._term_states.assignment
 
     @property
     @d.get_summary(base="tse_term_states_probs")
     def terminal_states_probabilities(self) -> Optional[pd.Series]:
         """Aggregated probability of cells to be in terminal states."""  # noqa: D401
-        return self._term_states_probs
+        return self._term_states.probs
+
+    @property
+    @d.get_summary(base="tse_term_states")
+    def initial_states(self) -> Optional[pd.Series]:
+        """
+        Categorical annotation of initial states.
+
+        By default, all transient cells will be labeled as `NaN`.
+        """
+        return self._init_states.assignment
+
+    @property
+    @d.get_summary(base="tse_term_states_probs")
+    def initial_states_probabilities(self) -> Optional[pd.Series]:
+        """Aggregated probability of cells to be in initial states."""  # noqa: D401
+        return self._init_states.probs
 
     @d.dedent
-    def set_terminal_states(
+    def set_states(
         self,
         labels: Union[pd.Series, Dict[str, Sequence[Any]]],
+        which: Literal["initial", "terminal"] = "terminal",
         cluster_key: Optional[str] = None,
-        add_to_existing: bool = False,
         **kwargs: Any,
     ) -> None:
         """
@@ -98,45 +124,36 @@ class TermStatesEstimator(BaseEstimator, ABC):
         cluster_key
             Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
             Each terminal state will be given the name and color corresponding to the cluster it mostly overlaps with.
-        add_to_existing
-            Whether the new terminal states should be added to the existing ones. Cells already assigned to a terminal
-            state will be re-assigned to the new terminal state if there's a conflict between old and new annotations.
-            This throws an error if no previous annotations corresponding to terminal states have been found.
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Nothing, just updates the following fields TODO(michalk8):
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
-        if add_to_existing:
-            existing = self.terminal_states
-            if existing is None:
-                raise RuntimeError(
-                    "Compute terminal states first as `.compute_terminal_states()` or "
-                    "set them manually as `.set_terminal_states()`."
-                )
-        else:
-            existing = None
-
         states, colors = self._set_categorical_labels(
             categories=labels,
             cluster_key=cluster_key,
-            existing=existing,
+            existing=None,
         )
-        self._write_terminal_states(
-            states,
-            colors,
+        self._write_states(
+            which,
+            states=states,
+            colors=colors,
             **kwargs,
         )
 
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
-    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
+    def rename_states(
+        self,
+        new_names: Mapping[str, str],
+        which: Literal["initial", "terminal"] = "terminal",
+    ) -> None:
         """
-        Rename categories in :attr:`terminal_states`.
+        Rename categories in :attr:`terminal_states` or :attr:`initial_states`.
 
         Parameters
         ----------
@@ -146,16 +163,16 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the names of:
+        Nothing, just updates the names of TODO(michalk8):
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
         """
-
-        term_states = self.terminal_states
-        if term_states is None:
+        backward = which == "initial"
+        states = self.initial_states if backward else self.terminal_states
+        if states is None:
             raise RuntimeError(
-                "Compute terminal states first as `.compute_terminal_states()` or "
-                "set them manually as `.set_terminal_states()`."
+                f"Compute {which} states first as `.compute_states(..., which={which!r})` or "
+                f"set them manually as `.set_states(..., which={which!r})`."
             )
 
         # fmt: off
@@ -164,30 +181,44 @@ class TermStatesEstimator(BaseEstimator, ABC):
         if not len(new_names):
             return
 
-        old_names = term_states.cat.categories
+        old_names = states.cat.categories
         new_names = {str(k): str(v) for k, v in new_names.items()}
         mask = np.isin(list(new_names.keys()), old_names)
         if not np.all(mask):
             invalid = sorted(np.array(list(new_names.keys()))[~mask])
-            raise ValueError(f"Invalid terminal states names: `{invalid}`. Valid names are: `{sorted(old_names)}`")
+            raise ValueError(f"Invalid {which} states names: `{invalid}`. Valid names are: `{sorted(old_names)}`")
 
         names_after_renaming = [new_names.get(n, n) for n in old_names]
         if len(set(names_after_renaming)) != len(old_names):
-            raise ValueError(f"After renaming, terminal states will no longer unique: `{names_after_renaming}`.")
+            raise ValueError(f"After renaming, {which} states will no longer unique: `{names_after_renaming}`.")
         # fmt: on
 
-        # GPCCA; alt. is to subclass
-        self._term_states = term_states.cat.rename_categories(new_names)
-        memberships = getattr(self, "terminal_states_memberships", None)
+        if backward:
+            self._init_states = self._init_states.set(
+                assignment=states.cat.rename_categories(new_names)
+            )
+            memberships = self._init_states.memberships
+            self._write_states(
+                which,
+                states=self.initial_states,
+                colors=self._init_states.colors,
+                probs=self.initial_states_probabilities,
+                log=False,
+            )
+        else:
+            self._term_states = self._term_states.set(
+                assignment=states.cat.rename_categories(new_names)
+            )
+            memberships = self._term_states.memberships
+            self._write_states(
+                which,
+                states=self.terminal_states,
+                colors=self._term_states.colors,
+                probs=self.terminal_states_probabilities,
+                log=False,
+            )
         if memberships is not None:
             memberships.names = [new_names.get(n, n) for n in memberships.names]
-
-        self._write_terminal_states(
-            self.terminal_states,
-            self._term_states_colors,
-            self.terminal_states_probabilities,
-            log=False,
-        )
 
     def _set_categorical_labels(
         self,
@@ -244,26 +275,32 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
     @logger
     @shadow
-    def _write_terminal_states(
+    def _write_states(
         self,
+        which: Literal["initial", "terminal"],
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
-        key = Key.obs.term_states(self.backward)
-        self._set("_term_states", self.adata.obs, key=key, value=states)
-        self._set("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), value=probs)
-        self._set("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), value=colors)
+        backward = which == "initial"
+        key = Key.obs.term_states(backward)
+        self._set(obj=self.adata.obs, key=key, value=states)
+        self._set(obj=self.adata.obs, key=Key.obs.probs(key), value=probs)
+        self._set(obj=self.adata.uns, key=Key.uns.colors(key), value=colors)
+        if backward:
+            self._init_states = self._init_states.set(assignment=states, probs=probs, colors=colors)
+        else:
+            self._term_states = self._term_states.set(assignment=states, probs=probs, colors=colors)
         self.params[key] = dict(params)
         # fmt: on
 
         return (
             f"Adding `adata.obs[{key!r}]`\n"
             f"       `adata.obs[{Key.obs.probs(key)!r}]`\n"
-            f"       `.terminal_states`\n"
-            f"       `.terminal_states_probabilities`\n"
+            f"       `.{which}_states`\n"
+            f"       `.{which}_states_probabilities`\n"
             "    Finish"
         )
 
@@ -273,22 +310,27 @@ class TermStatesEstimator(BaseEstimator, ABC):
             return False
 
         # fmt: off
-        key = Key.obs.term_states(self.backward)
-        with SafeGetter(self, allowed=KeyError) as sg:
-            self._get("_term_states", self.adata.obs, key=key, where="obs", dtype=pd.Series)
-            self._get("_term_states_probs", self.adata.obs, key=Key.obs.probs(key), where="obs", dtype=pd.Series)
-            self._get("_term_states_colors", self.adata.uns, key=Key.uns.colors(key), where="uns",
-                      dtype=(list, tuple, np.ndarray))
-            self._term_states_colors = np.asarray([to_hex(c) for c in self._term_states_colors])
-            self.params[key] = self._read_params(key)
+        for backward in [False, True]:
+            key = Key.obs.term_states(backward)
+            with SafeGetter(self, allowed=KeyError) as sg:
+                assignment = self._get(obj=self.adata.obs, key=key, where="obs", dtype=pd.Series)
+                probs = self._get(obj=self.adata.obs, key=Key.obs.probs(key), where="obs", dtype=pd.Series)
+                colors = self._get(obj=self.adata.uns, key=Key.uns.colors(key), where="uns",
+                                   dtype=(list, tuple, np.ndarray))
+                colors = np.asarray([to_hex(c) for c in colors])
+                if backward:
+                    self._init_states = StatesHolder(assignment=assignment, probs=probs, colors=colors)
+                else:
+                    self._term_states = StatesHolder(assignment=assignment, probs=probs, colors=colors)
+                self.params[key] = self._read_params(key)
         # fmt: on
 
         return sg.ok
 
     @d.dedent
-    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+    def compute_states(self, *args: Any, **kwargs: Any) -> None:
         """
-        Compute terminal states of the process.
+        Compute initial or terminal states of the process.
 
         This is an alias for :meth:`predict`.
 
@@ -301,6 +343,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Return
         ------
+        TODO(michalk8)
         Nothing, just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
@@ -308,6 +351,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         """
         return self.predict(*args, **kwargs)
 
+    # TODO(michalk8)
     plot_terminal_states = register_plotter(
         discrete="terminal_states", colors="_term_states_colors"
     )

@@ -28,6 +28,7 @@ from cellrank.estimators.mixins._utils import (
     register_plotter,
 )
 from cellrank.estimators.terminal_states._term_states_estimator import (
+    StatesHolder,
     TermStatesEstimator,
 )
 
@@ -85,40 +86,46 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         **kwargs: Any,
     ):
         super().__init__(object=object, **kwargs)
-
+        self._macrostates = StatesHolder()
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
         self._coarse_tmat: Optional[pd.DataFrame] = None
-
-        self._macrostates: Optional[pd.Series] = None
-        self._macrostates_memberships: Optional[Lineage] = None
-        self._macrostates_colors: Optional[np.ndarray] = None
-
-        self._term_states_memberships: Optional[Lineage] = None
 
     @property
     @d.get_summary(base="gpcca_macro")
     def macrostates(self) -> Optional[pd.Series]:
         """Macrostates of the transition matrix."""
-        return self._macrostates
+        return self._macrostates.assignment
 
     @property
     @d.get_summary(base="gpcca_macro_memberships")
     def macrostates_memberships(self) -> Optional[Lineage]:
-        """Macrostate membership matrix.
+        """
+        Macrostate membership matrix.
 
         Soft assignment of microstates (cells) to macrostates.
         """
-        return self._macrostates_memberships
+        return self._macrostates.memberships
+
+    @property
+    @d.get_summary(base="gpcca_init_states_memberships")
+    def initial_states_memberships(self) -> Optional[Lineage]:
+        """
+        Initial states membership matrix.
+
+        Soft assignment of cells to terminal states.
+        """
+        return self._init_states.memberships
 
     @property
     @d.get_summary(base="gpcca_term_states_memberships")
     def terminal_states_memberships(self) -> Optional[Lineage]:
-        """Terminal state membership matrix.
+        """
+        Terminal states membership matrix.
 
         Soft assignment of cells to terminal states.
         """
-        return self._term_states_memberships
+        return self._term_states.memberships
 
     @property
     @d.get_summary(base="gpcca_coarse_init")
@@ -223,6 +230,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         method: Literal[
             "stability", "top_n", "eigengap", "eigengap_coarse"
         ] = TermStatesMethod.STABILITY,
+        which: Literal["initial", "terminal"] = "terminal",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
@@ -265,7 +273,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # fmt: off
         if len(self._macrostates.cat.categories) == 1:
             logg.warning("Found only one macrostate. Making it the single terminal state")
-            self.set_terminal_states_from_macrostates(None, n_cells=n_cells, params=self._create_params())
+            self.set_states_from_macrostates(names=None, which=which, n_cells=n_cells, params=self._create_params())
             return
 
         method = TermStatesMethod(method)
@@ -290,28 +298,29 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            self.set_terminal_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
+            self.set_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
             return
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
-        self.set_terminal_states_from_macrostates(
+        self.set_states_from_macrostates(
             names, n_cells=n_cells, params=self._create_params()
         )
 
         return
 
     @d.dedent
-    def set_terminal_states_from_macrostates(
+    def set_states_from_macrostates(
         self,
         names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
+        which: Literal["initial", "terminal"] = "terminal",
         n_cells: int = 30,
         **kwargs: Any,
     ) -> None:
         """
-        Manually select terminal states from macrostates.
+        Manually select states from macrostates.
 
         Parameters
         ----------
@@ -336,16 +345,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if memberships is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
-        rename = True
         if names is None:
             names = memberships.names
-            rename = False
         if isinstance(names, str):
             names = [names]
-            rename = False
         if not isinstance(names, dict):
             names = {n: n for n in names}
-            rename = False
         if not len(names):
             raise ValueError("No macrostates have been selected.")
 
@@ -355,7 +360,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         names_after_renaming = {names.get(n, n) for n in memberships.names}
         if len(names_after_renaming) != memberships.shape[1]:
             raise ValueError(
-                f"After renaming, terminal state names will no longer be unique: `{names_after_renaming}`."
+                f"After renaming, {which} state names will no longer be unique: `{names_after_renaming}`."
             )
 
         # this also checks that the names are correct before renaming
@@ -364,49 +369,21 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         states = self._create_states(memberships, n_cells=n_cells, check_row_sums=False)
         if is_singleton:
-            colors = self._macrostates_colors.copy()
+            colors = self._macrostates.colors.copy()
             probs = memberships.X.squeeze() / memberships.X.max()
         else:
             colors = memberships[list(states.cat.categories)].colors
             probs = (memberships.X / memberships.X.max(0)).max(1)
         probs = pd.Series(probs, index=self.adata.obs_names)
 
-        self._write_terminal_states(
-            states, colors, probs, memberships, params=kwargs.pop("params", {})
+        self._write_states(
+            which,
+            states=states,
+            colors=colors,
+            probs=probs,
+            memberships=memberships,
+            params=kwargs.pop("params", {}),
         )
-        if rename:
-            # TODO(michalk8): in a future PR, remove this behavior in Lineage
-            # access lineage renames join states, e.g. 'Alpha, Beta' becomes 'Alpha or Beta' + whitespace stripping
-            self.rename_terminal_states(
-                dict(zip(self.terminal_states.cat.categories, names.values()))
-            )
-
-    @d.dedent
-    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
-        """
-        %(tse_rename_term_states.full_desc)s
-
-        Parameters
-        ----------
-        %(tse_rename_term_states.parameters)s
-
-        Returns
-        -------
-        %(tse_rename_term_states.returns)s
-            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
-        """  # noqa: D400
-        term_states_memberships = self.terminal_states_memberships
-        super().rename_terminal_states(new_names)
-
-        # fmt: off
-        new_names = {str(k): str(v) for k, v in new_names.items()}
-        term_states_memberships.names = [new_names.get(n, n) for n in term_states_memberships.names]
-        self._set("_term_states_memberships", value=term_states_memberships, shadow_only=True)
-        # fmt: on
-
-        with self._shadow:
-            key = Key.obsm.memberships(Key.obs.macrostates(self.backward))
-            self._set(obj=self.adata.obsm, key=key, value=term_states_memberships)
 
     @d.dedent
     def fit(
@@ -440,7 +417,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self.compute_macrostates(
             n_states=n_states, cluster_key=cluster_key, n_cells=n_cells
         )
-
         return self
 
     @d.dedent
@@ -969,7 +945,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the field as described in :meth:`compute_macrostates`.
+        Nothing, just updates the fields as described in :meth:`compute_macrostates`.
         """
 
         if n_cells is None:
@@ -992,7 +968,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         # remove previous fields
-        self._write_terminal_states(None, None, None, None, log=False)
+        self._write_states("initial", None, None, None, None, log=False)
+        self._write_states("terminal", None, None, None, None, log=False)
 
         # fmt: off
         assignment, colors = self._set_categorical_labels(assignment, cluster_key=cluster_key)
@@ -1008,7 +985,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         self._write_macrostates(
-            assignment, colors, memberships, time=time, params=params
+            macrostates=assignment,
+            colors=colors,
+            memberships=memberships,
+            time=time,
+            params=params,
         )
 
     @logger
@@ -1021,16 +1002,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
-        names = list(macrostates.cat.categories)
-
         key = Key.obs.macrostates(self.backward)
-        self._set("_macrostates", obj=self.adata.obs, key=key, value=macrostates, shadow_only=True)
+        self._set(obj=self.adata.obs, key=key, value=macrostates, shadow_only=True)
         ckey = Key.uns.colors(key)
-        self._set("_macrostates_colors", obj=self.adata.uns, key=ckey, value=colors, shadow_only=True)
+        self._set(obj=self.adata.uns, key=ckey, value=colors, shadow_only=True)
         mkey = Key.obsm.memberships(key)
-        self._set("_macrostates_memberships", obj=self.adata.obsm, key=mkey, value=memberships, shadow_only=True)
+        self._set(obj=self.adata.obsm, key=mkey, value=memberships, shadow_only=True)
+        self._macrostates = self._macrostates.set(assignment=macrostates, colors=colors, memberships=memberships)
         self.params[key] = dict(params)
 
+        names = list(macrostates.cat.categories)
         if len(names) > 1:
             # not using stationary distribution
             g = self._gpcca
@@ -1072,8 +1053,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @logger
     @shadow
-    def _write_terminal_states(
+    def _write_states(
         self,
+        which: Literal["initial", "terminal"],
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
@@ -1081,20 +1063,25 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         params: Dict[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
-        msg = super()._write_terminal_states(states, colors, probs, params=params, log=False)
+        msg = super()._write_states(which, states=states, colors=colors, probs=probs, params=params, log=False)
         msg = "\n".join(msg.split("\n")[:-1])
-        msg += "\n       `.terminal_states_memberships\n    Finish`"
+        msg += f"\n       `.{which}_states_memberships\n    Finish`"
 
         self._write_absorption_probabilities(None, None, log=False)
-        key = Key.obsm.memberships(Key.obs.term_states(self.backward))
-        self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships)
+
+        backward = which == "initial"
+        key = Key.obsm.memberships(Key.obs.term_states(backward))
+        self._set(obj=self.adata.obsm, key=key, value=memberships)
+        if backward:
+            self._init_states = self._init_states.set(memberships=memberships)
+        else:
+            self._term_states = self._term_states.set(memberships=memberships)
         # fmt: on
 
         return msg
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         _ = self._read_eigendecomposition(adata, allow_missing=True)
-        # TODO(michalk8): reintroduce in 2.0
         ok = self._read_schur_decomposition(adata, allow_missing=True)
         if not ok:
             return False
@@ -1103,14 +1090,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obs.macrostates(self.backward)
             # TODO(michalk8): in the future, be more stringent and ensure the categories match the macro memberships
-            self._get("_macrostates", self.adata.obs, key=key, where="obs", dtype=pd.Series)
+            assignment = self._get(obj=self.adata.obs, key=key, where="obs", dtype=pd.Series)
             ckey = Key.uns.colors(key)
-            self._get("_macrostates_colors", self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
+            colors = self._get(obj=self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
             mkey = Key.obsm.memberships(key)
-            self._get("_macrostates_memberships", self.adata.obsm, key=mkey, where="obsm", dtype=(Lineage, np.ndarray))
-            self._ensure_lineage_object("_macrostates_memberships", kind="macrostates")
-
-            self._macrostates_colors = self.macrostates_memberships.colors.copy()
+            memberships = self._get(obj=self.adata.obsm, key=mkey, where="obsm", dtype=(Lineage, np.ndarray))
+            self._macrostates = StatesHolder(assignment=assignment, colors=colors, memberships=memberships)
+            # TODO(michalk8)
+            # self._ensure_lineage_object("_macrostates_memberships", kind="macrostates")
             self.params[key] = self._read_params(key)
 
             tmat = self.adata.uns[Key.uns.coarse(self.backward)].copy()
@@ -1124,135 +1111,30 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
 
-        # TODO(michalk8): reintroduce this in 2.0 - this is done for high-level plotting of init/term states only
-        # if not sg.ok:
-        #    return False
+        if not sg.ok:
+            return False
 
         if not super()._read_from_adata(adata, **kwargs):
             return False
 
-        with SafeGetter(self, allowed=KeyError) as sg:
-            key = Key.obsm.memberships(Key.obs.term_states(self.backward))
-            self._get("_term_states_memberships", self.adata.obsm, key=key, where="obsm", dtype=(np.ndarray, Lineage))
-            self._ensure_lineage_object("_term_states_memberships", kind="term_states")
+        for backward in [False, True]:
+            with SafeGetter(self, allowed=KeyError) as sg:
+                key = Key.obsm.memberships(Key.obs.term_states(backward))
+                memberships = self._get(obj=self.adata.obsm, key=key, where="obsm", dtype=(np.ndarray, Lineage))
+                if backward:
+                    self._init_states = self._init_states.set(memberships=memberships)
+                else:
+                    self._term_states = self._term_states.set(memberships=memberships)
+                # TODO(michalk8): method of StatesHolder?
+                # self._ensure_lineage_object("_term_states_memberships", kind="term_states")
         # fmt: on
 
         return sg.ok and self._read_absorption_probabilities(adata)
 
+    # TODO(michalk8)
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"
     )
     plot_terminal_states = register_plotter(
         discrete="terminal_states", continuous="terminal_states_memberships"
     )
-
-    @d.dedent
-    def _compute_initial_states(self, n_states: int = 1, n_cells: int = 30) -> None:
-        """
-        Compute initial states from macrostates using :attr:`coarse_stationary_distribution`.
-
-        Parameters
-        ----------
-        n_states
-            Number of initial states.
-        %(n_cells)s
-
-        Returns
-        -------
-        %(set_initial_states_from_macrostates.returns)s
-        """
-
-        if n_states <= 0:
-            raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
-
-        if n_cells <= 0:
-            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
-
-        probs = self.macrostates_memberships
-        if probs is None:
-            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
-
-        if n_states > probs.shape[1]:
-            raise ValueError(
-                f"Requested `{n_states}` initial states, but only `{probs.shape[1]}` macrostates have been computed."
-            )
-
-        if probs.shape[1] == 1:
-            self._set_initial_states_from_macrostates(n_cells=n_cells)
-            return
-
-        stat_dist = self.coarse_stationary_distribution
-        if stat_dist is None:
-            raise RuntimeError("No coarse-grained stationary distribution found.")
-
-        self._set_initial_states_from_macrostates(
-            stat_dist[np.argsort(stat_dist)][:n_states].index, n_cells=n_cells
-        )
-
-    @d.get_sections(base="set_initial_states_from_macrostates", sections=["Returns"])
-    @d.dedent
-    def _set_initial_states_from_macrostates(
-        self,
-        names: Optional[Union[str, Sequence[str]]] = None,
-        n_cells: int = 30,
-    ) -> None:
-        """
-        Manually select initial states from macrostates.
-
-        Note that no check is performed to ensure initial and terminal states are distinct.
-
-        Parameters
-        ----------
-        names
-            Names of the macrostates to be marked as initial states. Multiple states can be combined using `','`,
-            such as `["Alpha, Beta", "Epsilon"]`.
-        %(n_cells)s
-
-        Returns
-        -------
-        Nothing, just modifies :attr:`anndata.AnnData.obs`. The actual keys depend of :attr:`backward`.
-        """
-
-        if not isinstance(n_cells, int):
-            raise TypeError(
-                f"Expected `n_cells` to be of type `int`, found `{type(n_cells).__name__}`."
-            )
-
-        if n_cells <= 0:
-            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
-
-        probs = self.macrostates_memberships
-        if probs is None:
-            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
-        elif probs.shape[1] == 1:
-            categorical = self._create_states(probs, n_cells=n_cells)
-            scaled = probs / probs.max()
-        else:
-            if names is None:
-                names = probs.names
-            if isinstance(names, str):
-                names = [names]
-
-            probs = probs[list(names)]
-            categorical = self._create_states(probs, n_cells=n_cells)
-            probs /= probs.max(0)
-
-            # compute the aggregated probability of being a initial/terminal state (no matter which)
-            scaled = probs.X.max(1)
-
-        self._write_initial_states(membership=probs, probs=scaled, cats=categorical)
-
-    def _write_initial_states(
-        self, membership: Lineage, probs: pd.Series, cats: pd.Series, time=None
-    ) -> None:
-        key = Key.obs.term_states(not self.backward)
-
-        self.adata.obs[key] = cats
-        self.adata.obs[Key.obs.probs(key)] = probs
-
-        self.adata.uns[Key.uns.colors(key)] = membership.colors
-
-        logg.info(
-            f"Adding `adata.obs[{key!r}]`\n       `adata.obs[{Key.uns.colors(key)!r}]`\n",
-            time=time,
-        )

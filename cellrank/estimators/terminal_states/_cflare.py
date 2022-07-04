@@ -97,7 +97,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
         n_neighbors
-            Number of neighbors in a KNN graph. This is the :math:`K` parameter for that,
+            Number of neighbors in a kNN graph. This is the :math:`K` parameter for that,
             the number of neighbors for each cell. Only used when ``method = 'leiden'``.
         resolution
             Resolution parameter for :func:`scanpy.tl.leiden`. Should be chosen relatively small.
@@ -224,7 +224,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             labels = _filter_cells(distances, rc_labels=labels, n_matches_min=n_matches_min)
         # fmt: on
 
-        self.set_terminal_states(
+        self.set_states(
             labels=labels,
             cluster_key=cluster_key,
             probs=self._compute_term_states_probs(eig, use),

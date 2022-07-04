@@ -234,7 +234,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
     mc.compute_macrostates(n_states=2)
     if state == State.MACRO:
         return mc
-    mc.set_terminal_states_from_macrostates()
+    mc.set_states_from_macrostates()
     if state == State.TERM:
         return mc
     mc.compute_absorption_probabilities(time_to_absorption="all")
@@ -624,7 +624,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -642,7 +642,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=5)
         with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates({"0": "1"})
+            mc.set_states_from_macrostates({"0": "1"})
         _check_renaming_no_write_terminal(mc)
 
     def test_set_terminal_states_from_macrostates_rename_not_unique_new_names(
@@ -657,7 +657,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=3, n_cells=5)
         with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates({"0": "1", "1": "1"})
+            mc.set_states_from_macrostates({"0": "1", "1": "1"})
         _check_renaming_no_write_terminal(mc)
 
     def test_set_terminal_states_from_macrostates_rename_overlapping_old_keys(
@@ -672,7 +672,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=3, n_cells=5)
         with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates({"0, 1": "foo", "1, 2": "bar"})
+            mc.set_states_from_macrostates({"0, 1": "foo", "1, 2": "bar"})
         _check_renaming_no_write_terminal(mc)
 
     def test_set_terminal_states_from_macrostates_rename_states(
@@ -686,7 +686,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
-        mc.set_terminal_states_from_macrostates({"0": "foo"})
+        mc.set_states_from_macrostates({"0": "foo"})
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -706,7 +706,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=3, n_cells=5)
-        mc.set_terminal_states_from_macrostates({"0, 1": "foo", "2": "bar"})
+        mc.set_states_from_macrostates({"0, 1": "foo", "2": "bar"})
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -727,7 +727,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=None)
         with pytest.raises(TypeError):
-            mc.set_terminal_states_from_macrostates(n_cells=None)
+            mc.set_states_from_macrostates(n_cells=None)
 
     def test_set_terminal_states_from_macrostates_non_positive_cells(
         self, adata_large: AnnData
@@ -741,7 +741,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=None)
         with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates(n_cells=0)
+            mc.set_states_from_macrostates(n_cells=0)
 
     def test_set_terminal_states_from_macrostates_invalid_name(
         self, adata_large: AnnData
@@ -755,7 +755,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(KeyError):
-            mc.set_terminal_states_from_macrostates(names=["foobar"])
+            mc.set_states_from_macrostates(names=["foobar"])
 
     @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
     def test_set_terminal_states_clusters(
@@ -773,7 +773,7 @@ class TestGPCCA:
 
         mc = cr.estimators.GPCCA(terminal_kernel)
 
-        mc.set_terminal_states({"clusters": values})
+        mc.set_states({"clusters": values})
         pd.testing.assert_series_equal(
             expected, mc.terminal_states, check_category_order=False, check_names=False
         )
@@ -788,7 +788,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(method="foobar")
+            mc.compute_states(method="foobar")
 
     def test_compute_terminal_states_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -800,7 +800,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(TypeError):
-            mc.compute_terminal_states(n_cells=None)
+            mc.compute_states(n_cells=None)
 
     def test_compute_terminal_states_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -812,7 +812,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(n_cells=0)
+            mc.compute_states(n_cells=0)
 
     def test_compute_terminal_states_eigengap(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -823,7 +823,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5, method="eigengap")
+        mc.compute_states(n_cells=5, method="eigengap")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -838,7 +838,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5, method="top_n", n_states=1)
+        mc.compute_states(n_cells=5, method="top_n", n_states=1)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -854,9 +854,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=5)
-        mc.compute_terminal_states(
-            n_cells=5, method="stability", stability_threshold=thresh
-        )
+        mc.compute_states(n_cells=5, method="stability", stability_threshold=thresh)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -879,9 +877,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(
-                n_cells=5, method="stability", stability_threshold=42
-            )
+            mc.compute_states(n_cells=5, method="stability", stability_threshold=42)
 
     def test_compute_terminal_states_too_many_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -893,7 +889,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(n_cells=4200)
+            mc.compute_states(n_cells=4200)
 
     def test_compute_terminal_states_default(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -904,7 +900,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5)
+        mc.compute_states(n_cells=5)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -918,7 +914,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
@@ -932,7 +928,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
@@ -948,7 +944,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -968,7 +964,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(RuntimeError):
@@ -982,7 +978,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -997,7 +993,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -1012,7 +1008,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -1026,7 +1022,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
         mc.compute_absorption_probabilities()
 
         cat = adata_large.obs["clusters"].cat.categories[0]
@@ -1052,13 +1048,13 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_states_from_macrostates()
 
         key = Key.obsm.memberships(Key.obs.term_states(mc.backward))
         assert len(mc.terminal_states.cat.categories) == 2
         assert adata_large.obsm[key].shape == (adata_large.n_obs, 2)
 
-        mc.set_terminal_states({"foo": adata_large.obs_names[:20]})
+        mc.set_states({"foo": adata_large.obs_names[:20]})
 
         assert len(mc.terminal_states.cat.categories) == 1
         assert mc.terminal_states_memberships is None
