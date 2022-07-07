@@ -1,10 +1,10 @@
-CellRank dev (2022-06-08)
+CellRank dev (2022-06-29)
 =========================
 
 Features
 --------
 
-- Update CytoTRACE calculation to check inf vals
+- Update CytoTRACE calculation to check infinite values.
   `#761 <https://github.com/theislab/cellrank/pull/761>`__
 
 - Refactor :class:`cellrank.tl.kernels.TransportMapKernel` for easier definition of extensions.
@@ -14,13 +14,13 @@ Features
   `#779 <https://github.com/theislab/cellrank/pull/779>`__
 
 - Refactor kernel module. These changes include:
-  - allow kernel elementwise multiplication
+  - allow kernel element-wise multiplication
   - decouple CytoTRACE computation from kernel initialization, see :meth:`cellrank.tl.kernels.CytoTRACEKernel.compute_cytottrace`
   - change argument ``mode`` to ``model`` in :class:`cellrank.tl.kernels.VelocityKernel`
   - change argument ``scheme`` to ``similarity`` in :class:`cellrank.tl.kernels.VelocityKernel`
   - remove ``'sampling'`` option in :class:`cellrank.tl.kernels.VelocityKernel`
   - distinguish between unidirectional and bidirectional kernels
-  - bidirectional kernel inversion is no longer inplace, returns a new object
+  - bidirectional kernel inversion is no longer in-place, returns a new object
   - add more memory efficient way of copying kernels
   - improve :class:`cellrank.kernels.PrecomputedKernel`
   - abstract kernel-related plotting functions (projection and random walks)
@@ -33,6 +33,12 @@ Features
 
 - Allow local block-diagonal connectivities in :class:`cellrank.tl.kernels.TransportMapKernel`. Rename ``last_time_point`` argument to ``self_transitions`` and add ``conn_weight``. ``self_transitions`` can also be applied to specific diagonal blocks only.
   `#828 <https://github.com/theislab/cellrank/pull/828>`__
+
+- Add :func:`cellrank.datasets.bone_marrow`.
+  `#886 <https://github.com/theislab/cellrank/pull/886>`__
+
+- Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
+  `#890 <https://github.com/theislab/cellrank/pull/890>`__
 
 
 Bugfixes
@@ -56,6 +62,9 @@ Bugfixes
 - Fix :class:`cellrank.tl.Lineage` subsetting (non-existent overlapping keys) and refactor the implementation.
   `#861 <https://github.com/theislab/cellrank/pull/861>`__
 
+- Adds references to the docs
+  `#887 <https://github.com/theislab/cellrank/pull/887>`__
+
 
 Miscellaneous
 -------------
@@ -66,9 +75,27 @@ Miscellaneous
 - Fix PETSc/SLEPc in CI for Linux. For now, macOS PETSc/SLEPc remains disabled.
   `#850 <https://github.com/theislab/cellrank/pull/850>`__
 
+- Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
+  `#894 <https://github.com/theislab/cellrank/pull/894>`__
+
+- Fix not being able to use ``minChi`` in :meth:`cellrank.estimators.GPCCA.fit`. Also compute 20 Schur vectors by default.
+  `#913 <https://github.com/theislab/cellrank/pull/913>`__
+
+- Prefer plotting macrostates/terminal in a discrete way.
+  `#914 <https://github.com/theislab/cellrank/pull/914>`__
+
 
 Documentation
 -------------
 
 - Add *Discourse* badge for questions and discussions.
   `#880 <https://github.com/theislab/cellrank/pull/880>`__
+
+- Adds references to the ``bibtex`` file.
+  `#883 <https://github.com/theislab/cellrank/pull/883>`__
+
+- Add ``furo`` theme based on ``scvi-tools``.
+  `#885 <https://github.com/theislab/cellrank/pull/885>`__
+
+- Fix ``RTD`` build - submodules.
+  `#901 <https://github.com/theislab/cellrank/pull/901>`__

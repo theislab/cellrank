@@ -25,7 +25,7 @@ class AnnDataMixin(ABC):
 
         Returns
         -------
-        `True` if the deserialization was successful, otherwise `False`.
+        `True` if the de-serialization was successful, otherwise `False`.
         """
         return True
 
@@ -54,7 +54,7 @@ class AnnDataMixin(ABC):
     @d.dedent
     def from_adata(cls, adata: AnnData, **kwargs: Any) -> "AnnDataMixin":
         """
-        Deserialize self from :class:`anndata.AnnData`.
+        De-serialize self from :class:`anndata.AnnData`.
 
         Parameters
         ----------
@@ -64,7 +64,7 @@ class AnnDataMixin(ABC):
 
         Returns
         -------
-        The deserialized object.
+        The de-serialized object.
         """
         obj = cls(adata, **kwargs)
         obj._read_from_adata(adata)

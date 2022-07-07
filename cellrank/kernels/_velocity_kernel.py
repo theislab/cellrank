@@ -270,7 +270,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
 
     @property
     def logits(self) -> Optional[np.ndarray]:
-        """Array of shape ``(n_cells, n_cells)`` containing unnormalized transition matrix."""
+        """Array of shape ``(n_cells, n_cells)`` containing not row-normalized transition matrix."""
         return self._logits
 
     def __invert__(self) -> "VelocityKernel":

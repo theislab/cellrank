@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Union, Callable, Optional
+from typing import Any, Type, Tuple, Union, Callable, Optional
 
 import pickle
 import pytest
@@ -41,7 +41,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import eye as speye
 from scipy.sparse import random as sprandom
-from scipy.sparse import spmatrix, isspmatrix_csr
+from scipy.sparse import issparse, spmatrix, isspmatrix_csr
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 _rtol = 1e-6
@@ -467,7 +467,7 @@ class TestKernel:
     def test_kernel_reads_correct_connectivities(
         self, adata: AnnData, key_added: Optional[str], clazz: type
     ):
-        if clazz == VelocityKernel and key_added == "foo":
+        if clazz is VelocityKernel and key_added == "foo":
             pytest.skip("`get_moments` in scVelo doesn't support specifying key")
         del adata.uns["neighbors"]
         del adata.obsp["connectivities"]
@@ -476,9 +476,9 @@ class TestKernel:
         sc.pp.neighbors(adata, key_added=key_added)
         kwargs = {"adata": adata, "conn_key": key_added}
 
-        if clazz == PseudotimeKernel:
+        if clazz is PseudotimeKernel:
             kwargs["time_key"] = "latent_time"
-        elif clazz == PrecomputedKernel:
+        elif clazz is PrecomputedKernel:
             adata.obsp["foo"] = np.eye(adata.n_obs)
             kwargs["transition_matrix"] = "foo"
         conn = (
@@ -790,7 +790,9 @@ class TestKernelCopy:
         assert ck1.backward == ck2.backward
 
     def test_copy_palantir_kernel(self, adata: AnnData):
-        pk1 = PseudotimeKernel(adata).compute_transition_matrix()
+        pk1 = PseudotimeKernel(
+            adata, time_key="dpt_pseudotime"
+        ).compute_transition_matrix()
         pk2 = pk1.copy()
 
         np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)
@@ -1038,7 +1040,7 @@ class TestVelocityScheme:
 class TestComputeProjection:
     def test_no_transition_matrix(self, adata: AnnData):
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
-            _ = cr.kernels.ConnectivityKernel(adata).plot_projection()
+            cr.kernels.ConnectivityKernel(adata).plot_projection()
 
     def test_no_basis(self, adata: AnnData):
         ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
@@ -1060,6 +1062,7 @@ class TestComputeProjection:
             ck.write_to_adata()
 
         assert adata.uns[Key.uns.kernel(ck.backward) + "_params"] == {
+            "init": {"check_connectivity": False, "conn_key": "connectivities"},
             "params": ck.params,
             "embeddings": ["umap"],
         }
@@ -1085,12 +1088,12 @@ class TestComputeProjection:
 
 class TestPseudotimeKernelScheme:
     def test_invalid_scheme(self, adata: AnnData):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         with pytest.raises(ValueError, match="foo"):
             pk.compute_transition_matrix(threshold_scheme="foo")
 
     def test_invalid_custom_scheme(self, adata: AnnData):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         with pytest.raises(ValueError, match="Expected row of shape"):
             pk.compute_transition_matrix(
                 threshold_scheme=lambda cpt, npt, ndist: np.ones(
@@ -1099,7 +1102,7 @@ class TestPseudotimeKernelScheme:
             )
 
     def test_custom_scheme(self, adata: AnnData):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         pk.compute_transition_matrix(
             threshold_scheme=lambda cpt, npt, ndist: np.ones(
                 (len(ndist)), dtype=np.float64
@@ -1112,7 +1115,7 @@ class TestPseudotimeKernelScheme:
 
     @pytest.mark.parametrize("scheme", ["hard", "soft"])
     def test_scheme(self, adata: AnnData, scheme: str):
-        pk = PseudotimeKernel(adata)
+        pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         pk.compute_transition_matrix(
             threshold_scheme=scheme, frac_to_keep=0.3, b=10, nu=0.5
         )
@@ -1395,7 +1398,7 @@ class TestPrecomputedKernel:
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
         assert "T_fwd_params" in pk.adata.uns.keys()
-        assert pk.adata.uns["T_fwd_params"] == {"params": pk.params}
+        assert pk.adata.uns["T_fwd_params"] == {"init": {}, "params": pk.params}
         np.testing.assert_array_equal(pk.adata.obsp["T_fwd"], pk.transition_matrix)
 
     def test_precomputed_different_adata(self, adata: AnnData):
@@ -1473,6 +1476,16 @@ class TestPrecomputedKernel:
 
         np.testing.assert_array_almost_equal(expected, actual.transition_matrix)
 
+    @pytest.mark.parametrize("backward", [False, True])
+    def test_precomputed_autodetection(self, adata: AnnData, backward: bool):
+        key = Key.uns.kernel(backward)
+        adata.obsp[key] = mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(adata)
+
+        assert pk.backward == backward
+        assert key in pk.params["origin"]
+        np.testing.assert_array_equal(mat, pk.transition_matrix)
+
 
 class TestKernelIO:
     @pytest.mark.parametrize("copy", [False, True])
@@ -1496,3 +1509,39 @@ class TestKernelIO:
                 assert k.adata is kernel.adata
 
         np.testing.assert_array_equal(k.transition_matrix.A, kernel.transition_matrix.A)
+
+    @pytest.mark.parametrize(
+        "clazz",
+        [
+            ConnectivityKernel,
+            VelocityKernel,
+            PseudotimeKernel,
+            CytoTRACEKernel,
+            PrecomputedKernel,
+            CustomKernel,
+        ],
+    )
+    def test_from_adata(self, adata: AnnData, clazz: Type[Kernel]):
+        kwargs, key = {}, "foo"
+        if clazz is PseudotimeKernel:
+            kwargs["time_key"] = "latent_time"
+        elif clazz is PrecomputedKernel:
+            adata.obsp["tmat"] = np.eye(adata.n_obs)
+            kwargs["obsp_key"] = "tmat"
+
+        k1 = clazz(adata, **kwargs)
+        if isinstance(k1, CytoTRACEKernel):
+            k1 = k1.compute_cytotrace()
+        k1 = k1.compute_transition_matrix()
+        k1.write_to_adata(key=key)
+
+        k2 = clazz.from_adata(adata, key=key)
+
+        assert k1.backward == k2.backward
+        assert k1.params == k2.params
+        if issparse(k1.transition_matrix):
+            np.testing.assert_almost_equal(
+                k1.transition_matrix.A, k2.transition_matrix.A
+            )
+        else:
+            np.testing.assert_almost_equal(k1.transition_matrix, k2.transition_matrix)

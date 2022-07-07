@@ -7,7 +7,7 @@ from pathlib import Path
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._utils import save_fig, _normalize
+from cellrank._utils._utils import save_fig, _normalize, _read_graph_data
 from cellrank.kernels.utils import RandomWalk, FlowPlotter, LowDimProjection
 from cellrank.kernels._utils import require_tmat
 from cellrank.kernels.mixins import IOMixin, BidirectionalMixin, UnidirectionalMixin
@@ -35,6 +35,7 @@ class KernelExpression(IOMixin, ABC):
         self._normalize = parent is None
         self._transition_matrix = None
         self._params: Dict[str, Any] = {}
+        self._init_kwargs = kwargs  # for `_read_from_adata`
 
     def __init_subclass__(cls, **_: Any) -> None:
         super().__init_subclass__()
@@ -144,10 +145,10 @@ class KernelExpression(IOMixin, ABC):
 
         Notes
         -----
-        This function is a Python reimplementation of the following
+        This function is a Python re-implementation of the following
         `original R function <https://github.com/tanaylab/embflow/blob/main/scripts/generate_paper_figures/plot_vein.r>`_
         with some minor stylistic differences.
-        This function will not recreate the results from :cite:`mittnenzweig:21`, because there, the Metacell model
+        This function will not recreate the results from :cite:`mittnenzweig:21`, because there, the *Metacell* model
         :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
         """  # noqa: E501
         fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
@@ -398,6 +399,7 @@ class KernelExpression(IOMixin, ABC):
         self.adata.uns[f"{key}_params"] = {
             **self.adata.uns.get(f"{key}_params", {}),
             **{"params": self.params},
+            **{"init": self._init_kwargs},
         }
         self.adata.obsp[key] = (
             self.transition_matrix.copy() if copy else self.transition_matrix
@@ -483,8 +485,10 @@ class KernelExpression(IOMixin, ABC):
 class Kernel(KernelExpression, ABC):
     """Base kernel class."""
 
-    def __init__(self, adata: AnnData, **kwargs: Any):
-        super().__init__(**kwargs)
+    def __init__(
+        self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any
+    ):
+        super().__init__(parent=parent, **kwargs)
         self._adata = adata
         self._n_obs = adata.n_obs
         self._read_from_adata(**kwargs)
@@ -512,6 +516,49 @@ class Kernel(KernelExpression, ABC):
                 f"Expected new `AnnData` object to have same shape as the previous `{self.shape}`, found `{shape}`."
             )
         self._adata = adata
+
+    @classmethod
+    @d.dedent
+    def from_adata(
+        cls,
+        adata: AnnData,
+        key: str,
+        copy: bool = False,
+    ) -> "Kernel":
+        """
+        Read kernel object saved using :meth:`write_to_adata`.
+
+        Parameters
+        ---------
+        %(adata)s
+        key
+            Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+            The parameters should be stored in :attr:`anndata.AnnData.uns` ``['{key}_params']``.
+        copy
+            Whether to copy the transition matrix.
+
+        Returns
+        -------
+        The kernel with explicitly initialized properties:
+
+            - :attr:`transition_matrix` - the transition matrix.
+            - :attr:`params` - parameters used for computation.
+        """
+        transition_matrix = _read_graph_data(adata, key=key)
+        try:
+            params = adata.uns[f"{key}_params"]["params"].copy()
+            init_params = adata.uns[f"{key}_params"]["init"].copy()
+        except KeyError as e:
+            raise KeyError(f"Unable to kernel parameters, reason: `{e}`") from e
+
+        if copy:
+            transition_matrix = transition_matrix.copy()
+
+        kernel = cls(adata, **init_params)
+        kernel.transition_matrix = transition_matrix
+        kernel._params = params
+
+        return kernel
 
     def copy(self, *, deep: bool = False) -> "Kernel":
         """Return a copy of self."""

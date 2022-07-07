@@ -40,6 +40,11 @@ class PrecomputedKernel(UnidirectionalKernel):
     backward
         Hint whether this is a forward, backward or a unidirectional kernel. Only used when ``object`` is
         :class:`anndata.AnnData`.
+
+    Notes
+    -----
+    If ``object`` is :class:`anndata.AnnData` and neither ``obsp_key`` nor ``backward`` is specified,
+    default forward and backward are tried and first one is used.
     """
 
     _SENTINEL = object()
@@ -69,7 +74,7 @@ class PrecomputedKernel(UnidirectionalKernel):
             raise TypeError(
                 f"Expected `object` to be either `str`, `bool`, `numpy.ndarray`, "
                 f"`scipy.sparse.spmatrix`, `AnnData` or `KernelExpression`, "
-                f"found `{type(object).__name__}`"
+                f"found `{type(object).__name__}`."
             )
 
     def _from_adata(
@@ -80,18 +85,35 @@ class PrecomputedKernel(UnidirectionalKernel):
         copy: bool = False,
     ) -> None:
         if obsp_key is None:
-            obsp_key = Key.uns.kernel(backward)
+            if backward is PrecomputedKernel._SENTINEL:
+                for backward in [False, True]:  # prefer `forward`
+                    obsp_key = Key.uns.kernel(backward)
+                    if obsp_key in adata.obsp:
+                        break
+                else:
+                    raise ValueError(
+                        "Unable to find transition matrix in `adata.obsp`. "
+                        "Please specify `obsp_key=...` or `backward=...`."
+                    )
+            else:
+                obsp_key = Key.uns.kernel(backward)
+            logg.info(f"Using transition matrix from `adata.obsp[{obsp_key!r}]`")
+
         tmat = _read_graph_data(adata, obsp_key)
+
         if backward is PrecomputedKernel._SENTINEL:
-            # not ideal, since None/False share the same key, we prefer False
+            # not ideal, since None/False share the same key, prefer `forward`
             if obsp_key == Key.uns.kernel(bwd=False):
                 backward = False
             elif obsp_key == Key.uns.kernel(bwd=True):
                 backward = True
             else:
                 backward = None
+            logg.info(f"Setting directionality `backward={backward}`")
+
         self._from_matrix(tmat, adata=adata, backward=backward, copy=copy)
         self.params["origin"] = f"adata.obsp[{obsp_key!r}]"
+        self._init_kwargs = {"obsp_key": obsp_key, "backward": backward}
 
     def _from_kernel(self, kernel: KernelExpression, copy: bool = False) -> None:
         if kernel.transition_matrix is None:

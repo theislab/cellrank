@@ -91,9 +91,9 @@ def circular_projection(
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
     **kwargs: Any,
-):
+) -> None:
     r"""
-    Plot absorption probabilities on a circular embedding as in :cite:`velten:17`.
+    Plot absorption probabilities on a circular embedding :cite:`velten:17`.
 
     Parameters
     ----------
@@ -116,7 +116,7 @@ def circular_projection(
         Can be one of the following:
 
             - `None` - it will determined automatically, based on the number of lineages.
-            - `'optimal'` - order lineages optimally by solving the Travelling salesman problem (TSP).
+            - `'optimal'` - order lineages optimally by solving the Traveling salesman problem (TSP).
               Recommended for <= `20` lineages.
             - `'default'` - use the order as specified by ``lineages``.
 

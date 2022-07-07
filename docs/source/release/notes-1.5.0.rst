@@ -49,7 +49,7 @@ Bugfixes
   `#737 <https://github.com/theislab/cellrank/pull/737>`__
 
 - Use actual number of nearest neighbors in :class:`cellrank.tl.kernels.PseudotimeKernel`
-  when using hard thresholding scheme.
+  when using hard threshold scheme.
   `#738 <https://github.com/theislab/cellrank/pull/738>`__
 
 - Fix :func:`cellrank.pl.cluster_lineage` sometimes reusing the same ax.
@@ -86,7 +86,7 @@ Miscellaneous
 Documentation
 -------------
 
-- Add Google Colab links for tutorials.
+- Add *Google Colab* links for tutorials.
   `#707 <https://github.com/theislab/cellrank/pull/707>`__
 
 - Allow ``towncrier`` to generate bleeding-edge development notes.

@@ -52,7 +52,7 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
 
         Uses symmetric, weighted kNN graph to compute symmetric transition matrix. The connectivities are computed
         using :func:`scanpy.pp.neighbors`. Depending on the parameters used there, they can be UMAP connectivities or
-        gaussian-kernel-based connectivities with adaptive kernel width.
+        Gaussian-kernel-based connectivities with adaptive kernel width.
 
         Parameters
         ----------
