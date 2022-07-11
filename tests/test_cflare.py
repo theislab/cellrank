@@ -8,6 +8,7 @@ import cellrank as cr
 from anndata import AnnData
 from cellrank.kernels import VelocityKernel, ConnectivityKernel
 from cellrank._utils._key import Key
+from cellrank.estimators.terminal_states._term_states_estimator import StatesHolder
 
 import numpy as np
 import pandas as pd
@@ -187,7 +188,7 @@ class TestCFLARE:
         np.testing.assert_array_equal(
             mc.absorption_probabilities.colors, mc.adata.uns[key]
         )
-        np.testing.assert_array_equal(mc._term_states_colors, mc.adata.uns[key])
+        np.testing.assert_array_equal(mc._term_states.colors, mc.adata.uns[key])
         np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1, rtol=1e-6)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
@@ -425,7 +426,7 @@ class TestCFLARE:
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states_colors
+                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states.colors
             )
             if arc in arcs
         ]
@@ -476,8 +477,9 @@ class TestCFLARE:
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._term_states = state_annotation
-        c._term_states_colors = np.array(["#000000", "#ffffff"])
+        c._term_states = StatesHolder(
+            assignment=state_annotation, colors=np.array(["#000000", "#ffffff"])
+        )
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()

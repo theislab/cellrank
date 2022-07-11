@@ -1124,7 +1124,7 @@ class TestGPCCASerialization:
         _assert_adata(adata, state, fwd=True)
 
     @pytest.mark.parametrize("copy", [False, True])
-    @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers")])
+    @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers",)])
     def test_to_adata_keep(
         self, adata_large: AnnData, keep: Union[str, Sequence[str]], copy: bool
     ):
