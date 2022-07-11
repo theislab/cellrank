@@ -101,7 +101,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.get_summary(base="gpcca_macro_memberships")
     def macrostates_memberships(self) -> Optional[Lineage]:
         """
-        Macrostate membership matrix.
+        Macrostate memberships.
 
         Soft assignment of microstates (cells) to macrostates.
         """
@@ -111,17 +111,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.get_summary(base="gpcca_init_states_memberships")
     def initial_states_memberships(self) -> Optional[Lineage]:
         """
-        Initial states membership matrix.
+        Initial states memberships.
 
         Soft assignment of cells to terminal states.
-        """
+        """  # noqa: D401
         return self._init_states.memberships
 
     @property
     @d.get_summary(base="gpcca_term_states_memberships")
     def terminal_states_memberships(self) -> Optional[Lineage]:
         """
-        Terminal states membership matrix.
+        Terminal states memberships.
 
         Soft assignment of cells to terminal states.
         """
@@ -272,7 +272,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         # fmt: off
         if len(self._macrostates.cat.categories) == 1:
-            logg.warning("Found only one macrostate. Making it the single terminal state")
+            logg.warning(f"Found only one macrostate. Making it the single {which} state")
             self.set_states_from_macrostates(names=None, which=which, n_cells=n_cells, params=self._create_params())
             return
 
@@ -308,8 +308,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self.set_states_from_macrostates(
             names, n_cells=n_cells, params=self._create_params()
         )
-
-        return
 
     @d.dedent
     def set_states_from_macrostates(
@@ -954,7 +952,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             assignment = pd.Series(np.argmax(memberships, axis=1).astype(str), dtype="category")
             # sometimes, a category can be missing
             assignment = assignment.cat.reorder_categories([str(i) for i in range(memberships.shape[1])])
-            not_enough_cells = []
             # fmt: on
         else:
             logg.debug("Setting the macrostates using macrostates memberships")
@@ -1117,7 +1114,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if not super()._read_from_adata(adata, **kwargs):
             return False
 
-        for backward in [False, True]:
+        for backward in [True, False]:
             with SafeGetter(self, allowed=KeyError) as sg:
                 key = Key.obsm.memberships(Key.obs.term_states(backward))
                 memberships = self._get(obj=self.adata.obsm, key=key, where="obsm", dtype=(np.ndarray, Lineage))
@@ -1129,6 +1126,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 # self._ensure_lineage_object("_term_states_memberships", kind="term_states")
         # fmt: on
 
+        # status is based on `backward=False` by design
         return sg.ok and self._read_absorption_probabilities(adata)
 
     # TODO(michalk8)

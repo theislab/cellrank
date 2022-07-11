@@ -310,7 +310,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             return False
 
         # fmt: off
-        for backward in [False, True]:
+        for backward in [True, False]:
             key = Key.obs.term_states(backward)
             with SafeGetter(self, allowed=KeyError) as sg:
                 assignment = self._get(obj=self.adata.obs, key=key, where="obs", dtype=pd.Series)
@@ -325,6 +325,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
                 self.params[key] = self._read_params(key)
         # fmt: on
 
+        # status is based on `backward=False` by design
         return sg.ok
 
     @d.dedent

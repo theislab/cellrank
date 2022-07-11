@@ -303,7 +303,7 @@ def assert_estimators_equal(
         if attr == "_invalid_n_states" and from_adata:
             continue
         actual_val, expected_val = getattr(actual, attr), getattr(expected, attr)
-        if isinstance(actual_val, cr._utils.Lineage):
+        if isinstance(actual_val, cr.Lineage):
             assert actual_val is not expected_val, attr
             assert_array_nan_equal(actual_val.X, expected_val.X)
         elif isinstance(actual_val, (np.ndarray, pd.Series, pd.DataFrame, list, tuple)):
