@@ -9,6 +9,7 @@ from typing import (
     Iterable,
     Optional,
     Sequence,
+    NamedTuple,
 )
 from typing_extensions import Literal, Protocol
 
@@ -37,7 +38,18 @@ __all__ = [
     "shadow",
     "register_plotter",
     "SafeGetter",
+    "StatesHolder",
 ]
+
+
+class StatesHolder(NamedTuple):  # noqa: D101
+    assignment: Optional[pd.Series] = None
+    probs: Optional[pd.Series] = None
+    colors: Optional[np.ndarray] = None
+    memberships: Optional[Lineage] = None
+
+    def set(self, **kwargs: Any) -> "StatesHolder":  # noqa: D102
+        return self._replace(**kwargs)
 
 
 class PlotMode(ModeEnum):
@@ -373,12 +385,7 @@ def _plot_dispatcher(
     )
 
 
-def register_plotter(
-    *,
-    discrete: Optional[str] = None,
-    continuous: Optional[str] = None,
-    colors: Optional[str] = None,
-):
+def register_plotter(*, fwd_attr: str, bwd_attr: Optional[str] = None):
     """
     Register a plotting function.
 
@@ -386,14 +393,8 @@ def register_plotter(
 
     Parameters
     ----------
-    discrete
-        Attribute which stores categorical :class:`pandas.Series`.
-    continuous
-        Attribute which stores :class:`cellrank.Lineage` containing continuous observations, such as
-        macrostates memberships or absorption probabilities.
-    colors
-        Attribute where color is stored. Useful only when specifying ``discrete``,
-        since :class:`cellrank.Lineage` already contains color information.
+    fwd_attr: TODO(michalk8): enable warnings
+    bwd_attr: TODO(michalk8): enable warnings
 
     Returns
     -------
@@ -407,43 +408,41 @@ def register_plotter(
         args: Any,
         kwargs: Dict[str, Any],
     ) -> None:
-        # fmt: off
-        disc: Optional[bool] = kwargs.pop("discrete", None)
-        # prefer `discrete`
-        disc = discrete is not None if disc is None else disc
+        # TODO(michalk8): enable warnings again
+        discrete: Optional[bool] = kwargs.pop("discrete", True)
+        which = kwargs.pop("which", "terminal")
+        if which not in ("initial", "terminal"):
+            raise ValueError(
+                f"Expected `which` to be either `'initial'` or `'terminal'`, found `{which!r}`."
+            )
+        if which == "initial" and bwd_attr is None:
+            which = "terminal"
 
-        if disc and discrete is None:
-            logg.warning(f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode")
-            disc = False
-        if not disc and continuous is None:
-            logg.warning(f"Unable to plot `.{discrete}` in `continuous` mode. Using `discrete` mode")
-            disc = True
-        # fmt: on
+        obj: Union[StatesHolder, Lineage] = getattr(
+            instance, fwd_attr if which == "terminal" else bwd_attr
+        )
+        if isinstance(obj, Lineage):
+            discrete = False
+        elif not discrete and obj.memberships is None:
+            discrete = True
 
-        attr = discrete if disc else continuous
-        data = getattr(instance, attr, None)
-        if data is None:
-            # prefer `continuous` for a prettier format
-            attr = continuous if continuous is not None else discrete
-            raise RuntimeError(f"Compute `.{attr}` first as `.compute_{attr}()`.")
-
-        if colors is None:
-            # extract colors from Lineage object, if present
-            _colors = getattr(getattr(instance, continuous, None), "colors", None)
+        if isinstance(obj, Lineage):
+            data, colors = obj, obj.colors
+        elif isinstance(obj, StatesHolder):
+            data = obj.assignment if discrete else obj.memberships
+            colors = obj.colors
         else:
-            _colors = getattr(instance, colors, None)
+            raise TypeError(f"Unable to plot a value of type `{type(obj).__name__}`.")
 
         return wrapped(
             *args,
             _data=data,
-            _colors=_colors,
-            _title=attr,
-            discrete=disc,
+            _colors=colors,
+            #  TODO(michak8): clean this up
+            _title=fwd_attr if which == "terminal" else bwd_attr,
+            discrete=discrete,
             **kwargs,
         )
-
-    if discrete is None and continuous is None:
-        raise ValueError("At least 1 of `discrete` or `continuous` must be set.")
 
     return wrapper(_plot_dispatcher)
 

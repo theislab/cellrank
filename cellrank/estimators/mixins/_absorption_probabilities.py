@@ -19,6 +19,7 @@ from cellrank._utils._linear_solver import _solve_lin_system
 from cellrank.estimators.mixins._utils import (
     SafeGetter,
     BaseProtocol,
+    StatesHolder,
     logger,
     shadow,
     register_plotter,
@@ -33,7 +34,7 @@ __all__ = ["AbsProbsMixin"]
 
 
 class AbsProbsProtocol(BaseProtocol):
-    _term_states_colors: np.ndarray
+    _term_states: StatesHolder
 
     @property
     def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
@@ -520,5 +521,5 @@ class AbsProbsMixin:
         return sg.ok
 
     plot_absorption_probabilities = register_plotter(
-        continuous="absorption_probabilities"
+        fwd_attr="absorption_probabilities"
     )

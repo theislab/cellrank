@@ -23,12 +23,12 @@ from cellrank.estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.kernels._base_kernel import KernelExpression
 from cellrank.estimators.mixins._utils import (
     SafeGetter,
+    StatesHolder,
     logger,
     shadow,
     register_plotter,
 )
 from cellrank.estimators.terminal_states._term_states_estimator import (
-    StatesHolder,
     TermStatesEstimator,
 )
 
@@ -1129,10 +1129,4 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # status is based on `backward=False` by design
         return sg.ok and self._read_absorption_probabilities(adata)
 
-    # TODO(michalk8)
-    plot_macrostates = register_plotter(
-        discrete="macrostates", continuous="macrostates_memberships"
-    )
-    plot_terminal_states = register_plotter(
-        discrete="terminal_states", continuous="terminal_states_memberships"
-    )
+    plot_macrostates = register_plotter(bwd_attr=None, fwd_attr="_macrostates")

@@ -8,7 +8,7 @@ import cellrank as cr
 from anndata import AnnData
 from cellrank.kernels import VelocityKernel, ConnectivityKernel
 from cellrank._utils._key import Key
-from cellrank.estimators.terminal_states._term_states_estimator import StatesHolder
+from cellrank.estimators.mixins._utils import StatesHolder
 
 import numpy as np
 import pandas as pd

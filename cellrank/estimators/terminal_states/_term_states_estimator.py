@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence, NamedTuple
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
 from abc import ABC
@@ -16,10 +16,10 @@ from cellrank._utils._colors import (
     _convert_to_hex_colors,
     _create_categorical_colors,
 )
-from cellrank._utils._lineage import Lineage
 from cellrank.kernels._base_kernel import KernelExpression
 from cellrank.estimators.mixins._utils import (
     SafeGetter,
+    StatesHolder,
     logger,
     shadow,
     register_plotter,
@@ -34,16 +34,6 @@ from pandas.api.types import infer_dtype, is_categorical_dtype
 from matplotlib.colors import to_hex
 
 __all__ = ["TermStatesEstimator"]
-
-
-class StatesHolder(NamedTuple):
-    assignment: Optional[pd.Series] = None
-    probs: Optional[pd.Series] = None
-    colors: Optional[np.ndarray] = None
-    memberships: Optional[Lineage] = None
-
-    def set(self, **kwargs: Any) -> "StatesHolder":
-        return self._replace(**kwargs)
 
 
 @d.dedent
@@ -352,7 +342,4 @@ class TermStatesEstimator(BaseEstimator, ABC):
         """
         return self.predict(*args, **kwargs)
 
-    # TODO(michalk8)
-    plot_terminal_states = register_plotter(
-        discrete="terminal_states", colors="_term_states_colors"
-    )
+    plot_states = register_plotter(fwd_attr="_term_states", bwd_attr="_init_states")
