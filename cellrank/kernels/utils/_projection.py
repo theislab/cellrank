@@ -88,7 +88,7 @@ class TmatProjection:
             except ValueError:
                 raise RuntimeError(
                     "Unable to find connectivities in the kernel. "
-                    "Please supply them as `connectivities=...`."
+                    "Please supply them explicitly as `connectivities=...`."
                 ) from None
         if not isspmatrix_csr(connectivities):
             connectivities = connectivities.tocsr()
@@ -99,16 +99,16 @@ class TmatProjection:
             warnings.simplefilter("ignore")
             for row_id, row in enumerate(self._kexpr.transition_matrix):
                 conn_idxs = connectivities[row_id, :].indices
-
                 dX = emb[conn_idxs] - emb[row_id, None]
 
                 if np.any(np.isnan(dX)):
                     T_emb[row_id, :] = np.nan
                 else:
-                    probs = row[:, conn_idxs]
-                    if issparse(probs):
-                        probs = probs.A.squeeze()
-
+                    probs = (
+                        row[:, conn_idxs].A.squeeze()
+                        if issparse(row)
+                        else row[conn_idxs]
+                    )
                     dX /= np.linalg.norm(dX, axis=1)[:, None]
                     dX = np.nan_to_num(dX)
                     T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]

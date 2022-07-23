@@ -1486,6 +1486,11 @@ class TestPrecomputedKernel:
         assert key in pk.params["origin"]
         np.testing.assert_array_equal(mat, pk.transition_matrix)
 
+    def test_projection_explicit_connectivities(self, adata: AnnData):
+        mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(mat, adata=adata)
+        pk.plot_projection(connectivities=adata.obsp["connectivities"])
+
 
 class TestKernelIO:
     @pytest.mark.parametrize("copy", [False, True])
