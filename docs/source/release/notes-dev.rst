@@ -1,4 +1,4 @@
-CellRank dev (2022-07-08)
+CellRank dev (2022-07-23)
 =========================
 
 Features
@@ -67,6 +67,9 @@ Bugfixes
 
 - Fix computing time to absorption to aggregated terminal states.
   `#923 <https://github.com/theislab/cellrank/pull/923>`__
+
+- Fix initial/terminal points size in random walk.
+  `#929 <https://github.com/theislab/cellrank/pull/929>`__
 
 
 Miscellaneous
