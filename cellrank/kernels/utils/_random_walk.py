@@ -283,7 +283,7 @@ class RandomWalk:
                 y=emb[ixs][:, 1],
                 outline_color=("black", to_hex(cmap(float(abs(ix))))),
                 kwargs={
-                    "s": kwargs.get("s", default_size(self._adata)) * 1.1,
+                    "s": kwargs.get("size", default_size(self._adata)) * 1.1,
                     "alpha": 0.9,
                 },
                 ax=ax,
