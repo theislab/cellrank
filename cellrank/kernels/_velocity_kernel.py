@@ -199,7 +199,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
 
         if model == VelocityModel.DETERMINISTIC:
             return Deterministic(
-                self._conn,
+                self.connectivities,
                 self._xdata,
                 self._vdata,
                 similarity=similarity,
@@ -208,7 +208,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
             )
         if model == VelocityModel.STOCHASTIC:
             return Stochastic(
-                self._conn,
+                self.connectivities,
                 self._xdata,
                 self._vexp,
                 self._vvar,
@@ -218,7 +218,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
             )
         if model == VelocityModel.MONTE_CARLO:
             return MonteCarlo(
-                self._conn,
+                self.connectivities,
                 self._xdata,
                 self._vexp,
                 self._vvar,
