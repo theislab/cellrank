@@ -1,5 +1,5 @@
 from cellrank.kernels.utils._tmat_flow import FlowPlotter
-from cellrank.kernels.utils._projection import LowDimProjection
+from cellrank.kernels.utils._projection import TmatProjection
 from cellrank.kernels.utils._similarity import (
     Cosine,
     DotProduct,
