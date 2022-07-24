@@ -2074,11 +2074,11 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
-        mc.plot_terminal_states(dpi=DPI, save=fpath)
+        mc.plot_states(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_final_states_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_terminal_states(color="clusters", dpi=DPI, save=fpath)
+        mc.plot_states(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
@@ -2216,35 +2216,35 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(dpi=DPI, save=fpath)
+        mc.plot_states(dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(states=["0"], dpi=DPI, save=fpath)
+        mc.plot_states(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_discrete(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(discrete=True, dpi=DPI, save=fpath)
+        mc.plot_states(discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(color="clusters", dpi=DPI, save=fpath)
+        mc.plot_states(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_no_same_plot(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_states(same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_states(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_title(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(title="foobar", dpi=DPI, save=fpath)
+        mc.plot_states(title="foobar", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_time(self, mc: GPCCA, fpath: str):
-        mc.plot_terminal_states(mode="time", dpi=DPI, save=fpath)
+        mc.plot_states(mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_disc_same(self, mc: GPCCA, fpath: str):
