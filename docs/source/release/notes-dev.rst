@@ -1,4 +1,4 @@
-CellRank dev (2022-07-23)
+CellRank dev (2022-07-24)
 =========================
 
 Features
@@ -39,6 +39,9 @@ Features
 
 - Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
   `#890 <https://github.com/theislab/cellrank/pull/890>`__
+
+- Allow passing connectivities for transition matrix projection. Useful when the kernel is not kNN-based.
+  `#930 <https://github.com/theislab/cellrank/pull/930>`__
 
 
 Bugfixes
