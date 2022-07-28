@@ -1,7 +1,8 @@
 Estimators
 ==========
-TODO(Marius1311): be more descriptive/verbose.
-Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
+Estimators enable quantitative analysis of Markov transition matrices computed using CellRank
+:ref:`Kernels`, including automatic detection of initial and terminal states, and computation
+of fate probabilities.
 
 .. module:: cellrank.estimators
 .. currentmodule:: cellrank
