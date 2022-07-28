@@ -271,7 +271,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
         # fmt: off
-        if len(self._macrostates.cat.categories) == 1:
+        if len(self.macrostates.cat.categories) == 1:
             logg.warning(f"Found only one macrostate. Making it the single {which} state")
             self.set_states_from_macrostates(names=None, which=which, n_cells=n_cells, params=self._create_params())
             return
