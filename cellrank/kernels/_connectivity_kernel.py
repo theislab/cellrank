@@ -68,7 +68,11 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
         if self._reuse_cache({"dnorm": density_normalize, "key": self._conn_key}, time=start):
             return self
 
-        self.transition_matrix = self._density_normalize(self._conn) if density_normalize else self._conn
+        conn = self.connectivities
+        if density_normalize:
+            conn = self._density_normalize(conn)
+
+        self.transition_matrix = conn
         logg.info("    Finish", time=start)
         # fmt: on
 

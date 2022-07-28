@@ -8,7 +8,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._utils import save_fig, _normalize, _read_graph_data
-from cellrank.kernels.utils import RandomWalk, FlowPlotter, LowDimProjection
+from cellrank.kernels.utils import RandomWalk, FlowPlotter, TmatProjection
 from cellrank.kernels._utils import require_tmat
 from cellrank.kernels.mixins import IOMixin, BidirectionalMixin, UnidirectionalMixin
 from cellrank.kernels.utils._random_walk import Indices_t
@@ -270,6 +270,7 @@ class KernelExpression(IOMixin, ABC):
         key_added: Optional[str] = None,
         recompute: bool = False,
         stream: bool = True,
+        connectivities: Optional[spmatrix] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -278,7 +279,7 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         basis
-            Key in :attr:`anndata.AnnData.obsm` containing the basis onto which to project.
+            Key in :attr:`anndata.AnnData.obsm` containing the basis.
         key_added
             If not `None`, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
@@ -287,15 +288,19 @@ class KernelExpression(IOMixin, ABC):
         stream
             If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
             Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
+        connectivities
+            Connectivity matrix to use for projection. If ``None``, use ones from the underlying kernel, is possible.
         kwargs
-            Keyword argument for the plotting function.
+            Keyword argument for the chosen plotting function.
 
         Returns
         -------
         Nothing, just plots and modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
-        proj = LowDimProjection(self, basis=basis)
-        proj.project(key_added=key_added, recompute=recompute)
+        proj = TmatProjection(self, basis=basis)
+        proj.project(
+            key_added=key_added, recompute=recompute, connectivities=connectivities
+        )
         proj.plot(stream=stream, **kwargs)
 
     def __add__(self, other: "KernelExpression") -> "KernelExpression":
@@ -311,7 +316,6 @@ class KernelExpression(IOMixin, ABC):
                     return False
                 if not kexpr._bin_consts:
                     return False
-
             return True
 
         if not isinstance(other, KernelExpression):

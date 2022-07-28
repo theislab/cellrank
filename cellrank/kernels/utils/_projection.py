@@ -10,12 +10,12 @@ from cellrank.kernels._utils import _get_basis
 from scvelo.tools.velocity_embedding import quiver_autoscale
 
 import numpy as np
-from scipy.sparse import issparse
+from scipy.sparse import issparse, spmatrix, isspmatrix_csr
 
-__all__ = ["LowDimProjection"]
+__all__ = ["TmatProjection"]
 
 
-class LowDimProjection:
+class TmatProjection:
     """
     Project transition matrix onto a low-dimensional embedding.
 
@@ -34,10 +34,11 @@ class LowDimProjection:
 
         for kernel in kexpr.kernels:
             if not isinstance(kernel, ConnectivityMixin):
-                raise TypeError(
-                    f"{kernel!r} is not a kNN based kernel. The embedding projection "
-                    "only works for kNN based kernels."
+                logg.warning(
+                    f"{kernel!r} is not a kNN based kernel. "
+                    f"The embedding projection works best for kNN-based kernels"
                 )
+                break
         self._kexpr = kexpr
         self._basis = basis[2:] if basis.startswith("X_") else basis
         self._key: Optional[str] = None
@@ -46,9 +47,12 @@ class LowDimProjection:
         self,
         key_added: Optional[str] = None,
         recompute: bool = False,
+        connectivities: Optional[spmatrix] = None,
     ) -> None:
         """
         Project transition matrix onto an embedding.
+
+        This function has been adapted from :func:`scvelo.tl.velocity_embedding`.
 
         Parameters
         ----------
@@ -56,41 +60,55 @@ class LowDimProjection:
             Key in :attr:`anndata.AnnData.obsm` where to store the projection.
         recompute
             Whether to recompute the projection if it already exists.
+        connectivities
+            Connectivity matrix to use for projection. If ``None``, use ones from the underlying kernel, is possible.
 
         Returns
         -------
         Nothing, just updates :attr:`anndata.AnnData` with the projection and the parameters used for computation.
         """
-        # modified from: https://github.com/theislab/scvelo/blob/master/scvelo/tools/velocity_embedding.py
+        from cellrank.kernels.mixins import ConnectivityMixin
 
         self._key = Key.uns.kernel(self._kexpr.backward, key=key_added)
         ukey = f"{self._key}_params"
-        key = self._key + "_" + self._basis
+        key = f"{self._key}_{self._basis}"
 
         if not recompute and key in self._kexpr.adata.obsm:
             logg.info(f"Using precomputed projection `adata.obsm[{key!r}]`")
             return
 
         start = logg.info(f"Projecting transition matrix onto `{self._basis}`")
+        if connectivities is None:
+            try:
+                connectivities, *_ = (
+                    c.connectivities
+                    for c in self._kexpr.kernels
+                    if isinstance(c, ConnectivityMixin)
+                )
+            except ValueError:
+                raise RuntimeError(
+                    "Unable to find connectivities in the kernel. "
+                    "Please supply them explicitly as `connectivities=...`."
+                ) from None
+        if not isspmatrix_csr(connectivities):
+            connectivities = connectivities.tocsr()
 
         emb = _get_basis(self._kexpr.adata, self._basis)
         T_emb = np.empty_like(emb)
-        conn = self._kexpr.kernels[0]._conn
-
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for row_id, row in enumerate(self._kexpr.transition_matrix):
-                conn_idxs = conn[row_id, :].indices
-
+                conn_idxs = connectivities[row_id, :].indices
                 dX = emb[conn_idxs] - emb[row_id, None]
 
                 if np.any(np.isnan(dX)):
                     T_emb[row_id, :] = np.nan
                 else:
-                    probs = row[:, conn_idxs]
-                    if issparse(probs):
-                        probs = probs.A.squeeze()
-
+                    probs = (
+                        row[:, conn_idxs].A.squeeze()
+                        if issparse(row)
+                        else row[conn_idxs]
+                    )
                     dX /= np.linalg.norm(dX, axis=1)[:, None]
                     dX = np.nan_to_num(dX)
                     T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]
@@ -122,7 +140,7 @@ class LowDimProjection:
             If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
             Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
         kwargs
-            Keyword argument for the plotting function.
+            Keyword argument for the chosen plotting function.
 
         Returns
         -------

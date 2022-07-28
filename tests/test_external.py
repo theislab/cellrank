@@ -106,13 +106,10 @@ class TestOTKernel:
             ck = connectivity_kernel(adata_large).compute_transition_matrix()
             combined_kernel = 0.9 * ok + 0.1 * ck
             combined_kernel.compute_transition_matrix()
-        else:
-            combined_kernel = ok
-
-        with pytest.raises(
-            TypeError, match=r"StationaryOTKernel is not a kNN based kernel"
-        ):
             combined_kernel.plot_projection()
+        else:
+            with pytest.raises(RuntimeError, match=r"Unable to find connectivities"):
+                ok.plot_projection()
 
 
 @wot_not_installed_skip
@@ -180,7 +177,6 @@ class TestWOTKernel:
             elif cmat == "X_pca":
                 assert param == "obsm:X_pca"
             elif cmat == "good_shape":
-                # careful, param is `nstr`, which does not equal anything
                 assert str(param) == "precomputed"
             else:
                 assert param == "default"
@@ -326,11 +322,10 @@ class TestWOTKernel:
             ck = connectivity_kernel(adata_large).compute_transition_matrix()
             combined_kernel = 0.9 * ok + 0.1 * ck
             combined_kernel.compute_transition_matrix()
-        else:
-            combined_kernel = ok
-
-        with pytest.raises(TypeError, match=r"WOTKernel is not a kNN based kernel"):
             combined_kernel.plot_projection()
+        else:
+            with pytest.raises(RuntimeError, match=r"Unable to find connectivities"):
+                ok.plot_projection()
 
     def test_wot_write(self, adata_large: AnnData, tmpdir):
         path = str(tmpdir / "wot.pickle")

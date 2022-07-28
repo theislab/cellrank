@@ -490,7 +490,7 @@ class TestKernel:
         k = clazz(**kwargs)
 
         if isinstance(k, ConnectivityMixin):
-            np.testing.assert_array_equal(k._conn.A, conn.A)
+            np.testing.assert_array_equal(k.connectivities.A, conn.A)
         else:
             assert not hasattr(k, "_conn")
 
@@ -816,7 +816,7 @@ class TestKernelCopy:
 
         for attr in ignored:
             assert getattr(ck2, attr, None) is None
-        assert ck2._conn is not None
+        assert ck2.connectivities is not None
         assert ck2._conn_key == ck1._conn_key
 
 
@@ -1485,6 +1485,11 @@ class TestPrecomputedKernel:
         assert pk.backward == backward
         assert key in pk.params["origin"]
         np.testing.assert_array_equal(mat, pk.transition_matrix)
+
+    def test_projection_explicit_connectivities(self, adata: AnnData):
+        mat = random_transition_matrix(adata.n_obs)
+        pk = PrecomputedKernel(mat, adata=adata)
+        pk.plot_projection(connectivities=adata.obsp["connectivities"])
 
 
 class TestKernelIO:
