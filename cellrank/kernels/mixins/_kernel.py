@@ -73,11 +73,11 @@ class BidirectionalMixin(ABC):
 
     def __init__(self, *args: Any, backward: bool = False, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        if not isinstance(backward, bool):
+        if not isinstance(backward, (bool, np.bool_)):
             raise TypeError(
                 f"Expected `backward` to be `bool`, found `{type(backward).__name__}`."
             )
-        self._backward = backward
+        self._backward = bool(backward)
         self._init_kwargs["backward"] = backward
 
     @abstractmethod
