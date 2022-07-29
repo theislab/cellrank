@@ -47,6 +47,8 @@ External Kernels
     external.kernels.StationaryOTKernel
     external.kernels.WOTKernel
 
+.. _estimators:
+
 Estimators
 ----------
 Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
