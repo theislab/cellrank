@@ -126,6 +126,7 @@ examples/example.h5ad
 figures
 data
 **/*.ipynb
+docs/source/notebooks
 
 # vendorized msmtools
 cellrank/_vendor

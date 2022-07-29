@@ -28,6 +28,9 @@ Please check out our manuscript :cite:`lange:22` in **Nature Methods** to learn 
 
 Getting started with CellRank
 -----------------------------
+We have tutorials and examples that help you getting started; tutorials are longer and explain computational pipelines,
+examples are short and demonstrate individual steps. To learn more about the principles behind CellRank, visit our
+
 If you're new to CellRank, make sure to go though the `basic tutorial`_ which introduces you to CellRank's high-level
 API. Most biological systems require a bit more control, so be sure to check out the `kernels and estimators tutorial`_
 which allows to unlock the full power of CellRank. If you want to see individual functions in action, visit our
