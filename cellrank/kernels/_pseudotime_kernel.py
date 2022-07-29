@@ -156,7 +156,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         # fmt: on
 
         biased_conn = scheme.bias_knn(
-            self._conn,
+            self.connectivities,
             self.pseudotime,
             n_jobs=n_jobs,
             backend=backend,

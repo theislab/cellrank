@@ -1102,6 +1102,22 @@ class TestGPCCA:
         np.testing.assert_array_equal(drivers.loc[gene], np.nan)
         assert np.asarray(drivers.iloc[drivers.index != gene].isnull()).sum() == 0
 
+    # fmt: off
+    @pytest.mark.parametrize("tta", ["0", [("0",), ("1",)], [("0",), ("1", "2",)], "all"])
+    # fmt: on
+    def test_compute_time_to_absorption(
+        self, adata_large: AnnData, tta: Union[str, Sequence[Tuple[str, ...]]]
+    ):
+        n_states = 3
+        n_expected = len(tta) if isinstance(tta, list) else 1
+        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
+        g = cr.estimators.GPCCA(ck)
+        g.fit(n_states=n_states)
+        g.set_terminal_states_from_macrostates()
+        g.compute_absorption_probabilities(time_to_absorption=tta)
+
+        np.testing.assert_array_equal(g.absorption_times.shape, (len(g), n_expected))
+
 
 class TestGPCCASerialization:
     @pytest.mark.parametrize("state", list(State))

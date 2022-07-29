@@ -1,0 +1,1 @@
+Fix not being able to use ``minChi`` in :meth:`cellrank.estimators.GPCCA.fit`. Also compute 20 Schur vectors by default.

@@ -1,4 +1,4 @@
-CellRank dev (2022-06-22)
+CellRank dev (2022-07-24)
 =========================
 
 Features
@@ -40,6 +40,9 @@ Features
 - Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
   `#890 <https://github.com/theislab/cellrank/pull/890>`__
 
+- Allow passing connectivities for transition matrix projection. Useful when the kernel is not kNN-based.
+  `#930 <https://github.com/theislab/cellrank/pull/930>`__
+
 
 Bugfixes
 --------
@@ -65,6 +68,12 @@ Bugfixes
 - Adds references to the docs
   `#887 <https://github.com/theislab/cellrank/pull/887>`__
 
+- Fix computing time to absorption to aggregated terminal states.
+  `#923 <https://github.com/theislab/cellrank/pull/923>`__
+
+- Fix initial/terminal points size in random walk.
+  `#929 <https://github.com/theislab/cellrank/pull/929>`__
+
 
 Miscellaneous
 -------------
@@ -77,6 +86,12 @@ Miscellaneous
 
 - Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
   `#894 <https://github.com/theislab/cellrank/pull/894>`__
+
+- Fix not being able to use ``minChi`` in :meth:`cellrank.estimators.GPCCA.fit`. Also compute 20 Schur vectors by default.
+  `#913 <https://github.com/theislab/cellrank/pull/913>`__
+
+- Prefer plotting macrostates/terminal in a discrete way.
+  `#914 <https://github.com/theislab/cellrank/pull/914>`__
 
 
 Documentation

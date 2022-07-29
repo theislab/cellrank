@@ -18,19 +18,17 @@ class ConnectivityMixin:
         self,
         conn_key: str = "connectivities",
         check_connectivity: bool = False,
+        check_symmetric: bool = True,
         **kwargs: Any,
     ) -> None:
         super()._read_from_adata(**kwargs)
-        # fmt: off
         self._conn_key = conn_key
-        self._conn = _get_neighs(self.adata, mode="connectivities", key=conn_key)
-        self._conn = csr_matrix(self._conn).astype(np.float64, copy=False)
-        # fmt: on
-        if check_connectivity:
-            if not _connected(self._conn):
-                logg.warning("kNN graph is not connected")
+        conn = _get_neighs(self.adata, mode="connectivities", key=conn_key)
+        self._conn = csr_matrix(conn).astype(np.float64, copy=False)
 
-        if not _symmetric(self._conn):
+        if check_connectivity and not _connected(self.connectivities):
+            logg.warning("kNN graph is not connected")
+        if check_symmetric and not _symmetric(self.connectivities):
             logg.warning("kNN graph is not symmetric")
 
     def _density_normalize(
@@ -50,14 +48,19 @@ class ConnectivityMixin:
         """
         logg.debug("Density normalizing the transition matrix")
 
-        q = np.asarray(self._conn.sum(axis=0)).squeeze()
+        q = np.asarray(self.connectivities.sum(axis=0)).squeeze()
         Q = spdiags(1.0 / q, 0, matrix.shape[0], matrix.shape[0])
 
         return Q @ matrix @ Q
 
+    @property
+    def connectivities(self) -> csr_matrix:
+        """Underlying connectivity matrix."""
+        return self._conn
+
 
 class UnidirectionalMixin:
-    """Mixin specifying that its kernel doesn't have a direction."""
+    """Mixin specifying that its kernel doesn't is directionless."""
 
     @property
     def backward(self) -> None:
@@ -70,11 +73,12 @@ class BidirectionalMixin(ABC):
 
     def __init__(self, *args: Any, backward: bool = False, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        if not isinstance(backward, bool):
+        if not isinstance(backward, (bool, np.bool_)):
             raise TypeError(
                 f"Expected `backward` to be `bool`, found `{type(backward).__name__}`."
             )
-        self._backward = backward
+        self._backward = bool(backward)
+        self._init_kwargs["backward"] = backward
 
     @abstractmethod
     def __invert__(self) -> "BidirectionalMixin":
