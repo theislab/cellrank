@@ -1,5 +1,8 @@
 Team
 ====
+..
+    TODO(michalk8): Could you format this so it looks like the scVI tools page? See https://scvi-tools.org/team#former-development-team-members
+
 CellRank was started as a collaboration between the Theislab at Helmholtz Munich and the Pe'er lab at Memorial Sloan
 Kettering Cancer Center (MSKCC). We are happy about every code contribution we received so far, check out the
 `contributions <https://github.com/theislab/cellrank/graphs/contributors>`_ section on GitHub for an overview.
