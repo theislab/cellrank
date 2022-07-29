@@ -13,7 +13,7 @@ these. Our kernels work with a variety of input data including `RNA velocity`_ :
 `cellular similarity`_ (both transcriptomic and spatial) and `pseudotime`_, among others. Our `VelocityKernel`_
 takes into account **uncertainty in the velocities** and allows you to aggregate the short-range fate relations
 given by RNA velocity into longer trends along the phenotypic manifold. Our main estimator is
-*Generalized Perron Cluster Cluster Analysis* (G-PCCA) :cite:`reuter:18` which coarse-grains the Markov chain
+*Generalized Perron Cluster Cluster Analysis* (GPCCA) :cite:`reuter:18` which coarse-grains the Markov chain
 into a set of macrostates which represent initial, terminal and intermediate states. For each transient cell,
 we compute its fate probability towards any terminal state. We show an example of such a fate map in the figure above,
 which has been computed using the data of :cite:`bastidas-ponce:19`. CellRank combines `kernels`_ and `estimators`_
