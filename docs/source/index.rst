@@ -44,13 +44,6 @@ CellRank's key applications
   fate determination
 - identify potential `driver genes`_ for each identified cellular trajectory
 
-Why is it called "CellRank"?
-----------------------------
-CellRank **does not** rank cells, we gave the package this name because just like Google's original `PageRank`_
-algorithm, it works with Markov chains to aggregate relationships between individual objects (cells vs. websites)
-to learn about more global properties of the underlying dynamics (initial & terminal states and fate probabilities vs.
-website relevance).
-
 Support
 -------
 We welcome your feedback! Feel free to open an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_, send
@@ -144,7 +137,6 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
 .. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _`tweet`: https://twitter.com/MariusLange8
-.. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
 
 .. _gallery: https://cellrank.readthedocs.io/en/stable/auto_examples/index.html
 .. _macrostates: https://cellrank.readthedocs.io/en/stable/auto_examples/estimators/compute_macrostates.html
