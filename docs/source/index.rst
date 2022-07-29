@@ -7,16 +7,6 @@ CellRank for directed single-cell fate mapping
    :width: 600px
    :align: center
 
-.. sidebar:: Key Contributors
-
-    * `Marius Lange`_: lead developer, initial CellRank conception, maintainer
-    * `Michal Klein`_: senior developer, design & architecture, maintainer
-    * `Philipp Weiler`_: developer
-
-.. _Marius Lange: https://twitter.com/MariusLange8
-.. _Michal Klein: https://github.com/michalk8
-.. _Philipp Weiler: https://twitter.com/PhilippWeiler7
-
 **CellRank** is a toolkit to uncover cellular dynamics based on Markov state modeling of single-cell data. It contains
 two main modules: `kernels`_ compute cell-cell transition probabilities and `estimators`_ generate hypothesis based on
 these. Our kernels work with a variety of input data including `RNA velocity`_ :cite:`manno:18` and :cite:`bergen:20`,
