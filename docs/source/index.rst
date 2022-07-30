@@ -7,9 +7,10 @@ CellRank: dynamics from multi-view single-cell data
    :width: 600px
    :align: center
 
-**CellRank** is a framework to study cellular dynamics based on Markov state modeling of multi-view single-cell data.
-It estimates differentiation direction based on a varied (and growing!) number of biological priors including RNA
-velocity, pseudotime, developmental potential and experimental time points.
+**CellRank** is a modular framework to study cellular dynamics based on Markov state modeling of multi-view single-cell
+data. It estimates differentiation direction based on a varied (and growing!) number of biological priors including RNA
+velocity, pseudotime, developmental potential and experimental time points. Read our
+:doc:`about cellrank <about_cellrank>` page to learn more.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
 backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:18,reuter:22`.
