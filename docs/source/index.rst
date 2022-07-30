@@ -7,10 +7,10 @@ CellRank: dynamics from multi-view single-cell data
    :width: 600px
    :align: center
 
-**CellRank** is a modular framework to study cellular dynamics based on Markov state modeling of multi-view single-cell
-data. It estimates differentiation direction based on a varied (and growing!) number of biological priors including RNA
-velocity, pseudotime, developmental potential and experimental time points. Read our
-:doc:`about cellrank <about_cellrank>` page to learn more.
+**CellRank** :cite:`lange:22` is a modular framework to study cellular dynamics based on Markov state modeling of
+multi-view single-cell data. It estimates differentiation direction based on a varied (and growing!) number of
+biological priors including RNA velocity, pseudotime, developmental potential and experimental time points.
+See :doc:`about CellRank <about/index>` to learn more.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
 backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:18,reuter:22`.
@@ -21,18 +21,17 @@ CellRank's key applications
 - infer `fate probabilities`_ towards terminal states.
 - visualize `gene expression trends`_ along specific trajectories.
 - identify potential `driver genes`_ for each trajectory.
-- ... and many more, check out our API.
+- ... and many more, check out our :doc:`API <api>`.
 
 Getting started with CellRank
 -----------------------------
-We have :doc:`tutorials` and :doc:`examples` that help you getting started; tutorials are longer and explain
-computational pipelines,
-examples are short and demonstrate individual steps. To learn more about the principles behind CellRank, visit our
-:doc:`about CellRank <about_cellrank>` page.
+We have :doc:`tutorials` and :doc:`examples` that help you getting started. Tutorials are longer and explain
+computational pipelines, examples are short and demonstrate individual steps. To learn more about the principles
+behind CellRank, visit :doc:`about CellRank <about/index>`.
 
 Citing CellRank
 ---------------
-If you find CellRank useful for your research, please visit our :doc:`citing CellRank <citing_cellrank>` page.
+If you find CellRank useful for your research, please check out :doc:`citing CellRank <about/cite>`.
 
 Support
 --------
@@ -71,9 +70,10 @@ We actively encourage any contribution! To get started, please check out the :do
 .. toctree::
     :caption: About
     :maxdepth: 3
+    :hidden:
 
     about/index
-    about/citing
+    about/cite
     about/team
     GitHub <https://github.com/theislab/cellrank>
     Discourse <https://discourse.scverse.org/c/ecosytem/cellrank/40>

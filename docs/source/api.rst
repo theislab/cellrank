@@ -90,7 +90,7 @@ Models
     models.SKLearnModel
 
 Datasets
-~~~~~~~~
+--------
 .. module:: cellrank.datasets
 .. currentmodule:: cellrank
 
