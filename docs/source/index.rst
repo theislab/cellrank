@@ -3,7 +3,7 @@
 CellRank: dynamics from multi-view single-cell data
 ====================================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_overview.png
    :width: 600px
    :align: center
 
