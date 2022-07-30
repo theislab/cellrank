@@ -1,5 +1,5 @@
-How to cite CellRank
-====================
+How to cite us
+==============
 If you find CellRank useful for your research, please consider citing the CellRank manuscript :cite:`lange:22`.
 In addition, if you used the :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states,
 please cite the GPCCA manuscript :cite:`reuter:18`. The :class:`cellrank.estimators.GPCCA` uses Generalized Perron

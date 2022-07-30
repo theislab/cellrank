@@ -1,7 +1,7 @@
 |PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
 
 CellRank: dynamics from multi-view single-cell data
-====================================================
+===================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_overview.png
    :width: 600px
@@ -16,7 +16,7 @@ CellRank scales to large cell numbers, is fully compatible with the `scverse`_ e
 backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:18,reuter:22`.
 
 CellRank's key applications
-----------------------------
+---------------------------
 - compute initial, terminal and intermediate `macrostates`_ :cite:`reuter:18,reuter:22`.
 - infer `fate probabilities`_ towards terminal states.
 - visualize `gene expression trends`_ along specific trajectories.
@@ -24,14 +24,14 @@ CellRank's key applications
 - ... and many more, check out our API.
 
 Getting started with CellRank
-------------------------------
+-----------------------------
 We have :doc:`tutorials` and :doc:`examples` that help you getting started; tutorials are longer and explain
 computational pipelines,
 examples are short and demonstrate individual steps. To learn more about the principles behind CellRank, visit our
 :doc:`about CellRank <about_cellrank>` page.
 
 Citing CellRank
-----------------
+---------------
 If you find CellRank useful for your research, please visit our :doc:`citing CellRank <citing_cellrank>` page.
 
 Support
@@ -46,7 +46,7 @@ Please check out our manuscript :cite:`lange:22` in Nature Methods to learn more
 
 Contributing
 -------------
-We actively encourage any contribution! To get started, please check out the `contribution guide`_.
+We actively encourage any contribution! To get started, please check out the :doc:`contributing`.
 
 .. toctree::
     :caption: General
@@ -56,14 +56,9 @@ We actively encourage any contribution! To get started, please check out the `co
     installation
     api
     developer_api
-    about_cellrank
-    team
-    citing_cellrank
     release_notes
     contributing
     references
-    GitHub <https://github.com/theislab/cellrank>
-    Discourse <https://discourse.scverse.org/c/ecosytem/cellrank/40>
 
 .. toctree::
     :caption: Gallery
@@ -72,6 +67,16 @@ We actively encourage any contribution! To get started, please check out the `co
 
     tutorials
     examples
+
+.. toctree::
+    :caption: About
+    :maxdepth: 3
+
+    about/index
+    about/citing
+    about/team
+    GitHub <https://github.com/theislab/cellrank>
+    Discourse <https://discourse.scverse.org/c/ecosytem/cellrank/40>
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
     :target: https://pypi.org/project/cellrank
@@ -101,11 +106,10 @@ We actively encourage any contribution! To get started, please check out the `co
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
 
-.. _macrostates: :doc:`notebooks/tutorials/initial_terminal_states`
-.. _fate probabilities: :doc:`notebooks/tutorials/fate_probabilities`
-.. _driver genes: :doc:`notebooks/tutorials/fate_probabilities`
-.. _gene expression trends: :doc:`notebooks/tutorials/gene_trends`
-.. _contribution guide: :doc:`contributing`
+.. _macrostates: notebooks/tutorials/initial_terminal_states.html
+.. _fate probabilities: notebooks/tutorials/fate_probabilities.html
+.. _driver genes: notebooks/tutorials/fate_probabilities.html
+.. _gene expression trends: notebooks/tutorials/gene_trends.html
 
 .. _scverse: https://scverse.org/
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html

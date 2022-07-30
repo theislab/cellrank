@@ -8,7 +8,7 @@ Kettering Cancer Center (MSKCC). We are happy about every code contribution we r
 `contributions <https://github.com/theislab/cellrank/graphs/contributors>`_ section on GitHub for an overview.
 
 Principal investigators
-------------------------
+-----------------------
 * Fabian Theis (Helmholtz Munich)
     * GitHub: https://github.com/theislab
     * Twitter: https://twitter.com/fabian_theis
@@ -21,20 +21,21 @@ Principal investigators
     * Image: https://www.mskcc.org/sites/default/files/styles/width_800/public/node/239650/main_image/pe-er-dana_210524_027-rt-3x2.jpeg
 
 Core development team
-----------------------
-    * Marius Lange (Helmholtz Munich)
-        * GitHub: https://github.com/Marius1311
-        * Twitter: https://twitter.com/MariusLange8
-        * Website: https://mariuslange.com/
-        * Image: https://mariuslange.com/author/marius-lange/avatar_huc2ea0f123de6d091882f094508aad23f_1614639_270x270_fill_q75_lanczos_center.jpg
-    * Michal Klein (Helmoltz Munich)
-        * GitHub: https://github.com/michalk8
-    * Philipp Weiler (Helmholtz Munich)
-        * GitHub: https://github.com/WeilerP
-        * Twitter: https://twitter.com/PhilippWeiler7
-        * Image: https://avatars.githubusercontent.com/u/28675704?v=4
+---------------------
+* Marius Lange (Helmholtz Munich)
+    * GitHub: https://github.com/Marius1311
+    * Twitter: https://twitter.com/MariusLange8
+    * Website: https://mariuslange.com/
+    * Image: https://mariuslange.com/author/marius-lange/avatar_huc2ea0f123de6d091882f094508aad23f_1614639_270x270_fill_q75_lanczos_center.jpg
+* Michal Klein (Helmoltz Munich)
+    * GitHub: https://github.com/michalk8
+* Philipp Weiler (Helmholtz Munich)
+    * GitHub: https://github.com/WeilerP
+    * Twitter: https://twitter.com/PhilippWeiler7
+    * Image: https://avatars.githubusercontent.com/u/28675704?v=4
 
 pyGPCCA development
---------------------
-CellRank's GPCCA estimator is based on `pyGPCCA <https://github.com/msmdev/pyGPCCA>`_  for coarse-graining of non-reversible Markov chains :cite:`reuter:18`;
-check out `their documentation <https://pygpcca.readthedocs.io/>`_ to learn about contributions.
+-------------------
+CellRank's GPCCA estimator is based on `pyGPCCA <https://github.com/msmdev/pyGPCCA>`_  for coarse-graining of
+non-reversible Markov chains :cite:`reuter:18`; check out `their documentation <https://pygpcca.readthedocs.io/>`_
+to learn about contributions.

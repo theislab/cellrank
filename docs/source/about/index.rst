@@ -9,9 +9,9 @@ Robustness
 Fate restriction is a gradual, noisy process requiring probabilistic treatment. Therefore, we use Markov chains to
 describe stochastic fate transitions, where each cell represents one state in the Markov chain. Markov chains describe
 memoryless transitions between system states through a probabilistic framework. Transition probabilities are summarized
-in a  transition matrix $T$, where $T_{jk}$, describes the probability of transitioning from state $j$ to state $k$ in
-one step. In our context, each state corresponds to a cell. Markov chains are established tools in single-cell genomics
-and form the basis of many successful pseudotime approaches :cite:`haghverdi:16,setty:19`.
+in a transition matrix :math:`T`, where :math:`T_{jk}`, describes the probability of transitioning from state :math:`j`
+to state :math:`k` in one step. In our context, each state corresponds to a cell. Markov chains are established tools in
+single-cell genomics and form the basis of many successful pseudotime approaches :cite:`haghverdi:16,setty:19`.
 
 By using Markov chains, we assume that cellular state transitions occur gradually and without memory. The former
 assumption implies that cells change their molecular state in small steps with many intermediate states which are
@@ -23,17 +23,17 @@ many of the previous successful TI approaches :cite:`haghverdi:16,setty:19,wolf:
 
 Modularity
 -----------
-A typical CellRank workflow consists of two steps: (i) estimating cell-cell transition probabilities to set up a Markov
-transition matrix $T$, and (ii) analyzing it using various tools to derive biological insights. Decoupling these two
-steps yields a powerful and flexible modeling framework as many analysis steps are independent of the construction of
-the transition matrix. For example, whether we use RNA velocity or a pseudotime to derive directed transition
-probabilities does not change how initial and terminal states are inferred or fate probabilities estimated. The general
-structure of the framework, corresponding to steps (i) and (ii), is given by:
+A typical CellRank workflow consists of two steps: **(i)** estimating cell-cell transition probabilities to set up a
+Markov transition matrix :math:`T`, and **(ii)** analyzing it using various tools to derive biological insights.
+Decoupling these two steps yields a powerful and flexible modeling framework as many analysis steps are independent
+of the construction of the transition matrix. For example, whether we use RNA velocity or a pseudotime to derive
+directed transition probabilities does not change how initial and terminal states are inferred or fate probabilities
+estimated. The general structure of the framework, corresponding to steps **(i)** and **(ii)**, is given by:
 
 * :ref:`Kernels <kernels>` that take multi-view single cell input data  and estimate a matrix of cell-cell transition
-  probabilities $T$. Row $i$ in matrix $T$ contains the transition probabilities from cell $i$ towards putative
-  descendants. Therefore, all entries in the matrix are between 0 and 1, and rows sum to one.
-* :ref:`Estimators <estimators>` that take a cell-cell transition matrix $T$ computed using any kernel and apply
+  probabilities :math:`T`. Row :math:`i` in matrix :math:`T` contains the transition probabilities from cell :math:`i`
+  towards putative descendants. Therefore, all entries in the matrix are between 0 and 1, and rows sum to one.
+* :ref:`Estimators <estimators>` that take a cell-cell transition matrix :math:`T` computed using any kernel and apply
   concepts from the theory of Markov chains to identify initial, terminal, and intermediate `macrostates`_ and compute
   `fate probabilities`_.
 
@@ -49,8 +49,8 @@ trajectory, and `cluster expression trends`_.
 
 Sparsity
 --------
-All CellRank kernels yield sparse transition matrices $T$. Further, the :class:`cellrank.estimators.GPCCA` estimator
-exploits sparsity in all major computations. Sparsity allows CellRank to scale to large datasets.
+All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`cellrank.estimators.GPCCA`
+estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to large datasets.
 
 
 Why is it called "CellRank"?
@@ -61,7 +61,7 @@ to learn about more global properties of the underlying dynamics (initial & term
 website relevance).
 
 
-.. _PageRank: https://en.wikipedia.org/wiki/PageRank#cite_note-1
+.. _PageRank: https://en.wikipedia.org/wiki/PageRank
 .. _pyGPCCA: https://pygpcca.readthedocs.io/
 
 .. _macrostates: :doc:`notebooks/tutorials/initial_terminal_states`
