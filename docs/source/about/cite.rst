@@ -17,7 +17,7 @@ If you find CellRank useful for your research, please consider citing :cite:`lan
     }
 
 In addition, if you use the :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states,
-please consider citing :cite:`reuter:18`:
+please consider citing :cite:`reuter:18` as:
 
 .. code-block:: bibtex
 

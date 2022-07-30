@@ -9,14 +9,11 @@ CellRank offers two modes to interact with its core functionality:
 
 - interacting directly with the kernels defined in :class:`cellrank.kernels.Kernel` and the
   estimators :class:`cellrank.estimators.GPCCA` or :class:`cellrank.estimators.CFLARE`.
-  The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have
-  computed your transition matrix.
-  See our `Kernels and estimators tutorial <https://cellrank.readthedocs.io/en/stable/kernels_and_estimators.html>`_.
-
-Additionally, there is a set of plotting functions which can be used downstream of either analysis mode.
-
-The utilities are mainly for fitting continuous models to gene expression data
-and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
+  The division into kernels and estimators ensures that CellRank is broadly applicable, no matter how you have
+  computed your transition matrix, see the :doc:`notebooks/tutorials/kernels_and_estimators` tutorial.
+- additionally, there is a set of :ref:`plotting` functions which can be used downstream of either analysis mode.
+- the :ref:`models` are mainly for fitting continuous models to gene expression data
+  and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
 
 .. _kernels:
 
@@ -62,6 +59,8 @@ Estimators predict cell fates using the transitions derived from :ref:`Kernels`.
     estimators.GPCCA
     estimators.CFLARE
 
+.. _plotting:
+
 Plotting
 --------
 .. module:: cellrank.pl
@@ -76,6 +75,8 @@ Plotting
     pl.heatmap
     pl.cluster_trends
     pl.aggregate_absorption_probabilities
+
+.. _models:
 
 Models
 ------

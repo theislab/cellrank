@@ -17,11 +17,12 @@ backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>
 
 CellRank's key applications
 ---------------------------
-- compute initial, terminal and intermediate `macrostates`_ :cite:`reuter:18,reuter:22`.
-- infer `fate probabilities`_ towards terminal states.
-- visualize `gene expression trends`_ along specific trajectories.
-- identify potential `driver genes`_ for each trajectory.
-- ... and many more, check out our :doc:`API <api>`.
+- compute initial, terminal and intermediate :doc:`macrostates <notebooks/tutorials/initial_terminal_states>`
+  :cite:`reuter:18,reuter:22`.
+- infer :doc:`fate probabilities <notebooks/tutorials/fate_probabilities>` towards terminal states.
+- visualize :doc:`gene expression trends <notebooks/tutorials/gene_trends>` along specific trajectories.
+- identify potential :doc:`driver genes <notebooks/tutorials/fate_probabilities>` for each trajectory.
+- ... and much more, check out our :doc:`API <api>`.
 
 Getting started with CellRank
 -----------------------------
@@ -34,17 +35,16 @@ Citing CellRank
 If you find CellRank useful for your research, please check out :doc:`citing CellRank <about/cite>`.
 
 Support
---------
-We welcome your feedback! Feel free to open an `issue`_ or send
-us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just want to make a
-comment/suggestion.
+-------
+We welcome your feedback! Feel free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you
+encounter a bug, need our help or just want to make a comment/suggestion.
 
 CellRank in publications
--------------------------
+------------------------
 Please check out our manuscript :cite:`lange:22` in Nature Methods to learn more.
 
 Contributing
--------------
+------------
 We actively encourage any contribution! To get started, please check out the :doc:`contributing`.
 
 .. toctree::
@@ -105,11 +105,6 @@ We actively encourage any contribution! To get started, please check out the :do
 .. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
-
-.. _macrostates: notebooks/tutorials/initial_terminal_states.html
-.. _fate probabilities: notebooks/tutorials/fate_probabilities.html
-.. _driver genes: notebooks/tutorials/fate_probabilities.html
-.. _gene expression trends: notebooks/tutorials/gene_trends.html
 
 .. _scverse: https://scverse.org/
 .. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
