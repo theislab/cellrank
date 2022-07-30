@@ -1,4 +1,4 @@
-CellRank dev (2022-07-24)
+CellRank dev (2022-07-30)
 =========================
 
 Features
@@ -73,6 +73,9 @@ Bugfixes
 
 - Fix initial/terminal points size in random walk.
   `#929 <https://github.com/theislab/cellrank/pull/929>`__
+
+- This just adds a new concept figure to be used in the updated docs.
+  `#937 <https://github.com/theislab/cellrank/pull/937>`__
 
 
 Miscellaneous
