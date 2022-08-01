@@ -13,14 +13,14 @@ biological priors including RNA velocity, pseudotime, developmental potential an
 See :doc:`about CellRank <about/index>` to learn more.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
-backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:18,reuter:22`. Feel
+backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:19,reuter:22`. Feel
 free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just
 want to make a comment/suggestion.
 
 CellRank's key applications
 ---------------------------
 - compute initial, terminal and intermediate :doc:`macrostates <notebooks/tutorials/initial_terminal_states>`
-  :cite:`reuter:18,reuter:22`.
+  :cite:`reuter:19,reuter:22`.
 - infer :doc:`fate probabilities <notebooks/tutorials/fate_probabilities>` towards terminal states.
 - visualize :doc:`gene expression trends <notebooks/tutorials/gene_trends>` along specific trajectories.
 - identify potential :doc:`driver genes <notebooks/tutorials/fate_probabilities>` for each trajectory.

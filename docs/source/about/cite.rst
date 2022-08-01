@@ -17,21 +17,17 @@ If you find CellRank useful for your research, please consider citing :cite:`lan
     }
 
 In addition, if you use the :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states,
-please consider citing :cite:`reuter:18` as:
+please consider citing :cite:`reuter:19` as:
 
 .. code-block:: bibtex
 
-    @article{reuter:18,
-        author = {Reuter, Bernhard and Weber, Marcus and Fackeldey, Konstantin and
-                  Röblitz, Susanna and Garcia, Martin E.},
-        title = {Generalized Markov State Modeling Method for Nonequilibrium
-                 Biomolecular Dynamics: Exemplified on Amyloid β Conformational
-                 Dynamics Driven by an Oscillating Electric Field},
-        journal = {Journal of Chemical Theory and Computation},
-        volume = {14},
-        number = {7},
-        pages = {3579-3594},
-        year = {2018},
-        doi = {10.1021/acs.jctc.8b00079},
-        note  = {PMID: 29812922},
+    @article{reuter:19,
+        author = {Reuter,Bernhard  and Fackeldey,Konstantin  and Weber,Marcus },
+        title = {Generalized Markov modeling of nonreversible molecular kinetics},
+        journal = {The Journal of Chemical Physics},
+        volume = {150},
+        number = {17},
+        pages = {174103},
+        year = {2019},
+        doi = {10.1063/1.5064530},
     }
