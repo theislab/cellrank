@@ -42,10 +42,9 @@ estimated. The general structure of the framework, corresponding to steps **(i)*
   :doc:`fate probabilities <../notebooks/tutorials/fate_probabilities>`.
 
 Our main (and recommended!) estimator is based on *Generalized Perron Cluster Cluster Analysis* (GPCCA)
-:cite:`reuter:18,reuter:19`, a method originally developed to study conformational protein dynamics. CellRank uses a
-robust implementation of GPCCA through the `pyGPCCA`_ package.
-Please don't forget to cite both CellRank and GPCCA when using the :class:`cellrank.estimators.GPCCA` estimator,
-see :doc:`How to cite CellRank <about/cite>`.
+:cite:`reuter:18,reuter:19`, a method originally developed to study molecular dynamics. CellRank uses a
+robust implementation of GPCCA through the `pyGPCCA`_ package. Please don't forget to cite both CellRank and GPCCA when
+using the :class:`cellrank.estimators.GPCCA` estimator, see :doc:`How to cite CellRank <about/cite>`.
 
 We use fate probabilities to visualize trajectory-specific
 :doc:`gene expression trends <../notebooks/tutorials/gene_trends>`, infer putative
