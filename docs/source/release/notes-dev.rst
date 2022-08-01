@@ -77,6 +77,9 @@ Bugfixes
 - This just adds a new concept figure to be used in the updated docs.
   `#937 <https://github.com/theislab/cellrank/pull/937>`__
 
+- Update to the overview figure
+  `#938 <https://github.com/theislab/cellrank/pull/938>`__
+
 
 Miscellaneous
 -------------
