@@ -13,7 +13,9 @@ biological priors including RNA velocity, pseudotime, developmental potential an
 See :doc:`about CellRank <about/index>` to learn more.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
-backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:18,reuter:22`.
+backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:18,reuter:22`. Feel
+free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just
+want to make a comment/suggestion.
 
 CellRank's key applications
 ---------------------------
@@ -27,17 +29,8 @@ CellRank's key applications
 Getting started with CellRank
 -----------------------------
 We have :doc:`tutorials` and :doc:`examples` that help you getting started. Tutorials are longer and explain
-computational pipelines, examples are short and demonstrate individual steps. To learn more about the principles
-behind CellRank, visit :doc:`about CellRank <about/index>`.
-
-Citing CellRank
----------------
-If you find CellRank useful for your research, please check out :doc:`citing CellRank <about/cite>`.
-
-Support
--------
-We welcome your feedback! Feel free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you
-encounter a bug, need our help or just want to make a comment/suggestion.
+computational pipelines, examples are short and demonstrate individual steps. To see CellRank in action, explore our
+manuscript :cite:`lange:22` in Nature Methods.
 
 Contributing
 ------------
@@ -103,6 +96,4 @@ We actively encourage any contribution! To get started, please check out the :do
     :alt: Coverage
 
 .. _scverse: https://scverse.org/
-.. _Theislab: https://www.helmholtz-muenchen.de/icb/research/groups/theis-lab/overview/index.html
-.. _Peerlab: https://www.mskcc.org/research/ski/labs/dana-pe-er
 .. _issue: https://github.com/theislab/cellrank/issues/new/choose

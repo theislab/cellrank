@@ -1,7 +1,8 @@
 About CellRank
 ==============
 CellRank is a unified solution for the probabilistic description of cellular dynamics, encompassing various input data
-modalities and analysis scenarios through one consistent application user interface (:doc:`API <../api>`).
+modalities and analysis scenarios through one consistent application user interface (:doc:`API <../api>`). If you find
+CellRank useful for your research, please check out :doc:`citing CellRank <cite>`.
 
 Design principles
 -----------------
@@ -57,10 +58,6 @@ Sparsity
 ~~~~~~~~
 All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`cellrank.estimators.GPCCA`
 estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to large datasets.
-
-CellRank in publications
-------------------------
-Please check out our manuscript :cite:`lange:22` in Nature Methods to learn more.
 
 Why is it called "CellRank"?
 ----------------------------
