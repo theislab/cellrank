@@ -37,5 +37,5 @@ Core development team
 pyGPCCA development
 -------------------
 CellRank's GPCCA estimator is based on `pyGPCCA <https://github.com/msmdev/pyGPCCA>`_  for coarse-graining of
-non-reversible Markov chains :cite:`reuter:18`; check out `their documentation <https://pygpcca.readthedocs.io/>`_
+non-reversible Markov chains :cite:`reuter:19`; check out `their documentation <https://pygpcca.readthedocs.io/>`_
 to learn about contributions.

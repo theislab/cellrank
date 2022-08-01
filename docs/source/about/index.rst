@@ -22,7 +22,7 @@ assumption implies that cells change their molecular state in small steps with m
 captured in the data. This is a reasonable assumption for most biological systems. The latter assumption implies that a
 state transition depends only on the current molecular state and not on the history of states. This assumption is valid
 as CellRank describes average cellular dynamics, rather than any individual cell. Both assumptions form the basis of
-many of the previous successful TI approaches :cite:`haghverdi:16,setty:19,wolf:19`.
+many of the previous successful trajectory inference approaches :cite:`haghverdi:16,setty:19,wolf:19`.
 
 Modularity
 ~~~~~~~~~~
