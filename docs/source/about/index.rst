@@ -5,9 +5,7 @@ modalities and analysis scenarios through one consistent application user interf
 
 Design principles
 -----------------
-Our framework is based on three key principles: :ref:`robustness`, :ref:`modularity` and :ref:`sparsity`.
-
-.. _robustness:
+Our framework is based on three key principles: `Robustness`_, `Modularity`_ and `Sparsity`_.
 
 Robustness
 ~~~~~~~~~~
@@ -24,8 +22,6 @@ captured in the data. This is a reasonable assumption for most biological system
 state transition depends only on the current molecular state and not on the history of states. This assumption is valid
 as CellRank describes average cellular dynamics, rather than any individual cell. Both assumptions form the basis of
 many of the previous successful TI approaches :cite:`haghverdi:16,setty:19,wolf:19`.
-
-.. _modularity:
 
 Modularity
 ~~~~~~~~~~
@@ -57,12 +53,14 @@ We use fate probabilities to visualize trajectory-specific
 :func:`cascades of gene activation <cellrank.pl.heatmap>` along a trajectory, and
 :func:`cluster expression trends <cellrank.pl.cluster_trends>`.
 
-.. _sparsity:
-
 Sparsity
 ~~~~~~~~
 All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`cellrank.estimators.GPCCA`
 estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to large datasets.
+
+CellRank in publications
+------------------------
+Please check out our manuscript :cite:`lange:22` in Nature Methods to learn more.
 
 Why is it called "CellRank"?
 ----------------------------

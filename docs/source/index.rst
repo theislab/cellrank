@@ -39,10 +39,6 @@ Support
 We welcome your feedback! Feel free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you
 encounter a bug, need our help or just want to make a comment/suggestion.
 
-CellRank in publications
-------------------------
-Please check out our manuscript :cite:`lange:22` in Nature Methods to learn more.
-
 Contributing
 ------------
 We actively encourage any contribution! To get started, please check out the :doc:`contributing`.
