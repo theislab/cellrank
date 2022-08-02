@@ -1,6 +1,7 @@
 Plotting
 ========
-Plotting functions visualize CellRank outputs computed using :ref:`Kernels`, :ref:`Estimators` or :ref:`Models`.
+Plotting functions visualize CellRank outputs computed using :doc:`kernels <kernels>`, :doc:`estimators <estimators>`
+or :doc:`models <models>`.
 
 .. module:: cellrank.pl
 .. currentmodule:: cellrank
