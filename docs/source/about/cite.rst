@@ -16,8 +16,10 @@ If you find CellRank useful for your research, please consider citing :cite:`lan
         publisher = {Nature Publishing Group}
     }
 
-In addition, if you use the :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states,
-please consider citing :cite:`reuter:19` as:
+In addition, if you use :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states, you are
+using the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:22` under the hood, which implements the
+Generalized Perron Cluster Cluster Analysis (GPCCA) algorithm. Thus, additionally to CellRank, please cite GPCCA
+:cite:`reuter:19` as:
 
 .. code-block:: bibtex
 
