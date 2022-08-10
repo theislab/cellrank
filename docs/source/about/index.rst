@@ -66,4 +66,4 @@ to learn about more global properties of the underlying dynamics (initial & term
 website relevance).
 
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank
-.. _pyGPCCA: https://pygpcca.readthedocs.io/
+.. _pyGPCCA: https://github.com/msmdev/pyGPCCA

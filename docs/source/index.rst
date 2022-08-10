@@ -13,7 +13,7 @@ biological priors including RNA velocity, pseudotime, developmental potential an
 See :doc:`about CellRank <about/index>` to learn more.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
-backend, it is powered by the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:19,reuter:22`. Feel
+backend, it is powered by the `pyGPCCA package <https://github.com/msmdev/pyGPCCA>`_ :cite:`reuter:19,reuter:22`. Feel
 free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or just
 want to make a comment/suggestion.
 

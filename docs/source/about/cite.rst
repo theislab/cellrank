@@ -17,7 +17,7 @@ If you find CellRank useful for your research, please consider citing :cite:`lan
     }
 
 In addition, if you use :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states, you are
-using the `pyGPCCA package <https://pygpcca.readthedocs.io/>`_ :cite:`reuter:22` under the hood, which implements the
+using the `pyGPCCA package <https://github.com/msmdev/pyGPCCA>`_ :cite:`reuter:22` under the hood, which implements the
 Generalized Perron Cluster Cluster Analysis (GPCCA) algorithm. Thus, additionally to CellRank, please cite GPCCA
 :cite:`reuter:19` as:
 
