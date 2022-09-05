@@ -1,4 +1,4 @@
-CellRank dev (2022-08-08)
+CellRank dev (2022-09-05)
 =========================
 
 Features
@@ -82,6 +82,9 @@ Bugfixes
 
 - Update to the overview figure
   `#938 <https://github.com/theislab/cellrank/pull/938>`__
+
+- Import `Iterable` from `collections.abc` and not `collections`. `Iterable` was removed from `collections` in Python 3.10
+  `#943 <https://github.com/theislab/cellrank/pull/943>`__
 
 
 Miscellaneous
