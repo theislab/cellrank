@@ -1,0 +1,1 @@
+Import `Iterable` from `collections.abc` and not `collections`. `Iterable` was removed from `collections` in Python 3.10
