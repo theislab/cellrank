@@ -424,9 +424,7 @@ class TestInitializeKernel:
     def test_str(self, adata: AnnData):
         n = adata.n_obs
         actual = str(ConnectivityKernel(adata).compute_transition_matrix())
-        expected = (
-            f"{ConnectivityKernel.__name__}[n={n}, dnorm=True, key='connectivities']"
-        )
+        expected = f"{ConnectivityKernel.__name__}[n={n}]"
 
         assert actual == expected
 
