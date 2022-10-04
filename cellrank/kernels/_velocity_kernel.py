@@ -1,8 +1,6 @@
 from typing import Any, Tuple, Union, Callable, Optional, Sequence
 from typing_extensions import Literal
 
-from abc import ABC
-
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
@@ -21,7 +19,7 @@ __all__ = ["VelocityKernel"]
 
 
 @d.dedent
-class VelocityKernel(ConnectivityMixin, BidirectionalKernel, ABC):
+class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     """
     Kernel which computes a transition matrix based on RNA velocity.
 
