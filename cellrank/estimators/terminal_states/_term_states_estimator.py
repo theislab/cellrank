@@ -78,7 +78,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         cluster_key: Optional[str] = None,
         add_to_existing: bool = False,
         **kwargs: Any,
-    ) -> None:
+    ) -> "TermStatesEstimator":
         """
         Manually define terminal states.
 
@@ -105,7 +105,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -130,6 +130,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             colors,
             **kwargs,
         )
+        return self
 
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
@@ -306,7 +307,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Return
         ------
-        Nothing, just updates the following fields:
+        Self and just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s

@@ -1077,7 +1077,7 @@ class TestGPCCA:
         _assert_params(g, State.MACRO, fwd=True)
 
         res = g.predict()
-        assert res is None
+        assert res is g
         _assert_params(g, State.TERM, fwd=False)
         _assert_params(g, State.TERM, fwd=True)
 
