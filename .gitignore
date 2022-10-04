@@ -112,7 +112,7 @@ venv.bak/
 .vscode/
 
 # documentation
-docs/source/api
+docs/source/api/_autosummary
 docs/source/auto_examples
 docs/source/gen_modules
 docs/build
