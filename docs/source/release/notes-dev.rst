@@ -40,6 +40,9 @@ Features
 - Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
   `#890 <https://github.com/theislab/cellrank/pull/890>`__
 
+- Updates kernels/estimators ``__str__/__repr__`` and allows for better method chaining.
+  `#896 <https://github.com/theislab/cellrank/pull/896>`__
+
 - Allow passing connectivities for transition matrix projection. Useful when the kernel is not kNN-based.
   `#930 <https://github.com/theislab/cellrank/pull/930>`__
 
