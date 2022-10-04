@@ -64,7 +64,7 @@ if __name__ == "__main__":
         ),
         zip_safe=False,
         packages=find_packages(),
-        python_requires=">=3.7",
+        python_requires=">=3.8",
         platforms=["Linux", "MacOs", "Windows"],
         keywords=sorted(
             [
