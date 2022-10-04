@@ -1,3 +1,3 @@
-Contributing
-============
+Contributing guide
+==================
 Under construction.

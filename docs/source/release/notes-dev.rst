@@ -1,4 +1,4 @@
-CellRank dev (2022-06-22)
+CellRank dev (2022-10-04)
 =========================
 
 Features
@@ -40,6 +40,9 @@ Features
 - Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
   `#890 <https://github.com/theislab/cellrank/pull/890>`__
 
+- Allow passing connectivities for transition matrix projection. Useful when the kernel is not kNN-based.
+  `#930 <https://github.com/theislab/cellrank/pull/930>`__
+
 
 Bugfixes
 --------
@@ -65,6 +68,25 @@ Bugfixes
 - Adds references to the docs
   `#887 <https://github.com/theislab/cellrank/pull/887>`__
 
+- Fix computing time to absorption to aggregated terminal states.
+  `#923 <https://github.com/theislab/cellrank/pull/923>`__
+
+- Fix initial/terminal points size in random walk.
+  `#929 <https://github.com/theislab/cellrank/pull/929>`__
+
+- This adapts some of our docs for the 2.0 release; it clears up the landing page and introduces some new pages, including the "teams", "how to cite us", and "about cellrank" pages.
+  `#936 <https://github.com/theislab/cellrank/pull/936>`__
+
+- This just adds a new concept figure to be used in the updated docs.
+  `#937 <https://github.com/theislab/cellrank/pull/937>`__
+
+- Update to the overview figure
+  `#938 <https://github.com/theislab/cellrank/pull/938>`__
+
+- Import ``Iterable`` from ``collections.abc`` and not ``collections``. ``Iterable`` was removed from ``collections`` in
+  Python 3.10
+  `#943 <https://github.com/theislab/cellrank/pull/943>`__
+
 
 Miscellaneous
 -------------
@@ -77,6 +99,12 @@ Miscellaneous
 
 - Remove default real-time and pseudotime arguments from :class:`cellrank.kernels.ExperimentalTimeKernel` and :class:`cellrank.kernels.PseudotimeKernel`.
   `#894 <https://github.com/theislab/cellrank/pull/894>`__
+
+- Fix not being able to use ``minChi`` in :meth:`cellrank.estimators.GPCCA.fit`. Also compute 20 Schur vectors by default.
+  `#913 <https://github.com/theislab/cellrank/pull/913>`__
+
+- Prefer plotting macrostates/terminal in a discrete way.
+  `#914 <https://github.com/theislab/cellrank/pull/914>`__
 
 
 Documentation

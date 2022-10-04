@@ -430,11 +430,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if n_states is None:
             self.compute_eigendecomposition()
             n_states = self.eigendecomposition["eigengap"] + 1
-        if isinstance(n_states, int) and n_states == 1:
+        elif isinstance(n_states, int) and n_states == 1:
             self.compute_eigendecomposition()
 
-        return self.compute_macrostates(
-            n_states=n_states, cluster_key=cluster_key, n_cells=n_cells, **kwargs
+        n = n_states if isinstance(n_states, int) else max(n_states)
+        # call explicitly since `compute_macrostates` doesn't handle the case
+        # when `minChi` is used for `n_states` and `self._gpcca` is uninitialized
+        self.compute_schur(n, **kwargs)
+        self.compute_macrostates(
+            n_states=n_states, cluster_key=cluster_key, n_cells=n_cells
         )
 
     @d.dedent

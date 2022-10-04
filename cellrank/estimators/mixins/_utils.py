@@ -312,7 +312,7 @@ def _plot_dispatcher(
     self: PlotterProtocol,
     states: Optional[Union[str, Sequence[str]]] = None,
     color: Optional[str] = None,
-    discrete: bool = False,
+    discrete: bool = True,
     mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
     time_key: str = "latent_time",
     same_plot: bool = True,
@@ -409,8 +409,8 @@ def register_plotter(
     ) -> None:
         # fmt: off
         disc: Optional[bool] = kwargs.pop("discrete", None)
-        # prefer `continuous`
-        disc = continuous is None if disc is None else disc
+        # prefer `discrete`
+        disc = discrete is not None if disc is None else disc
 
         if disc and discrete is None:
             logg.warning(f"Unable to plot `.{continuous}` in `discrete` mode. Using `continuous` mode")

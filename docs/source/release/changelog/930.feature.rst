@@ -1,0 +1,1 @@
+Allow passing connectivities for transition matrix projection. Useful when the kernel is not kNN-based.

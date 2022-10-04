@@ -5,7 +5,8 @@ import os
 from enum import auto
 from math import fabs
 from pathlib import Path
-from collections import Iterable, defaultdict
+from collections import defaultdict
+from collections.abc import Iterable
 
 from anndata import AnnData
 from cellrank import logging as logg

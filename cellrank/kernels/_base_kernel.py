@@ -7,8 +7,8 @@ from pathlib import Path
 from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._utils import save_fig, _normalize
-from cellrank.kernels.utils import RandomWalk, FlowPlotter, LowDimProjection
+from cellrank._utils._utils import save_fig, _normalize, _read_graph_data
+from cellrank.kernels.utils import RandomWalk, FlowPlotter, TmatProjection
 from cellrank.kernels._utils import require_tmat
 from cellrank.kernels.mixins import IOMixin, BidirectionalMixin, UnidirectionalMixin
 from cellrank.kernels.utils._random_walk import Indices_t
@@ -35,6 +35,7 @@ class KernelExpression(IOMixin, ABC):
         self._normalize = parent is None
         self._transition_matrix = None
         self._params: Dict[str, Any] = {}
+        self._init_kwargs = kwargs  # for `_read_from_adata`
 
     def __init_subclass__(cls, **_: Any) -> None:
         super().__init_subclass__()
@@ -269,6 +270,7 @@ class KernelExpression(IOMixin, ABC):
         key_added: Optional[str] = None,
         recompute: bool = False,
         stream: bool = True,
+        connectivities: Optional[spmatrix] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -277,7 +279,7 @@ class KernelExpression(IOMixin, ABC):
         Parameters
         ----------
         basis
-            Key in :attr:`anndata.AnnData.obsm` containing the basis onto which to project.
+            Key in :attr:`anndata.AnnData.obsm` containing the basis.
         key_added
             If not `None`, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
             Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
@@ -286,15 +288,19 @@ class KernelExpression(IOMixin, ABC):
         stream
             If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
             Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
+        connectivities
+            Connectivity matrix to use for projection. If ``None``, use ones from the underlying kernel, is possible.
         kwargs
-            Keyword argument for the plotting function.
+            Keyword argument for the chosen plotting function.
 
         Returns
         -------
         Nothing, just plots and modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
-        proj = LowDimProjection(self, basis=basis)
-        proj.project(key_added=key_added, recompute=recompute)
+        proj = TmatProjection(self, basis=basis)
+        proj.project(
+            key_added=key_added, recompute=recompute, connectivities=connectivities
+        )
         proj.plot(stream=stream, **kwargs)
 
     def __add__(self, other: "KernelExpression") -> "KernelExpression":
@@ -310,7 +316,6 @@ class KernelExpression(IOMixin, ABC):
                     return False
                 if not kexpr._bin_consts:
                     return False
-
             return True
 
         if not isinstance(other, KernelExpression):
@@ -398,6 +403,7 @@ class KernelExpression(IOMixin, ABC):
         self.adata.uns[f"{key}_params"] = {
             **self.adata.uns.get(f"{key}_params", {}),
             **{"params": self.params},
+            **{"init": self._init_kwargs},
         }
         self.adata.obsp[key] = (
             self.transition_matrix.copy() if copy else self.transition_matrix
@@ -483,8 +489,10 @@ class KernelExpression(IOMixin, ABC):
 class Kernel(KernelExpression, ABC):
     """Base kernel class."""
 
-    def __init__(self, adata: AnnData, **kwargs: Any):
-        super().__init__(**kwargs)
+    def __init__(
+        self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any
+    ):
+        super().__init__(parent=parent, **kwargs)
         self._adata = adata
         self._n_obs = adata.n_obs
         self._read_from_adata(**kwargs)
@@ -512,6 +520,49 @@ class Kernel(KernelExpression, ABC):
                 f"Expected new `AnnData` object to have same shape as the previous `{self.shape}`, found `{shape}`."
             )
         self._adata = adata
+
+    @classmethod
+    @d.dedent
+    def from_adata(
+        cls,
+        adata: AnnData,
+        key: str,
+        copy: bool = False,
+    ) -> "Kernel":
+        """
+        Read kernel object saved using :meth:`write_to_adata`.
+
+        Parameters
+        ---------
+        %(adata)s
+        key
+            Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
+            The parameters should be stored in :attr:`anndata.AnnData.uns` ``['{key}_params']``.
+        copy
+            Whether to copy the transition matrix.
+
+        Returns
+        -------
+        The kernel with explicitly initialized properties:
+
+            - :attr:`transition_matrix` - the transition matrix.
+            - :attr:`params` - parameters used for computation.
+        """
+        transition_matrix = _read_graph_data(adata, key=key)
+        try:
+            params = adata.uns[f"{key}_params"]["params"].copy()
+            init_params = adata.uns[f"{key}_params"]["init"].copy()
+        except KeyError as e:
+            raise KeyError(f"Unable to kernel parameters, reason: `{e}`") from e
+
+        if copy:
+            transition_matrix = transition_matrix.copy()
+
+        kernel = cls(adata, **init_params)
+        kernel.transition_matrix = transition_matrix
+        kernel._params = params
+
+        return kernel
 
     def copy(self, *, deep: bool = False) -> "Kernel":
         """Return a copy of self."""
