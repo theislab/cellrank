@@ -343,7 +343,6 @@ class WOTKernel(Kernel, error=_error):
         self,
         t1: Numeric_t,
         t2: Numeric_t,
-        adata: Optional[AnnData] = None,
         cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
         **kwargs: Any,
