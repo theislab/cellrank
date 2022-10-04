@@ -3,6 +3,7 @@ from typing_extensions import Literal
 
 from abc import ABC, abstractmethod
 from types import MappingProxyType
+from tqdm.auto import tqdm
 from contextlib import contextmanager
 
 import scanpy as sc
@@ -39,6 +40,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._tmaps: Optional[Dict[Pair_t, AnnData]] = None
+        self._obs: Optional[pd.DataFrame] = None
 
     @abstractmethod
     def _compute_tmap(
@@ -170,6 +172,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             Keyword arguments for :func:`scanpy.pp.neighbors` when using ``self_transitions`` use
             :class:`cellrank.kernels.ConnectivityKernel`. Can contain `'density_normalize'` for
             :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
+        kwargs
+            Additional keyword arguments.
 
         Returns
         -------
@@ -181,27 +185,38 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         cache_params = dict(kwargs)
         cache_params["threshold"] = threshold
         cache_params["self_transitions"] = self_transitions
-        if SelfTransitions(self_transitions) == SelfTransitions.ALL:
-            conn_kwargs["conn_weight"] = conn_weight
         if self._reuse_cache(cache_params):
             return self
+
+        if (
+            self_transitions == "all" or isinstance(self_transitions, (tuple, list))
+        ) and (conn_weight is None or not (0 < conn_weight < 1)):
+            raise ValueError(
+                f"Expected `conn_weight` to be in interval `(0, 1)`, found `{conn_weight}`."
+            )
 
         timepoints = self.experimental_time.cat.categories
         timepoints = list(zip(timepoints[:-1], timepoints[1:]))
 
-        self._tmaps = {
-            (t1, t2): self._tmat_to_adata(t1, t2, self._compute_tmap(t1, t2, **kwargs))
-            for t1, t2 in timepoints
-        }
-        if threshold is not None:
-            self._threshold_transport_maps(self._tmaps, threshold=threshold, copy=False)
+        self._tmaps = {}
+        for t1, t2 in tqdm(timepoints, unit="time pair"):
+            tmat = self._compute_tmap(t1, t2, **kwargs)
+            self.transport_maps[t1, t2] = self._tmat_to_adata(t1, t2, tmat)
 
-        self.transition_matrix = self._restich_tmaps(
-            self._tmaps,
+        if threshold is not None:
+            self._threshold_transport_maps(
+                self.transport_maps, threshold=threshold, copy=False
+            )
+
+        tmap = self._restich_tmaps(
+            self.transport_maps,
             self_transitions=self_transitions,
             conn_weight=conn_weight,
-            conn_kwargs=conn_kwargs,
-        ).X
+            **conn_kwargs,
+        )
+
+        self.transition_matrix = tmap.X
+        self._obs = tmap.obs
 
         return self
 
@@ -213,7 +228,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             str, SelfTransitions, Sequence[Numeric_t]
         ] = SelfTransitions.DIAGONAL,
         conn_weight: Optional[float] = None,
-        conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        **kwargs: Any,
     ) -> AnnData:
         """
         Group individual transport maps into 1 matrix aligned with :attr:`adata`.
@@ -241,7 +256,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             )
         tmaps = self._validate_tmaps(tmaps)
 
-        conn_kwargs = dict(conn_kwargs)
+        conn_kwargs = dict(kwargs)
         conn_kwargs["copy"] = False
         _ = conn_kwargs.pop("key_added", None)
 
@@ -270,10 +285,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             verbosity = settings.verbosity
             try:  # ignore overly verbose logging
                 settings.verbosity = 0
-                if conn_weight is None or not (0 < conn_weight < 1):
-                    raise ValueError(
-                        "Please specify `conn_weight` in interval `(0, 1)`."
-                    )
                 for i, ((t1, _), tmap) in enumerate(tmaps.items()):
                     if t1 not in self_transitions:
                         continue
@@ -465,6 +476,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
     def transport_maps(self) -> Optional[Dict[Pair_t, AnnData]]:
         """Transport maps for consecutive time pairs."""
         return self._tmaps
+
+    @property
+    def obs(self) -> Optional[pd.DataFrame]:
+        """Cell-level metadata."""
+        return self._obs
 
     def __invert__(self) -> "TransportMapKernel":
         tk = super().__invert__("_tmaps")  # don't copy transport maps

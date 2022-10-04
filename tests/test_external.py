@@ -173,13 +173,13 @@ class TestWOTKernel:
             ok = ok.compute_transition_matrix(cost_matrices=cost_matrices)
             param = ok.params["cost_matrices"]
             if cmat == "Ms":
-                assert param == "layer:Ms"
+                assert param == "Ms"
             elif cmat == "X_pca":
-                assert param == "obsm:X_pca"
+                assert param == "X_pca"
             elif cmat == "good_shape":
-                assert str(param) == "precomputed"
+                assert param is cost_matrices
             else:
-                assert param == "default"
+                assert param is None
 
     @pytest.mark.parametrize("n_iters", [3, 5])
     def test_growth_rates(self, adata_large: AnnData, n_iters: int):
