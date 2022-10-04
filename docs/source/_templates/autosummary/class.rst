@@ -41,12 +41,9 @@ Methods table
 Attributes
 ~~~~~~~~~~
 {% for item in attributes %}
-
 {{ item | escape | underline(line='^') }}
 .. autoattribute:: {{ [objname, item] | join(".") }}
-
 {% endfor %}
-
 {% endif %}
 {% endblock %}
 
@@ -55,13 +52,10 @@ Attributes
 
 Methods
 ~~~~~~~
-
 {% for item in methods %}
 {% if item != '__init__' %}
-
 {{ item | escape | underline(line='^') }}
 .. automethod:: {{ [objname, item] | join(".") }}
-
 {% endif %}
 {% endfor %}
 
