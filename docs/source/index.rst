@@ -24,7 +24,7 @@ CellRank's key applications
 - infer :doc:`fate probabilities <notebooks/tutorials/fate_probabilities>` towards terminal states.
 - visualize :doc:`gene expression trends <notebooks/tutorials/gene_trends>` along specific trajectories.
 - identify potential :doc:`driver genes <notebooks/tutorials/fate_probabilities>` for each trajectory.
-- ... and much more, check out our :doc:`API <api>`.
+- ... and much more, check out our :doc:`API <api/index>`.
 
 Getting started with CellRank
 -----------------------------
@@ -42,8 +42,7 @@ We actively encourage any contribution! To get started, please check out the :do
     :hidden:
 
     installation
-    api
-    developer_api
+    api/index
     release_notes
     contributing
     references
