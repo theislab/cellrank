@@ -1,0 +1,1 @@
+Updates kernels/estimators ``__str__/__repr__`` and allows for better method chaining.
