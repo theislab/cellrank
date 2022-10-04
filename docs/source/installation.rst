@@ -1,6 +1,6 @@
 Installation
 ============
-CellRank requires Python version >= 3.7 to run. We recommend using Miniconda_ to manage the environments.
+CellRank requires Python version >= 3.8 to run. We recommend using Miniconda_ to manage the environments.
 
 Anaconda
 --------
