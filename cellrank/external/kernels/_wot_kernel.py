@@ -1,8 +1,7 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, Union, Mapping, Optional, Sequence
 from typing_extensions import Literal
 
 from types import MappingProxyType
-from tqdm.auto import tqdm
 
 import scanpy as sc
 from anndata import AnnData
@@ -321,62 +320,39 @@ class WOTKernel(Kernel, error=_error):
         _ = kwargs.pop("ncounts", None)
         _ = kwargs.pop("ncells", None)
         _ = kwargs.pop("parameters", None)  # parameters file
-        kwargs["lambda1"] = lambda1
-        kwargs["lambda2"] = lambda2
-        kwargs["epsilon"] = epsilon
-        kwargs["growth_iters"] = max(growth_iters, 1)
-        self_transitions = SelfTransitions(self_transitions)
 
-        start = logg.info(
-            "Computing transition matrix using Waddington optimal transport"
-        )
-
-        adata = _maybe_subset_hvgs(self.adata, use_highly_variable=use_highly_variable)
-        cost_matrices, cmat_param = self._generate_cost_matrices(adata, cost_matrices)
-        if self._reuse_cache(
-            {
-                "cost_matrices": cmat_param,
-                "solver": solver,
-                "growth_rate_key": growth_rate_key,
-                "use_highly_variable": use_highly_variable,
-                "self_transitions": self_transitions,
-                "threshold": threshold,
-                **kwargs,
-            },
-            time=start,
-        ):
-            return self
-
-        logg.info(f"Computing transport maps for `{len(cost_matrices)}` time pairs")
-        self._tmaps = self._compute_tmaps(
-            adata,
-            cost_matrices=cost_matrices,
-            solver=solver,
-            growth_rate_field=growth_rate_key,
-            **kwargs,
-        )
-        if threshold is not None:
-            self._threshold_transport_maps(self._tmaps, threshold=threshold, copy=False)
-
-        tmap = self._restich_tmaps(
-            self._tmaps,
+        _ = super().compute_transition_matrix(
+            threshold=threshold,
             self_transitions=self_transitions,
             conn_weight=conn_weight,
             conn_kwargs=conn_kwargs,
+            cost_matrices=cost_matrices,
+            lambda1=lambda1,
+            lambda2=lambda2,
+            epsilon=epsilon,
+            growth_iters=max(growth_iters, 1),
+            solver=solver,
+            growth_rate_key=growth_rate_key,
+            **kwargs,
         )
-        self._growth_rates = tmap.obs
-
-        self.transition_matrix = tmap.X
         self.adata.obs["estimated_growth_rates"] = self.growth_rates[f"g{growth_iters}"]
-
-        logg.info("    Finish", time=start)
 
         return self
 
-    def _compute_tmap(self, t1: Numeric_t, t2: Numeric_t, **kwargs: Any) -> AnnData:
-        ot_model: wot.ot.OTModel = kwargs.pop("ot_model")
-        cost_matrix: Optional[Union[str, np.ndarray]] = kwargs.pop("cost_matrix")
-
+    def _compute_tmap(
+        self,
+        t1: Numeric_t,
+        t2: Numeric_t,
+        adata: Optional[AnnData] = None,
+        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
+        use_highly_variable: Optional[Union[str, bool]] = True,
+        **kwargs: Any,
+    ) -> AnnData:
+        adata = _maybe_subset_hvgs(self.adata, use_highly_variable=use_highly_variable)
+        ot_model = self._create_ot_model(adata, **kwargs)
+        cost_matrix = self._compute_cost_matrix(
+            t1, t2, adata, cost_matrices=cost_matrices
+        )
         tmap: Optional[AnnData] = ot_model.compute_transport_map(
             t1,
             t2,
@@ -388,130 +364,95 @@ class WOTKernel(Kernel, error=_error):
                 f"Please ensure that `adata.obs[{self._time_key!r}]` has the correct dtype (float)."
             )
         tmap.X = tmap.X.astype(np.float64)
-        nans = int(np.sum(~np.isfinite(tmap.X)))
-        if nans:
+        invalid = int(np.sum(~np.isfinite(tmap.X)))
+        if invalid:
             raise ValueError(
-                f"Encountered `{nans}` non-finite values for time pair `{(t1, t2)}`."
+                f"Encountered `{invalid}` non-finite values for time pair `{(t1, t2)}`."
             )
 
         return tmap
 
-    def _compute_tmaps(
+    def _create_ot_model(
         self,
         adata: AnnData,
-        cost_matrices: Optional[Mapping[Pair_t, Optional[np.ndarray]]] = None,
-        solver: Literal["fixed_iters", "duality_gap"] = "duality_gap",
-        growth_rate_field: Optional[str] = None,
+        solver: Literal["fixed_iters", "duality_gap"],
+        growth_rate_key: str,
         **kwargs: Any,
-    ) -> Dict[Tuple[float, float], AnnData]:
-        _ = wot.ot.OTModel(
+    ) -> "wot.ot.OTModel":
+        model = wot.ot.OTModel(
             adata,
             day_field=self._time_key,
             covariate_field=None,
-            growth_rate_field=growth_rate_field,
+            growth_rate_field=growth_rate_key,
         )
         for k in kwargs:
-            if k not in _.ot_config:
+            if k not in model.ot_config:
                 raise TypeError(f"WOT got an unexpected keyword argument {k!r}.")
 
-        ot_model = wot.ot.OTModel(
+        return wot.ot.OTModel(
             adata,
             day_field=self._time_key,
             covariate_field=None,
-            growth_rate_field=growth_rate_field,
+            growth_rate_field=growth_rate_key,
             solver=solver,
             **kwargs,
         )
 
-        tmaps: Dict[Tuple[float, float], AnnData] = {}
-        for (t1, t2), cost_matrix in tqdm(cost_matrices.items(), unit="time pair"):
-            tmaps[t1, t2] = self._compute_tmap(
-                t1,
-                t2,
-                ot_model=ot_model,
-                cost_matrix=cost_matrix,
+    def _compute_cost_matrix(
+        self,
+        t1: Numeric_t,
+        t2: Numeric_t,
+        adata: AnnData,  # is possibly subsetted by HVGs
+        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
+    ) -> Optional[np.ndarray]:
+        if cost_matrices is None:  # default cost matrix
+            return None
+        if isinstance(cost_matrices, dict):  # precomputed cost matrix
+            cmat = cost_matrices[t1, t2]
+            if cmat is not None:
+                n_start = len(np.where(self.experimental_time == t1)[0])
+                n_end = len(np.where(self.experimental_time == t2)[0])
+                try:
+                    if cmat.shape != (n_start, n_end):
+                        raise ValueError(
+                            f"Expected cost matrix for time pair `{t1, t2}` to be "
+                            f"of shape `{(n_start, n_end)}`, found `{cmat.shape}`."
+                        )
+                except AttributeError:
+                    logg.warning(
+                        f"Unable to verify whether supplied cost matrix for time pair `{t1, t2}` "
+                        f"has the correct shape `{(n_start, n_end)}`"
+                    )
+            return cmat
+        if not isinstance(cost_matrices, str):
+            raise TypeError(
+                f"Expected `cost_matrices` to be `str`, `dict` or `None`, "
+                f"found `{type(cost_matrices).__name__}`."
             )
 
-        return tmaps
-
-    def _generate_cost_matrices(
-        self,
-        adata: AnnData,
-        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
-    ) -> Tuple[Mapping[Pair_t, Optional[np.ndarray]], str]:
-        timepoints = self.experimental_time.cat.categories
-        timepoints = list(zip(timepoints[:-1], timepoints[1:]))
-
-        if cost_matrices is None:
-            logg.info("Using default cost matrices")
-            return {tpair: None for tpair in timepoints}, "default"
-
-        if isinstance(cost_matrices, dict):
-            logg.info("Using precomputed cost matrices")
-
-            cmats = {}
-            for tpair in timepoints:
-                if tpair not in cost_matrices:
-                    logg.warning(
-                        f"Unable to find cost matrix for pair `{tpair}`. Using default"
-                    )
-                cmats[tpair] = cmat = cost_matrices.get(tpair, None)
-                if cmat is not None:
-                    n_start = len(np.where(self.experimental_time == tpair[0])[0])
-                    n_end = len(np.where(self.experimental_time == tpair[1])[0])
-                    try:
-                        if cmat.shape != (n_start, n_end):
-                            raise ValueError(
-                                f"Expected cost matrix for time pair `{tpair}` to be "
-                                f"of shape `{(n_start, n_end)}`, found `{cmat.shape}`."
-                            )
-                    except AttributeError:
-                        logg.warning(
-                            f"Unable to verify whether supplied cost matrix for time pair `{tpair}` "
-                            f"has the correct shape `{(n_start, n_end)}`"
-                        )
-
-            # prevent equality comparison when comparing with cache
-            return cmats, "precomputed"
-
-        if isinstance(cost_matrices, str):
-            logg.info(f"Computing cost matrices using `{cost_matrices!r}` key")
-            if cost_matrices == "X":
-                cost_matrices = None
-
+        if cost_matrices == "X":
+            cost_matrices = None
+        try:
+            features = adata._get_X(layer=cost_matrices)
+        except KeyError:
             try:
-                features = adata._get_X(layer=cost_matrices)
-                modifier = "layer"
+                features = adata.obsm[cost_matrices]
             except KeyError:
-                try:
-                    features = adata.obsm[cost_matrices]
-                    modifier = "obsm"
-                except KeyError:
-                    raise KeyError(
-                        f"Unable to find key `{cost_matrices!r}` in `adata.layers` or `adata.obsm`."
-                    ) from None
+                raise KeyError(
+                    f"Unable to find key `{cost_matrices!r}` in `adata.layers` or `adata.obsm`."
+                ) from None
 
-            cmats = {}
-            for tpair in tqdm(timepoints, unit="cost matrix"):
-                start_ixs = np.where(self.experimental_time == tpair[0])[0]
-                end_ixs = np.where(self.experimental_time == tpair[1])[0]
-
-                # being sparse is handled in WOT's function below
-                cmats[tpair] = wot.ot.OTModel.compute_default_cost_matrix(
-                    features[start_ixs], features[end_ixs]
-                )
-
-            return cmats, f"{modifier}:{cost_matrices}"
-
-        raise NotImplementedError(
-            f"Specifying cost matrices as "
-            f"`{type(cost_matrices).__name__}` is not yet implemented."
+        start_ixs = np.where(self.experimental_time == t1)[0]
+        end_ixs = np.where(self.experimental_time == t2)[0]
+        # being sparse is handled in WOT's function below
+        return wot.ot.OTModel.compute_default_cost_matrix(
+            features[start_ixs], features[end_ixs]
         )
 
     @property
     def growth_rates(self) -> Optional[pd.DataFrame]:
-        """Estimated cell growth rates for each growth rate iteration."""
-        return self._growth_rates
+        """Estimated cell growth rates for each growth rate iteration, alias for :attr:`obs`."""
+        return self.obs
 
     def __invert__(self) -> "WOTKernel":
         wk = super().__invert__()
