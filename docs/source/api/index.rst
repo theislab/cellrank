@@ -18,9 +18,9 @@ Additionally, there is a set of plotting functions which can be used downstream 
 The utilities are mainly for fitting continuous models to gene expression data
 and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
 
-
 .. toctree::
     :caption: API
+    :maxdepth: 1
 
     kernels
     estimators

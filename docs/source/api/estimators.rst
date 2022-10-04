@@ -4,7 +4,6 @@ Estimators enable quantitative analysis of Markov transition matrices computed u
 :doc:`kernels <kernels>`, including automatic detection of initial and terminal states, and computation
 of fate probabilities.
 
-
 .. module:: cellrank.estimators
 .. currentmodule:: cellrank
 

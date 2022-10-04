@@ -1,8 +1,8 @@
 About CellRank
 ==============
 CellRank is a unified solution for the probabilistic description of cellular dynamics, encompassing various input data
-modalities and analysis scenarios through one consistent application user interface (:doc:`API <../api>`). If you find
-CellRank useful for your research, please check out :doc:`citing CellRank <cite>`.
+modalities and analysis scenarios through one consistent application user interface (:doc:`API <../api/index>`).
+If you find CellRank useful for your research, please check out :doc:`citing CellRank <cite>`.
 
 Design principles
 -----------------
@@ -33,11 +33,11 @@ of the construction of the transition matrix. For example, whether we use RNA ve
 directed transition probabilities does not change how initial and terminal states are inferred or fate probabilities
 estimated. The general structure of the framework, corresponding to steps **(i)** and **(ii)**, is given by:
 
-* :ref:`Kernels <kernels>` that take multi-view single cell input data  and estimate a matrix of cell-cell transition
-  probabilities :math:`T`. Row :math:`i` in matrix :math:`T` contains the transition probabilities from cell :math:`i`
-  towards putative descendants. Therefore, all entries in the matrix are between 0 and 1, and rows sum to one.
-* :ref:`Estimators <estimators>` that take a cell-cell transition matrix :math:`T` computed using any kernel and apply
-  concepts from the theory of Markov chains to identify initial, terminal, and intermediate
+* :doc:`Kernels <../api/kernels>` that take multi-view single cell input data  and estimate a matrix of cell-cell
+  transition probabilities :math:`T`. Row :math:`i` in matrix :math:`T` contains the transition probabilities from cell
+  :math:`i` towards putative descendants. Therefore, all entries in the matrix are between 0 and 1, and rows sum to one.
+* :doc:`Estimators <../api/estimators>` that take a cell-cell transition matrix :math:`T` computed using any kernel and
+  apply concepts from the theory of Markov chains to identify initial, terminal, and intermediate
   :doc:`macrostates <../notebooks/tutorials/initial_terminal_states>` and compute
   :doc:`fate probabilities <../notebooks/tutorials/fate_probabilities>`.
 
