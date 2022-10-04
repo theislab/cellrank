@@ -186,6 +186,13 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         if self._reuse_cache(cache_params):
             return self
 
+        if (
+            self_transitions == "all" or isinstance(self_transitions, (tuple, list))
+        ) and (conn_weight is None or not (0 < conn_weight < 1)):
+            raise ValueError(
+                f"Expected `conn_weight` to be in interval `(0, 1)`, found `{conn_weight}`."
+            )
+
         timepoints = self.experimental_time.cat.categories
         timepoints = list(zip(timepoints[:-1], timepoints[1:]))
 
@@ -270,10 +277,6 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             verbosity = settings.verbosity
             try:  # ignore overly verbose logging
                 settings.verbosity = 0
-                if conn_weight is None or not (0 < conn_weight < 1):
-                    raise ValueError(
-                        "Please specify `conn_weight` in interval `(0, 1)`."
-                    )
                 for i, ((t1, _), tmap) in enumerate(tmaps.items()):
                     if t1 not in self_transitions:
                         continue
