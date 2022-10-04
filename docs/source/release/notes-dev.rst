@@ -87,6 +87,9 @@ Bugfixes
   Python 3.10
   `#943 <https://github.com/theislab/cellrank/pull/943>`__
 
+- Require ``Python >= 3.8`` and fix :func:`cellrank.pl.log_odds` colormap type.
+  `#949 <https://github.com/theislab/cellrank/pull/949>`__
+
 
 Miscellaneous
 -------------
