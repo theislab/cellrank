@@ -305,7 +305,7 @@ class TestInitializeKernel:
         z = ~(v + c)
 
         assert z._transition_matrix is None
-        with pytest.raises(RuntimeError, match=f"`{~v}` is uninitialized"):
+        with pytest.raises(RuntimeError, match=rf"is uninitialized"):
             # not allowed because VK is reset
             assert z.transition_matrix is not None
 
@@ -402,20 +402,19 @@ class TestInitializeKernel:
     def test_repr(self, adata: AnnData):
         rpr = repr(VelocityKernel(adata))
 
-        assert rpr == f"{VelocityKernel.__name__}"
+        assert rpr == f"{VelocityKernel.__name__}[n={adata.n_obs}]"
 
     def test_repr_inv(self, adata: AnnData):
         rpr = repr(~VelocityKernel(adata))
 
-        assert rpr == f"~{VelocityKernel.__name__}"
+        assert rpr == f"~{VelocityKernel.__name__}[n={adata.n_obs}]"
 
     def test_repr_inv_comb(self, adata: AnnData):
-        rpr = repr(~(VelocityKernel(adata) + ConnectivityKernel(adata)))
+        actual = repr(~(VelocityKernel(adata) + ConnectivityKernel(adata)))
+        n = adata.n_obs
+        expected = f"~(1.0 * {VelocityKernel.__name__}[n={n}] + 1.0 * {ConnectivityKernel.__name__}[n={n}])"
 
-        assert (
-            rpr
-            == f"~(1.0 * {VelocityKernel.__name__} + 1.0 * {ConnectivityKernel.__name__})"
-        )
+        assert actual == expected
 
     def test_str_repr_equiv_no_transition_matrix(self, adata: AnnData):
         vk = VelocityKernel(adata)
@@ -423,11 +422,11 @@ class TestInitializeKernel:
         assert repr(vk) == str(vk)
 
     def test_str(self, adata: AnnData):
-        string = str(ConnectivityKernel(adata).compute_transition_matrix())
+        n = adata.n_obs
+        actual = str(ConnectivityKernel(adata).compute_transition_matrix())
+        expected = f"{ConnectivityKernel.__name__}[n={n}]"
 
-        assert (
-            string == f"{ConnectivityKernel.__name__}[dnorm=True, key='connectivities']"
-        )
+        assert actual == expected
 
     def test_combination_correct_parameters(self, adata: AnnData):
         k = VelocityKernel(adata).compute_transition_matrix(

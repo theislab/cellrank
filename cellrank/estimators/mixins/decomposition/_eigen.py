@@ -71,7 +71,7 @@ class EigenMixin:
         alpha: float = 1.0,
         only_evals: bool = False,
         ncv: Optional[int] = None,
-    ) -> None:
+    ) -> "EigenMixin":
         """
         Compute eigendecomposition of :attr:`transition_matrix`.
 
@@ -90,7 +90,7 @@ class EigenMixin:
 
         Returns
         -------
-        Nothing, just updates the following field:
+        Self and updates the following field:
 
             - :attr:`eigendecomposition` - %(eigen.summary)s
         """
@@ -151,6 +151,7 @@ class EigenMixin:
             },
             time=start,
         )
+        return self
 
     @d.dedent
     def plot_spectrum(

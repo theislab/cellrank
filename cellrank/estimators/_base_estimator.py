@@ -73,6 +73,40 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def __init_subclass__(cls, **kwargs: Any):
         super().__init_subclass__()
 
+    @abstractmethod
+    def fit(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
+        """
+        Fit an estimator.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Self.
+        """
+
+    @abstractmethod
+    def predict(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
+        """
+        Run a prediction.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Self.
+        """
+
     def _set(
         self,
         attr: Optional[str] = None,
@@ -432,47 +466,16 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     def __copy__(self) -> "BaseEstimator":
         return self.copy(deep=False)
 
+    def _format_params(self) -> str:
+        return f"kernel={self.kernel!s}"
+
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}[n={len(self)}, kernel={repr(self.kernel)}]"
+        return f"{self.__class__.__name__}[{self._format_params()}]"
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}[n={len(self)}, kernel={str(self.kernel)}]"
+        return repr(self)
 
     @property
     def params(self) -> Dict[str, Any]:
         """Estimator parameters."""
         return self._params
-
-    @abstractmethod
-    def fit(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
-        """
-        Fit an estimator.
-
-        Parameters
-        ----------
-        args
-            Positional arguments.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        Self.
-        """
-
-    @abstractmethod
-    def predict(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Run a prediction.
-
-        Parameters
-        ----------
-        args
-            Positional arguments.
-        kwargs
-            Keyword arguments.
-
-        Returns
-        -------
-        Nothing.
-        """

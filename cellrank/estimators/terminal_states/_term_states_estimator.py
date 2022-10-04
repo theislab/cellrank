@@ -78,7 +78,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         cluster_key: Optional[str] = None,
         add_to_existing: bool = False,
         **kwargs: Any,
-    ) -> None:
+    ) -> "TermStatesEstimator":
         """
         Manually define terminal states.
 
@@ -105,7 +105,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -130,11 +130,14 @@ class TermStatesEstimator(BaseEstimator, ABC):
             colors,
             **kwargs,
         )
+        return self
 
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
-    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
+    def rename_terminal_states(
+        self, new_names: Mapping[str, str]
+    ) -> "TermStatesEstimator":
         """
         Rename categories in :attr:`terminal_states`.
 
@@ -146,7 +149,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the names of:
+        Self and updates the following field:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
         """
@@ -188,6 +191,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             self.terminal_states_probabilities,
             log=False,
         )
+        return self
 
     def _set_categorical_labels(
         self,
@@ -286,7 +290,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return sg.ok
 
     @d.dedent
-    def compute_terminal_states(self, *args: Any, **kwargs: Any) -> None:
+    def compute_terminal_states(
+        self, *args: Any, **kwargs: Any
+    ) -> "TermStatesEstimator":
         """
         Compute terminal states of the process.
 
@@ -301,7 +307,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Return
         ------
-        Nothing, just updates the following fields:
+        Self and just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -311,3 +317,12 @@ class TermStatesEstimator(BaseEstimator, ABC):
     plot_terminal_states = register_plotter(
         discrete="terminal_states", colors="_term_states_colors"
     )
+
+    def _format_params(self) -> str:
+        fmt = super()._format_params()
+        ts = (
+            None
+            if self.terminal_states is None
+            else sorted(self.terminal_states.cat.categories)
+        )
+        return fmt + f", terminal_states={ts}"

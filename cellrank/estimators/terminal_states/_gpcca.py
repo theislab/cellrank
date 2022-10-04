@@ -146,7 +146,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> "GPCCA":
         """
         Compute the macrostates.
 
@@ -163,7 +163,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`macrostates` - %(gpcca_macro.summary)s
             - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
@@ -181,7 +181,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 n_cells=n_cells,
                 cluster_key=cluster_key,
             )
-            return
+            return self
 
         if self._gpcca is None or kwargs:
             self.compute_schur(n_states, **kwargs)
@@ -216,6 +216,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             params=self._create_params(),
             time=start,
         )
+        return self
 
     @d.dedent
     def predict(
@@ -227,7 +228,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
-    ) -> None:
+    ) -> "GPCCA":
         """
         Automatically select terminal states from macrostates.
 
@@ -253,7 +254,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
@@ -265,8 +266,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # fmt: off
         if len(self._macrostates.cat.categories) == 1:
             logg.warning("Found only one macrostate. Making it the single terminal state")
-            self.set_terminal_states_from_macrostates(None, n_cells=n_cells, params=self._create_params())
-            return
+            return self.set_terminal_states_from_macrostates(None, n_cells=n_cells, params=self._create_params())
 
         method = TermStatesMethod(method)
         eig = self.eigendecomposition
@@ -290,8 +290,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            self.set_terminal_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
-            return
+            return self.set_terminal_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
@@ -300,8 +299,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self.set_terminal_states_from_macrostates(
             names, n_cells=n_cells, params=self._create_params()
         )
-
-        return
+        return self
 
     @d.dedent
     def set_terminal_states_from_macrostates(
@@ -309,7 +307,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
         n_cells: int = 30,
         **kwargs: Any,
-    ) -> None:
+    ) -> "GPCCA":
         """
         Manually select terminal states from macrostates.
 
@@ -323,7 +321,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -380,9 +378,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self.rename_terminal_states(
                 dict(zip(self.terminal_states.cat.categories, names.values()))
             )
+        return self
 
     @d.dedent
-    def rename_terminal_states(self, new_names: Mapping[str, str]) -> None:
+    def rename_terminal_states(self, new_names: Mapping[str, str]) -> "GPCCA":
         """
         %(tse_rename_term_states.full_desc)s
 
@@ -396,7 +395,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
         """  # noqa: D400
         term_states_memberships = self.terminal_states_memberships
-        super().rename_terminal_states(new_names)
+        _ = super().rename_terminal_states(new_names)
 
         # fmt: off
         new_names = {str(k): str(v) for k, v in new_names.items()}
@@ -407,6 +406,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         with self._shadow:
             key = Key.obsm.memberships(Key.obs.macrostates(self.backward))
             self._set(obj=self.adata.obsm, key=key, value=term_states_memberships)
+        return self
 
     @d.dedent
     def fit(
@@ -430,18 +430,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if n_states is None:
             self.compute_eigendecomposition()
             n_states = self.eigendecomposition["eigengap"] + 1
-        if isinstance(n_states, int) and n_states == 1:
+        elif isinstance(n_states, int) and n_states == 1:
             self.compute_eigendecomposition()
 
         n = n_states if isinstance(n_states, int) else max(n_states)
-        # call explicitly because `compute_macrostates` doesn't handle the case
+        # call explicitly since `compute_macrostates` doesn't handle the case
         # when `minChi` is used for `n_states` and `self._gpcca` is uninitialized
         self.compute_schur(n, **kwargs)
-        self.compute_macrostates(
+        return self.compute_macrostates(
             n_states=n_states, cluster_key=cluster_key, n_cells=n_cells
         )
-
-        return self
 
     @d.dedent
     @inject_docs(o=CoarseTOrder)
@@ -1256,3 +1254,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             f"Adding `adata.obs[{key!r}]`\n       `adata.obs[{Key.uns.colors(key)!r}]`\n",
             time=time,
         )
+
+    def _format_params(self) -> str:
+        fmt = super()._format_params()
+        macro = (
+            None
+            if self.macrostates is None
+            else sorted(self.macrostates.cat.categories)
+        )
+        return fmt + f", macrostates={macro}"
