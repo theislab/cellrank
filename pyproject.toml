@@ -47,7 +47,7 @@ skip_glob = "examples/*.py"
 
 [tool.towncrier]
 package = "cellrank"
-single_file = true
+single_file = false
 filename = "docs/source/release/notes-{version}.rst"
 directory = "docs/source/release/changelog"
 issue_format = "`#{issue} <https://github.com/theislab/cellrank/pull/{issue}>`__"
