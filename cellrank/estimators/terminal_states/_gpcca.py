@@ -437,7 +437,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # call explicitly since `compute_macrostates` doesn't handle the case
         # when `minChi` is used for `n_states` and `self._gpcca` is uninitialized
         self.compute_schur(n, **kwargs)
-        self.compute_macrostates(
+        return self.compute_macrostates(
             n_states=n_states, cluster_key=cluster_key, n_cells=n_cells
         )
 
