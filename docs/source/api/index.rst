@@ -21,7 +21,6 @@ and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene
 
 .. toctree::
     :caption: API
-    :hidden:
 
     kernels
     estimators

@@ -1,4 +1,4 @@
-CellRank dev (2022-07-24)
+CellRank dev (2022-10-04)
 =========================
 
 Features
@@ -73,6 +73,19 @@ Bugfixes
 
 - Fix initial/terminal points size in random walk.
   `#929 <https://github.com/theislab/cellrank/pull/929>`__
+
+- This adapts some of our docs for the 2.0 release; it clears up the landing page and introduces some new pages, including the "teams", "how to cite us", and "about cellrank" pages.
+  `#936 <https://github.com/theislab/cellrank/pull/936>`__
+
+- This just adds a new concept figure to be used in the updated docs.
+  `#937 <https://github.com/theislab/cellrank/pull/937>`__
+
+- Update to the overview figure
+  `#938 <https://github.com/theislab/cellrank/pull/938>`__
+
+- Import ``Iterable`` from ``collections.abc`` and not ``collections``. ``Iterable`` was removed from ``collections`` in
+  Python 3.10
+  `#943 <https://github.com/theislab/cellrank/pull/943>`__
 
 
 Miscellaneous
