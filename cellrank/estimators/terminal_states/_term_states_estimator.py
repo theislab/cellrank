@@ -319,9 +319,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
     def _format_params(self) -> str:
         fmt = super()._format_params()
-        n_ts = (
+        ts = (
             None
             if self.terminal_states is None
-            else len(self.terminal_states.cat.categories)
+            else sorted(self.terminal_states.cat.categories)
         )
-        return fmt + f", term_states={n_ts}"
+        return fmt + f", terminal_states={ts}"

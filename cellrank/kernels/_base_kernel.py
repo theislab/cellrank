@@ -588,10 +588,12 @@ class Kernel(KernelExpression, ABC):
                 setattr(self, attr, obj)
 
     def _format_params(self) -> str:
-        return ", ".join(
+        n, _ = self.shape
+        params = ", ".join(
             f"{k}={round(v, 3) if isinstance(v, float) else v!r}"
             for k, v in self.params.items()
         )
+        return f"n={n}, {params}" if params else f"n={n}"
 
     @property
     def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
@@ -621,16 +623,13 @@ class Kernel(KernelExpression, ABC):
         return 1
 
     def __repr__(self) -> str:
-        params_fmt = self._format_params()
-        if params_fmt:
-            return (
-                f"{'~' if self.backward and self._parent is None else ''}"
-                f"{self.__class__.__name__}[{params_fmt}]"
-            )
-        return f"{'~' if self.backward and self._parent is None else ''}{self.__class__.__name__}"
+        params = self._format_params()
+        prefix = "~" if self.backward and self._parent is None else ""
+        return f"{prefix}{self.__class__.__name__}[{params}]"
 
     def __str__(self) -> str:
-        return repr(self)
+        prefix = "~" if self.backward and self._parent is None else ""
+        return f"{prefix}{self.__class__.__name__}[n={self.shape[0]}]"
 
 
 class UnidirectionalKernel(UnidirectionalMixin, Kernel, ABC):

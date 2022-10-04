@@ -1257,7 +1257,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def _format_params(self) -> str:
         fmt = super()._format_params()
-        n_macro = (
-            None if self.macrostates is None else len(self.macrostates.cat.categories)
+        macro = (
+            None
+            if self.macrostates is None
+            else sorted(self.macrostates.cat.categories)
         )
-        return fmt + f", macrostates={n_macro}"
+        return fmt + f", macrostates={macro}"
