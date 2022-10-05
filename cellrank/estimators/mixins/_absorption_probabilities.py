@@ -223,28 +223,7 @@ class AbsProbsMixin:
         keys
             Terminal states for which to compute the absorption probabilities.
             If `None`, use all states defined in :attr:`terminal_states`.
-        solver
-            Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
-            when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
-
-            Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-            :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
-        use_petsc
-            Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
-            If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
-        n_jobs
-            Number of parallel jobs to use when using an iterative solver.
-        backend
-            Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
-        show_progress_bar
-            Whether to show progress bar. Only used when ``solver != 'direct'``.
-        tol
-            Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
-            decreasing this for severely ill-conditioned matrices.
-        preconditioner
-            Preconditioner to use, only available when ``use_petsc = True``. For valid options, see
-            `here <https://petsc.org/release/docs/manual/ksp/?highlight=pctype#preconditioners>`__.
-            We recommend the `'ilu'` preconditioner for badly conditioned problems.
+        %(absorption_utils)s
 
         Returns
         -------
@@ -282,6 +261,7 @@ class AbsProbsMixin:
             time=start,
         )
 
+    @d.dedent
     def compute_absorption_times(
         self: AbsProbsProtocol,
         keys: Optional[Sequence[str]] = None,
@@ -292,12 +272,12 @@ class AbsProbsMixin:
         use_petsc: bool = True,
         n_jobs: Optional[int] = None,
         backend: Backend_t = _DEFAULT_BACKEND,
-        show_progress_bar: bool = True,
+        show_progress_bar: Optional[bool] = None,
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
         """
-        Compute mean (and optionally variance) time to absorption.
+        Compute mean time to absorption and optionally its variance.
 
         Parameters
         ----------
@@ -306,15 +286,19 @@ class AbsProbsMixin:
             If `None`, use all states defined in :attr:`terminal_states`.
         calculate_variance
             Whether to calculate variance of the mean time to absorption.
-        TODO
+        %(absorption_utils)s
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Nothing, just updates the following field:
 
             - :attr:`absorption_times` - %(abs_times.summary)s
         """
         start = logg.info("Computing absorption times")
+        if show_progress_bar is None:
+            # prevent from displaying too many progress bars
+            show_progress_bar = not calculate_variance
+
         data = self._rec_trans_states(keys, ctx="time_to_absorption")
         abs_times = _calculate_lineage_absorption_time_means(
             data.q,
