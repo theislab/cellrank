@@ -1,4 +1,4 @@
-CellRank dev (2022-10-04)
+CellRank dev (2022-10-05)
 =========================
 
 Features
@@ -92,6 +92,9 @@ Bugfixes
 
 - Require ``Python >= 3.8`` and fix :func:`cellrank.pl.log_odds` colormap type.
   `#949 <https://github.com/theislab/cellrank/pull/949>`__
+
+- Allow NaN values when determining foreground/background color.
+  `#951 <https://github.com/theislab/cellrank/pull/951>`__
 
 
 Miscellaneous
