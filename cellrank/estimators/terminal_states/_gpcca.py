@@ -1083,7 +1083,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         msg = "\n".join(msg.split("\n")[:-1])
         msg += "\n       `.terminal_states_memberships\n    Finish`"
 
-        self._write_absorption_probabilities(None, None, log=False)
+        self._write_absorption_probabilities(None, log=False)
         key = Key.obsm.memberships(Key.obs.term_states(self.backward))
         self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships)
         # fmt: on

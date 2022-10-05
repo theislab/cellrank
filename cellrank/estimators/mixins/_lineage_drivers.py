@@ -547,7 +547,6 @@ class LinDriversMixin(AbsProbsMixin):
     def _write_absorption_probabilities(
         self: LinDriversProtocol,
         abs_probs: Optional[Lineage],
-        abs_times: Optional[pd.DataFrame],
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         self._write_lineage_drivers(None, use_raw=False, log=False)
@@ -556,7 +555,7 @@ class LinDriversMixin(AbsProbsMixin):
         except AttributeError:
             pass
         return super()._write_absorption_probabilities(
-            abs_probs, abs_times, params=params, log=False
+            abs_probs, params=params, log=False
         )
 
     @logger

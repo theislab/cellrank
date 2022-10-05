@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence, NamedTuple
 from typing_extensions import Literal
 
 from types import MappingProxyType
@@ -30,6 +30,16 @@ from scipy.sparse import issparse, spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
 __all__ = ["AbsProbsMixin"]
+
+
+class RecTransStates(NamedTuple):
+    q: Union[np.ndarray, spmatrix]
+    s: Union[np.ndarray, spmatrix]
+    trans_indices: np.ndarray
+    rec_indices: np.ndarray
+    name_to_ixs: Dict[str, np.ndarray]
+    term_states: pd.Series
+    term_states_colors: Sequence[Any]
 
 
 class AbsProbsProtocol(BaseProtocol):
@@ -74,13 +84,15 @@ class AbsProbsProtocol(BaseProtocol):
     ) -> np.ndarray:
         ...
 
+    def _rec_trans_states(self, keys: Optional[Sequence[str]]) -> RecTransStates:
+        ...
+
     def _ensure_lineage_object(self, attr: str, **kwargs: Any) -> None:
         ...
 
     def _write_absorption_probabilities(
         self,
         abs_probs: Optional[Lineage],
-        abs_times: Optional[pd.DataFrame],
     ) -> str:
         ...
 
@@ -142,7 +154,7 @@ class AbsProbsMixin:
     def absorption_probabilities(self) -> Optional[Lineage]:
         """Absorption probabilities.
 
-        Informally, given a (finite, discrete) Markov chain with a set of transient states :math:`T` and
+        Informally, given a (finite, discrete) RecTransStates chain with a set of transient states :math:`T` and
         a set of absorbing states :math:`A`, the absorption probability for cell :math:`i` from :math:`T`
         to reach cell :math:`j` from :math:`R` is the probability that a random walk initialized in :math:`i`
         will reach absorbing state :math:`j`.
@@ -181,13 +193,6 @@ class AbsProbsMixin:
             str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]
         ] = "gmres",
         use_petsc: bool = True,
-        time_to_absorption: Optional[
-            Union[
-                Literal["all"],
-                Sequence[Union[str, Sequence[str]]],
-                Dict[Union[str, Sequence[str]], Literal["mean", "var"]],
-            ]
-        ] = None,
         n_jobs: Optional[int] = None,
         backend: Backend_t = _DEFAULT_BACKEND,
         show_progress_bar: bool = True,
@@ -215,16 +220,6 @@ class AbsProbsMixin:
         use_petsc
             Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
             If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
-        time_to_absorption
-            Whether to compute mean time to absorption and its variance to specific absorbing states.
-
-            If a :class:`dict`, can be specified as ``{{'Alpha': 'var', ...}}`` to also compute variance.
-            In case when states are a :class:`tuple`, time to absorption will be computed to the subset of these states,
-            such as ``[('Alpha', 'Beta'), ...]`` or ``{{('Alpha', 'Beta'): 'mean', ...}}``.
-            Can be specified as ``'all'`` to compute it to any absorbing state in ``keys``, which is more efficient
-            than listing all absorbing states explicitly.
-
-            It might be beneficial to disable the progress bar as ``show_progress_bar = False`` because of many solves.
         n_jobs
             Number of parallel jobs to use when using an iterative solver.
         backend
@@ -241,63 +236,18 @@ class AbsProbsMixin:
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Nothing, just updates the following field:
 
             - :attr:`absorption_probabilities` - %(abs_probs.summary)s
-            - :attr:`absorption_times` - %(abs_times.summary)s Only if ``time_to_absorption`` is specified.
         """
-        if self.terminal_states is None:
-            raise RuntimeError(
-                "Compute terminal states first as `.compute_terminal_states()`."
-            )
-        if keys is not None:
-            keys = sorted(set(keys))
-
         start = logg.info("Computing absorption probabilities")
 
-        # get the transition matrix
-        if not issparse(self.transition_matrix):
-            logg.warning(
-                "Attempting to solve a potentially large linear system with dense transition matrix"
-            )
-
-        # process the current annotations according to `keys`
-        term_states, colors = _process_series(
-            series=self.terminal_states, keys=keys, colors=self._term_states_colors
-        )
-        # warn in case only one state is left
-        keys = list(term_states.cat.categories)
-        if len(keys) == 1:
-            logg.warning(
-                "There is only `1` terminal state, all cells will have probability `1` of going there"
-            )
-
-        # get indices corresponding to recurrent and transient states
-        rec_indices, trans_indices, lookup_dict = _get_cat_and_null_indices(term_states)
-        if not len(trans_indices):
-            raise RuntimeError("Markov chain is irreducible.")
-
-        # create Q (restriction transient-transient), S (restriction transient-recurrent)
-        q = self.transition_matrix[trans_indices, :][:, trans_indices]
-        s = self.transition_matrix[trans_indices, :][:, rec_indices]
-
-        # take individual solutions and piece them together to get absorption probabilities towards the classes
-        macro_ix_helper = np.cumsum(
-            [0] + [len(indices) for indices in lookup_dict.values()]
-        )
-        # `s` can be sparse or dense, ensure the correct shape
-        s = np.concatenate(
-            [
-                s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1)
-                for a, b in _pairwise(macro_ix_helper)
-            ],
-            axis=1,
-        )
+        data = self._rec_trans_states(keys)
         abs_probs = self._compute_absorption_probabilities(
-            q,
-            s,
-            trans_indices=trans_indices,
-            term_states=term_states,
+            data.q,
+            data.s,
+            trans_indices=data.trans_indices,
+            term_states=data.term_states,
             solver=solver,
             use_petsc=use_petsc,
             n_jobs=n_jobs,
@@ -306,36 +256,73 @@ class AbsProbsMixin:
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
         )
-
-        if time_to_absorption is not None:
-            lineages = _normalize_abs_times(keys, time_to_absorption=time_to_absorption)
-            abs_times = _calculate_lineage_absorption_time_means(
-                q,
-                s,
-                trans_indices=trans_indices,
-                ixs=lookup_dict,
-                lineages=lineages,
-                solver=solver,
-                use_petsc=use_petsc,
-                n_jobs=n_jobs,
-                backend=backend,
-                tol=tol,
-                show_progress_bar=show_progress_bar,
-                preconditioner=preconditioner,
-                index=self.adata.obs_names,
-            )
-        else:
-            abs_times = None
+        abs_probs = Lineage(
+            abs_probs,
+            names=list(data.term_states.cat.categories),
+            colors=data.term_states_colors,
+        )
 
         params = self._create_params(
             remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
         )
         self._write_absorption_probabilities(
-            Lineage(abs_probs, names=keys, colors=colors),
-            abs_times,
+            abs_probs,
             params=params,
             time=start,
         )
+
+    def compute_absorption_times(
+        self: AbsProbsProtocol,
+        keys: Optional[Sequence[str]] = None,
+        calculate_variance: bool = False,
+        solver: Union[
+            str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]
+        ] = "gmres",
+        use_petsc: bool = True,
+        n_jobs: Optional[int] = None,
+        backend: Backend_t = _DEFAULT_BACKEND,
+        show_progress_bar: bool = True,
+        tol: float = 1e-6,
+        preconditioner: Optional[str] = None,
+    ) -> None:
+        """
+        Compute mean (and optionally variance) time to absorption.
+
+        Parameters
+        ----------
+        keys
+            Terminal states for which to compute the absorption probabilities.
+            If `None`, use all states defined in :attr:`terminal_states`.
+        calculate_variance
+            Whether to calculate variance of the mean time to absorption.
+
+        Returns
+        -------
+        Nothing, just updates the following fields:
+
+            - :attr:`absorption_times` - %(abs_times.summary)s
+        """
+        data = self._rec_trans_states(keys)
+        abs_times = _calculate_lineage_absorption_time_means(
+            data.q,
+            data.s,
+            calculate_variance=calculate_variance,
+            trans_indices=data.trans_indices,
+            ixs=data.name_to_ixs,
+            solver=solver,
+            use_petsc=use_petsc,
+            n_jobs=n_jobs,
+            backend=backend,
+            tol=tol,
+            show_progress_bar=show_progress_bar,
+            preconditioner=preconditioner,
+            index=self.adata.obs_names,
+        )
+
+        # params = self._create_params(
+        #    remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
+        # )
+        return abs_times
 
     @d.dedent
     def compute_lineage_priming(
@@ -390,6 +377,68 @@ class AbsProbsMixin:
         self._write_lineage_priming(values)
 
         return values
+
+    def _rec_trans_states(
+        self: AbsProbsProtocol,
+        keys: Optional[Sequence[str]] = None,
+        *,
+        warn_one_state: bool = True,
+    ) -> RecTransStates:
+        if self.terminal_states is None:
+            raise RuntimeError(
+                "Compute terminal states first as `.compute_terminal_states()`."
+            )
+        if keys is not None:
+            keys = sorted(set(keys))
+
+        # get the transition matrix
+        if not issparse(self.transition_matrix):
+            logg.warning(
+                "Attempting to solve a potentially large linear system with dense transition matrix"
+            )
+
+        # process the current annotations according to `keys`
+        term_states, colors = _process_series(
+            series=self.terminal_states, keys=keys, colors=self._term_states_colors
+        )
+        # warn in case only one state is left
+        keys = list(term_states.cat.categories)
+        if warn_one_state and len(keys) == 1:
+            logg.warning(
+                "There is only `1` terminal state, all cells will have probability `1` of going there"
+            )
+
+        # get indices corresponding to recurrent and transient states
+        rec_indices, trans_indices, name_to_ixs = _get_cat_and_null_indices(term_states)
+        if not len(trans_indices):
+            raise RuntimeError("Markov chain is irreducible.")
+
+        # create Q (restriction transient-transient), S (restriction transient-recurrent)
+        q = self.transition_matrix[trans_indices, :][:, trans_indices]
+        s = self.transition_matrix[trans_indices, :][:, rec_indices]
+
+        # take individual solutions and piece them together to get absorption probabilities towards the classes
+        macro_ix_helper = np.cumsum(
+            [0] + [len(indices) for indices in name_to_ixs.values()]
+        )
+        # `s` can be sparse or dense, ensure the correct shape
+        s = np.concatenate(
+            [
+                s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1)
+                for a, b in _pairwise(macro_ix_helper)
+            ],
+            axis=1,
+        )
+
+        return RecTransStates(
+            q=q,
+            s=s,
+            trans_indices=trans_indices,
+            rec_indices=rec_indices,
+            name_to_ixs=name_to_ixs,
+            term_states=term_states,
+            term_states_colors=colors,
+        )
 
     def _compute_absorption_probabilities(
         self: AbsProbsProtocol,
@@ -447,29 +496,18 @@ class AbsProbsMixin:
     def _write_absorption_probabilities(
         self: AbsProbsProtocol,
         abs_probs: Optional[Lineage],
-        abs_times: Optional[pd.DataFrame],
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
-        key1 = Key.obsm.abs_probs(self.backward)
-        self._set("_absorption_probabilities", self.adata.obsm, key=key1, value=abs_probs)
-        key2 = Key.obsm.abs_times(self.backward)
-        self._set("_absorption_times", self.adata.obsm, key=key2, value=abs_times)
+        key = Key.obsm.abs_probs(self.backward)
+        self._set("_absorption_probabilities", self.adata.obsm, key=key, value=abs_probs)
         self._write_lineage_priming(None, log=False)
-        self.params[key1] = dict(params)
+        self.params[key] = dict(params)
         # fmt: on
 
-        if abs_times is None:
-            return (
-                f"Adding `adata.obsm[{key1!r}]`\n"
-                f"       `.absorption_probabilities`\n"
-                f"    Finish"
-            )
         return (
-            f"Adding `adata.obsm[{key1!r}]`\n"
-            f"       `adata.obsm[{key2!r}]`\n"
+            f"Adding `adata.obsm[{key!r}]`\n"
             f"       `.absorption_probabilities`\n"
-            f"       `.absorption_times`\n"
             f"    Finish"
         )
 
@@ -499,7 +537,13 @@ class AbsProbsMixin:
         key = Key.obs.priming_degree(self.backward)
         self._set("_priming_degree", self.adata.obs, key=key, value=priming_degree)
 
-        return f"Adding `adata.obs[{key!r}]`\n       `.priming_degree`\n    Finish"
+        # fmt: off
+        return (
+            f"Adding `adata.obs[{key!r}]`\n"
+            f"       `.priming_degree`\n"
+            f"    Finish"
+        )
+        # fmt: on
 
     def _read_absorption_probabilities(
         self: AbsProbsProtocol, anndata: AnnData
@@ -509,9 +553,6 @@ class AbsProbsMixin:
             key1 = Key.obsm.abs_probs(self.backward)
             self._get("_absorption_probabilities", self.adata.obsm, key=key1, where="obsm", dtype=(np.ndarray, Lineage))
             self._ensure_lineage_object("_absorption_probabilities", kind="abs_probs")
-            key = Key.obsm.abs_times(self.backward)
-            self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
-                      allow_missing=True)
             key = Key.obs.priming_degree(self.backward)
             self._get("_priming_degree", self.adata.obs, key=key, where="obs", dtype=pd.Series, allow_missing=True)
             self.params[key1] = self._read_params(key1)
