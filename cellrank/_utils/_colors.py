@@ -136,6 +136,8 @@ def _contrasting_color(r: int, g: int, b: int) -> str:
 
 
 def _get_black_or_white(value: float, cmap) -> str:
+    if np.isnan(value):
+        return "#000000"
     if not (0.0 <= value <= 1.0):
         raise ValueError(f"Value must be in range `[0, 1]`, found `{value}`.")
 
