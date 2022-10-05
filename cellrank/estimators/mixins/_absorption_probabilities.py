@@ -84,7 +84,12 @@ class AbsProbsProtocol(BaseProtocol):
     ) -> np.ndarray:
         ...
 
-    def _rec_trans_states(self, keys: Optional[Sequence[str]]) -> RecTransStates:
+    def _rec_trans_states(
+        self,
+        keys: Optional[Sequence[str]],
+        *,
+        ctx: Literal["abs_probs", "time_to_absorption"],
+    ) -> RecTransStates:
         ...
 
     def _ensure_lineage_object(self, attr: str, **kwargs: Any) -> None:
@@ -93,6 +98,13 @@ class AbsProbsProtocol(BaseProtocol):
     def _write_absorption_probabilities(
         self,
         abs_probs: Optional[Lineage],
+    ) -> str:
+        ...
+
+    def _write_absorption_times(
+        self,
+        abs_times: Optional[pd.DataFrame],
+        params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         ...
 
@@ -241,8 +253,7 @@ class AbsProbsMixin:
             - :attr:`absorption_probabilities` - %(abs_probs.summary)s
         """
         start = logg.info("Computing absorption probabilities")
-
-        data = self._rec_trans_states(keys)
+        data = self._rec_trans_states(keys, ctx="abs_probs")
         abs_probs = self._compute_absorption_probabilities(
             data.q,
             data.s,
@@ -295,6 +306,7 @@ class AbsProbsMixin:
             If `None`, use all states defined in :attr:`terminal_states`.
         calculate_variance
             Whether to calculate variance of the mean time to absorption.
+        TODO
 
         Returns
         -------
@@ -302,7 +314,8 @@ class AbsProbsMixin:
 
             - :attr:`absorption_times` - %(abs_times.summary)s
         """
-        data = self._rec_trans_states(keys)
+        start = logg.info("Computing absorption times")
+        data = self._rec_trans_states(keys, ctx="time_to_absorption")
         abs_times = _calculate_lineage_absorption_time_means(
             data.q,
             data.s,
@@ -319,10 +332,14 @@ class AbsProbsMixin:
             index=self.adata.obs_names,
         )
 
-        # params = self._create_params(
-        #    remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
-        # )
-        return abs_times
+        params = self._create_params(
+            remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
+        )
+        self._write_absorption_times(
+            abs_times,
+            params=params,
+            time=start,
+        )
 
     @d.dedent
     def compute_lineage_priming(
@@ -382,7 +399,7 @@ class AbsProbsMixin:
         self: AbsProbsProtocol,
         keys: Optional[Sequence[str]] = None,
         *,
-        warn_one_state: bool = True,
+        ctx: Literal["abs_probs", "time_to_absorption"],
     ) -> RecTransStates:
         if self.terminal_states is None:
             raise RuntimeError(
@@ -403,7 +420,7 @@ class AbsProbsMixin:
         )
         # warn in case only one state is left
         keys = list(term_states.cat.categories)
-        if warn_one_state and len(keys) == 1:
+        if ctx == "abs_probs" and len(keys) == 1:
             logg.warning(
                 "There is only `1` terminal state, all cells will have probability `1` of going there"
             )
@@ -511,22 +528,22 @@ class AbsProbsMixin:
             f"    Finish"
         )
 
-    def _ensure_lineage_object(
-        self: AbsProbsProtocol, attr: str, **kwargs: Any
-    ) -> None:
-        if isinstance(getattr(self, attr), np.ndarray):
-            try:
-                setattr(
-                    self,
-                    attr,
-                    Lineage.from_adata(
-                        self.adata, backward=self.backward, copy=True, **kwargs
-                    ),
-                )
-            except Exception as e:  # noqa: B902
-                raise RuntimeError(
-                    f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
-                ) from None
+    @logger
+    @shadow
+    def _write_absorption_times(
+        self: AbsProbsProtocol,
+        abs_times: Optional[pd.DataFrame],
+        params: Mapping[str, Any] = MappingProxyType({}),
+    ) -> str:
+        key = Key.obsm.abs_times(self.backward)
+        self._set("_absorption_times", self.adata.obsm, key=key, value=abs_times)
+        self.params[key] = dict(params)
+
+        return (
+            f"Adding `adata.obsm[{key!r}]`\n"
+            f"       `.absorption_times`\n"
+            f"    Finish"
+        )
 
     @logger
     @shadow
@@ -545,9 +562,7 @@ class AbsProbsMixin:
         )
         # fmt: on
 
-    def _read_absorption_probabilities(
-        self: AbsProbsProtocol, anndata: AnnData
-    ) -> bool:
+    def _read_absorption_probabilities(self: AbsProbsProtocol, adata: AnnData) -> bool:
         # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key1 = Key.obsm.abs_probs(self.backward)
@@ -559,6 +574,31 @@ class AbsProbsMixin:
         # fmt: on
 
         return sg.ok
+
+    def _read_absorption_times(self: AbsProbsProtocol, adata: AnnData) -> bool:
+        # fmt: off
+        with SafeGetter(self, allowed=KeyError) as sg:
+            key = Key.obsm.abs_times(self.backward)
+            self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
+                      allow_missing=True)
+            self.params[key] = self._read_params(key)
+        # fmt: on
+
+        return sg.ok
+
+    def _ensure_lineage_object(
+        self: AbsProbsProtocol, attr: str, **kwargs: Any
+    ) -> None:
+        if not isinstance(getattr(self, attr), Lineage):
+            try:
+                lineage = Lineage.from_adata(
+                    self.adata, backward=self.backward, copy=True, **kwargs
+                )
+                setattr(self, attr, lineage)
+            except Exception as e:  # noqa: B902
+                raise RuntimeError(
+                    f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
+                ) from None
 
     plot_absorption_probabilities = register_plotter(
         continuous="absorption_probabilities"

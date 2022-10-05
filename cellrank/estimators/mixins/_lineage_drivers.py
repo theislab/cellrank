@@ -566,8 +566,6 @@ class LinDriversMixin(AbsProbsMixin):
         use_raw: bool,
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
-        self._lineage_drivers = drivers
-
         # fmt: off
         key = Key.varm.lineage_drivers(self.backward)
         self._set("_lineage_drivers", self.adata.raw.varm if use_raw else self.adata.varm, key=key, value=drivers)

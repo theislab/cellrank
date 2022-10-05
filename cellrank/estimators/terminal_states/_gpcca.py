@@ -1135,7 +1135,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._ensure_lineage_object("_term_states_memberships", kind="term_states")
         # fmt: on
 
-        return sg.ok and self._read_absorption_probabilities(adata)
+        return (
+            sg.ok
+            and self._read_absorption_probabilities(adata)
+            and self._read_absorption_times(adata)
+        )
 
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"
