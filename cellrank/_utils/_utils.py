@@ -252,7 +252,7 @@ def _process_series(
     for cat in keys_:
         # if there are more than two keys in this category, combine them
         if len(cat) > 1:
-            new_cat_name = " or ".join(cat)
+            new_cat_name = " or ".join(cat)  # TODO(michalk8): use `,`
             mask = np.repeat(False, len(series_temp))
             for key in cat:
                 mask = np.logical_or(mask, series_temp == key)

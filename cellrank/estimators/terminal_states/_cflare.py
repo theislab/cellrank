@@ -61,7 +61,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         self,
         use: Optional[Union[int, Sequence[int]]] = None,
         percentile: Optional[int] = 98,
-        method: Literal["leiden", "means"] = "leiden",
+        method: Literal["leiden", "kmeans"] = "leiden",
         cluster_key: Optional[str] = None,
         n_clusters_kmeans: Optional[int] = None,
         n_neighbors: int = 20,
