@@ -1083,7 +1083,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         msg = "\n".join(msg.split("\n")[:-1])
         msg += "\n       `.terminal_states_memberships\n    Finish`"
 
-        self._write_absorption_probabilities(None, None, log=False)
+        # TODO(michalk8): CFLARE doesn't remove the downstream properties
+        self._write_absorption_probabilities(None, log=False)
+        self._write_absorption_times(None, log=False)
         key = Key.obsm.memberships(Key.obs.term_states(self.backward))
         self._set("_term_states_memberships", obj=self.adata.obsm, key=key, value=memberships)
         # fmt: on
@@ -1135,7 +1137,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._ensure_lineage_object("_term_states_memberships", kind="term_states")
         # fmt: on
 
-        return sg.ok and self._read_absorption_probabilities(adata)
+        abs_prob_ok = self._read_absorption_probabilities(adata)
+        abs_time_ok = self._read_absorption_times(adata)
+        return sg.ok and abs_prob_ok and abs_time_ok
 
     plot_macrostates = register_plotter(
         discrete="macrostates", continuous="macrostates_memberships"
