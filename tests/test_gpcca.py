@@ -1319,6 +1319,9 @@ class TestGPCCAIO:
     def test_compute_schur_verbosity(
         self, adata_large: AnnData, verbose: Optional[bool], capsys
     ):
+        _ = pytest.importorskip("petsc4py")
+        _ = pytest.importorskip("slepc4py")
+
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4.0)
         g = cr.estimators.GPCCA(vk)
 
