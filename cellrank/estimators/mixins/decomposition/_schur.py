@@ -170,7 +170,7 @@ class SchurMixin:
         self._gpcca = GPCCA(tmat, eta=initial_distribution, z=which, method=method)
         start = logg.info("Computing Schur decomposition")
 
-        with contextlib.nullcontext() if verbose else contextlib.redirect_stdout(
+        with (contextlib.nullcontext if verbose else contextlib.redirect_stdout)(
             io.StringIO()
         ):
             try:
