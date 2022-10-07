@@ -166,7 +166,7 @@ class AbsProbsMixin:
     def absorption_probabilities(self) -> Optional[Lineage]:
         """Absorption probabilities.
 
-        Informally, given a (finite, discrete) RecTransStates chain with a set of transient states :math:`T` and
+        Informally, given a (finite, discrete) Markov chain with a set of transient states :math:`T` and
         a set of absorbing states :math:`A`, the absorption probability for cell :math:`i` from :math:`T`
         to reach cell :math:`j` from :math:`R` is the probability that a random walk initialized in :math:`i`
         will reach absorbing state :math:`j`.
@@ -277,7 +277,7 @@ class AbsProbsMixin:
         preconditioner: Optional[str] = None,
     ) -> None:
         """
-        Compute mean time to absorption and optionally its variance.
+        Compute the mean time to absorption and optionally its variance.
 
         Parameters
         ----------
@@ -285,7 +285,7 @@ class AbsProbsMixin:
             Terminal states for which to compute the absorption probabilities.
             If `None`, use all states defined in :attr:`terminal_states`.
         calculate_variance
-            Whether to calculate variance of the mean time to absorption.
+            Whether to calculate the variance.
         %(absorption_utils)s
 
         Returns

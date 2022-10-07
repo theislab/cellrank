@@ -1115,8 +1115,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             tmat = self.adata.uns[Key.uns.coarse(self.backward)].copy()
             if not isinstance(tmat, AnnData):
-                raise TypeError(f"Expected coarse-grained transition matrix to be stored "
-                                f"as `AnnData`, found `{type(tmat).__name__}`.")
+                raise TypeError(
+                    f"Expected coarse-grained transition matrix to be stored "
+                    f"as `AnnData`, found `{type(tmat).__name__}`."
+                )
 
             self._coarse_tmat = pd.DataFrame(tmat.X, index=tmat.obs_names, columns=tmat.obs_names)
             self._coarse_init_dist = tmat.obs["coarse_init_dist"]
