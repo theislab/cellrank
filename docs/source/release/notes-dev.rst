@@ -1,4 +1,4 @@
-CellRank dev (2022-10-06)
+CellRank dev (2022-10-07)
 =========================
 
 Features
@@ -114,6 +114,9 @@ Miscellaneous
 
 - Prefer plotting macrostates/terminal in a discrete way.
   `#914 <https://github.com/theislab/cellrank/pull/914>`__
+
+- Use ``", "`` instead of ``" or "`` when joining states.
+  `#954 <https://github.com/theislab/cellrank/pull/954>`__
 
 
 Documentation
