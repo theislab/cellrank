@@ -1,4 +1,4 @@
-CellRank dev (2022-07-24)
+CellRank dev (2022-10-07)
 =========================
 
 Features
@@ -40,6 +40,9 @@ Features
 - Add argument ``subset_to_serum`` to :func:`cellrank.datasets.reprogramming_schiebinger` to allow downloading the subsetted data. This includes the transition matrix computed with the :class:`cellrank.external.WOTKernel`.
   `#890 <https://github.com/theislab/cellrank/pull/890>`__
 
+- Updates kernels/estimators ``__str__/__repr__`` and allows for better method chaining.
+  `#896 <https://github.com/theislab/cellrank/pull/896>`__
+
 - Allow passing connectivities for transition matrix projection. Useful when the kernel is not kNN-based.
   `#930 <https://github.com/theislab/cellrank/pull/930>`__
 
@@ -74,6 +77,25 @@ Bugfixes
 - Fix initial/terminal points size in random walk.
   `#929 <https://github.com/theislab/cellrank/pull/929>`__
 
+- This adapts some of our docs for the 2.0 release; it clears up the landing page and introduces some new pages, including the "teams", "how to cite us", and "about cellrank" pages.
+  `#936 <https://github.com/theislab/cellrank/pull/936>`__
+
+- This just adds a new concept figure to be used in the updated docs.
+  `#937 <https://github.com/theislab/cellrank/pull/937>`__
+
+- Update to the overview figure
+  `#938 <https://github.com/theislab/cellrank/pull/938>`__
+
+- Import ``Iterable`` from ``collections.abc`` and not ``collections``. ``Iterable`` was removed from ``collections`` in
+  Python 3.10
+  `#943 <https://github.com/theislab/cellrank/pull/943>`__
+
+- Require ``Python >= 3.8`` and fix :func:`cellrank.pl.log_odds` colormap type.
+  `#949 <https://github.com/theislab/cellrank/pull/949>`__
+
+- Allow NaN values when determining foreground/background color.
+  `#951 <https://github.com/theislab/cellrank/pull/951>`__
+
 
 Miscellaneous
 -------------
@@ -92,6 +114,9 @@ Miscellaneous
 
 - Prefer plotting macrostates/terminal in a discrete way.
   `#914 <https://github.com/theislab/cellrank/pull/914>`__
+
+- Use ``", "`` instead of ``" or "`` when joining states.
+  `#954 <https://github.com/theislab/cellrank/pull/954>`__
 
 
 Documentation

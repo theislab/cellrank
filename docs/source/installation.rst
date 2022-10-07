@@ -1,6 +1,6 @@
 Installation
 ============
-CellRank requires Python version >= 3.7 to run. We recommend using Miniconda_ to manage the environments.
+CellRank requires Python version >= 3.8 to run. We recommend using Miniconda_ to manage the environments.
 
 Anaconda
 --------
@@ -77,23 +77,8 @@ tutorial explaining the installation.
 
 If after reading this, you still can't proceed with the installation, feel free to open a `GitHub issue`_.
 
-Jupyter Notebook
-----------------
-To run the tutorials in a notebook locally, please install::
-
-   pip install notebook
-
-and run ``jupyter notebook`` in the terminal. If you get the error ``Not a directory: 'xdg-settings'``,
-use ``jupyter notebook --no-browser`` instead and open the URL manually (or use this
-`bugfix <https://github.com/jupyter/notebook/issues/3746#issuecomment-444957821>`_). Alternatively,
-you can run all tutorials interactively directly in your browser using `binder`_. Just click the
-binder button at the top of each tutorial.
-
-If you run into issues, feel free to open a `GitHub issue`_ or send us an `email <mailto:info@cellrank.org>`_ .
-
 .. _`Miniconda`: https://conda.pydata.org/miniconda.html
 .. _`GitHub issue`: https://github.com/theislab/cellrank/issues/new
-.. _`binder`: https://mybinder.org/
 .. _`SLEPc`: https://slepc.upv.es/
 .. _`PETSc`: https://www.mcs.anl.gov/petsc/
 .. _`MPICH`: https://www.mpich.org/

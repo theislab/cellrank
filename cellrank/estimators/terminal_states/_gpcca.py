@@ -153,7 +153,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> "GPCCA":
         """
         Compute the macrostates.
 
@@ -170,7 +170,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`macrostates` - %(gpcca_macro.summary)s
             - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
@@ -188,7 +188,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 n_cells=n_cells,
                 cluster_key=cluster_key,
             )
-            return
+            return self
 
         if self._gpcca is None or kwargs:
             self.compute_schur(n_states, **kwargs)
@@ -223,6 +223,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             params=self._create_params(),
             time=start,
         )
+        return self
 
     @d.dedent
     def predict(
@@ -235,7 +236,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
-    ) -> None:
+    ) -> "GPCCA":
         """
         Automatically select terminal states from macrostates.
 
@@ -251,6 +252,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 - `'stability'` - select states which have a stability >= ``stability_threshold``.
                   The stability is given by the diagonal elements of :attr:`coarse_T`.
         %(n_cells)s
+        which: TODO(michalk8)
         alpha
             Weight given to the deviation of an eigenvalue from one.
             Only used when ``method = 'eigengap'`` or ``method = 'eigengap_coarse'``.
@@ -261,7 +263,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
@@ -270,16 +272,19 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
-        # fmt: off
         if len(self.macrostates.cat.categories) == 1:
-            logg.warning(f"Found only one macrostate. Making it the single {which} state")
-            self.set_states_from_macrostates(names=None, which=which, n_cells=n_cells, params=self._create_params())
-            return
+            logg.warning(
+                f"Found only one macrostate, making it the single {which} state"
+            )
+            return self.set_states_from_macrostates(
+                names=None, n_cells=n_cells, which=which, params=self._create_params()
+            )
 
         method = TermStatesMethod(method)
         eig = self.eigendecomposition
         coarse_T = self.coarse_T
 
+        # fmt: off
         if method == TermStatesMethod.EIGENGAP:
             if eig is None:
                 raise RuntimeError("Compute eigendecomposition first as `.compute_eigendecomposition()`.")
@@ -298,25 +303,24 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            self.set_states_from_macrostates(names, n_cells=n_cells, params=self._create_params())
-            return
+            return self.set_states_from_macrostates(names, n_cells=n_cells, which=which, params=self._create_params())
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
-        self.set_states_from_macrostates(
-            names, n_cells=n_cells, params=self._create_params()
+        return self.set_states_from_macrostates(
+            names, n_cells=n_cells, which=which, params=self._create_params()
         )
 
     @d.dedent
     def set_states_from_macrostates(
         self,
         names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
-        which: Literal["initial", "terminal"] = "terminal",
         n_cells: int = 30,
+        which: Literal["initial", "terminal"] = "terminal",
         **kwargs: Any,
-    ) -> None:
+    ) -> "GPCCA":
         """
         Manually select states from macrostates.
 
@@ -327,10 +331,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             such as ``["Alpha, Beta", "Epsilon"]``.  If a :class:`dict`, keys correspond to the names
             of the macrostates and the values to the new names.  If `None`, select all macrostates.
         %(n_cells)s
+        which: TODO(michalk8):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and updates the following fields: TODO(michalk8)
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -352,7 +357,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if not len(names):
             raise ValueError("No macrostates have been selected.")
 
-        # we do this also here because if `rename_terminal_states` fails
+        # we do this also here because if `rename_states` fails
         # invalid states would've been written to this object and nothing to adata
         names = {str(k): str(v) for k, v in names.items()}
         names_after_renaming = {names.get(n, n) for n in memberships.names}
@@ -382,6 +387,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             memberships=memberships,
             params=kwargs.pop("params", {}),
         )
+        return self
 
     @d.dedent
     def fit(
@@ -405,17 +411,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if n_states is None:
             self.compute_eigendecomposition()
             n_states = self.eigendecomposition["eigengap"] + 1
-        if isinstance(n_states, int) and n_states == 1:
+        elif isinstance(n_states, int) and n_states == 1:
             self.compute_eigendecomposition()
 
         n = n_states if isinstance(n_states, int) else max(n_states)
-        # call explicitly because `compute_macrostates` doesn't handle the case
+        # call explicitly since `compute_macrostates` doesn't handle the case
         # when `minChi` is used for `n_states` and `self._gpcca` is uninitialized
-        self.compute_schur(n, **kwargs)
-        self.compute_macrostates(
+        _ = self.compute_schur(n, **kwargs)
+        return self.compute_macrostates(
             n_states=n_states, cluster_key=cluster_key, n_cells=n_cells
         )
-        return self
 
     @d.dedent
     @inject_docs(o=CoarseTOrder)
@@ -1065,6 +1070,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         msg += f"\n       `.{which}_states_memberships\n    Finish`"
 
         self._write_absorption_probabilities(None, None, log=False)
+        # TODO(michalk8): CFLARE doesn't remove the downstream properties
+        self._write_absorption_times(None, log=False)
 
         backward = which == "initial"
         key = Key.obsm.memberships(Key.obs.term_states(backward))
@@ -1099,8 +1106,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             tmat = self.adata.uns[Key.uns.coarse(self.backward)].copy()
             if not isinstance(tmat, AnnData):
-                raise TypeError(f"Expected coarse-grained transition matrix to be stored "
-                                f"as `AnnData`, found `{type(tmat).__name__}`.")
+                raise TypeError(
+                    f"Expected coarse-grained transition matrix to be stored "
+                    f"as `AnnData`, found `{type(tmat).__name__}`."
+                )
 
             self._coarse_tmat = pd.DataFrame(tmat.X, index=tmat.obs_names, columns=tmat.obs_names)
             self._coarse_init_dist = tmat.obs["coarse_init_dist"]
@@ -1127,6 +1136,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # fmt: on
 
         # status is based on `backward=False` by design
-        return sg.ok and self._read_absorption_probabilities(adata)
+        abs_prob_ok = self._read_absorption_probabilities(adata)
+        abs_time_ok = self._read_absorption_times(adata)
+        return sg.ok and abs_prob_ok and abs_time_ok
+
+    def _format_params(self) -> str:
+        fmt = super()._format_params()
+        macro = (
+            None
+            if self.macrostates is None
+            else sorted(self.macrostates.cat.categories)
+        )
+        return fmt + f", macrostates={macro}"
 
     plot_macrostates = register_plotter(bwd_attr=None, fwd_attr="_macrostates")

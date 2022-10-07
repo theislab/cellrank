@@ -54,15 +54,14 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
             - :attr:`eigendecomposition` - %(eigen.summary)s
         """
-        self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
-        return self
+        return self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
 
     @d.dedent
     def predict(
         self,
         use: Optional[Union[int, Sequence[int]]] = None,
         percentile: Optional[int] = 98,
-        method: Literal["leiden", "means"] = "leiden",
+        method: Literal["leiden", "kmeans"] = "leiden",
         cluster_key: Optional[str] = None,
         n_clusters_kmeans: Optional[int] = None,
         n_neighbors: int = 20,
@@ -72,7 +71,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         basis: Optional[str] = None,
         n_comps: int = 5,
         scale: Optional[bool] = None,
-    ) -> None:
+    ) -> "CFLARE":
         """
         Find approximate recurrent classes of the Markov chain.
 
@@ -117,7 +116,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -224,7 +223,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             labels = _filter_cells(distances, rc_labels=labels, n_matches_min=n_matches_min)
         # fmt: on
 
-        self.set_states(
+        return self.set_states(
             labels=labels,
             cluster_key=cluster_key,
             probs=self._compute_term_states_probs(eig, use),
@@ -258,8 +257,10 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         ok = super()._read_from_adata(adata, **kwargs)
+        #  TODO(michalk8): don't short circuit after eigen
         return (
             ok
             and self._read_eigendecomposition(adata, allow_missing=False)
             and self._read_absorption_probabilities(adata)
+            and self._read_absorption_times(adata)
         )

@@ -5,8 +5,8 @@ from setuptools import setup, find_packages
 try:
     from cellrank import __email__, __author__, __version__, __maintainer__
 except ImportError:
-    __author__ = "Marius Lange, Michal Klein"
-    __maintainer__ = "Marius Lange, Michal Klein"
+    __author__ = "Marius Lange, Michal Klein, Philipp Weiler"
+    __maintainer__ = "Marius Lange, Michal Klein, Philipp Weiler"
     __email__ = "info@cellrank.org"
     __version__ = "1.5.1"
 
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         ),
         zip_safe=False,
         packages=find_packages(),
-        python_requires=">=3.7",
+        python_requires=">=3.8",
         platforms=["Linux", "MacOs", "Windows"],
         keywords=sorted(
             [

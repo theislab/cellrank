@@ -3,6 +3,8 @@ from typing import Any
 from docrep import DocstringProcessor
 from textwrap import dedent
 
+__all__ = ["d", "inject_docs"]
+
 _adata = """\
 adata : :class:`anndata.AnnData`
     Annotated data object."""
@@ -164,6 +166,29 @@ Can be specified as:
 _gene_symbols = """\
 gene_symbols
     Key in :attr:`anndata.AnnData.var` to use instead of :attr:`anndata.AnnData.var_names`."""
+_absorption_utils = """\
+solver
+    Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
+    when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
+
+    Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
+    :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
+use_petsc
+    Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
+    If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
+n_jobs
+    Number of parallel jobs to use when using an iterative solver.
+backend
+    Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
+show_progress_bar
+    Whether to show progress bar. Only used when ``solver != 'direct'``.
+tol
+    Convergence tolerance for the iterative solver. The default is fine for most cases, only consider
+    decreasing this for severely ill-conditioned matrices.
+preconditioner
+    Preconditioner to use, only available when ``use_petsc = True``. For valid options, see
+    `here <https://petsc.org/release/docs/manual/ksp/?highlight=pctype#preconditioners>`__.
+    We recommend the `'ilu'` preconditioner for badly conditioned problems."""
 
 
 def inject_docs(**kwargs: Any):  # noqa
@@ -219,4 +244,5 @@ d = DocstringProcessor(
     ),
     rw_ixs=_rw_ixs,
     gene_symbols=_gene_symbols,
+    absorption_utils=_absorption_utils,
 )

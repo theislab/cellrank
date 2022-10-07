@@ -94,7 +94,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         which: Literal["initial", "terminal"] = "terminal",
         cluster_key: Optional[str] = None,
         **kwargs: Any,
-    ) -> None:
+    ) -> "TermStatesEstimator":
         """
         Manually define terminal states.
 
@@ -110,6 +110,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
                   annotations in :attr:`adata.AnnData.obs_names`.
                   If only 1 key is provided, values should correspond to terminal state clusters if a categorical
                   :class:`pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
+        which: TODO(michalk8)
 
         cluster_key
             Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
@@ -117,7 +118,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Nothing, just updates the following fields TODO(michalk8):
+        Self and updates the following fields: TODO(michalk8)
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -133,15 +134,16 @@ class TermStatesEstimator(BaseEstimator, ABC):
             colors=colors,
             **kwargs,
         )
+        return self
 
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
-    def rename_states(
+    def rename_states(  # TODO(michalk8): override in GPCCA to handle macrostates
         self,
         new_names: Mapping[str, str],
         which: Literal["initial", "terminal"] = "terminal",
-    ) -> None:
+    ) -> "TermStatesEstimator":
         """
         Rename categories in :attr:`terminal_states` or :attr:`initial_states`.
 
@@ -150,10 +152,11 @@ class TermStatesEstimator(BaseEstimator, ABC):
         new_names
             Mapping where keys corresponds to the old names and the values to the new names.
             The new names must be unique.
+        which: TODO(michalk8)
 
         Returns
         -------
-        Nothing, just updates the names of TODO(michalk8):
+        Self and updates one the following field: TODO(michalk8)
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
         """
@@ -209,6 +212,8 @@ class TermStatesEstimator(BaseEstimator, ABC):
             )
         if memberships is not None:
             memberships.names = [new_names.get(n, n) for n in memberships.names]
+
+        return self
 
     def _set_categorical_labels(
         self,
@@ -319,7 +324,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return sg.ok
 
     @d.dedent
-    def compute_states(self, *args: Any, **kwargs: Any) -> None:
+    def compute_states(self, *args: Any, **kwargs: Any) -> "TermStatesEstimator":
         """
         Compute initial or terminal states of the process.
 
@@ -334,8 +339,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Return
         ------
-        TODO(michalk8)
-        Nothing, just updates the following fields:
+        Self and just updates the following fields: TODO
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -343,3 +347,12 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return self.predict(*args, **kwargs)
 
     plot_states = register_plotter(fwd_attr="_term_states", bwd_attr="_init_states")
+
+    def _format_params(self) -> str:
+        fmt = super()._format_params()
+        ts = (
+            None
+            if self.terminal_states is None
+            else sorted(self.terminal_states.cat.categories)
+        )
+        return fmt + f", terminal_states={ts}"

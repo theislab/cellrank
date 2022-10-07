@@ -252,7 +252,7 @@ def _process_series(
     for cat in keys_:
         # if there are more than two keys in this category, combine them
         if len(cat) > 1:
-            new_cat_name = " or ".join(cat)
+            new_cat_name = ", ".join(cat)
             mask = np.repeat(False, len(series_temp))
             for key in cat:
                 mask = np.logical_or(mask, series_temp == key)
@@ -1443,8 +1443,8 @@ def _calculate_lineage_absorption_time_means(
     R: csr_matrix,
     trans_indices: np.ndarray,
     ixs: Dict[str, np.ndarray],
-    lineages: Dict[Sequence[str], str],
     index: pd.Index,
+    calculate_variance: bool = False,
     **kwargs: Any,
 ) -> pd.DataFrame:
     """
@@ -1462,34 +1462,31 @@ def _calculate_lineage_absorption_time_means(
         Number of states of the full transition matrix.
     ixs
         Mapping of names of absorbing states and their indices in the full transition matrix.
-    lineages
-        Lineages for which to calculate the mean time until absorption moments.
+    calculate_variance
+        Whether to calculate variance of the mean time to absorption.
     kwargs
         Keyword arguments for :func:`cellrank._utils._linear_solver._solver_lin_system`.
 
     Returns
     -------
-    :class:`pandas.DataFrame`
-        A :class:`pandas.DataFrame. with means and optionally variances of
-        mean time to absorption for each lineage in ``lineages``.
-
-        Uses more efficient implementation if compute the time for all lineages.
+    A dataframe with means and optionally variances of the time to absorption for each lineage in ``ixs``.
+    Uses more efficient implementation if compute the time for all lineages.
     """
     n = len(index)
     res = pd.DataFrame(index=index)
 
-    if len(lineages) == 1 and set(next(iter(lineages.keys()))) == set(ixs.keys()):
+    if len(ixs) == 1:
         # use faster implementation in this case
         name = ", ".join(ixs.keys())
-        res[f"{name} mean"], var = _calculate_absorption_time_moments(
+        res[f"{name}_mean"], var = _calculate_absorption_time_moments(
             Q,
             trans_indices,
             n,
-            calculate_variance=next(iter(lineages.values())) == "var",
+            calculate_variance=calculate_variance,
             **kwargs,
         )
         if var is not None:
-            res[f"{name} var"] = var
+            res[f"{name}_var"] = var
 
         return res
 
@@ -1499,29 +1496,27 @@ def _calculate_lineage_absorption_time_means(
     logg.debug("Solving equation for `B`")
     B = _solve_lin_system(Q, R, use_eye=True, **kwargs)
 
-    no_jobs_kwargs = {k: v for k, v in kwargs.items() if k != "n_jobs"}
-    name_to_ix = dict(zip(ixs.keys(), range(len(ixs))))
-    for lns, moment in lineages.items():
-        name = ", ".join(lns)
-        ix = np.concatenate([ixs[ln] for ln in lns])
+    no_jobs_kwargs = kwargs.copy()
+    _ = no_jobs_kwargs.pop("n_jobs", None)
 
-        D_j = diags(np.sum(B[:, [name_to_ix[ln] for ln in lns]], axis=1))
+    for i, (lineage, indices) in enumerate(ixs.items()):
+        D_j = diags(B[:, i])  # use `i`, since `B` is already aggregated
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
 
         # fmt: off
-        logg.debug(f"Calculating mean time to absorption to `{name!r}`")
+        logg.debug(f"Calculating mean time to absorption to `{lineage!r}`")
         m = _solve_lin_system(D_j_inv @ N_inv @ D_j, np.ones(Q.shape[0]), **kwargs).squeeze()
         # fmt: on
 
         mean = np.full(n, fill_value=np.inf, dtype=np.float64)
-        mean[ix] = 0
+        mean[indices] = 0
         mean[trans_indices] = m
-        res[f"{name} mean"] = mean
+        res[f"{lineage}_mean"] = mean
 
-        if moment == "var":
+        if calculate_variance:
             # fmt: off
-            logg.debug(f"Calculating variance of mean time to absorption to `{name!r}`")
+            logg.debug(f"Calculating variance of the mean time to absorption to `{lineage!r}`")
 
             X = _solve_lin_system(D_j + Q @ D_j, N_inv @ D_j, use_eye=False, **kwargs)
             y = m - X @ (m**2)
@@ -1530,9 +1525,9 @@ def _calculate_lineage_absorption_time_means(
             assert np.all(v >= 0), f"Encountered negative variance: `{v[v < 0]}`."
 
             var = np.full(n, fill_value=np.nan, dtype=np.float64)
-            var[ix] = 0
+            var[indices] = 0
             var[trans_indices] = v
-            res[f"{name} var"] = var
+            res[f"{lineage}_var"] = var
             # fmt: on
     return res
 

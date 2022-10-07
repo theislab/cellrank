@@ -1,0 +1,1 @@
+This adapts some of our docs for the 2.0 release; it clears up the landing page and introduces some new pages, including the "teams", "how to cite us", and "about cellrank" pages.

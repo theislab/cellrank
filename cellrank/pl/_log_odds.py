@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Union, Iterable, Optional, Sequence
+from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
 
 from copy import copy
 from pathlib import Path
@@ -120,13 +120,13 @@ def log_odds(
             ax.set_xticks(np.arange(0, n_cats, step))
             ax.set_xticklabels(df[time_key].cat.categories[::step])
 
-    def cont_palette(values: np.ndarray) -> Tuple[np.ndarray, ScalarMappable]:
+    def cont_palette(values: np.ndarray) -> Tuple[List[str], ScalarMappable]:
         cm = copy(plt.get_cmap(cmap))
         cm.set_bad("grey")
         sm = ScalarMappable(
             cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values))
         )
-        return np.array([to_hex(v) for v in (sm.to_rgba(values))]), sm
+        return [to_hex(v) for v in (sm.to_rgba(values))], sm
 
     def get_data(
         key: str,
@@ -148,6 +148,7 @@ def log_odds(
             palette = {k: palette[k] for k in df[key].unique()}
             hue, thresh_mask, sm = key, None, None
         except TypeError:
+            # not a categorical
             palette, hue, thresh_mask, sm = (
                 cont_palette(adata.obs[key].values[mask])[0],
                 None,
@@ -155,6 +156,7 @@ def log_odds(
                 None,
             )
         except KeyError:
+            # unable to find data in `adata.obs`, try res
             try:
                 # fmt: off
                 if thresh is None:

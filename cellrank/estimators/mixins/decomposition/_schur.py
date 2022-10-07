@@ -62,6 +62,7 @@ class SchurMixin:
         real-valued, square matrix :math:`A`. It is given by :math:`A = Q R Q^T`, where :math:`Q` contains the
         real Schur vectors and :math:`R` is the Schur matrix. :math:`Q` is orthogonal and :math:`R` is quasi-upper
         triangular with 1x1 and 2x2 blocks on the diagonal.
+
         If PETSc and SLEPc are installed, only the leading Schur vectors are computed.
         """
         return self._schur_vectors
@@ -81,8 +82,8 @@ class SchurMixin:
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
         """Eigendecomposition of :attr:`transition_matrix`.
 
-        For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
-        compute both left and right eigenvectors.
+        For non-symmetric real matrices, left and right eigenvectors will in general be different and complex.
+        We compute both left and right eigenvectors.
 
         Returns
         -------
@@ -105,7 +106,7 @@ class SchurMixin:
         method: Literal["krylov", "brandts"] = "krylov",
         which: Literal["LR", "LM"] = "LR",
         alpha: float = 1.0,
-    ):
+    ) -> "SchurMixin":
         """
         Compute Schur decomposition.
 
@@ -127,7 +128,7 @@ class SchurMixin:
 
         Returns
         -------
-        Nothing, just updates the following fields:
+        Self and just updates the following fields:
 
             - :attr:`schur_vectors` - %(schur_vectors.summary)s
             - :attr:`schur_matrix` -  %(schur_matrix.summary)s
@@ -200,6 +201,7 @@ class SchurMixin:
             params=self._create_params(),
             time=start,
         )
+        return self
 
     @d.dedent
     def plot_schur_matrix(

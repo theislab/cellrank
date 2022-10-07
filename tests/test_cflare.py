@@ -233,75 +233,35 @@ class TestCFLARE:
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
 
-    def test_compute_absorption_probabilities_lineage_absorption_mean(
-        self, adata_large: AnnData
+    @pytest.mark.parametrize("calculate_variance", [False, True])
+    def test_compute_absorption_times(
+        self, adata_large: AnnData, calculate_variance: bool
     ):
+        keys = ["0", "1", "2, 3"]
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
-        tol = 1e-6
 
-        mc = cr.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_states(use=2)
-
-        # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(
-            solver="gmres",
-            use_petsc=False,
-            tol=tol,
-            time_to_absorption="0",
+        mc = (
+            cr.estimators.CFLARE(terminal_kernel)
+            .fit(k=5)
+            .predict(use=4, n_clusters_kmeans=4, method="kmeans")
         )
+
+        mc.compute_absorption_times(keys=keys, calculate_variance=calculate_variance)
         at = mc.absorption_times
+        expected_cols = sorted(
+            [
+                f"{k}_{mod}"
+                for k in keys
+                for mod in ["mean"] + (["var"] if calculate_variance else [])
+            ]
+        )
+        actual_cols = sorted(at.columns)
 
         assert isinstance(at, pd.DataFrame)
         np.testing.assert_array_equal(at.index, adata_large.obs_names)
-        np.testing.assert_array_equal(at.columns, ["0 mean"])
-
-    def test_compute_absorption_probabilities_lineage_absorption_var(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-        tol = 1e-6
-
-        mc = cr.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_states(use=2)
-
-        # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"0": "var"}
-        )
-        at = mc.absorption_times
-
-        assert isinstance(at, pd.DataFrame)
-        np.testing.assert_array_equal(at.index, adata_large.obs_names)
-        np.testing.assert_array_equal(at.columns, ["0 mean", "0 var"])
-
-    def test_compute_absorption_probabilities_lineage_absorption_all(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-        tol = 1e-6
-
-        mc = cr.estimators.CFLARE(terminal_kernel)
-        mc.compute_eigendecomposition(k=5)
-        mc.compute_states(use=2)
-
-        # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(
-            solver="gmres", use_petsc=False, tol=tol, time_to_absorption={"all": "var"}
-        )
-        name = ", ".join(mc.absorption_probabilities.names)
-        at = mc.absorption_times
-
-        assert isinstance(at, pd.DataFrame)
-        np.testing.assert_array_equal(at.index, adata_large.obs_names)
-        np.testing.assert_array_equal(at.columns, [f"{name} mean", f"{name} var"])
+        np.testing.assert_array_equal(actual_cols, expected_cols)
 
     def test_compute_lineage_drivers_no_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)

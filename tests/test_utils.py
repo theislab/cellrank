@@ -247,9 +247,7 @@ class TestProcessSeries:
 
     def test_reoder_keys(self):
         x = pd.Series(["b", "c", "a", "d", "a"]).astype("category")
-        expected = pd.Series(["a or b or d", np.nan] + ["a or b or d"] * 3).astype(
-            "category"
-        )
+        expected = pd.Series(["a, b, d", np.nan] + ["a, b, d"] * 3).astype("category")
 
         res = _process_series(x, keys=["b, a, d"])
 
@@ -281,7 +279,7 @@ class TestProcessSeries:
 
     def test_return_colors(self):
         x = pd.Series(["b", "c", "a", "d", "a"]).astype("category")
-        expected = pd.Series(["a or b", "c or d", "a or b", "c or d", "a or b"]).astype(
+        expected = pd.Series(["a, b", "c, d", "a, b", "c, d", "a, b"]).astype(
             "category"
         )
 
