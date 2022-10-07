@@ -236,7 +236,7 @@ class TestCFLARE:
     def test_compute_absorption_times(
         self, adata_large: AnnData, calculate_variance: bool
     ):
-        keys = ["0", "1"]
+        keys = ["0", "1", "2, 3"]
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -244,7 +244,7 @@ class TestCFLARE:
         mc = (
             cr.estimators.CFLARE(terminal_kernel)
             .fit(k=5)
-            .predict(use=2, n_clusters_kmeans=2, method="kmeans")
+            .predict(use=4, n_clusters_kmeans=4, method="kmeans")
         )
 
         mc.compute_absorption_times(keys=keys, calculate_variance=calculate_variance)
