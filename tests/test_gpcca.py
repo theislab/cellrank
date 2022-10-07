@@ -1314,3 +1314,18 @@ class TestGPCCAIO:
             _ = cr.estimators.GPCCA.read(
                 os.path.join(tmpdir, "foo.pickle"), adata=adata
             )
+
+    @pytest.mark.parametrize("verbose", [None, False, True])
+    def test_compute_schur_verbosity(
+        self, adata_large: AnnData, verbose: Optional[bool], capsys
+    ):
+        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4.0)
+        g = cr.estimators.GPCCA(vk)
+
+        g.compute_schur(n_components=10, method="krylov", verbose=verbose)
+        out, _ = capsys.readouterr()
+
+        if verbose:
+            assert len(out)
+        else:
+            assert not len(out)
