@@ -1,6 +1,8 @@
 from typing import Any, Dict, Tuple, Union, Mapping, Optional
 from typing_extensions import Literal
 
+import io
+import contextlib
 from types import MappingProxyType
 from pathlib import Path
 from pygpcca import GPCCA
@@ -105,6 +107,7 @@ class SchurMixin:
         method: Literal["krylov", "brandts"] = "krylov",
         which: Literal["LR", "LM"] = "LR",
         alpha: float = 1.0,
+        verbose: Optional[bool] = None,
     ) -> "SchurMixin":
         """
         Compute Schur decomposition.
@@ -124,6 +127,9 @@ class SchurMixin:
 
             For benefits of each method, see :class:`pygpcca.GPCCA`.
         %(eigen)s
+        verbose
+            Whether to print extra information when computing the Schur decomposition.
+            If `None`, it's disabled when ``method = 'krylov'``.
 
         Returns
         -------
@@ -153,6 +159,8 @@ class SchurMixin:
             logg.warning(
                 f"Unable to import `petsc4py` or `slepc4py`. Using `method={method!r}`"
             )
+        if verbose is None:
+            verbose = method == "brandts"
 
         tmat = self.transition_matrix
         if method == "brandts" and issparse(self.transition_matrix):
@@ -162,16 +170,19 @@ class SchurMixin:
         self._gpcca = GPCCA(tmat, eta=initial_distribution, z=which, method=method)
         start = logg.info("Computing Schur decomposition")
 
-        try:
-            self._gpcca._do_schur_helper(n_components)
-        except ValueError as e:
-            if "will split complex conjugate eigenvalues" not in str(e):
-                raise
-            logg.warning(
-                f"Using `{n_components}` components would split a block of complex conjugate eigenvalues. "
-                f"Using `n_components={n_components + 1}`"
-            )
-            self._gpcca._do_schur_helper(n_components + 1)
+        with (contextlib.nullcontext if verbose else contextlib.redirect_stdout)(
+            io.StringIO()
+        ):
+            try:
+                self._gpcca._do_schur_helper(n_components)
+            except ValueError as e:
+                if "will split complex conjugate eigenvalues" not in str(e):
+                    raise
+                logg.warning(
+                    f"Using `{n_components}` components would split a block of complex conjugate eigenvalues. "
+                    f"Using `n_components={n_components + 1}`"
+                )
+                self._gpcca._do_schur_helper(n_components + 1)
 
         self._invalid_n_states = np.array(
             [
