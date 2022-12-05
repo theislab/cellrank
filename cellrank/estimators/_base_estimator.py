@@ -133,7 +133,6 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
             Key in ``obj`` to update with ``value``. Only used when ``obj != None``.
         value
             Value to set. If `None` and ``key != None``, it removes the values under ``obj['{key}']``, if present.
-
         copy
             Whether to copy the ``value`` before setting it in ``obj``.
         shadow_only

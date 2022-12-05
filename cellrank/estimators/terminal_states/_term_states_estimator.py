@@ -107,7 +107,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
                   `NaN` entries denote cells that do not belong to any terminal state, i.e. these are either initial or
                   transient cells.
                 - :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
-                  annotations in :attr:`adata.AnnData.obs_names`.
+                  annotations in :attr:`anndata.AnnData.obs_names`.
                   If only 1 key is provided, values should correspond to terminal state clusters if a categorical
                   :class:`pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
         which: TODO(michalk8)
@@ -172,7 +172,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         if not isinstance(new_names, Mapping):
             raise TypeError(f"Expected new names to be a `Mapping`, found `{type(new_names).__name__}`.")
         if not len(new_names):
-            return
+            return self
 
         old_names = states.cat.categories
         new_names = {str(k): str(v) for k, v in new_names.items()}

@@ -257,10 +257,9 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         ok = super()._read_from_adata(adata, **kwargs)
-        #  TODO(michalk8): don't short circuit after eigen
+        ok = ok and self._read_eigendecomposition(adata, allow_missing=False)
         return (
             ok
-            and self._read_eigendecomposition(adata, allow_missing=False)
             and self._read_absorption_probabilities(adata)
             and self._read_absorption_times(adata)
         )
