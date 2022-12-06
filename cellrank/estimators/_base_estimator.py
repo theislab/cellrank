@@ -136,7 +136,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         copy
             Whether to copy the ``value`` before setting it in ``obj``.
         shadow_only
-            Whether or not to update the ``obj`` if we are not in the shadow.
+            Whether to update the ``obj`` if we are not in the shadow.
 
         Returns
         -------
@@ -169,10 +169,10 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
     def _get(
         self,
-        attr: Optional[str],
+        *,
         obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
-        where: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
+        shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
@@ -182,24 +182,22 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
         Parameters
         ----------
-        attr
-            Attribute to set. If `None`, return the value.
         obj
             Object from which to extract the data.
         key
             Key in ``obj`` where the data is stored.
-        where
+        shadow_attr
             Attribute of :attr:`_shadow_adata` where to save the extracted data. If `None`, don't update it.
         dtype
             Valid type(s) of the extracted data.
         copy
-            Copy the data before setting the ``attr``.
+            Copy the data before setting the ``self_attr``.
         allow_missing
-            Whether or not to allow ``key`` to be missing in ``obj``.
+            Whether to allow ``key`` to be missing in ``obj``.
 
         Returns
         -------
-        Nothing, just updates ``attr`` with the extracted values and optionally :attr:`_shadow_adata`.
+        The extracted values and optionally updates :attr:`_shadow_adata` ``.{shadow_attr}``.
 
         Raises
         ------
@@ -210,25 +208,24 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         KeyError
             If ``allow_missing = False`` and ``key`` was not found in ``obj``.
         """
-        if not hasattr(self, attr):
-            raise AttributeError(attr)
+        if shadow_attr is not None and not hasattr(self._shadow_adata, shadow_attr):
+            raise AttributeError(shadow_attr)
 
         try:
             data = obj[key]
             if dtype is not None and not isinstance(data, dtype):
                 raise TypeError(
-                    f"Expected `.{attr}` to be of type `{dtype}`, found `{type(data).__name__}`."
+                    f"Expected object to be of type `{dtype}`, found `{type(data).__name__}`."
                 )
-            if attr is None:
-                return data
             if copy:
                 data = copy_(data)
-            setattr(self, attr, data)
-            if where is not None:
-                getattr(self._shadow_adata, where)[key] = data
+            if shadow_attr is not None:
+                getattr(self._shadow_adata, shadow_attr)[key] = data
+            return data
         except KeyError:
             if not allow_missing:
                 raise
+            return None
 
     @property
     @contextmanager

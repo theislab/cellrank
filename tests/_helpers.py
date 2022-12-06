@@ -263,7 +263,11 @@ def assert_estimators_equal(
     from_adata: bool = False,
 ) -> None:
     def check_arrays(x, y):
-        if isinstance(x, tuple) and hasattr(x, "_fields") and hasattr(x, "_asdict"):
+        if isinstance(x, cr.Lineage):
+            check_arrays(x.X, y.X)
+            check_arrays(x.names, y.names)
+            check_arrays(x.colors, y.colors)
+        elif isinstance(x, tuple) and hasattr(x, "_fields") and hasattr(x, "_asdict"):
             # namedtuple
             x, y = x._asdict(), y._asdict()
             assert x.keys() == y.keys()

@@ -62,7 +62,7 @@ class State(str, Enum):
         if self.value == "macro":
             return Key.obs.macrostates(bwd)
         if self.value == "term":
-            return Key.obs.term_states(bwd)
+            return Key.obs.term_states(False, bwd=bwd)
         if self.value == "abs":
             return Key.obsm.abs_probs(bwd)
         if self.value == "lin":
@@ -83,7 +83,7 @@ class State(str, Enum):
             key3 = Key.obsm.memberships(key1)
             return ("obs", key1), ("uns", key2), ("obsm", key3)
         if self.value == "term":
-            key1 = Key.obs.term_states(bwd)
+            key1 = Key.obs.term_states(False, bwd=bwd)
             key2 = Key.obs.probs(key1)
             key3 = Key.uns.colors(key1)
             return ("obs", key1), ("obs", key2), ("uns", key3)
@@ -103,12 +103,11 @@ class State(str, Enum):
             return ("_eigendecomposition", dict), ("_schur_vectors", np.ndarray), ("_schur_matrix", np.ndarray)
         if self.value == "macro":
             return (
-                ("_macrostates", pd.Series), ("_macrostates_colors", np.ndarray),
-                ("_macrostates_memberships", Lineage), ("_coarse_tmat", pd.DataFrame),
+                ("macrostates", pd.Series), ("macrostates_memberships", Lineage), ("_coarse_tmat", pd.DataFrame),
                 ("_coarse_init_dist", pd.Series), ("_coarse_stat_dist", pd.Series)
             )
         if self.value == "term":
-            return ("_term_states", pd.Series), ("_term_states_probs", pd.Series), ("_term_states_colors", np.ndarray)
+            return ("terminal_states", pd.Series), ("terminal_states_probabilities", pd.Series)
         if self.value == "abs":
             return (
                 ("_absorption_probabilities", Lineage), ("_absorption_times", pd.DataFrame),
@@ -145,7 +144,7 @@ def _check_eigdecomposition(mc: cr.estimators.GPCCA) -> None:
 
 def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
     assert isinstance(mc.macrostates, pd.Series)
-    assert len(mc._macrostates_colors) == len(mc.macrostates.cat.categories)
+    assert len(mc._macrostates.colors) == len(mc.macrostates.cat.categories)
 
     if "stationary_dist" in mc.eigendecomposition:  # one state
         assert isinstance(mc.macrostates_memberships, cr.Lineage)
@@ -193,7 +192,7 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     # macrostates
     assert isinstance(mc.macrostates, pd.Series)
     assert isinstance(mc.macrostates_memberships, cr.Lineage)
-    np.testing.assert_array_equal(mc._macrostates_colors, mc.macrostates_memberships.colors)
+    np.testing.assert_array_equal(mc._macrostates.colors, mc.macrostates_memberships.colors)
 
     # term states
     key = Key.obs.term_states(mc.backward)
@@ -201,7 +200,7 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     # TODO(michalk8): assert series equal from pandas
     assert_array_nan_equal(mc.adata.obs[key], mc.terminal_states)
     np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc.absorption_probabilities.colors)
-    np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc._term_states_colors)
+    np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc._term_states.colors)
     assert isinstance(mc.terminal_states_probabilities, pd.Series)
     np.testing.assert_array_equal(mc.adata.obs[Key.obs.probs(key)], mc.terminal_states_probabilities)
 
@@ -284,12 +283,12 @@ def _assert_adata(
         else:
             for attr, key in state.attr_keys:
                 obj = getattr(adata, attr)
-                assert key not in obj, sorted(obj.keys())
+                assert key not in obj, (state, attr, key)
         _assert_adata(adata, state.next, fwd=True, init=False)
     else:
         for attr, key in state.attr_keys:
             obj = getattr(adata, attr)
-            assert key in obj, sorted(obj.keys())
+            assert key in obj, (state, attr, key)
         _assert_adata(adata, state.prev, fwd=False)
 
 
@@ -1051,7 +1050,7 @@ class TestGPCCA:
         mc.compute_macrostates(n_states=2)
         mc.set_states_from_macrostates()
 
-        key = Key.obsm.memberships(Key.obs.term_states(mc.backward))
+        key = Key.obsm.memberships(Key.obs.term_states(estim_bwd=mc.backward))
         assert len(mc.terminal_states.cat.categories) == 2
         assert adata_large.obsm[key].shape == (adata_large.n_obs, 2)
 
@@ -1108,7 +1107,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         g = cr.estimators.GPCCA(ck)
         g.fit(n_states=n_states)
-        g.set_terminal_states_from_macrostates()
+        g.set_states_from_macrostates()
         g.compute_absorption_probabilities()
         g.compute_absorption_times(keys=keys)
 
@@ -1170,10 +1169,11 @@ class TestGPCCASerialization:
         _assert_adata(g2.adata, state, fwd=True)
         assert_estimators_equal(g1, g2, from_adata=True)
 
+    # TODO(michalk8): parametrize by bwd, needs attr_keys modification
     @pytest.mark.parametrize("state", list(State))
     def test_from_adata_incomplete(self, adata_large: AnnData, state: State):
-        if state in (State.SCHUR, State.MACRO):
-            pytest.skip("See the reintroduce TODO in GPCCA")
+        if state in (State.SCHUR,):
+            pytest.skip("FIXME")
         g_orig = _fit_gpcca(adata_large, State.LIN)
         adata = g_orig.to_adata()
 
@@ -1185,6 +1185,7 @@ class TestGPCCASerialization:
         _assert_gpcca_attrs(g, state, fwd=True, init=False)
         _assert_gpcca_attrs(g, state.prev, fwd=False)
         _assert_adata(g._shadow_adata, state, fwd=True, init=False)
+        print(state, g._shadow_adata)
         _assert_adata(g._shadow_adata, state.prev, fwd=False)
 
     @pytest.mark.parametrize("bwd", [False, True])
@@ -1205,13 +1206,13 @@ class TestGPCCASerialization:
 
         for key in keys:
             assert isinstance(adata.obsm[key], Lineage)
-            adata.obsm[key] = np.array(adata.obsm[key])
+            adata.obsm[key] = np.array(adata.obsm[key], copy=True)
             assert isinstance(adata.obsm[key], np.ndarray)
 
         g = cr.estimators.GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(bwd))
         for attr, key in zip(attrs, keys):
             obj = getattr(g, attr)
-            assert isinstance(obj, Lineage)
+            assert isinstance(obj, Lineage), attr
             np.testing.assert_allclose(obj.X, bdata.obsm[key].X)
             np.testing.assert_array_equal(obj.names, bdata.obsm[key].names)
             np.testing.assert_array_equal(obj.colors, bdata.obsm[key].colors)

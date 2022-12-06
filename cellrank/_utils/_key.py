@@ -40,8 +40,9 @@ class Key:
             return f"macrostates_{Key.backward(bwd)}"
 
         @classmethod
-        def term_states(cls, bwd: Optional[bool]) -> str:
-            return f"{Key.initial(bwd)}_states"
+        def term_states(cls, estim_bwd: Optional[bool], *, bwd: bool = False) -> str:
+            states = "init_states" if bwd else "term_states"
+            return f"{states}_{Key.backward(estim_bwd)}"
 
         @classmethod
         def priming_degree(cls, bwd: Optional[bool]) -> str:
@@ -62,7 +63,7 @@ class Key:
 
         @classmethod
         def abs_probs(cls, bwd: Optional[bool]) -> str:
-            return Key.where(bwd) + "_" + Key.obs.term_states(bwd)
+            return f"lineages_{Key.backward(bwd)}"
 
         @classmethod
         def abs_times(cls, bwd: Optional[bool]) -> str:

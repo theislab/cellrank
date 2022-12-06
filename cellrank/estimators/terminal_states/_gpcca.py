@@ -970,10 +970,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         # remove previous fields
-        self._write_states("initial", None, None, None, None, log=False)
-        self._write_states("terminal", None, None, None, None, log=False)
-
         # fmt: off
+        self._write_states("initial", states=None, colors=None, probs=None, memberships=None, log=False)
+        self._write_states("terminal", states=None, colors=None, probs=None, memberships=None, log=False)
+
         assignment, colors = self._set_categorical_labels(assignment, cluster_key=cluster_key)
         memberships = Lineage(memberships, names=list(assignment.cat.categories), colors=colors)
         # fmt: on
@@ -1074,7 +1074,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._write_absorption_times(None, log=False)
 
         backward = which == "initial"
-        key = Key.obsm.memberships(Key.obs.term_states(backward))
+        key = Key.obsm.memberships(Key.obs.term_states(self.backward, bwd=backward))
         self._set(obj=self.adata.obsm, key=key, value=memberships)
         if backward:
             self._init_states = self._init_states.set(memberships=memberships)
@@ -1094,17 +1094,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obs.macrostates(self.backward)
             # TODO(michalk8): in the future, be more stringent and ensure the categories match the macro memberships
-            assignment = self._get(obj=self.adata.obs, key=key, where="obs", dtype=pd.Series)
+            assignment = self._get(obj=adata.obs, key=key, shadow_attr="obs", dtype=pd.Series)
             ckey = Key.uns.colors(key)
-            colors = self._get(obj=self.adata.uns, key=ckey, where="uns", dtype=(list, tuple, np.ndarray))
+            colors = self._get(obj=adata.uns, key=ckey, shadow_attr="uns", dtype=(list, tuple, np.ndarray))
             mkey = Key.obsm.memberships(key)
-            memberships = self._get(obj=self.adata.obsm, key=mkey, where="obsm", dtype=(Lineage, np.ndarray))
+            memberships = self._get(obj=adata.obsm, key=mkey, shadow_attr="obsm", dtype=(Lineage, np.ndarray))
+            memberships = self._ensure_lineage_object(memberships, backward=self.backward, kind="macrostates")
             self._macrostates = StatesHolder(assignment=assignment, colors=colors, memberships=memberships)
-            # TODO(michalk8)
-            # self._ensure_lineage_object("_macrostates_memberships", kind="macrostates")
             self.params[key] = self._read_params(key)
 
-            tmat = self.adata.uns[Key.uns.coarse(self.backward)].copy()
+            tmat = adata.uns[Key.uns.coarse(self.backward)].copy()
             if not isinstance(tmat, AnnData):
                 raise TypeError(
                     f"Expected coarse-grained transition matrix to be stored "
@@ -1123,19 +1122,19 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if not super()._read_from_adata(adata, **kwargs):
             return False
 
+        # status is based on `backward=False` by design
         for backward in [True, False]:
             with SafeGetter(self, allowed=KeyError) as sg:
-                key = Key.obsm.memberships(Key.obs.term_states(backward))
-                memberships = self._get(obj=self.adata.obsm, key=key, where="obsm", dtype=(np.ndarray, Lineage))
+                key = Key.obsm.memberships(Key.obs.term_states(self.backward, bwd=backward))
+                memberships = self._get(obj=adata.obsm, key=key, shadow_attr="obsm", dtype=(np.ndarray, Lineage))
+                memberships = self._ensure_lineage_object(memberships, backward=backward, kind="term_states")
                 if backward:
                     self._init_states = self._init_states.set(memberships=memberships)
                 else:
                     self._term_states = self._term_states.set(memberships=memberships)
-                # TODO(michalk8): method of StatesHolder?
-                # self._ensure_lineage_object("_term_states_memberships", kind="term_states")
+                self._set(obj=self._shadow_adata.obsm, key=key, value=memberships)
         # fmt: on
 
-        # status is based on `backward=False` by design
         abs_prob_ok = self._read_absorption_probabilities(adata)
         abs_time_ok = self._read_absorption_times(adata)
         return sg.ok and abs_prob_ok and abs_time_ok

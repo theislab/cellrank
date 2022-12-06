@@ -280,7 +280,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     ) -> str:
         # fmt: off
         backward = which == "initial"
-        key = Key.obs.term_states(backward)
+        key = Key.obs.term_states(self.backward, bwd=backward)
         self._set(obj=self.adata.obs, key=key, value=states)
         self._set(obj=self.adata.obs, key=Key.obs.probs(key), value=probs)
         self._set(obj=self.adata.uns, key=Key.uns.colors(key), value=colors)
@@ -306,11 +306,11 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         # fmt: off
         for backward in [True, False]:
-            key = Key.obs.term_states(backward)
+            key = Key.obs.term_states(self.backward, bwd=backward)
             with SafeGetter(self, allowed=KeyError) as sg:
-                assignment = self._get(obj=self.adata.obs, key=key, where="obs", dtype=pd.Series)
-                probs = self._get(obj=self.adata.obs, key=Key.obs.probs(key), where="obs", dtype=pd.Series)
-                colors = self._get(obj=self.adata.uns, key=Key.uns.colors(key), where="uns",
+                assignment = self._get(obj=adata.obs, key=key, shadow_attr="obs", dtype=pd.Series)
+                probs = self._get(obj=adata.obs, key=Key.obs.probs(key), shadow_attr="obs", dtype=pd.Series)
+                colors = self._get(obj=adata.uns, key=Key.uns.colors(key), shadow_attr="uns",
                                    dtype=(list, tuple, np.ndarray))
                 colors = np.asarray([to_hex(c) for c in colors])
                 if backward:

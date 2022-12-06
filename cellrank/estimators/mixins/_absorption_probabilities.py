@@ -93,7 +93,14 @@ class AbsProbsProtocol(BaseProtocol):
     ) -> RecTransStates:
         ...
 
-    def _ensure_lineage_object(self, attr: str, **kwargs: Any) -> None:
+    def _ensure_lineage_object(
+        self,
+        obj: Union[str, np.ndarray, Lineage],
+        *,
+        kind: Literal["macrostates", "term_states", "abs_probs"],
+        backward: bool,
+        **kwargs: Any,
+    ) -> Lineage:
         ...
 
     def _write_absorption_probabilities(
@@ -548,42 +555,69 @@ class AbsProbsMixin:
         # fmt: on
 
     def _read_absorption_probabilities(self: AbsProbsProtocol, adata: AnnData) -> bool:
-        # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key1 = Key.obsm.abs_probs(self.backward)
-            self._get("_absorption_probabilities", self.adata.obsm, key=key1, where="obsm", dtype=(np.ndarray, Lineage))
-            self._ensure_lineage_object("_absorption_probabilities", kind="abs_probs")
+            abs_probs = self._get(
+                obj=adata.obsm,
+                key=key1,
+                shadow_attr="obsm",
+                dtype=(np.ndarray, Lineage),
+            )
+            self._absorption_probabilities = self._ensure_lineage_object(
+                abs_probs, backward=self.backward, kind="abs_probs"
+            )
             key = Key.obs.priming_degree(self.backward)
-            self._get("_priming_degree", self.adata.obs, key=key, where="obs", dtype=pd.Series, allow_missing=True)
+            self._priming_degree = self._get(
+                obj=adata.obs,
+                key=key,
+                shadow_attr="obs",
+                dtype=pd.Series,
+                allow_missing=True,
+            )
             self.params[key1] = self._read_params(key1)
-        # fmt: on
 
         return sg.ok
 
     def _read_absorption_times(self: AbsProbsProtocol, adata: AnnData) -> bool:
-        # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obsm.abs_times(self.backward)
-            self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
-                      allow_missing=True)
+            self._absorption_times = self._get(
+                obj=adata.obsm,
+                key=key,
+                shadow_attr="obsm",
+                dtype=pd.DataFrame,
+                allow_missing=True,
+            )
             self.params[key] = self._read_params(key)
-        # fmt: on
 
         return sg.ok
 
     def _ensure_lineage_object(
-        self: AbsProbsProtocol, attr: str, **kwargs: Any
-    ) -> None:
-        if not isinstance(getattr(self, attr), Lineage):
-            try:
-                lineage = Lineage.from_adata(
-                    self.adata, backward=self.backward, copy=True, **kwargs
-                )
-                setattr(self, attr, lineage)
-            except Exception as e:  # noqa: B902
-                raise RuntimeError(
-                    f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
-                ) from None
+        self: AbsProbsProtocol,
+        obj: Union[str, np.ndarray, Lineage],
+        *,
+        kind: Literal["macrostates", "term_states", "abs_probs"],
+        backward: bool,
+        **kwargs: Any,
+    ) -> Lineage:
+        if isinstance(obj, str):
+            obj = getattr(self, obj)
+        if isinstance(obj, Lineage):
+            return obj
+
+        try:
+            return Lineage.from_adata(
+                self.adata,
+                backward=backward,
+                kind=kind,
+                estimator_backward=self.backward,
+                copy=True,
+                **kwargs,
+            )
+        except Exception as e:  # noqa: B902
+            raise RuntimeError(
+                f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
+            ) from None
 
     plot_absorption_probabilities = register_plotter(
         fwd_attr="absorption_probabilities"

@@ -310,18 +310,32 @@ class SchurMixin:
     def _read_schur_decomposition(
         self: SchurProtocol, adata: AnnData, allow_missing: bool = True
     ) -> bool:
-        # fmt: off
         key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
-            self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
+            self._eigendecomposition = self._get(
+                obj=adata.uns,
+                key=key,
+                shadow_attr="uns",
+                dtype=dict,
+                allow_missing=allow_missing,
+            )
             key = Key.obsm.schur_vectors(self.backward)
-            self._get("_schur_vectors", self.adata.obsm, key=key, where="obsm", dtype=np.ndarray,
-                      allow_missing=allow_missing)
+            self._schur_vectors = self._get(
+                obj=self.adata.obsm,
+                key=key,
+                shadow_attr="obsm",
+                dtype=np.ndarray,
+                allow_missing=allow_missing,
+            )
             key = Key.uns.schur_matrix(self.backward)
-            self._get("_schur_matrix", self.adata.uns, key=key, where="uns", dtype=np.ndarray,
-                      allow_missing=allow_missing)
+            self._schur_matrix = self._get(
+                obj=self.adata.uns,
+                key=key,
+                shadow_attr="uns",
+                dtype=np.ndarray,
+                allow_missing=allow_missing,
+            )
             key = f"schur_decomposition_{Key.backward(self.backward)}"
             self.params[key] = self._read_params(key)
-        # fmt: on
 
         return sg.ok

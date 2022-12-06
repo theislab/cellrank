@@ -52,9 +52,9 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
         **kwargs: Any,
     ):
         if isinstance(terminal_states, str):
-            adata.obs[Key.obs.term_states(bwd=False)] = adata.obs[terminal_states]
+            adata.obs[Key.obs.term_states(False)] = adata.obs[terminal_states]
         elif isinstance(terminal_states, pd.Series):
-            adata.obs[Key.obs.term_states(bwd=False)] = terminal_states
+            adata.obs[Key.obs.term_states(False)] = terminal_states
 
         try:
             super().__init__(adata, g=g, **kwargs)
