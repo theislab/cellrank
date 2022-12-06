@@ -1127,8 +1127,8 @@ class TestGPCCASerialization:
     # TODO(michalk8): parametrize by bwd, needs attr_keys modification
     @pytest.mark.parametrize("state", list(State))
     def test_from_adata_incomplete(self, adata_large: AnnData, state: State):
-        if state in (State.SCHUR,):
-            pytest.skip("FIXME")
+        if state == State.SCHUR:
+            pytest.xfail("Schur decomposition is not needed.")
         g_orig = _fit_gpcca(adata_large, State.LIN)
         adata = g_orig.to_adata()
 
@@ -1140,7 +1140,6 @@ class TestGPCCASerialization:
         _assert_gpcca_attrs(g, state, fwd=True, init=False)
         _assert_gpcca_attrs(g, state.prev, fwd=False)
         _assert_adata(g._shadow_adata, state, fwd=True, init=False)
-        print(state, g._shadow_adata)
         _assert_adata(g._shadow_adata, state.prev, fwd=False)
 
     @pytest.mark.parametrize("bwd", [False, True])

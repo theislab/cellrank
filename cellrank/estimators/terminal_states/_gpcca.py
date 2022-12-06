@@ -1089,6 +1089,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         return msg
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
+        # design choice: no need to eigen/Schur-decomposition
         _ = self._read_eigendecomposition(adata, allow_missing=True)
         ok = self._read_schur_decomposition(adata, allow_missing=True)
         if not ok:
