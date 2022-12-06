@@ -18,7 +18,7 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
 
     # lineages
     abs_probs = adata.obsm[Key.obsm.abs_probs(bwd)]
-    assert isinstance(abs_probs, cr._utils.Lineage)
+    assert isinstance(abs_probs, cr.Lineage)
     np.testing.assert_array_equal(abs_probs.names, adata.obs[key].cat.categories)
     np.testing.assert_array_equal(abs_probs.colors, adata.uns[Key.uns.colors(key)])
     np.testing.assert_allclose(abs_probs.X.sum(1), 1.0, rtol=1e-3)

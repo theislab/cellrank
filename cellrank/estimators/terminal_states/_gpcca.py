@@ -353,7 +353,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if isinstance(names, str):
             names = [names]
         if not isinstance(names, dict):
-            names = {n: n for n in names}
+            names = {n: n for n in names}  # identity
         if not len(names):
             raise ValueError("No macrostates have been selected.")
 
@@ -369,6 +369,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # this also checks that the names are correct before renaming
         is_singleton = memberships.shape[1] == 1
         memberships = memberships[list(names.keys())].copy()
+        memberships.names = list(names.values())
 
         states = self._create_states(memberships, n_cells=n_cells, check_row_sums=False)
         if is_singleton:
@@ -376,7 +377,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             probs = memberships.X.squeeze() / memberships.X.max()
         else:
             colors = memberships[list(states.cat.categories)].colors
-            probs = (memberships.X / memberships.X.max(0)).max(1)
+            probs = (memberships.X / memberships.X.max(axis=0)).max(axis=1)
         probs = pd.Series(probs, index=self.adata.obs_names)
 
         self._write_states(
@@ -1034,7 +1035,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._set("_coarse_tmat", value=tmat, shadow_only=True)
             self._set("_coarse_init_dist", value=init_dist, shadow_only=True)
             self._set("_coarse_stat_dist", value=stat_dist, shadow_only=True)
-            self._set(obj=self.adata.uns, key=Key.uns.coarse(self.backward), value=AnnData(tmat, obs=dists))
+            self._set(
+                obj=self.adata.uns, key=Key.uns.coarse(self.backward),
+                value=AnnData(tmat, obs=dists, dtype=float)
+            )
         else:
             for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:
                 self._set(attr, value=None, shadow_only=True)
