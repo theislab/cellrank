@@ -58,8 +58,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @property
     @d.get_summary(base="tse_term_states")
     def terminal_states(self) -> Optional[pd.Series]:
-        """
-        Categorical annotation of terminal states.
+        """Categorical annotation of terminal states.
 
         By default, all transient cells will be labeled as `NaN`.
         """
@@ -72,17 +71,16 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return self._term_states.probs
 
     @property
-    @d.get_summary(base="tse_term_states")
+    @d.get_summary(base="tse_init_states")
     def initial_states(self) -> Optional[pd.Series]:
-        """
-        Categorical annotation of initial states.
+        """Categorical annotation of initial states.
 
         By default, all transient cells will be labeled as `NaN`.
         """
         return self._init_states.assignment
 
     @property
-    @d.get_summary(base="tse_term_states_probs")
+    @d.get_summary(base="tse_init_states_probs")
     def initial_states_probabilities(self) -> Optional[pd.Series]:
         """Aggregated probability of cells to be in initial states."""  # noqa: D401
         return self._init_states.probs
@@ -96,32 +94,36 @@ class TermStatesEstimator(BaseEstimator, ABC):
         **kwargs: Any,
     ) -> "TermStatesEstimator":
         """
-        Manually define terminal states.
+        Manually define initial or terminal states.
 
         Parameters
         ----------
         labels
-            Defines the terminal states. Valid options are:
+            Defines the states. Valid options are:
 
-                - categorical :class:`pandas.Series` where each category corresponds to a terminal state.
-                  `NaN` entries denote cells that do not belong to any terminal state, i.e. these are either initial or
-                  transient cells.
-                - :class:`dict` where keys are terminal states and values are lists of cell barcodes corresponding to
+                - categorical :class:`pandas.Series` where each category corresponds to an individual state.
+                  `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
+                - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
                   annotations in :attr:`anndata.AnnData.obs_names`.
-                  If only 1 key is provided, values should correspond to terminal state clusters if a categorical
+                  If only 1 key is provided, values should correspond to clusters if a categorical
                   :class:`pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
-        which: TODO(michalk8)
-
+        %(which)s
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
-            Each terminal state will be given the name and color corresponding to the cluster it mostly overlaps with.
+            Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states` or
+            :attr:`initial_states`. Each state will be given the name and color corresponding to the cluster it
+            mostly overlaps with.
 
         Returns
         -------
-        Self and updates the following fields: TODO(michalk8)
+        If ``which = 'terminal'``, returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+
+        Otherwise, returns self and updates the following fields:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
         """
         states, colors = self._set_categorical_labels(
             categories=labels,
@@ -145,20 +147,24 @@ class TermStatesEstimator(BaseEstimator, ABC):
         which: Literal["initial", "terminal"] = "terminal",
     ) -> "TermStatesEstimator":
         """
-        Rename categories in :attr:`terminal_states` or :attr:`initial_states`.
+        Rename :attr:`terminal_states` or :attr:`initial_states`.
 
         Parameters
         ----------
         new_names
             Mapping where keys corresponds to the old names and the values to the new names.
             The new names must be unique.
-        which: TODO(michalk8)
+        %(which)s
 
         Returns
         -------
-        Self and updates one the following field: TODO(michalk8)
+        If ``which = 'terminal'``, returns self and updates the following field:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
+
+        Otherwise, returns self and updates the following field:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
         """
         backward = which == "initial"
         states = self.initial_states if backward else self.terminal_states
@@ -326,9 +332,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @d.dedent
     def compute_states(self, *args: Any, **kwargs: Any) -> "TermStatesEstimator":
         """
-        Compute initial or terminal states of the process.
-
-        This is an alias for :meth:`predict`.
+        Compute initial or terminal states of the process, alias for :meth:`predict`.
 
         Parameters
         ----------
@@ -339,10 +343,15 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Return
         ------
-        Self and just updates the following fields: TODO
+        If ``which = 'terminal'``, returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+
+        Otherwise, returns self and updates the following fields:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
         """
         return self.predict(*args, **kwargs)
 

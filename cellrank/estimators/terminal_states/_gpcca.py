@@ -100,8 +100,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @property
     @d.get_summary(base="gpcca_macro_memberships")
     def macrostates_memberships(self) -> Optional[Lineage]:
-        """
-        Macrostate memberships.
+        """Macrostate memberships.
 
         Soft assignment of microstates (cells) to macrostates.
         """
@@ -110,18 +109,16 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @property
     @d.get_summary(base="gpcca_init_states_memberships")
     def initial_states_memberships(self) -> Optional[Lineage]:
-        """
-        Initial states memberships.
+        """Initial states memberships.
 
-        Soft assignment of cells to terminal states.
+        Soft assignment of cells to initial states.
         """  # noqa: D401
         return self._init_states.memberships
 
     @property
     @d.get_summary(base="gpcca_term_states_memberships")
     def terminal_states_memberships(self) -> Optional[Lineage]:
-        """
-        Terminal states memberships.
+        """Terminal states memberships.
 
         Soft assignment of cells to terminal states.
         """
@@ -160,8 +157,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Parameters
         ----------
         n_states
-            Number of macrostates. If a :class:`typing.Sequence`, use the *minChi* criterion :cite:`reuter:18`.
-            If `None`, use the *eigengap* heuristic.
+            Number of macrostates to compute. If a :class:`~typing.Sequence`, use the *minChi*
+            criterion :cite:`reuter:18`. If `None`, use the *eigengap* heuristic.
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
@@ -238,12 +235,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states: Optional[int] = None,
     ) -> "GPCCA":
         """
-        Automatically select terminal states from macrostates.
+        Automatically select initial or terminal states from macrostates.
 
         Parameters
         ----------
         method
-            How to select the terminal states. Valid option are:
+            How to select the states. Valid option are:
 
                 - `'eigengap'` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
                 - `'eigengap_coarse'` - select the number of states based on the *eigengap* of the diagonal
@@ -252,7 +249,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 - `'stability'` - select states which have a stability >= ``stability_threshold``.
                   The stability is given by the diagonal elements of :attr:`coarse_T`.
         %(n_cells)s
-        which: TODO(michalk8)
+        %(which)s
         alpha
             Weight given to the deviation of an eigenvalue from one.
             Only used when ``method = 'eigengap'`` or ``method = 'eigengap_coarse'``.
@@ -263,11 +260,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Self and updates the following fields:
+        If ``which = 'terminal'``, returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+            - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
+
+        Otherwise, returns self and updates the following fields:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
         """
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
@@ -322,24 +325,32 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         **kwargs: Any,
     ) -> "GPCCA":
         """
-        Manually select states from macrostates.
+        Manually select initial or terminal states from macrostates.
 
         Parameters
         ----------
         names
-            Names of the macrostates to be marked as terminal. Multiple states can be combined using `','`,
-            such as ``["Alpha, Beta", "Epsilon"]``.  If a :class:`dict`, keys correspond to the names
-            of the macrostates and the values to the new names.  If `None`, select all macrostates.
+            Macrostates to select. Multiple states can be combined using `','`, such as `["Alpha, Beta", "Epsilon"]`.
+            If a :class:`dict`, keys correspond to the names of the macrostates and the values to the new names.
+            If `None`, select all macrostates.
         %(n_cells)s
-        which: TODO(michalk8):
+        %(which)s
+        kwargs
+            Unused keyword arguments.
 
         Returns
         -------
-        Self and updates the following fields: TODO(michalk8)
+        If ``which = 'terminal'``, returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
             - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
+
+        Otherwise, returns self and updates the following fields:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
         """
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
