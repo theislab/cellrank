@@ -4,6 +4,7 @@ from typing import (
     List,
     Tuple,
     Union,
+    Literal,
     TypeVar,
     Callable,
     Hashable,
@@ -11,7 +12,6 @@ from typing import (
     Optional,
     Sequence,
 )
-from typing_extensions import Literal
 
 import os
 import wrapt
