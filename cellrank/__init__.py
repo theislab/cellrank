@@ -7,12 +7,8 @@ __maintainer__ = ", ".join(["Marius Lange", "Michal Klein", "Philipp Weiler"])
 __version__ = "1.5.1"
 __email__ = "info@cellrank.org"
 
-try:
-    from importlib_metadata import version  # Python < 3.8
-except ImportError:
-    from importlib.metadata import version  # Python = 3.8
-
 from packaging.version import parse
+from importlib.metadata import version
 
 try:
     __full_version__ = parse(version(__name__))

@@ -1,5 +1,14 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Iterable, Optional, Sequence
-from typing_extensions import Literal
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Literal,
+    Mapping,
+    Iterable,
+    Optional,
+    Sequence,
+)
 
 from abc import ABC, abstractmethod
 from types import MappingProxyType
