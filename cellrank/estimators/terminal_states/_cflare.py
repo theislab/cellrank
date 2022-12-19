@@ -25,10 +25,13 @@ __all__ = ["CFLARE"]
 @d.dedent
 class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     """
-    Compute the initial/terminal states of a Markov chain via spectral heuristics.
+    Clustering and filtering of left and right eigenvectors (CFLARE).
 
-    This estimator uses the left eigenvectors of the transition matrix to filter to a set of recurrent cells
-    and the right eigenvectors to cluster this set of cells into discrete groups.
+    This estimator computes initial and terminal states, as well as fate probabilities.
+    It uses the left eigenvectors of the transition matrix to filter to a set of (approximately)
+    recurrent cells and the right eigenvectors to cluster this set of cells into discrete groups.
+    CFLARE exists mostly for legacy reasons, we recommend using the :class:`cellrank.estimators.GPCCA`
+    estimator, which is mathematically more principled.
 
     Parameters
     ----------
