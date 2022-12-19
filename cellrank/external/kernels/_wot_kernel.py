@@ -32,10 +32,14 @@ except ImportError as e:
 @d.dedent
 class WOTKernel(Kernel, error=_error):
     """
-    Waddington optimal transport kernel from :cite:`schiebinger:19`.
+    Waddington optimal transport (WOT) kernel from :cite:`schiebinger:19`.
 
-    This class requires the `wot` package, which can be installed as
-    `pip install git+https://github.com/broadinstitute/wot`.
+    This kernel requires the `wot` package, which can be installed as
+    `pip install git+https://github.com/broadinstitute/wot`. In short, this kernel computes cell-cell transition
+    probabilities for time-series single-cell datasets by solving optimal transport (OT) problems :cite:`peyre:19`
+    to couple cells from earlier to later time points. In addition, the CellRank interface allows you to combine
+    across- time point transitions with within- time point transitions, to account for dynamical asynchrony within
+    each time point. Please see the `WOT documentation <https://broadinstitute.github.io/wot/>`_ to learn more.
 
     Parameters
     ----------

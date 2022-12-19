@@ -27,11 +27,11 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
     Stationary optimal transport (OT) kernel from :cite:`zhang:21`.
 
     This kernel requires the `statOT` package, which can be installed as `pip install statot POT`. In short, this
-    kernel computes cell-cell transition probabilites by solving an OT problem for a cellular system in steady
-    state, e.g. a system like adult hematopoiesis for which a single time point is enough to capture the entire
-    dynamical landscape. This requires you to have some knowledge about sources and sinks in your dataset, e.g.
-    cellular growth- and death rates, as well as potential entry- or exit points. Please see the  `Stationary OT
-    documentation <https://statot.readthedocs.io/en/latest/>`_ to learn more.
+    kernel computes cell-cell transition probabilites by solving an OT problem :cite:`peyre:19` for a cellular
+    system in steady state, e.g. a system like adult hematopoiesis for which a single time point is enough to
+    capture the entire dynamical landscape. This requires you to have some knowledge about sources and sinks in
+    your dataset, e.g. cellular growth- and death rates, as well as potential entry- or exit points. Please see
+    the  `Stationary OT documentation <https://statot.readthedocs.io/en/latest/>`_ to learn more.
 
     Parameters
     ----------
