@@ -50,9 +50,12 @@ def log_odds(
     **kwargs: Any,
 ) -> Optional[Union[Axes, Sequence[Axes]]]:
     """
-    Plot log-odds ratio between lineages.
+    Plot log-odds ratio between trajectories.
 
-    Log-odds are plotted as a function of the experimental time.
+    This plotting function is geared towards time-series datasets that have been analyzed
+    using the :class:`cellrank.external.kernels.WOTKernel`. It visualizes log-odd ratios
+    between between different trajectories per cell, with the option to color in certain
+    molecular features, like genes. This can be useful to detect and visualize fate-decisive genes.
 
     Parameters
     ----------
