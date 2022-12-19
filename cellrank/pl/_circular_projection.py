@@ -92,7 +92,13 @@ def circular_projection(
     **kwargs: Any,
 ) -> None:
     r"""
-    Plot absorption probabilities on a circular embedding :cite:`velten:17`.
+    Visualize fate probabilities in a circular embedding :cite:`velten:17,jaitin:14`.
+
+    We arrange all computed terminal states evenly spaced around the unit circle and place
+    cells inside the unit circle in a way that reflects their fate probabilities. In other words,
+    the more certain we are that a cell will transition towards a given terminal state, the closer
+    we place it to that terminal state. Uncommited cells thus reside in the middle of the circle.
+    Please see our 2022 manuscript to learn more :cite:`lange:22`.
 
     Parameters
     ----------
