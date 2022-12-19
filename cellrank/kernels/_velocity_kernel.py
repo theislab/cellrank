@@ -23,10 +23,9 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     Kernel which computes a transition matrix based on RNA velocity.
 
     This borrows ideas from both :cite:`manno:18` and :cite:`bergen:20`. In short, for each cell *i*, we compute
-    transition probabilities :math:`p_{i, j}` to each cell *j* in the neighborhood of *i*. The transition probabilities
-    are computed as a multinomial logistic regression where the weights :math:`w_j` (for all *j*) are given
-    by the vector that connects cell *i* with cell *j* in gene expression space, and the features :math:`x_i` are given
-    by the velocity vector :math:`v_i` of cell *i*.
+    transition probabilities :math:`T_{i, j}` to each cell :math:`j` in the neighborhood of :math:`i`. We quantify
+    how much the velocity vector :math:`v_i` of cell :math:`i` points towards each of its nearst neighbors. For
+    this comparison, we support various schemes including cosine similarity and pearson correlation.
 
     Parameters
     ----------
