@@ -73,7 +73,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     to guide the identification of initial, intermediate and terminal states.
 
     To get started with this estimator, we recommend going over the
-    :doc:`initial and terminal states tutorial <../notebooks/tutorials/cellrank_meets_pseudotime>`_.
+    :doc:`initial and terminal states tutorial </docs/source/notebooks/tutorials/initial_terminal_states>`.
 
     Parameters
     ----------
