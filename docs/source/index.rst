@@ -78,11 +78,11 @@ We actively encourage any contribution! To get started, please check out the :do
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
 
-.. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/master
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=master
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
-.. |Notebooks| image:: https://img.shields.io/github/workflow/status/theislab/cellrank_notebooks/CI/master?label=notebooks
+.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=master&label=notebooks
     :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
