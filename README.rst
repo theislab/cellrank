@@ -107,11 +107,11 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://discourse.scverse.org/
     :alt: Discourse
 
-.. |CI| image:: https://img.shields.io/github/workflow/status/theislab/cellrank/Test/master
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=master
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
-.. |Notebooks| image:: https://img.shields.io/github/workflow/status/theislab/cellrank_notebooks/CI/master?label=notebooks
+.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=master&label=notebooks
     :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
