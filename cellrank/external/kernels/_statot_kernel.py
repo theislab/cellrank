@@ -1,5 +1,4 @@
-from typing import Any, Union, Optional
-from typing_extensions import Literal
+from typing import Any, Union, Literal, Optional
 
 from anndata import AnnData
 from cellrank._utils._key import Key

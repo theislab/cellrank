@@ -1,5 +1,4 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence
-from typing_extensions import Literal
+from typing import Any, Dict, Tuple, Union, Literal, Mapping, Optional, Sequence
 
 from types import MappingProxyType
 from pathlib import Path

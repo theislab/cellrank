@@ -1,5 +1,4 @@
-from typing import Any, Dict, List, Union, Optional, Sequence
-from typing_extensions import Literal
+from typing import Any, Dict, List, Union, Literal, Optional, Sequence
 
 from anndata import AnnData
 from cellrank import logging as logg

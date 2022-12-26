@@ -1,5 +1,4 @@
-from typing import Any, Dict, Type, Tuple, Callable
-from typing_extensions import Literal
+from typing import Any, Dict, Type, Tuple, Literal, Callable
 
 from abc import ABC, ABCMeta
 from enum import Enum, EnumMeta

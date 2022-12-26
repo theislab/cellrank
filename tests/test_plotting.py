@@ -1,5 +1,4 @@
-from typing import Tuple, Union, Callable
-from typing_extensions import Literal
+from typing import Tuple, Union, Literal, Callable
 
 import os
 import pytest
