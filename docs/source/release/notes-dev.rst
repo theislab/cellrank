@@ -1,4 +1,4 @@
-CellRank dev (2022-10-07)
+CellRank dev (2022-12-26)
 =========================
 
 Features
@@ -133,3 +133,6 @@ Documentation
 
 - Fix ``RTD`` build - submodules.
   `#901 <https://github.com/theislab/cellrank/pull/901>`__
+
+- Fix CI badges and tox.
+  `#975 <https://github.com/theislab/cellrank/pull/975>`__

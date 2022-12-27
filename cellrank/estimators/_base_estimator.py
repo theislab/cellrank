@@ -1,5 +1,15 @@
-from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional, Sequence
-from typing_extensions import Literal
+from typing import (
+    Any,
+    Dict,
+    List,
+    Tuple,
+    Union,
+    Literal,
+    Mapping,
+    Callable,
+    Optional,
+    Sequence,
+)
 
 from abc import ABC, abstractmethod
 from copy import copy as copy_

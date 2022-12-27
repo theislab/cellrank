@@ -1,5 +1,14 @@
-from typing import Any, Dict, Tuple, Union, Mapping, Optional, Sequence, NamedTuple
-from typing_extensions import Literal
+from typing import (
+    Any,
+    Dict,
+    Tuple,
+    Union,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    NamedTuple,
+)
 
 from types import MappingProxyType
 

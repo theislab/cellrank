@@ -1,5 +1,4 @@
-from typing import Any, Union, Mapping, Optional
-from typing_extensions import Literal
+from typing import Any, Union, Literal, Mapping, Optional
 
 import warnings
 from copy import copy as _copy

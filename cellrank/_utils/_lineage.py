@@ -3,13 +3,13 @@ from typing import (
     List,
     Tuple,
     Union,
+    Literal,
     Mapping,
     TypeVar,
     Callable,
     Iterable,
     Optional,
 )
-from typing_extensions import Literal
 
 from copy import copy as copy_
 from enum import auto

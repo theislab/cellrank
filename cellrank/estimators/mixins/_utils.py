@@ -3,15 +3,16 @@ from typing import (
     Dict,
     Tuple,
     Union,
+    Literal,
     Mapping,
     TypeVar,
     Callable,
     Iterable,
     Optional,
+    Protocol,
     Sequence,
     NamedTuple,
 )
-from typing_extensions import Literal, Protocol
 
 from copy import copy, deepcopy
 from enum import auto

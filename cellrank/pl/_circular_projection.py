@@ -1,5 +1,4 @@
-from typing import Any, Tuple, Union, Mapping, Callable, Optional, Sequence
-from typing_extensions import Literal
+from typing import Any, Tuple, Union, Literal, Mapping, Callable, Optional, Sequence
 
 from enum import auto
 from types import MappingProxyType

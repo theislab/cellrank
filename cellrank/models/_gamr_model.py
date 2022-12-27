@@ -1,5 +1,4 @@
-from typing import Any, Tuple, Union, Optional
-from typing_extensions import Literal
+from typing import Any, Tuple, Union, Literal, Optional
 
 from copy import copy, deepcopy
 from enum import auto
