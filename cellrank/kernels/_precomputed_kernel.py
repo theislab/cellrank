@@ -16,7 +16,12 @@ __all__ = ["PrecomputedKernel"]
 @d.dedent
 class PrecomputedKernel(UnidirectionalKernel):
     """
-    Kernel which contains a precomputed transition matrix.
+    Kernel which is initialized based on a precomputed transition matrix.
+
+    This kernel serves as CellRank's interface with other methods that compute cell-cell transition matrices; you
+    can use this kernel to input you own custom transition matrix and continue to use all CellRank functionality.
+    In particular, you can use a percomputed kernel, just like any other kernel, to initialize an estimator and
+    compute initial and terminal states, fate probabilities, and driver genes.
 
     Parameters
     ----------
