@@ -97,8 +97,9 @@ def circular_projection(
     We arrange all computed terminal states evenly spaced around the unit circle and place
     cells inside the unit circle in a way that reflects their fate probabilities. In other words,
     the more certain we are that a cell will transition towards a given terminal state, the closer
-    we place it to that terminal state. Uncommited cells thus reside in the middle of the circle.
-    Please see our 2022 manuscript to learn more :cite:`lange:22`.
+    we place it to that terminal state. Uncommitted cells thus reside in the middle of the circle.
+
+    Please refer to our manuscript :cite:`lange:22` to learn more.
 
     Parameters
     ----------
