@@ -757,7 +757,14 @@ def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
 
     import networkx as nx
 
-    G = nx.from_scipy_sparse_matrix(c) if issparse(c) else nx.from_numpy_array(c)
+    if issparse(c):
+        try:
+            G = nx.from_scipy_sparse_array(c)
+        except AttributeError:
+            # bwd compatibility for `networkx <2.7`
+            G = nx.from_scipy_sparse_matrix(c)
+    else:
+        G = nx.from_numpy_array(c)
 
     return nx.is_connected(G)
 

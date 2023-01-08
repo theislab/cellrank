@@ -10,6 +10,7 @@ import scvelo as scv
 import cellrank as cr
 from anndata import AnnData
 from cellrank.kernels import VelocityKernel, PrecomputedKernel, ConnectivityKernel
+from cellrank._utils._utils import _connected
 
 import numpy as np
 import pandas as pd
@@ -65,7 +66,7 @@ def bias_knn(
     conn_biased = conn.copy()
 
     # check whether the original graph was connected
-    assert _is_connected(conn), "The underlying KNN graph is disconnected."
+    assert _connected(conn), "The underlying KNN graph is disconnected."
 
     for i in range(conn.shape[0]):
         # get indices, values and current pseudo t
@@ -89,7 +90,7 @@ def bias_knn(
     conn_biased.eliminate_zeros()
 
     # check whether the biased graph is still connected
-    assert _is_connected(conn_biased), "The biased KNN graph has become disconnected."
+    assert _connected(conn_biased), "The biased KNN graph has become disconnected."
 
     return conn_biased
 
@@ -104,15 +105,6 @@ def density_normalization(velo_graph, trans_graph):
     velo_graph = Q @ velo_graph @ Q
 
     return velo_graph
-
-
-def _is_connected(c) -> bool:
-    import networkx as nx
-    from scipy.sparse import issparse
-
-    G = nx.from_scipy_sparse_matrix(c) if issparse(c) else nx.from_numpy_array(c)
-
-    return nx.is_connected(G)
 
 
 def create_kernels(
