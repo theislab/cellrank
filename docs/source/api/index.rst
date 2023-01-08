@@ -4,19 +4,18 @@ Import CellRank as::
 
     import cellrank as cr
 
-Once velocities and the velocity graph have been computed using either `scvelo`_ or `velocyto`_,
-CellRank offers two modes to interact with its core functionality:
+CellRank has a modular API, organized around kernels and estimators:
 
-- interacting directly with the kernels defined in :class:`cellrank.kernels.Kernel` and the
-  estimators :class:`cellrank.estimators.GPCCA` or :class:`cellrank.estimators.CFLARE`.
-  The division into kernels and estimators ensures that CellRank in broadly applicable, no matter how you have
-  computed your transition matrix.
-  See our `Kernels and estimators tutorial <https://cellrank.readthedocs.io/en/stable/kernels_and_estimators.html>`_.
+- :doc:`Kernels <kernels>` compute cell-cell transition matrices using various input data modalities,
+  including RNA velocity, any pseudotime, a developmental potential, experimental time points, and more.
+- :doc:`Estimators <estimators>` use the cell-cell transition matrix to derive insights about cellular dynamics,
+  for example, they compute initial and terminal states, fate probabilities, and driver genes. Our recommended
+  estimator is :class:`cellrank.estimators.GPCCA`.
+- In addition, there are :doc:`models <models>` for gene trend fitting, :doc:`plotting functions <plotting>`
+  for visualization, and :doc:`datasets <datasets>` that help you getting started with CellRank.
 
-Additionally, there is a set of plotting functions which can be used downstream of either analysis mode.
-
-The utilities are mainly for fitting continuous models to gene expression data
-and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene_trends`.
+If you are new to CellRank, check out our :doc:`about CellRank <../about/index>` page, and take a look at our
+:doc:`tutorials <../tutorials>`.
 
 .. toctree::
     :caption: API
@@ -28,6 +27,3 @@ and are utilized in some of the plotting functions, like :func:`cellrank.pl.gene
     plotting
     datasets
     developer
-
-.. _scvelo: https://scvelo.readthedocs.io/
-.. _velocyto: http://velocyto.org/
