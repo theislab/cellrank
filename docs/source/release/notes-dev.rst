@@ -96,6 +96,9 @@ Bugfixes
 - Allow NaN values when determining foreground/background color.
   `#951 <https://github.com/theislab/cellrank/pull/951>`__
 
+- Fix sparse array conversion in ``networkx>=3.0``.
+  `#978 <https://github.com/theislab/cellrank/pull/978>`__
+
 
 Miscellaneous
 -------------
