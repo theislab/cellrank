@@ -51,6 +51,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosummary",
     "sphinx_gallery.load_style",
+    "sphinx_design",
     "nbsphinx",
     "sphinx_copybutton",
     "typed_returns",
@@ -119,7 +120,11 @@ todo_include_todos = False
 html_theme = "furo"
 html_static_path = ["_static"]
 html_logo = "_static/img/logo.png"
-html_css_files = ["css/override.css", "css/sphinx_gallery.css"]
+html_css_files = [
+    "css/override.css",
+    "css/sphinx_gallery.css",
+    "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css",
+]
 html_show_sphinx = False
 html_show_sourcelink = True
 html_theme_options = {
