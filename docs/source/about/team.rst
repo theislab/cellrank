@@ -46,7 +46,7 @@ Core Development Team
         :img-top: https://avatars.githubusercontent.com/u/28675704
 
         - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=Tn1E5RkAAAAJ>`_
-        - :fab:`github` `PhilippWeiler <https://github.com/WeilerP>`_
+        - :fab:`github` `WeilerP <https://github.com/WeilerP>`_
 
 ``pyGPCCA`` Development
 -----------------------
