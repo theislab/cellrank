@@ -1,4 +1,4 @@
-CellRank dev (2023-01-08)
+CellRank dev (2023-01-10)
 =========================
 
 Features
@@ -139,3 +139,6 @@ Documentation
 
 - Fix CI badges and tox.
   `#975 <https://github.com/theislab/cellrank/pull/975>`__
+
+- Polish team page.
+  `#976 <https://github.com/theislab/cellrank/pull/976>`__
