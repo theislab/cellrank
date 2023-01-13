@@ -7,35 +7,49 @@ CellRank was started as a collaboration between the Theislab at Helmholtz Munich
 Kettering Cancer Center (MSKCC). We are happy about every code contribution we received so far, check out the
 `contributions <https://github.com/theislab/cellrank/graphs/contributors>`_ section on GitHub for an overview.
 
-Principal investigators
+Principal Investigators
 -----------------------
-* Fabian Theis (Helmholtz Munich)
-    * GitHub: https://github.com/theislab
-    * Twitter: https://twitter.com/fabian_theis
-    * Website: https://www.helmholtz-munich.de/icb/research/groups/machine-learning/overview/index.html
-    * Image: https://www.sanger.ac.uk/wp-content/uploads/fabian_theis.jpg
-* Dana Pe'er (MSKCC)
-    * GitHub: https://github.com/dpeerlab
-    * Twitter: https://twitter.com/dana_peer
-    * Website: https://www.mskcc.org/research/ski/labs/dana-pe-er
-    * Image: https://www.mskcc.org/sites/default/files/styles/width_800/public/node/239650/main_image/pe-er-dana_210524_027-rt-3x2.jpeg
+.. grid:: auto
 
-Core development team
+    .. grid-item-card:: :fab:`twitter` `Fabian Theis <https://twitter.com/fabian_theis>`_
+        :img-top: https://scholar.googleusercontent.com/citations?view_op=medium_photo&user=sqWpn2AAAAAJ
+
+        - :fas:`building-columns` `Helmholtz Munich <https://www.helmholtz-munich.de/en/icb/research-groups/theis-lab>`_
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=sqWpn2AAAAAJ>`_
+        - :fab:`github` `theislab <https://github.com/theislab/>`_
+
+    .. grid-item-card:: :fab:`twitter` `Dana Pe'er <https://twitter.com/dana_peer>`_
+        :img-top: https://scholar.googleusercontent.com/citations?view_op=medium_photo&user=aJOeGRoAAAAJ
+
+        - :fas:`building-columns` `MSKCC <https://www.mskcc.org/research/ski/labs/dana-pe-er>`_
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=aJOeGRoAAAAJ>`_
+        - :fab:`github` `dpeerlab <https://github.com/dpeerlab>`_
+
+Core Development Team
 ---------------------
-* Marius Lange (Helmholtz Munich)
-    * GitHub: https://github.com/Marius1311
-    * Twitter: https://twitter.com/MariusLange8
-    * Website: https://mariuslange.com/
-    * Image: https://mariuslange.com/author/marius-lange/avatar_huc2ea0f123de6d091882f094508aad23f_1614639_270x270_fill_q75_lanczos_center.jpg
-* Michal Klein (Helmoltz Munich)
-    * GitHub: https://github.com/michalk8
-* Philipp Weiler (Helmholtz Munich)
-    * GitHub: https://github.com/WeilerP
-    * Twitter: https://twitter.com/PhilippWeiler7
-    * Image: https://avatars.githubusercontent.com/u/28675704?v=4
+.. grid:: auto
 
-pyGPCCA development
--------------------
+    .. grid-item-card:: :fab:`twitter` `Marius Lange <https://twitter.com/MariusLange8>`_
+        :img-top: https://mariuslange.com/author/marius-lange/avatar_huc2ea0f123de6d091882f094508aad23f_1614639_270x270_fill_q75_lanczos_center.jpg
+
+        - :fas:`house` `mariuslange.com <https://mariuslange.com/>`_
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=QrhWUR4AAAAJ>`_
+        - :fab:`github` `Marius1311 <https://github.com/Marius1311>`_
+
+    .. grid-item-card:: Michal Klein
+        :img-top: https://avatars.githubusercontent.com/u/46717574
+
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=zByzdzcAAAAJ>`_
+        - :fab:`github` `michalk8 <https://github.com/michalk8>`_
+
+    .. grid-item-card:: :fab:`twitter` `Philipp Weiler <https://twitter.com/philippweiler7>`_
+        :img-top: https://avatars.githubusercontent.com/u/28675704
+
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=Tn1E5RkAAAAJ>`_
+        - :fab:`github` `WeilerP <https://github.com/WeilerP>`_
+
+``pyGPCCA`` Development
+-----------------------
 CellRank's GPCCA estimator is based on `pyGPCCA <https://github.com/msmdev/pyGPCCA>`_  for coarse-graining of
 non-reversible Markov chains :cite:`reuter:19`; check out `their documentation <https://pygpcca.readthedocs.io/>`_
 to learn about contributions.

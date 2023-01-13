@@ -9,5 +9,6 @@ sphinx-autodoc-annotation
 sphinx-autodoc-typehints>=1.10.3
 sphinx-gallery
 sphinx_copybutton
+sphinx_design>=0.3.0
 sphinxcontrib-bibtex>=2.3.0
 sphinxcontrib-spelling

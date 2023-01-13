@@ -97,6 +97,12 @@ def heatmap(
     """
     Plot a heatmap of smoothed gene expression along specified lineages.
 
+    This requires a pseudotemporal ordering of cellular dynamics, computed using a method like
+    DPT :cite:`haghverdi:16` or Palantir :cite:`setty:19`. The function combines the pseudotemporal
+    ordering with CellRank's fate probabilities to visualize each gene's expression along specific
+    trajectories. In the heatmap, genes are ordered according to their peak in pseudotime, which
+    emphasizes expression cascades of sequential activation.
+
     Parameters
     ----------
     %(adata)s

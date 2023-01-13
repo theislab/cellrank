@@ -62,17 +62,19 @@ class CoarseTOrder(ModeEnum):
 @d.dedent
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     """
-    Generalized Perron Cluster Cluster Analysis :cite:`reuter:18` as implemented in \
+    Generalized Perron Cluster Cluster Analysis (GPCCA) :cite:`reuter:18,reuter:19` as implemented in \
     `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
 
-    Coarse-grains a discrete Markov chain into a set of macrostates and computes coarse-grained transition probabilities
-    among the macrostates. Each macrostate corresponds to an area of the state space, i.e. to a subset of cells. The
-    assignment is soft, i.e. each cell is assigned to every macrostate with a certain weight, where weights sum to
-    one per cell. Macrostates are computed by maximizing the 'crispness' which can be thought of as a measure for
-    minimal overlap between macrostates in a certain inner-product sense. Once the macrostates have been computed,
-    we project the large transition matrix onto a coarse-grained transition matrix among the macrostates via
-    a Galerkin projection. This projection is based on invariant subspaces of the original transition matrix which
-    are obtained using the real Schur decomposition :cite:`reuter:18`.
+    This is our main and recommended estimator. Use it to compute macrostates, automatically and
+    semi-automatically classify these as initial, intermediate and terminal states, compute fate
+    probabilities towards macrostates, uncover driver genes, and much more. To compute and classify
+    macrostates, we run the GPCCA algorithm under the hood, which returns a soft assignmend of cells
+    to macrostates, as well as a coarse-grained transition matrix among the set of macrostates
+    :cite:`reuter:18,reuter:19`. This estimator allows you to inject prior knowledge where available
+    to guide the identification of initial, intermediate and terminal states.
+
+    To get started with this estimator, we recommend going over the
+    :doc:`initial and terminal states tutorial </docs/source/notebooks/tutorials/initial_terminal_states>`.
 
     Parameters
     ----------

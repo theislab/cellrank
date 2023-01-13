@@ -1,0 +1,1 @@
+Fix sparse array conversion in ``networkx>=3.0``.
