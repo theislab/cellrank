@@ -396,9 +396,12 @@ def register_plotter(
 
     Parameters
     ----------
-    fwd_attr: TODO(michalk8): enable warnings
-    bwd_attr: TODO(michalk8): enable warnings
-    macro_attr: TODO(michalk8)
+    fwd_attr:
+        Attribute containing the terminal states.
+    bwd_attr:
+        Attribute containing the initial states.
+    macro_attr:
+        Attribute containing the macrostates.
 
     Returns
     -------
@@ -437,13 +440,13 @@ def register_plotter(
             data = obj.assignment if discrete else obj.memberships
             colors = obj.colors
         else:
-            raise TypeError(f"Unable to plot a value of type `{type(obj).__name__}`.")
+            raise TypeError(f"Unable to plot a value of type `{type(obj)}`.")
 
         return wrapped(
             *args,
             _data=data,
             _colors=colors,
-            _title=which,
+            _title=f"{attr} states",
             discrete=discrete,
             **kwargs,
         )
