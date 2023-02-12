@@ -1082,11 +1082,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     ) -> str:
         # fmt: off
         key = Key.obs.macrostates(self.backward)
-        self._set(obj=self.adata.obs, key=key, value=macrostates, shadow_only=True)
+        self._set(obj=self.adata.obs, key=key, value=macrostates)
         ckey = Key.uns.colors(key)
-        self._set(obj=self.adata.uns, key=ckey, value=colors, shadow_only=True)
+        self._set(obj=self.adata.uns, key=ckey, value=colors)
         mkey = Key.obsm.memberships(key)
-        self._set(obj=self.adata.obsm, key=mkey, value=memberships, shadow_only=True)
+        self._set(obj=self.adata.obsm, key=mkey, value=memberships)
         self._macrostates = self._macrostates.set(assignment=macrostates, colors=colors, memberships=memberships)
         self.params[key] = dict(params)
 
