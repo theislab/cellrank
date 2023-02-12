@@ -532,7 +532,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         with pytest.raises(RuntimeError, match=r"Compute macro"):
-            mc.predict(n_states=1, which="initial")
+            mc.predict_initial_states(n_states=1)
 
     def test_compute_initial_states_from_forward(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -543,7 +543,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=4, n_cells=5)
-        mc.predict(n_states=3, which="initial", method="top_n")
+        mc.predict_initial_states(n_states=3)
 
         assert mc.terminal_states is None
         assert len(mc.initial_states.cat.categories) == 3
@@ -561,7 +561,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=5)
 
-        mc.predict(n_states=1, which="initial")
+        mc.predict_initial_states(n_states=1)
 
         key = Key.obs.term_states(mc.backward, bwd=True)
 
