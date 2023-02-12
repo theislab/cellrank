@@ -2185,35 +2185,37 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(states=["0"], dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_discrete(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(discrete=True, dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(color="clusters", dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_no_same_plot(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_states(
+            which="macro", cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath
+        )
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_title(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(title="foobar", dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", title="foobar", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_time(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(mode="time", dpi=DPI, save=fpath)
+        mc.plot_states(which="macro", mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states(self, mc: GPCCA, fpath: str):

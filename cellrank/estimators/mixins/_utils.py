@@ -386,7 +386,9 @@ def _plot_dispatcher(
     )
 
 
-def register_plotter(*, fwd_attr: str, bwd_attr: Optional[str] = None):
+def register_plotter(
+    *, fwd_attr: str, bwd_attr: Optional[str] = None, macro_attr: Optional[str] = None
+) -> Callable[..., None]:
     """
     Register a plotting function.
 
@@ -396,6 +398,7 @@ def register_plotter(*, fwd_attr: str, bwd_attr: Optional[str] = None):
     ----------
     fwd_attr: TODO(michalk8): enable warnings
     bwd_attr: TODO(michalk8): enable warnings
+    macro_attr: TODO(michalk8)
 
     Returns
     -------
@@ -412,16 +415,17 @@ def register_plotter(*, fwd_attr: str, bwd_attr: Optional[str] = None):
         # TODO(michalk8): enable warnings again
         discrete: Optional[bool] = kwargs.pop("discrete", True)
         which = kwargs.pop("which", "terminal")
-        if which not in ("initial", "terminal"):
-            raise ValueError(
-                f"Expected `which` to be either `'initial'` or `'terminal'`, found `{which!r}`."
-            )
-        if which == "initial" and bwd_attr is None:
-            which = "terminal"
 
-        obj: Union[StatesHolder, Lineage] = getattr(
-            instance, fwd_attr if which == "terminal" else bwd_attr
-        )
+        try:
+            attr = attr_map[which]
+            if attr is None:
+                raise ValueError(f"{type(instance)} cannot plot {which} states.")
+        except KeyError:
+            raise ValueError(
+                f"Expected `which` to be one of `{sorted(attr_map.keys())}`, found `{which!r}`."
+            ) from None
+
+        obj: Union[StatesHolder, Lineage] = getattr(instance, attr)
         if isinstance(obj, Lineage):
             discrete = False
         elif not discrete and obj.memberships is None:
@@ -439,11 +443,16 @@ def register_plotter(*, fwd_attr: str, bwd_attr: Optional[str] = None):
             *args,
             _data=data,
             _colors=colors,
-            #  TODO(michak8): clean this up
-            _title=fwd_attr if which == "terminal" else bwd_attr,
+            _title=attr,
             discrete=discrete,
             **kwargs,
         )
+
+    attr_map = {
+        "initial": bwd_attr,
+        "terminal": fwd_attr,
+        "macro": macro_attr,
+    }
 
     return wrapper(_plot_dispatcher)
 
