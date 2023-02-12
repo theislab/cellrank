@@ -1171,6 +1171,30 @@ class TestGPCCASerialization:
 
         assert_estimators_equal(g_orig, g, from_adata=True)
 
+    def test_overlapping_states_from_macro(self, adata_large: AnnData):
+        g = _fit_gpcca(adata_large, State.TERM, backward=False)
+        initial_states = g.terminal_states.cat.categories
+
+        with pytest.raises(ValueError, match=r"Found \`\d+\` overlapping"):
+            g.set_states_from_macrostates(initial_states, which="initial")
+        assert g.initial_states is None
+
+        g.set_states_from_macrostates(
+            initial_states, which="initial", allow_overlap=True
+        )
+        pd.testing.assert_series_equal(g.terminal_states, g.initial_states)
+
+    def test_overlapping_states_explicit(self, adata_large: AnnData):
+        g = _fit_gpcca(adata_large, State.TERM, backward=False)
+        initial_states = {"overlapping_initial_state": g.adata.obs_names[:20]}
+
+        with pytest.raises(ValueError, match=r"Found \`\d+\` overlapping"):
+            g.set_states(initial_states, which="initial")
+        assert g.initial_states is None
+
+        g.set_states(initial_states, which="initial", allow_overlap=True)
+        assert g.initial_states is not None
+
 
 class TestGPCCAIO:
     @pytest.mark.parametrize("deep", [False, True])

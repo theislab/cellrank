@@ -146,20 +146,18 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @d.dedent
     def rename_states(  # TODO(michalk8): override in GPCCA to handle macrostates
         self,
-        new_names: Mapping[str, str],
+        old_new: Mapping[str, str],
         which: Literal["initial", "terminal"] = "terminal",
-        allow_overlap: bool = False,
     ) -> "TermStatesEstimator":
         """
         Rename :attr:`terminal_states` or :attr:`initial_states`.
 
         Parameters
         ----------
-        new_names
+        old_new
             Mapping where keys correspond to the old names and the values to the new names.
             The new names must be unique.
         %(which)s
-        %(allow_overlap)s
 
         Returns
         -------
@@ -175,54 +173,52 @@ class TermStatesEstimator(BaseEstimator, ABC):
         states = self.initial_states if backward else self.terminal_states
         if states is None:
             raise RuntimeError(
-                f"Compute {which} states first as `.compute_states(..., which={which!r})` or "
+                f"Compute {which} states first as `.predict_{which}_states(...)` or "
                 f"set them manually as `.set_states(..., which={which!r})`."
             )
 
         # fmt: off
-        if not isinstance(new_names, Mapping):
-            raise TypeError(f"Expected new names to be a `Mapping`, found `{type(new_names).__name__}`.")
-        if not len(new_names):
+        if not isinstance(old_new, Mapping):
+            raise TypeError(f"Expected new names to be a `Mapping`, found `{type(old_new)}`.")
+        if not len(old_new):
             return self
 
         old_names = states.cat.categories
-        new_names = {str(k): str(v) for k, v in new_names.items()}
-        mask = np.isin(list(new_names.keys()), old_names)
+        old_new = {str(k): str(v) for k, v in old_new.items()}
+        mask = np.isin(list(old_new.keys()), old_names)
         if not np.all(mask):
-            invalid = sorted(np.array(list(new_names.keys()))[~mask])
+            invalid = sorted(np.array(list(old_new.keys()))[~mask])
             raise ValueError(f"Invalid {which} states names: `{invalid}`. Valid names are: `{sorted(old_names)}`.")
 
-        names_after_renaming = [new_names.get(n, n) for n in old_names]
+        names_after_renaming = [old_new.get(n, n) for n in old_names]
         if len(set(names_after_renaming)) != len(old_names):
             raise ValueError(f"After renaming, {which} states will no longer unique: `{names_after_renaming}`.")
         # fmt: on
 
         if backward:
-            assignment = states.cat.rename_categories(new_names)
+            assignment = states.cat.rename_categories(old_new)
             memberships = self._init_states.memberships
             self._write_states(
                 which,
                 states=assignment,
                 colors=self._init_states.colors,
                 probs=self.initial_states_probabilities,
-                allow_overlap=allow_overlap,
                 log=False,
             )
             self._init_states = self._init_states.set(assignment=assignment)
         else:
-            assignment = states.cat.rename_categories(new_names)
+            assignment = states.cat.rename_categories(old_new)
             memberships = self._term_states.memberships
             self._write_states(
                 which,
                 states=assignment,
                 colors=self._term_states.colors,
                 probs=self.terminal_states_probabilities,
-                allow_overlap=allow_overlap,
                 log=False,
             )
             self._term_states = self._term_states.set(assignment=assignment)
         if memberships is not None:
-            memberships.names = [new_names.get(n, n) for n in memberships.names]
+            memberships.names = [old_new.get(n, n) for n in memberships.names]
 
         return self
 
@@ -295,9 +291,12 @@ class TermStatesEstimator(BaseEstimator, ABC):
         if not allow_overlap:
             fwd_states, bwd_states = (self.terminal_states, states) if backward else (states, self.initial_states)
             if fwd_states is not None and bwd_states is not None:
-                overlap = set(fwd_states.cat.categories) & set(bwd_states.cat.categories)
+                overlap = np.sum(~pd.isnull(fwd_states) & ~pd.isnull(bwd_states))
                 if overlap:
-                    raise ValueError(f"Found overlapping initial and terminal states: `{sorted(overlap)}`.")
+                    raise ValueError(
+                        f"Found `{overlap}` overlapping cells between initial and terminal states. "
+                        f"If this is intended, use `allow_overlap=True`."
+                    )
 
         key = Key.obs.term_states(self.backward, bwd=backward)
         self._set(obj=self.adata.obs, key=key, value=states)
