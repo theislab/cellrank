@@ -192,6 +192,10 @@ preconditioner
 which = """\
 which
     Whether to compute initial or terminal states."""
+allow_overlap = """\
+allow_overlap
+    Whether to allow overlapping names between initial and terminal states.
+"""
 
 
 def inject_docs(**kwargs: Any):  # noqa
@@ -249,4 +253,5 @@ d = DocstringProcessor(
     gene_symbols=_gene_symbols,
     absorption_utils=_absorption_utils,
     which=which,
+    allow_overlap=allow_overlap,
 )

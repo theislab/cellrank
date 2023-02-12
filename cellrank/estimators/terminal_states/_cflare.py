@@ -77,8 +77,8 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         """
         Find approximate recurrent classes of the Markov chain.
 
-        Filter to obtain recurrent states in left eigenvectors.
-        Cluster to obtain approximate recurrent classes in right eigenvectors.
+        Filter to obtain recurrent states from left eigenvectors.
+        Cluster to obtain approximate recurrent classes from right eigenvectors.
 
         Parameters
         ----------
@@ -227,6 +227,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         return self.set_states(
             labels=labels,
+            which="terminal",
             cluster_key=cluster_key,
             probs=self._compute_term_states_probs(eig, use),
             params=self._create_params(),

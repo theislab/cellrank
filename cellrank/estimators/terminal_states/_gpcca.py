@@ -238,6 +238,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
+        allow_overlap: bool = False,
     ) -> "GPCCA":
         """
         Automatically select terminal states from macrostates.
@@ -261,6 +262,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Threshold used when ``method = 'stability'``.
         n_states
             Number of states used when ``method = 'top_n'``.
+        %(allow_overlap)s
 
         Returns
         -------
@@ -319,11 +321,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
         return self.set_states_from_macrostates(
-            names, n_cells=n_cells, which="terminal", params=self._create_params()
+            names,
+            n_cells=n_cells,
+            which="terminal",
+            params=self._create_params(),
+            allow_overlap=allow_overlap,
         )
 
     @d.dedent
-    def predict_initial_states(self, n_states: int = 1, n_cells: int = 30) -> "GPCCA":
+    def predict_initial_states(
+        self, n_states: int = 1, n_cells: int = 30, allow_overlap: bool = False
+    ) -> "GPCCA":
         """
         Compute initial states from macrostates using :attr:`coarse_stationary_distribution`.
 
@@ -332,6 +340,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states
             Number of initial states.
         %(n_cells)s
+        %(allow_overlap)s
 
         Returns
         -------
@@ -356,7 +365,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         if probs.shape[1] == 1:
-            return self.set_states_from_macrostates(n_cells=n_cells, which="initial")
+            return self.set_states_from_macrostates(
+                n_cells=n_cells, which="initial", allow_overlap=allow_overlap
+            )
 
         stat_dist = self.coarse_stationary_distribution
         if stat_dist is None:
@@ -364,7 +375,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         states = list(stat_dist[np.argsort(stat_dist)][:n_states].index)
         return self.set_states_from_macrostates(
-            states, n_cells=n_cells, which="initial"
+            states, n_cells=n_cells, which="initial", allow_overlap=allow_overlap
         )
 
     @d.dedent
@@ -373,6 +384,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
         n_cells: int = 30,
         which: Literal["initial", "terminal"] = "terminal",
+        allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "GPCCA":
         """
@@ -386,6 +398,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             If `None`, select all macrostates.
         %(n_cells)s
         %(which)s
+        %(allow_overlap)s
         kwargs
             Unused keyword arguments.
 
@@ -452,6 +465,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             probs=probs,
             memberships=memberships,
             params=kwargs.pop("params", {}),
+            allow_overlap=allow_overlap,
         )
         return self
 
@@ -1132,9 +1146,18 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         probs: Optional[pd.Series] = None,
         memberships: Optional[Lineage] = None,
         params: Dict[str, Any] = MappingProxyType({}),
+        allow_overlap: bool = False,
     ) -> str:
+        msg = super()._write_states(
+            which,
+            states=states,
+            colors=colors,
+            probs=probs,
+            params=params,
+            allow_overlap=allow_overlap,
+            log=False,
+        )
         # fmt: off
-        msg = super()._write_states(which, states=states, colors=colors, probs=probs, params=params, log=False)
         msg = "\n".join(msg.split("\n")[:-1])
         msg += f"\n       `.{which}_states_memberships\n    Finish`"
 

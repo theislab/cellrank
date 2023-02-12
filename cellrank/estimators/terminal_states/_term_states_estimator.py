@@ -90,6 +90,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         labels: Union[pd.Series, Dict[str, Sequence[Any]]],
         which: Literal["initial", "terminal"] = "terminal",
         cluster_key: Optional[str] = None,
+        allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "TermStatesEstimator":
         """
@@ -106,11 +107,13 @@ class TermStatesEstimator(BaseEstimator, ABC):
                   annotations in :attr:`anndata.AnnData.obs_names`.
                   If only 1 key is provided, values should correspond to clusters if a categorical
                   :class:`pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
-        %(which)s
+        which
+            Whether to set initial or terminal states.
         cluster_key
             Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states` or
             :attr:`initial_states`. Each state will be given the name and color corresponding to the cluster it
             mostly overlaps with.
+        %(allow_overlap)s
 
         Returns
         -------
@@ -133,6 +136,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             which,
             states=states,
             colors=colors,
+            allow_overlap=allow_overlap,
             **kwargs,
         )
         return self
@@ -144,6 +148,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         self,
         new_names: Mapping[str, str],
         which: Literal["initial", "terminal"] = "terminal",
+        allow_overlap: bool = False,
     ) -> "TermStatesEstimator":
         """
         Rename :attr:`terminal_states` or :attr:`initial_states`.
@@ -151,9 +156,10 @@ class TermStatesEstimator(BaseEstimator, ABC):
         Parameters
         ----------
         new_names
-            Mapping where keys corresponds to the old names and the values to the new names.
+            Mapping where keys correspond to the old names and the values to the new names.
             The new names must be unique.
         %(which)s
+        %(allow_overlap)s
 
         Returns
         -------
@@ -184,7 +190,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         mask = np.isin(list(new_names.keys()), old_names)
         if not np.all(mask):
             invalid = sorted(np.array(list(new_names.keys()))[~mask])
-            raise ValueError(f"Invalid {which} states names: `{invalid}`. Valid names are: `{sorted(old_names)}`")
+            raise ValueError(f"Invalid {which} states names: `{invalid}`. Valid names are: `{sorted(old_names)}`.")
 
         names_after_renaming = [new_names.get(n, n) for n in old_names]
         if len(set(names_after_renaming)) != len(old_names):
@@ -192,29 +198,29 @@ class TermStatesEstimator(BaseEstimator, ABC):
         # fmt: on
 
         if backward:
-            self._init_states = self._init_states.set(
-                assignment=states.cat.rename_categories(new_names)
-            )
+            assignment = states.cat.rename_categories(new_names)
             memberships = self._init_states.memberships
             self._write_states(
                 which,
-                states=self.initial_states,
+                states=assignment,
                 colors=self._init_states.colors,
                 probs=self.initial_states_probabilities,
+                allow_overlap=allow_overlap,
                 log=False,
             )
+            self._init_states = self._init_states.set(assignment=assignment)
         else:
-            self._term_states = self._term_states.set(
-                assignment=states.cat.rename_categories(new_names)
-            )
+            assignment = states.cat.rename_categories(new_names)
             memberships = self._term_states.memberships
             self._write_states(
                 which,
-                states=self.terminal_states,
+                states=assignment,
                 colors=self._term_states.colors,
                 probs=self.terminal_states_probabilities,
+                allow_overlap=allow_overlap,
                 log=False,
             )
+            self._term_states = self._term_states.set(assignment=assignment)
         if memberships is not None:
             memberships.names = [new_names.get(n, n) for n in memberships.names]
 
