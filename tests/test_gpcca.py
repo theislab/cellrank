@@ -1088,12 +1088,10 @@ class TestGPCCASerialization:
             res = shares_mem(adata.X, g.adata.X)
             assert not res if copy else res
         if "obs" in keep:
-            # we don't save macrostates in the underlying object, only during serialization
-            key = Key.obs.macrostates(g.backward)
-            cols = [c for c in adata.obs.columns if c != key]
-            obs = adata.obs[cols]
-            np.testing.assert_array_equal(obs.shape, g.adata.obs.shape)
-            assert_frame_equal(obs, g.adata.obs[cols])
+            columns = adata.obs.columns
+            np.testing.assert_array_equal(adata.obs.shape, g.adata.obs.shape)
+            # reorder columns
+            assert_frame_equal(adata.obs, g.adata.obs[columns])
         if "obsm" in keep:
             for key in g.adata.obsm.keys():
                 res = shares_mem(adata.obsm[key], g.adata.obsm[key])

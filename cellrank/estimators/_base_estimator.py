@@ -346,8 +346,8 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                   which to keep from this attribute. If the values are specified either as `True` or `'all'`,
                   everything from this attribute will be kept.
         copy
-            Whether to copy the data. Can be specified on per-attribute basis. Useful for attributes that store arrays.
-            Attributes not specified here will not be copied.
+            Whether to copy the data. Can be specified on per-attribute basis.
+            Useful for attributes that are array-like.
 
         Returns
         -------
