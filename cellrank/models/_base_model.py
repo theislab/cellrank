@@ -238,7 +238,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
     @property
     def shape(self) -> Tuple[int]:
-        """Number of cells in :attr:`adata`."""  # noqa: D401
+        """Number of cells in :attr:`adata`."""
         return (self._n_obs,)
 
     @property
@@ -267,19 +267,19 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @property
     @d.get_summary(base="base_model_x")
     def x(self) -> np.ndarray:
-        """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
+        """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""
         return self._x
 
     @property
     @d.get_summary(base="base_model_y")
     def y(self) -> np.ndarray:
-        """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
+        """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""
         return self._y
 
     @property
     @d.get_summary(base="base_model_w")
     def w(self) -> np.ndarray:
-        """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""  # noqa
+        """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""
         return self._w
 
     @property

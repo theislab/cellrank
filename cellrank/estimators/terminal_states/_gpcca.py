@@ -113,7 +113,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         """Initial states memberships.
 
         Soft assignment of cells to initial states.
-        """  # noqa: D401
+        """
         return self._init_states.memberships
 
     @property
@@ -1155,14 +1155,5 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         abs_prob_ok = self._read_absorption_probabilities(adata)
         abs_time_ok = self._read_absorption_times(adata)
         return sg.ok and abs_prob_ok and abs_time_ok
-
-    def _format_params(self) -> str:
-        fmt = super()._format_params()
-        macro = (
-            None
-            if self.macrostates is None
-            else sorted(self.macrostates.cat.categories)
-        )
-        return fmt + f", macrostates={macro}"
 
     plot_macrostates = register_plotter(bwd_attr=None, fwd_attr="_macrostates")

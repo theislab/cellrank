@@ -103,7 +103,9 @@ def compare(
 
     def compare_cflare_fwd(
         func: Callable,
-    ) -> Callable:  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
+    ) -> (
+        Callable
+    ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
         def decorator(self, adata_cflare_fwd) -> None:
             adata, mc = adata_cflare_fwd
             fpath, path = _prepare_fname(func)
