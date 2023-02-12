@@ -224,24 +224,28 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         return self
 
     @d.dedent
-    def predict(
+    def predict(self, *args: Any, **kwargs: Any) -> "GPCCA":
+        """Automatically select terminal states from macrostates, alias for :meth:`predict_terminal_states`."""
+        return self.predict_terminal_states(*args, **kwargs)
+
+    @d.dedent
+    def predict_terminal_states(
         self,
         method: Literal[
             "stability", "top_n", "eigengap", "eigengap_coarse"
         ] = TermStatesMethod.STABILITY,
-        which: Literal["initial", "terminal"] = "terminal",
         n_cells: int = 30,
         alpha: Optional[float] = 1,
         stability_threshold: float = 0.96,
         n_states: Optional[int] = None,
     ) -> "GPCCA":
         """
-        Automatically select initial or terminal states from macrostates.
+        Automatically select terminal states from macrostates.
 
         Parameters
         ----------
         method
-            How to select the states. Valid option are:
+            How to select the terminal states. Valid option are:
 
                 - `'eigengap'` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
                 - `'eigengap_coarse'` - select the number of states based on the *eigengap* of the diagonal
@@ -250,7 +254,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 - `'stability'` - select states which have a stability >= ``stability_threshold``.
                   The stability is given by the diagonal elements of :attr:`coarse_T`.
         %(n_cells)s
-        %(which)s
         alpha
             Weight given to the deviation of an eigenvalue from one.
             Only used when ``method = 'eigengap'`` or ``method = 'eigengap_coarse'``.
@@ -261,27 +264,24 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        If ``which = 'terminal'``, returns self and updates the following fields:
+        Returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
             - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
-
-        Otherwise, returns self and updates the following fields:
-
-            - :attr:`initial_states` - %(tse_init_states.summary)s
-            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
         """
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
         if len(self.macrostates.cat.categories) == 1:
             logg.warning(
-                f"Found only one macrostate, making it the single {which} state"
+                "Found only one macrostate, making it the single terminal state"
             )
             return self.set_states_from_macrostates(
-                names=None, n_cells=n_cells, which=which, params=self._create_params()
+                names=None,
+                n_cells=n_cells,
+                which="terminal",
+                params=self._create_params(),
             )
 
         method = TermStatesMethod(method)
@@ -307,14 +307,64 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            return self.set_states_from_macrostates(names, n_cells=n_cells, which=which, params=self._create_params())
+            return self.set_states_from_macrostates(
+                names,
+                n_cells=n_cells,
+                which="terminal",
+                params=self._create_params()
+            )
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
         return self.set_states_from_macrostates(
-            names, n_cells=n_cells, which=which, params=self._create_params()
+            names, n_cells=n_cells, which="terminal", params=self._create_params()
+        )
+
+    @d.dedent
+    def predict_initial_states(self, n_states: int = 1, n_cells: int = 30) -> "GPCCA":
+        """
+        Compute initial states from macrostates using :attr:`coarse_stationary_distribution`.
+
+        Parameters
+        ----------
+        n_states
+            Number of initial states.
+        %(n_cells)s
+
+        Returns
+        -------
+        Returns self and updates the following fields:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
+        """
+
+        if n_states <= 0:
+            raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        probs = self.macrostates_memberships
+        if probs is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+        if n_states > probs.shape[1]:
+            raise ValueError(
+                f"Requested `{n_states}` initial states, but only `{probs.shape[1]}` macrostates have been computed."
+            )
+
+        if probs.shape[1] == 1:
+            return self.set_states_from_macrostates(n_cells=n_cells, which="initial")
+
+        stat_dist = self.coarse_stationary_distribution
+        if stat_dist is None:
+            raise RuntimeError("No coarse-grained stationary distribution found.")
+
+        states = list(stat_dist[np.argsort(stat_dist)][:n_states].index)
+        return self.set_states_from_macrostates(
+            states, n_cells=n_cells, which="initial"
         )
 
     @d.dedent
