@@ -239,7 +239,7 @@ def _plot_continuous(
     mode = PlotMode(mode)
     if not isinstance(_data, Lineage):
         raise TypeError(
-            f"Expected data to be of type `Lineage`, found `{type(_data).__name__}`."
+            f"Expected data to be of type `Lineage`, found `{type(_data)}`."
         )
 
     if states is None:
@@ -443,7 +443,7 @@ def register_plotter(
             *args,
             _data=data,
             _colors=colors,
-            _title=attr,
+            _title=which,
             discrete=discrete,
             **kwargs,
         )
