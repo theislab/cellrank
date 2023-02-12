@@ -328,34 +328,6 @@ class TermStatesEstimator(BaseEstimator, ABC):
         # status is based on `backward=False` by design
         return sg.ok
 
-    @d.dedent
-    def compute_states(self, *args: Any, **kwargs: Any) -> "TermStatesEstimator":
-        """
-        Compute initial or terminal states of the process, alias for :meth:`predict`.
-
-        Parameters
-        ----------
-        args
-            Positional arguments.
-        kwargs
-            Keyword arguments arguments.
-
-        Return
-        ------
-        If ``which = 'terminal'``, returns self and updates the following fields:
-
-            - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
-
-        Otherwise, returns self and updates the following fields:
-
-            - :attr:`initial_states` - %(tse_init_states.summary)s
-            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-        """
-        return self.predict(*args, **kwargs)
-
-    plot_states = register_plotter(fwd_attr="_term_states", bwd_attr="_init_states")
-
     def _format_params(self) -> str:
         fmt = super()._format_params()
         ts = (
@@ -364,3 +336,5 @@ class TermStatesEstimator(BaseEstimator, ABC):
             else sorted(self.terminal_states.cat.categories)
         )
         return fmt + f", terminal_states={ts}"
+
+    plot_states = register_plotter(fwd_attr="_term_states", bwd_attr="_init_states")

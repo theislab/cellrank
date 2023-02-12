@@ -60,7 +60,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     final_kernel.write_to_adata()
 
     mc.compute_eigendecomposition()
-    mc.compute_states(use=2, method="kmeans")
+    mc.predict(use=2, method="kmeans")
     mc.compute_absorption_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 

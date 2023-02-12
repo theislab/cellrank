@@ -40,7 +40,7 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_spectrum()
         estimator_fwd.plot_spectrum(real_only=True)
 
-        estimator_fwd.compute_states(use=1, method="leiden")
+        estimator_fwd.predict(use=1, method="leiden")
         estimator_fwd.plot_states()
 
         estimator_fwd.compute_absorption_probabilities()
@@ -63,7 +63,7 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_spectrum()
         estimator_bwd.plot_spectrum(real_only=True)
 
-        estimator_bwd.compute_states(use=1, method="kmeans")
+        estimator_bwd.predict(use=1, method="kmeans")
         estimator_bwd.plot_states()
 
         estimator_bwd.compute_absorption_probabilities()

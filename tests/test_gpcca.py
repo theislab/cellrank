@@ -532,7 +532,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         with pytest.raises(RuntimeError, match=r"Compute macro"):
-            mc.compute_states(n_states=1, which="initial")
+            mc.predict(n_states=1, which="initial")
 
     def test_compute_initial_states_from_forward(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -543,7 +543,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=4, n_cells=5)
-        mc.compute_states(n_states=3, which="initial", method="top_n")
+        mc.predict(n_states=3, which="initial", method="top_n")
 
         assert mc.terminal_states is None
         assert len(mc.initial_states.cat.categories) == 3
@@ -561,7 +561,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=5)
 
-        mc.compute_states(n_states=1, which="initial")
+        mc.predict(n_states=1, which="initial")
 
         key = Key.obs.term_states(mc.backward, bwd=True)
 
@@ -743,7 +743,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_states(method="foobar")
+            mc.predict(method="foobar")
 
     def test_compute_terminal_states_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -755,7 +755,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(TypeError):
-            mc.compute_states(n_cells=None)
+            mc.predict(n_cells=None)
 
     def test_compute_terminal_states_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -767,7 +767,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_states(n_cells=0)
+            mc.predict(n_cells=0)
 
     def test_compute_terminal_states_eigengap(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -778,7 +778,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_states(n_cells=5, method="eigengap")
+        mc.predict(n_cells=5, method="eigengap")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -793,7 +793,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_states(n_cells=5, method="top_n", n_states=1)
+        mc.predict(n_cells=5, method="top_n", n_states=1)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -809,7 +809,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=5)
-        mc.compute_states(n_cells=5, method="stability", stability_threshold=thresh)
+        mc.predict(n_cells=5, method="stability", stability_threshold=thresh)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -832,7 +832,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_states(n_cells=5, method="stability", stability_threshold=42)
+            mc.predict(n_cells=5, method="stability", stability_threshold=42)
 
     def test_compute_terminal_states_too_many_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -844,7 +844,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_states(n_cells=4200)
+            mc.predict(n_cells=4200)
 
     def test_compute_terminal_states_default(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -855,7 +855,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_states(n_cells=5)
+        mc.predict(n_cells=5)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
