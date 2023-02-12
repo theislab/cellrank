@@ -416,8 +416,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             names = [names]
         if not isinstance(names, dict):
             names = {n: n for n in names}  # identity
-        if not len(names):
-            raise ValueError("No macrostates have been selected.")
+        if not len(names):  # unset the states
+            self._write_states(
+                which, states=None, colors=None, probs=None, memberships=None, log=False
+            )
+            return self
 
         # we do this also here because if `rename_states` fails
         # invalid states would've been written to this object and nothing to adata

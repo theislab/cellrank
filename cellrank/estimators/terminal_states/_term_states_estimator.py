@@ -282,9 +282,17 @@ class TermStatesEstimator(BaseEstimator, ABC):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         params: Dict[str, Any] = MappingProxyType({}),
+        allow_overlap: bool = False,
     ) -> str:
         # fmt: off
         backward = which == "initial"
+        if not allow_overlap:
+            fwd_states, bwd_states = (self.terminal_states, states) if backward else (states, self.initial_states)
+            if fwd_states is not None and bwd_states is not None:
+                overlap = set(fwd_states.cat.categories) & set(bwd_states.cat.categories)
+                if overlap:
+                    raise ValueError(f"Found overlapping initial and terminal states: `{sorted(overlap)}`.")
+
         key = Key.obs.term_states(self.backward, bwd=backward)
         self._set(obj=self.adata.obs, key=key, value=states)
         self._set(obj=self.adata.obs, key=Key.obs.probs(key), value=probs)
@@ -330,12 +338,11 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
     def _format_params(self) -> str:
         fmt = super()._format_params()
-        ts = (
-            None
-            if self.terminal_states is None
-            else sorted(self.terminal_states.cat.categories)
-        )
-        return fmt + f", terminal_states={ts}"
+        # fmt: off
+        init_states = None if self.initial_states is None else sorted(self.initial_states.cat.categories)
+        term_states = None if self.terminal_states is None else sorted(self.terminal_states.cat.categories)
+        return fmt + f", initial_states={init_states}, terminal_states={term_states}"
+        # fmt: on
 
     plot_states = register_plotter(
         fwd_attr="_term_states", bwd_attr="_init_states", macro_attr=None
