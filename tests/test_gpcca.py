@@ -566,7 +566,7 @@ class TestGPCCA:
         key = Key.obs.term_states(mc.backward, bwd=True)
 
         assert key in mc.adata.obs
-        np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, ["1"])
+        np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, ["0"])
         assert Key.obs.probs(key) in mc.adata.obs
         assert Key.uns.colors(key) in mc.adata.uns
 
@@ -831,7 +831,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"No macrostates"):
             mc.predict(n_cells=5, method="stability", stability_threshold=42)
 
     def test_compute_terminal_states_too_many_cells(self, adata_large: AnnData):
