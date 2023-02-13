@@ -1,3 +1,0 @@
-Developer API
-=============
-Under construction.

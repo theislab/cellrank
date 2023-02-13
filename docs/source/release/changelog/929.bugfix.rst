@@ -1,1 +1,0 @@
-Fix initial/terminal points size in random walk.

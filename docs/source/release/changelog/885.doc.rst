@@ -1,1 +1,0 @@
-Add ``furo`` theme based on ``scvi-tools``.

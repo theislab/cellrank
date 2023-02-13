@@ -1,1 +1,0 @@
-Allow NaN values when determining foreground/background color.

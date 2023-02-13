@@ -1,1 +1,0 @@
-Fix :class:`cellrank.tl.Lineage` subsetting (non-existent overlapping keys) and refactor the implementation.

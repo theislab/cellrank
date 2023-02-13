@@ -43,13 +43,181 @@ Pair_t = Tuple[Numeric_t, Numeric_t]
 Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
 
 
-class TransportMapKernel(ExperimentalTimeKernel, ABC):
-    """Kernel base class which computes transition matrix based on transport maps for consecutive time point pairs."""
-
+class BaseTransportMapKernel(ExperimentalTimeKernel, ABC):
+    """Base class for transport map kernel."""
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._tmaps: Optional[Dict[Pair_t, AnnData]] = None
         self._obs: Optional[pd.DataFrame] = None
+
+    def _validate_tmaps(
+        self,
+        tmaps: Dict[Pair_t, AnnData],
+        allow_reorder: bool = True,
+    ) -> Mapping[Pair_t, AnnData]:
+        """
+        Validate that transport maps conform to various invariants.
+
+        Parameters
+        ----------
+        tmaps
+            Transport maps where :attr:`anndata.AnnData.var_names` in the earlier time point must correspond to
+            :attr:`anndata.AnnData.obs_names` in the later time point.
+        allow_reorder
+            Whether the target cells in the earlier transport map can be used to reorder
+            the source cells of the later transport map.
+
+        Returns
+        -------
+        Possibly reordered transport maps.
+
+        Raises
+        ------
+        ValueError
+            If ``allow_subset = False`` and the target/source cell names on earlier/later transport map don't match.
+        KeyError
+            If ``allow_subset = True`` and the target cells in earlier transport map are not found in the later one or
+            if the transport maps haven't been computed for all cells in :attr:`adata`.
+        """
+        if not len(tmaps):
+            raise ValueError("No transport maps have been computed.")
+
+        tps, tmap2 = list(tmaps.keys()), None
+        for (t1, t2), (t3, t4) in zip(tps[:-1], tps[1:]):
+            tmap1, tmap2 = tmaps[t1, t2], tmaps[t3, t4]
+            try:
+                np.testing.assert_array_equal(tmap1.var_names, tmap2.obs_names)
+            except AssertionError:
+                if not allow_reorder:
+                    raise ValueError(
+                        f"Target cells of coupling with shape `{tmap1.shape}` at `{(t1, t2)}` does not "
+                        f"match the source cells of coupling with shape `{tmap2.shape}` at `{(t3, t4)}`"
+                    ) from None
+                try:
+                    # if a subset happens, we still assume that the transport maps cover all cells from `adata`
+                    # i.e. the transport maps define a superset
+                    tmaps[t3, t4] = tmap2[tmap1.var_names]  # keep the view
+                except KeyError as e:
+                    raise KeyError(
+                        f"Unable to reorder transport map at `{(t3, t4)}` "
+                        f"using transport map at `{(t1, t2)}`."
+                    ) from e
+
+        seen_obs = []
+        for tmap in tmaps.values():
+            seen_obs.extend(tmap.obs_names)
+        seen_obs.extend(tmap.var_names)
+
+        try:
+            pd.testing.assert_series_equal(
+                pd.Series(sorted(seen_obs)),
+                pd.Series(sorted(self.adata.obs_names)),
+                check_names=False,
+                check_flags=False,
+                check_index=True,
+            )
+        except AssertionError as e:
+            raise KeyError(
+                "Observations from transport maps don't match "
+                "the observations from the underlying `AnnData` object."
+            ) from e
+
+        return tmaps
+
+    def _tmat_to_adata(
+        self, t1: Numeric_t, t2: Numeric_t, tmat: Union[np.ndarray, spmatrix, AnnData]
+    ) -> AnnData:
+        """Convert transport map ``tmat`` to :class:`anndata.AnnData`. Do nothing if ``tmat`` is of the correct type."""
+        if isinstance(tmat, AnnData):
+            return tmat
+
+        tmat = AnnData(X=tmat, dtype=tmat.dtype)
+        tmat.obs_names = self.adata[self.adata.obs[self._time_key] == t1].obs_names
+        tmat.var_names = self.adata[self.adata.obs[self._time_key] == t2].obs_names
+
+        return tmat
+
+    @contextmanager
+    def _tmap_as_tmat(self, **kwargs: Any) -> None:
+        """Temporarily set :attr:`transport_maps` as :attr:`transition_matrix`."""
+        if self.transport_maps is None:
+            raise RuntimeError(
+                "Compute transport maps first as `.compute_transition_matrix()`."
+            )
+
+        tmat = self._transition_matrix
+        try:
+            # fmt: off
+            self._transition_matrix = self._restich_tmaps(self.transport_maps, **kwargs).X
+            # fmt: on
+            yield
+        finally:
+            self._transition_matrix = tmat
+
+    @staticmethod
+    def _compute_connectivity_tmat(
+        adata: AnnData, **kwargs: Any
+    ) -> Union[np.ndarray, spmatrix]:
+        from cellrank.kernels import ConnectivityKernel
+
+        # same default as in `ConnectivityKernel`
+        density_normalize = kwargs.pop("density_normalize", True)
+        sc.pp.neighbors(adata, **kwargs)
+
+        return (
+            ConnectivityKernel(adata)
+            .compute_transition_matrix(density_normalize=density_normalize)
+            .transition_matrix
+        )
+
+    @d.dedent
+    def plot_single_flow(
+        self,
+        cluster: str,
+        cluster_key: str,
+        time_key: Optional[str] = None,
+        use_transport_maps: bool = False,
+        threshold: Optional[Union[float, Literal["auto"]]] = None,
+        **kwargs: Any,
+    ) -> None:
+        """
+        %(plot_single_flow.full_desc)s
+
+        Parameters
+        ----------
+        %(plot_single_flow.parameters)s
+
+        Returns
+        -------
+        %(plot_single_flow.returns)s
+        """  # noqa: D400
+        if use_transport_maps:
+            with self._tmap_as_tmat(threshold):
+                return super().plot_single_flow(
+                    cluster, cluster_key, time_key=time_key, **kwargs
+                )
+        return super().plot_single_flow(
+            cluster, cluster_key, time_key=time_key, **kwargs
+        )
+
+    @property
+    def transport_maps(self) -> Optional[Dict[Pair_t, AnnData]]:
+        """Transport maps for consecutive time pairs."""
+        return self._tmaps
+
+    @property
+    def obs(self) -> Optional[pd.DataFrame]:
+        """Cell-level metadata."""
+        return self._obs
+
+    def __invert__(self) -> "TransportMapKernel":
+        tk = super().__invert__("_tmaps")  # don't copy transport maps
+        tk._tmaps = None
+        return tk
+
+
+class TransportMapKernel(BaseTransportMapKernel, ABC):
+    """Kernel base class which computes transition matrix based on transport maps for consecutive time point pairs."""
 
     @abstractmethod
     def _compute_tmap(
@@ -331,167 +499,4 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         return tmp
 
-    def _validate_tmaps(
-        self,
-        tmaps: Dict[Pair_t, AnnData],
-        allow_reorder: bool = True,
-    ) -> Mapping[Pair_t, AnnData]:
-        """
-        Validate that transport maps conform to various invariants.
-
-        Parameters
-        ----------
-        tmaps
-            Transport maps where :attr:`anndata.AnnData.var_names` in the earlier time point must correspond to
-            :attr:`anndata.AnnData.obs_names` in the later time point.
-        allow_reorder
-            Whether the target cells in the earlier transport map can be used to reorder
-            the source cells of the later transport map.
-
-        Returns
-        -------
-        Possibly reordered transport maps.
-
-        Raises
-        ------
-        ValueError
-            If ``allow_subset = False`` and the target/source cell names on earlier/later transport map don't match.
-        KeyError
-            If ``allow_subset = True`` and the target cells in earlier transport map are not found in the later one or
-            if the transport maps haven't been computed for all cells in :attr:`adata`.
-        """
-        if not len(tmaps):
-            raise ValueError("No transport maps have been computed.")
-
-        tps, tmap2 = list(tmaps.keys()), None
-        for (t1, t2), (t3, t4) in zip(tps[:-1], tps[1:]):
-            tmap1, tmap2 = tmaps[t1, t2], tmaps[t3, t4]
-            try:
-                np.testing.assert_array_equal(tmap1.var_names, tmap2.obs_names)
-            except AssertionError:
-                if not allow_reorder:
-                    raise ValueError(
-                        f"Target cells of coupling with shape `{tmap1.shape}` at `{(t1, t2)}` does not "
-                        f"match the source cells of coupling with shape `{tmap2.shape}` at `{(t3, t4)}`"
-                    ) from None
-                try:
-                    # if a subset happens, we still assume that the transport maps cover all cells from `adata`
-                    # i.e. the transport maps define a superset
-                    tmaps[t3, t4] = tmap2[tmap1.var_names]  # keep the view
-                except KeyError as e:
-                    raise KeyError(
-                        f"Unable to reorder transport map at `{(t3, t4)}` "
-                        f"using transport map at `{(t1, t2)}`."
-                    ) from e
-
-        seen_obs = []
-        for tmap in tmaps.values():
-            seen_obs.extend(tmap.obs_names)
-        seen_obs.extend(tmap.var_names)
-
-        try:
-            pd.testing.assert_series_equal(
-                pd.Series(sorted(seen_obs)),
-                pd.Series(sorted(self.adata.obs_names)),
-                check_names=False,
-                check_flags=False,
-                check_index=True,
-            )
-        except AssertionError as e:
-            raise KeyError(
-                "Observations from transport maps don't match "
-                "the observations from the underlying `AnnData` object."
-            ) from e
-
-        return tmaps
-
-    def _tmat_to_adata(
-        self, t1: Numeric_t, t2: Numeric_t, tmat: Union[np.ndarray, spmatrix, AnnData]
-    ) -> AnnData:
-        """Convert transport map ``tmat`` to :class:`anndata.AnnData`. Do nothing if ``tmat`` is of the correct type."""
-        if isinstance(tmat, AnnData):
-            return tmat
-
-        tmat = AnnData(X=tmat, dtype=tmat.dtype)
-        tmat.obs_names = self.adata[self.adata.obs[self._time_key] == t1].obs_names
-        tmat.var_names = self.adata[self.adata.obs[self._time_key] == t2].obs_names
-
-        return tmat
-
-    @contextmanager
-    def _tmap_as_tmat(self, **kwargs: Any) -> None:
-        """Temporarily set :attr:`transport_maps` as :attr:`transition_matrix`."""
-        if self.transport_maps is None:
-            raise RuntimeError(
-                "Compute transport maps first as `.compute_transition_matrix()`."
-            )
-
-        tmat = self._transition_matrix
-        try:
-            # fmt: off
-            self._transition_matrix = self._restich_tmaps(self.transport_maps, **kwargs).X
-            # fmt: on
-            yield
-        finally:
-            self._transition_matrix = tmat
-
-    @staticmethod
-    def _compute_connectivity_tmat(
-        adata: AnnData, **kwargs: Any
-    ) -> Union[np.ndarray, spmatrix]:
-        from cellrank.kernels import ConnectivityKernel
-
-        # same default as in `ConnectivityKernel`
-        density_normalize = kwargs.pop("density_normalize", True)
-        sc.pp.neighbors(adata, **kwargs)
-
-        return (
-            ConnectivityKernel(adata)
-            .compute_transition_matrix(density_normalize=density_normalize)
-            .transition_matrix
-        )
-
-    @d.dedent
-    def plot_single_flow(
-        self,
-        cluster: str,
-        cluster_key: str,
-        time_key: Optional[str] = None,
-        use_transport_maps: bool = False,
-        threshold: Optional[Union[float, Literal["auto"]]] = None,
-        **kwargs: Any,
-    ) -> None:
-        """
-        %(plot_single_flow.full_desc)s
-
-        Parameters
-        ----------
-        %(plot_single_flow.parameters)s
-
-        Returns
-        -------
-        %(plot_single_flow.returns)s
-        """  # noqa: D400
-        if use_transport_maps:
-            with self._tmap_as_tmat(threshold):
-                return super().plot_single_flow(
-                    cluster, cluster_key, time_key=time_key, **kwargs
-                )
-        return super().plot_single_flow(
-            cluster, cluster_key, time_key=time_key, **kwargs
-        )
-
-    @property
-    def transport_maps(self) -> Optional[Dict[Pair_t, AnnData]]:
-        """Transport maps for consecutive time pairs."""
-        return self._tmaps
-
-    @property
-    def obs(self) -> Optional[pd.DataFrame]:
-        """Cell-level metadata."""
-        return self._obs
-
-    def __invert__(self) -> "TransportMapKernel":
-        tk = super().__invert__("_tmaps")  # don't copy transport maps
-        tk._tmaps = None
-        return tk
+    

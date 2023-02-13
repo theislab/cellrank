@@ -1,1 +1,0 @@
-Fix when associating term/macro states assignment when reference is not categorical string.

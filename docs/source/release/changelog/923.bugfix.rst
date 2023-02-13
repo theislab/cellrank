@@ -1,1 +1,0 @@
-Fix computing time to absorption to aggregated terminal states.

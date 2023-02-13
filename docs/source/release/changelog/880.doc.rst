@@ -1,1 +1,0 @@
-Add *Discourse* badge for questions and discussions.
