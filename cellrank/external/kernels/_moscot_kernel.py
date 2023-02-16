@@ -58,11 +58,11 @@ class MoscotKernel(Kernel, error=_error):
         tmaps = []
         if sparsified:
             for key in time_points:
-                if problem[key].solution.sparsified_transport_matrix is None:
+                if problem[key].solution._sparsified_tmap is None:
                     raise ValueError(
                         f"Please sparsify the transport matrix for {key} first."
                     )
-                tmaps.append(problem[key].solution.sparsified_transport_matrix)
+                tmaps.append(problem[key].solution._sparsified_tmap)
         else:
             for key in time_points:
                 if problem[key].solution.transport_matrix is None:
