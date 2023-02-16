@@ -342,6 +342,7 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
             :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
         kwargs
             Additional keyword arguments.
+
         Returns
         -------
         Self and updates the following attributes:

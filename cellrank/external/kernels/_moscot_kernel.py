@@ -39,7 +39,7 @@ class MoscotKernel(Kernel, error=_error):
         cls,
         problem: Type[CompoundProblem],
         time_points: Optional[Tuple[float, float]] = None,
-        threshold: Optional[float] = None,
+        sparsified: bool = False,
         self_transitions: Union[
             Literal["uniform", "diagonal", "connectivities", "all"],
             Sequence[Numeric_t],
@@ -55,14 +55,20 @@ class MoscotKernel(Kernel, error=_error):
 
         if time_points is None:
             time_points = list(problem)
-        if threshold is None:
-            kernel.transport_maps = [
-                problem[key].solution.transport_matrix for key in time_points
-            ]
+        tmaps = []
+        if sparsified:
+            for key in time_points:
+                if problem[key].solution.sparsified_transport_matrix is None:
+                    raise ValueError(
+                        f"Please sparsify the transport matrix for {key} first."
+                    )
+                tmaps.append(problem[key].solution.sparsified_transport_matrix)
         else:
-            kernel.transport_maps = [
-                problem[key].solution.sparsify(threshold=threshold)
-                for key in time_points
-            ]
+            for key in time_points:
+                if problem[key].solution.transport_matrix is None:
+                    raise ValueError(
+                        f"No transport matrix found. Please solve the problem {key} first."
+                    )
+                tmaps.append(problem[key].solution.transport_matrix)
 
         return kernel
