@@ -290,7 +290,7 @@ def _fit_bulk(
     models
         Gene and lineage specific estimators.
     callbacks
-        Functions which are called to prepare the ``models`.
+        Functions which are called to prepare the ``models``.
     genes
         Genes for which to fit the ``models``.
     lineages

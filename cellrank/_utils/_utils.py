@@ -1166,7 +1166,7 @@ def _fuzzy_to_discrete(
     ``raise_threshold x n_most_likely`` samples, we append c_1, ..., c_m to a list `critical_clusters`,
     which we return.
 
-    We return a boolean matrix `a_discrete` of the same shape as ``a_fuzzy`;`, where `1` in position
+    We return a boolean matrix `a_discrete` of the same shape as ``a_fuzzy``, where `1` in position
     `i, j` indicates that sample `i` is assigned to cluster `j`. Note that we don't assign all samples
     to clusters (most entries in `a_discrete` will be `0`) - this is meant to only assign a small
     subset of the samples, which we are most confident in.

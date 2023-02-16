@@ -134,7 +134,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         Parameters
         ----------
         attr
-            Attribute to set. Only updated when we're not in the shadow. If `None`, don't update anything.
+            Attribute to set. Only updated when we're not in the shadow. If ``None``, don't update anything.
             See :attr:`_in_shadow` and ``obj`` for more information.
         obj
             Object which to update with ``value`` alongside the ``attr`.

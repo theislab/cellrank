@@ -174,7 +174,7 @@ def reprogramming_morris(
         - `'CellTagDN_XXk'` - CellTag from day `N` from the `XXk` cells ``subset``.
 
     Parameters
-    ---------
+    ----------
     subset
         Whether to return the full object or just a subset. Can be one of:
 

@@ -533,7 +533,7 @@ class Kernel(KernelExpression, ABC):
         Read kernel object saved using :meth:`write_to_adata`.
 
         Parameters
-        ---------
+        ----------
         %(adata)s
         key
             Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
