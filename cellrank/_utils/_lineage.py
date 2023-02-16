@@ -531,7 +531,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def nlin(self) -> int:
-        """The number of lineages."""  # noqa: D401
+        """The number of lineages."""
         return self.shape[1]
 
     @d.get_full_description(base="lin_pd")

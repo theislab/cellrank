@@ -163,14 +163,12 @@ class TestToolsUtils:
     def test_matrix_connectivity(
         self, test_matrix_1: np.ndarray, test_matrix_3: np.ndarray
     ):
-
         assert _connected(test_matrix_1)
         assert not _connected(test_matrix_3)
 
     def test_matrix_symmetry(
         self, test_matrix_1: np.ndarray, test_matrix_4: np.ndarray
     ):
-
         assert not _symmetric(test_matrix_1)
         assert _symmetric(test_matrix_4)
 
@@ -180,7 +178,6 @@ class TestToolsUtils:
         test_matrix_2: np.ndarray,
         test_matrix_3: np.ndarray,
     ):
-
         np.testing.assert_array_equal(
             _partition(test_matrix_1)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
         )

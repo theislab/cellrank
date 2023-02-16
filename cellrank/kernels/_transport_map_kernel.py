@@ -9,10 +9,12 @@ from typing import (
     Optional,
     Sequence,
 )
+
 from abc import ABC, abstractmethod
 from types import MappingProxyType
 from tqdm.auto import tqdm
 from contextlib import contextmanager
+
 import scanpy as sc
 from anndata import AnnData
 from cellrank import logging as logg
@@ -21,15 +23,21 @@ from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._utils import _normalize
 from cellrank.kernels._experimental_time_kernel import ExperimentalTimeKernel
+
 import numpy as np
 import pandas as pd
 from scipy.sparse import bmat, spdiags, spmatrix, csr_matrix
+
 __all__ = ["TransportMapKernel"]
+
+
 class SelfTransitions(ModeEnum):
     UNIFORM = "uniform"
     DIAGONAL = "diagonal"
     CONNECTIVITIES = "connectivities"
     ALL = "all"
+
+
 Numeric_t = Union[int, float]
 Pair_t = Tuple[Numeric_t, Numeric_t]
 Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
@@ -37,6 +45,7 @@ Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
 
 class BaseTransportMapKernel(ExperimentalTimeKernel, ABC):
     """Base class for transport map kernel."""
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         self._tmaps: Optional[Dict[Pair_t, AnnData]] = None
@@ -49,6 +58,7 @@ class BaseTransportMapKernel(ExperimentalTimeKernel, ABC):
     ) -> Mapping[Pair_t, AnnData]:
         """
         Validate that transport maps conform to various invariants.
+
         Parameters
         ----------
         tmaps
@@ -171,9 +181,11 @@ class BaseTransportMapKernel(ExperimentalTimeKernel, ABC):
     ) -> None:
         """
         %(plot_single_flow.full_desc)s
+
         Parameters
         ----------
         %(plot_single_flow.parameters)s
+
         Returns
         -------
         %(plot_single_flow.returns)s
@@ -205,12 +217,14 @@ class BaseTransportMapKernel(ExperimentalTimeKernel, ABC):
 
 class TransportMapKernel(BaseTransportMapKernel, ABC):
     """Kernel base class which computes transition matrix based on transport maps for consecutive time point pairs."""
+
     @abstractmethod
     def _compute_tmap(
         self, t1: Numeric_t, t2: Numeric_t, **kwargs: Any
     ) -> Union[np.ndarray, spmatrix, AnnData]:
         """
         Compute transport matrix for a time point pair.
+
         Parameters
         ----------
         t1
@@ -219,11 +233,13 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
             Later time point in :attr:`experimental_time`.
         kwargs
             Additional keyword arguments.
+
         Returns
         -------
         Array of shape ``(n_cells_early, n_cells_late)``. If :class:`anndata.AnnData`, :attr:`anndata.AnnData.obs_names`
         and :attr:`anndata.AnnData.var_names` correspond to subsets of observations from :attr:`adata`.
         """
+
     @d.get_sections(base="tmk_thresh", sections=["Parameters"])
     def _threshold_transport_maps(
         self,
@@ -233,6 +249,7 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
     ) -> Optional[Mapping[Pair_t, AnnData]]:
         """
         Remove small non-zero values from :attr:`transition_matrix`.
+
         Parameters
         ----------
         threshold
@@ -244,6 +261,7 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
             Rows where all values are removed will have uniform distribution and a warning will be issued.
         copy
             Whether to return a copy of the ``tmaps`` or modify in-place.
+
         Returns
         -------
         If ``copy = True``, returns a thresholded transport maps. Otherwise, modifies ``tmaps`` in-place.
@@ -284,6 +302,7 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
             tmat.eliminate_zeros()
             tmaps[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
         return tmaps if copy else None
+
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
     @inject_docs(st=SelfTransitions)
@@ -300,6 +319,7 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
     ) -> "TransportMapKernel":
         """
         Compute transition matrix using transport maps.
+
         Parameters
         ----------
         %(tmk_thresh.parameters)s
@@ -358,6 +378,7 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
         self.transition_matrix = tmap.X
         self._obs = tmap.obs
         return self
+
     @d.dedent
     def _restich_tmaps(
         self,
@@ -370,11 +391,13 @@ class TransportMapKernel(BaseTransportMapKernel, ABC):
     ) -> AnnData:
         """
         Group individual transport maps into 1 matrix aligned with :attr:`adata`.
+
         Parameters
         ----------
         tmaps
             Sorted transport maps as ``{{(t1, t2): tmat_2, (t2, t3): tmat_2, ...}}``.
         %(tmk_tmat.parameters)s
+
         Returns
         -------
         Merged transport maps into one :class:`anndata.AnnData` object.
