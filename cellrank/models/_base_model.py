@@ -238,7 +238,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
     @property
     def shape(self) -> Tuple[int]:
-        """Number of cells in :attr:`adata`."""  # noqa: D401
+        """Number of cells in :attr:`adata`."""
         return (self._n_obs,)
 
     @property
@@ -267,19 +267,19 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @property
     @d.get_summary(base="base_model_x")
     def x(self) -> np.ndarray:
-        """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
+        """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""
         return self._x
 
     @property
     @d.get_summary(base="base_model_y")
     def y(self) -> np.ndarray:
-        """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""  # noqa
+        """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""
         return self._y
 
     @property
     @d.get_summary(base="base_model_w")
     def w(self) -> np.ndarray:
-        """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""  # noqa
+        """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""
         return self._w
 
     @property
@@ -297,13 +297,13 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @property
     @d.get_summary(base="base_model_x_hat")
     def x_hat(self) -> np.ndarray:
-        """Filtered independent variables used when calculating default confidence interval, usually same as :attr:`x`."""  # noqa
+        """Filtered independent variables used when calculating default confidence interval, usually same as :attr:`x`."""
         return self._x_hat
 
     @property
     @d.get_summary(base="base_model_y_hat")
     def y_hat(self) -> np.ndarray:
-        """Filtered dependent variables used when calculating default confidence interval, usually same as :attr:`y`."""  # noqa
+        """Filtered dependent variables used when calculating default confidence interval, usually same as :attr:`y`."""
         return self._y_hat
 
     @property
@@ -1105,7 +1105,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @abstractmethod
     @d.dedent
     def copy(self) -> "BaseModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""
 
     def __copy__(self) -> "BaseModel":
         return self.copy()
@@ -1356,7 +1356,7 @@ class FailedModel(BaseModel):
 
     @d.dedent
     def copy(self) -> "FailedModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""
         return FailedModel(self.model.copy(), exc=self._exc)
 
     def __bool__(self):
@@ -1498,7 +1498,7 @@ class FittedModel(BaseModel):
         key_added: Optional[str] = "_x_test",
         **kwargs,
     ) -> np.ndarray:
-        """%(base_model_y_test.summary)s"""  # noqa
+        """%(base_model_y_test.summary)s"""
         return self._y_test
 
     @d.dedent
@@ -1524,7 +1524,7 @@ class FittedModel(BaseModel):
 
     @d.dedent
     def copy(self) -> "FittedModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""
         # here we return a deepcopy since it doesn't make sense to make a shallow one
         return FittedModel.from_model(self)
 

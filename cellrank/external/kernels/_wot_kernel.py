@@ -178,7 +178,7 @@ class WOTKernel(Kernel, error=_error):
             - mouse, apoptosis - `Hallmark P53 Pathway, MSigDB <https://www.gsea-msigdb.org/gsea/msigdb/cards/HALLMARK_P53_PATHWAY>`_.
 
         For more information about WOT, see the official `tutorial <https://broadinstitute.github.io/wot/tutorial/>`_.
-        """  # noqa: E501
+        """
 
         def get_scores(
             key: str,

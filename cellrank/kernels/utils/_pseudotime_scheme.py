@@ -268,5 +268,5 @@ class CustomThresholdScheme(ThresholdSchemeABC):
         Returns
         -------
         %(pt_scheme.returns)s
-        """  # noqa: D400
+        """
         return self._callback(cell_pseudotime, neigh_pseudotime, neigh_conn, **kwargs)

@@ -284,7 +284,7 @@ class GAM(BaseModel):
 
     @d.dedent
     def copy(self) -> "BaseModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""
         res = GAM(self.adata)
         self._shallowcopy_attributes(res)
 

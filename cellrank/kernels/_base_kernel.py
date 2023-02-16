@@ -150,7 +150,7 @@ class KernelExpression(IOMixin, ABC):
         with some minor stylistic differences.
         This function will not recreate the results from :cite:`mittnenzweig:21`, because there, the *Metacell* model
         :cite:`baran:19` was used to compute the flow, whereas here the transition matrix is used.
-        """  # noqa: E501
+        """
         fp = FlowPlotter(self.adata, self.transition_matrix, cluster_key, time_key)
         fp = fp.prepare(cluster, clusters, time_points)
 

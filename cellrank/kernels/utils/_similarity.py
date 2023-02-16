@@ -253,7 +253,7 @@ class SimilarityHessian(SimilarityABC, Hessian):
         Returns
         -------
         %(sim_scheme.returns)s
-        """  # noqa: D400
+        """
         return _predict_transition_probabilities_numpy(
             v, D, softmax_scale, self._center_mean, self._scale_by_norm
         )
@@ -272,7 +272,7 @@ class SimilarityHessian(SimilarityABC, Hessian):
         Returns
         -------
         %(hessian.returns)s
-        """  # noqa: D400
+        """
         return _predict_transition_probabilities_jax_H(
             v, D, softmax_scale, self._center_mean, self._scale_by_norm
         )

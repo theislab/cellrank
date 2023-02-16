@@ -353,7 +353,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         Returns
         -------
         %(adata)s
-        """  # noqa: D400
+        """
 
         def handle_attribute(attr: Attr_t, keys: List[str], *, copy: bool) -> None:
             try:
@@ -446,7 +446,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         Returns
         -------
         %(from_adata.returns)s
-        """  # noqa: D400
+        """
         return super().from_adata(adata, obsp_key=obsp_key)
 
     @d.dedent

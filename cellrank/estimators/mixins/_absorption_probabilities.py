@@ -356,7 +356,7 @@ class AbsProbsMixin:
         Also updates the following field:
 
             - :attr:`priming_degree` - %(priming_degree.summary)s
-        """  # noqa: D400
+        """
         abs_probs = self.absorption_probabilities
         if abs_probs is None:
             raise RuntimeError(

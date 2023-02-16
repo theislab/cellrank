@@ -1427,7 +1427,7 @@ def _calculate_absorption_time_moments(
             "Calculating variance of mean time to absorption to any absorbing state"
         )
 
-        I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape[0])  # noqa
+        I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape[0])
         A_t = (I + Q).T
         B_t = (I - Q).T
 
@@ -1497,7 +1497,7 @@ def _calculate_lineage_absorption_time_means(
 
         return res
 
-    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)  # noqa: E741
+    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)
     N_inv = I - Q
 
     logg.debug("Solving equation for `B`")

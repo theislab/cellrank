@@ -99,7 +99,7 @@ class SKLearnModel(BaseModel):
         Returns
         -------
         Fits the model and returns self.
-        """  # noqa: D400
+        """
 
         super().fit(x, y, w, **kwargs)
 
@@ -229,12 +229,12 @@ class SKLearnModel(BaseModel):
 
     @property
     def model(self) -> BaseEstimator:
-        """The underlying :class:`sklearn.base.BaseEstimator`."""  # noqa
+        """The underlying :class:`sklearn.base.BaseEstimator`."""
         return self._model
 
     @d.dedent
     def copy(self) -> "SKLearnModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""
         res = SKLearnModel(
             self.adata, self._model, weight_name=self._weight_name, ignore_raise=True
         )

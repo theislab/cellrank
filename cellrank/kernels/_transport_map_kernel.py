@@ -471,7 +471,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         Returns
         -------
         %(plot_single_flow.returns)s
-        """  # noqa: D400
+        """
         if use_transport_maps:
             with self._tmap_as_tmat(threshold):
                 return super().plot_single_flow(

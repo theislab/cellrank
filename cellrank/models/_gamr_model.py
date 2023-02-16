@@ -329,7 +329,7 @@ class GAMR(BaseModel):
 
     @d.dedent
     def copy(self) -> "GAMR":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""
         res = GAMR(
             self.adata,
             self._n_knots,

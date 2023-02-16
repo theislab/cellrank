@@ -394,7 +394,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         %(tse_rename_term_states.returns)s
             - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
-        """  # noqa: D400
+        """
         term_states_memberships = self.terminal_states_memberships
         _ = super().rename_terminal_states(new_names)
 
