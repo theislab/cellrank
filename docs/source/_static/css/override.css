@@ -8,90 +8,89 @@ https://github.com/streamlink/streamlink/blob/17a4088c38709123c0bcab4a150549bd16
 
 /* for the sphinx design cards */
 body {
-    --sd-color-shadow: dimgrey;
+  --sd-color-shadow: dimgrey;
 }
 
-dt:target, span.highlighted {
-    background-color: #f0f0f0;
+dt:target,
+span.highlighted {
+  background-color: #f0f0f0;
 }
 
 dl.citation > dt {
-    float: left;
-    margin-right: 15px;
-    font-weight: bold;
+  float: left;
+  margin-right: 15px;
+  font-weight: bold;
 }
 
 /* Parameters normalize size and captialized, */
 dl .field-list dt {
-    font-size: var(--font-size--normal) !important;
-    text-transform: none !important;
+  font-size: var(--font-size--normal) !important;
+  text-transform: none !important;
 }
 
 /* examples and headings in classes */
 p.rubric {
-    font-size: var(--font-size--normal);
-    text-transform: none;
-    font-weight: 500;
+  font-size: var(--font-size--normal);
+  text-transform: none;
+  font-weight: 500;
 }
-
 
 /* adapted from https://github.com/dask/dask-sphinx-theme/blob/main/dask_sphinx_theme/static/css/nbsphinx.css */
 .nbinput .prompt,
 .nboutput .prompt {
-    display: none;
+  display: none;
 }
-.nboutput .stderr{
-    display: none;
+.nboutput .stderr {
+  display: none;
 }
 
 div.nblast.container {
-    padding-bottom: 10px !important;
-    padding-right: 0px;
-    padding-left: 0px;
+  padding-bottom: 10px !important;
+  padding-right: 0px;
+  padding-left: 0px;
 }
 
 div.nbinput.container {
-    padding-top: 10px !important;
-    padding-right: 0px;
-    padding-left: 0px;
+  padding-top: 10px !important;
+  padding-right: 0px;
+  padding-left: 0px;
 }
 
 div.nbinput.container div.input_area {
-    /* Code cell border that works in both dark and light mode */
-    border-color: rgba(127,127,127,.25) !important;
+  /* Code cell border that works in both dark and light mode */
+  border-color: rgba(127, 127, 127, 0.25) !important;
 }
 
 div.nbinput.container div.input_area div[class*="highlight"] > pre {
-    padding: 10px !important;
-    margin: 0;
+  padding: 10px !important;
+  margin: 0;
 }
 
 p.topic-title {
-    margin-top: 0;
+  margin-top: 0;
 }
 
 div.output_area > img {
-    height: auto !important;
+  height: auto !important;
 }
-
 
 /* so that api methods are small in sidebar */
 li.toctree-l3 {
-    font-size: 81.25% !important;
+  font-size: 81.25% !important;
 }
 
 li.toctree-l4 {
-    font-size: 75% !important;
+  font-size: 75% !important;
 }
 
 .sidebar-tree .reference {
-    height: inherit;
+  height: inherit;
 }
 
 .sd-card-img-top {
-    width: 128px;
-    height: 128px;
-    object-fit: cover;
-    margin: 1em auto 0em auto;
-    border-radius: 50%;
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+  margin: 1em auto 0em auto;
+  border-radius: 50%;
 }
