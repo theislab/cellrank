@@ -540,8 +540,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -554,9 +554,9 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "0",
+            "latent_time",
             random_state=0,
             backward=True,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -569,8 +569,8 @@ class TestClusterTrends:
             model,
             RAW_GENES[:5],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
             use_raw=True,
@@ -584,8 +584,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             norm=False,
             dpi=DPI,
             save=fpath,
@@ -599,8 +599,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             data_key="Ms",
             norm=False,
             dpi=DPI,
@@ -615,7 +615,7 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
-            time_key="latent_time",
+            "latent_time",
             random_state=42,
             dpi=DPI,
             save=fpath,
@@ -629,8 +629,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -643,8 +643,8 @@ class TestClusterTrends:
             {GENES[0]: fm, GENES[5]: fm, "*": fm.model},
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             key="foobar",
             dpi=DPI,
             save=fpath,
@@ -660,8 +660,8 @@ class TestClusterTrends:
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             return_models=True,
         )
 
@@ -683,7 +683,7 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
-            time_key="latent_time",
+            "latent_time",
             random_state=42,
             key="foo",
         )
@@ -693,7 +693,7 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
-            time_key="latent_time",
+            "latent_time",
             random_state=42,
             key="bar",
         )
@@ -704,7 +704,14 @@ class TestClusterTrends:
 
     def test_cluster_lineage_writes(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        cr.pl.cluster_trends(adata_cflare, model, GENES[:10], "0", n_test_points=200)
+        cr.pl.cluster_trends(
+            adata_cflare,
+            model,
+            GENES[:10],
+            "0",
+            time_key="latent_time",
+            n_test_points=200,
+        )
 
         assert isinstance(adata_cflare.uns["lineage_0_trend"], AnnData)
         assert adata_cflare.uns["lineage_0_trend"].shape == (10, 200)
@@ -713,7 +720,13 @@ class TestClusterTrends:
     def test_cluster_lineage_key(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
         cr.pl.cluster_trends(
-            adata_cflare, model, GENES[:10], "0", n_test_points=200, key="foobar"
+            adata_cflare,
+            model,
+            GENES[:10],
+            "0",
+            "latent_time",
+            n_test_points=200,
+            key="foobar",
         )
 
         assert isinstance(adata_cflare.uns["foobar"], AnnData)
@@ -728,9 +741,9 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             covariate_key=["clusters", "latent_time"],
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -743,10 +756,10 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             covariate_key="latent_time",
             cmap="inferno",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -759,10 +772,10 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             covariate_key="latent_time",
             ratio=0.25,
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -775,9 +788,9 @@ class TestClusterTrends:
             model,
             [f"{g}:gs" for g in GENES[:10]],
             "1",
+            "latent_time",
             gene_symbols="symbol",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -2697,8 +2710,8 @@ class TestFittedModel:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             n_points=100,
-            time_key="latent_time",
             random_state=49,
             dpi=DPI,
             save=fpath,
