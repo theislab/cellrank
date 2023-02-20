@@ -1,1 +1,0 @@
-* Bumps `isort` to `5.12.0`.
