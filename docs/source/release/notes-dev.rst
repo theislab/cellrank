@@ -99,9 +99,6 @@ Bugfixes
 - Fix sparse array conversion in ``networkx>=3.0``.
   `#978 <https://github.com/theislab/cellrank/pull/978>`__
 
-- * Bumps `isort` to `5.12.0`.
-  `#994 <https://github.com/theislab/cellrank/pull/994>`__
-
 
 Miscellaneous
 -------------
