@@ -229,7 +229,7 @@ class SKLearnModel(BaseModel):
 
     @property
     def model(self) -> BaseEstimator:
-        """The underlying :class:`sklearn.base.BaseEstimator`."""  # noqa
+        """The underlying :class:`sklearn.base.BaseEstimator`."""
         return self._model
 
     @d.dedent

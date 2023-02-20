@@ -68,7 +68,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @property
     @d.get_summary(base="tse_term_states_probs")
     def terminal_states_probabilities(self) -> Optional[pd.Series]:
-        """Aggregated probability of cells to be in terminal states."""  # noqa: D401
+        """Aggregated probability of cells to be in terminal states."""
         return self._term_states_probs
 
     @d.dedent
