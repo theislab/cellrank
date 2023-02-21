@@ -317,12 +317,12 @@ def _plot_continuous(
     )
 
 
-# TODO(michalk8): in 2.0, remove %(time_mode)s and the deprecation
 @d.dedent
 @inject_docs(m=PlotMode)
 @deprecated_arg_names({"cluster_key": "color"})
 def _plot_dispatcher(
     self: PlotterProtocol,
+    which: Literal["macro", "initial", "terminal"] = "macro",
     states: Optional[Union[str, Sequence[str]]] = None,
     color: Optional[str] = None,
     discrete: bool = True,
@@ -338,18 +338,23 @@ def _plot_dispatcher(
 
     Parameters
     ----------
+    which
+        Which type of macrostates to plot. Valid options are:
+
+            - ``'macro'`` - plot the macrostates.
+            - ``'initial'`` - plot the macrostates marked as initial states.
+            - ``'terminal'`` - plot the macrostates marked as terminal terminal.
     states
-        States to plot.
+        Subset of the macrostates to show. If ``None``, plot all macrostates.
     color
-        Key in :attr:`anndata.AnnData.obs`.
+        Key in :attr:`anndata.AnnData.obs` or in :attr:`anndata.AnnData.var` used to color the observations.
     discrete
         Whether to plot the data as continuous or discrete observations.
         If the data cannot be plotted as continuous observations, it will be plotted as discrete.
-    %(time_mode)s
     time_key
         Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
     title
-        Title of the plot(s).
+        Title of the plot.
     same_plot
         Whether to plot the data on the same plot or not. Only use when ``mode = {m.EMBEDDING!r}``.
         If `True` and ``discrete = False``, ``color`` is ignored.
@@ -362,6 +367,7 @@ def _plot_dispatcher(
     -------
     %(just_plots)s
     """
+    del which  # handled by `register_plotter`
     if discrete:
         return _plot_discrete(
             self,
