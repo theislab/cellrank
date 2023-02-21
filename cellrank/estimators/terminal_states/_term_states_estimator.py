@@ -231,7 +231,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @inject_docs(m=PlotMode)
     def plot_macrostates(
         self,
-        which: Literal["macro", "initial", "terminal"] = "macro",
+        which: Literal["macro", "initial", "terminal"],
         states: Optional[Union[str, Sequence[str]]] = None,
         color: Optional[str] = None,
         discrete: bool = True,
@@ -247,7 +247,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         Parameters
         ----------
         which
-            Which type of macrostates to plot. Valid options are:
+            Which macrostates to plot. Valid options are:
 
                 - ``'macro'`` - plot the macrostates.
                 - ``'initial'`` - plot the macrostates marked as initial states.
