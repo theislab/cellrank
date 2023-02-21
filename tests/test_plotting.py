@@ -2075,11 +2075,11 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_final_states(self, mc: CFLARE, fpath: str):
-        mc.plot_macrostates(dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_final_states_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_macrostates(color="clusters", dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
@@ -2219,35 +2219,37 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_lineages(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(states=["0"], dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_discrete(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(discrete=True, dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", discrete=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cluster_key(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(color="clusters", dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_no_same_plot(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
+        mc.plot_macrostates(
+            which="terminal", cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath
+        )
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_title(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(title="foobar", dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", title="foobar", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_time(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(mode="time", dpi=DPI, save=fpath)
+        mc.plot_macrostates(which="terminal", mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_cont_same_no_clusters(self, mc: GPCCA, fpath: str):

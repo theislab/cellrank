@@ -231,7 +231,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @inject_docs(m=PlotMode)
     def plot_macrostates(
         self,
-        which: Literal["macro", "initial", "terminal"] = "terminal",
+        which: Literal["macro", "initial", "terminal"] = "macro",
         states: Optional[Union[str, Sequence[str]]] = None,
         color: Optional[str] = None,
         discrete: bool = True,
@@ -276,7 +276,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
         %(just_plots)s
         """
         if which == "macro":
-            obj: StatesHolder = self._macrostates
+            obj: Optional[StatesHolder] = getattr(self, "_macrostates", None)
+            if obj is None:
+                raise RuntimeError(f"`{type(self).__name__}` cannot plot macrostates.")
         elif which == "initial":
             obj = self._init_states
         elif which == "terminal":
