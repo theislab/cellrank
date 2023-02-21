@@ -20,13 +20,7 @@ from cellrank._utils._colors import _get_black_or_white, _create_categorical_col
 from cellrank._utils._lineage import Lineage
 from cellrank.estimators.mixins import EigenMixin, SchurMixin, LinDriversMixin
 from cellrank.kernels._base_kernel import KernelExpression
-from cellrank.estimators.mixins._utils import (
-    SafeGetter,
-    StatesHolder,
-    logger,
-    shadow,
-    register_plotter,
-)
+from cellrank.estimators.mixins._utils import SafeGetter, StatesHolder, logger, shadow
 from cellrank.estimators.terminal_states._term_states_estimator import (
     TermStatesEstimator,
 )
@@ -1228,7 +1222,3 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         abs_prob_ok = self._read_absorption_probabilities(adata)
         abs_time_ok = self._read_absorption_times(adata)
         return sg.ok and abs_prob_ok and abs_time_ok
-
-    plot_macrostates = register_plotter(
-        fwd_attr="_term_states", bwd_attr="_init_states", macro_attr="_macrostates"
-    )

@@ -2250,33 +2250,19 @@ class TestGPCCA:
         mc.plot_macrostates(mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_abs_probs_disc_same(self, mc: GPCCA, fpath: str):
-        mc.plot_absorption_probabilities(
-            color="clusters", discrete=True, same_plot=True, dpi=DPI, save=fpath
-        )
-
-    @compare(kind="gpcca")
-    def test_scvelo_gpcca_abs_probs_disc_not_same(self, mc: GPCCA, fpath: str):
-        mc.plot_absorption_probabilities(
-            color="clusters", discrete=True, same_plot=False, dpi=DPI, save=fpath
-        )
-
-    @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_cont_same_no_clusters(self, mc: GPCCA, fpath: str):
-        mc.plot_absorption_probabilities(
-            discrete=False, same_plot=True, dpi=DPI, save=fpath
-        )
+        mc.plot_absorption_probabilities(same_plot=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
         mc.plot_absorption_probabilities(
-            color="clusters", discrete=False, same_plot=True, dpi=DPI, save=fpath
+            color="clusters", same_plot=True, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_abs_probs_cont_not_same(self, mc: GPCCA, fpath: str):
         mc.plot_absorption_probabilities(
-            color="clusters", discrete=False, same_plot=False, dpi=DPI, save=fpath
+            color="clusters", same_plot=False, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")

@@ -26,12 +26,12 @@ from cellrank._utils._utils import (
 from cellrank._utils._lineage import Lineage
 from cellrank._utils._linear_solver import _solve_lin_system
 from cellrank.estimators.mixins._utils import (
+    PlotMode,
     SafeGetter,
     BaseProtocol,
     StatesHolder,
     logger,
     shadow,
-    register_plotter,
 )
 
 import numpy as np
@@ -129,6 +129,22 @@ class AbsProbsProtocol(BaseProtocol):
         self,
         priming_degree: Optional[pd.Series],
     ) -> str:
+        ...
+
+    def _plot_continuous(
+        self,
+        _data: Lineage,
+        _colors: Optional[np.ndarray] = None,
+        _title: Optional[str] = None,
+        states: Optional[Union[str, Sequence[str]]] = None,
+        color: Optional[str] = None,
+        mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
+        time_key: str = "latent_time",
+        title: Optional[Union[str, Sequence[str]]] = None,
+        same_plot: bool = True,
+        cmap: str = "viridis",
+        **kwargs: Any,
+    ) -> None:
         ...
 
 
@@ -276,6 +292,60 @@ class AbsProbsMixin:
             abs_probs,
             params=params,
             time=start,
+        )
+
+    def plot_absorption_probabilities(
+        self: AbsProbsProtocol,
+        states: Optional[Union[str, Sequence[str]]] = None,
+        color: Optional[str] = None,
+        mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
+        time_key: str = "latent_time",
+        same_plot: bool = True,
+        title: Optional[Union[str, Sequence[str]]] = None,
+        cmap: str = "viridis",
+        **kwargs: Any,
+    ) -> None:
+        """Plot absorption probabilities.
+
+        Parameters
+        ----------
+        states
+            Subset of the macrostates to show. If ``None``, plot all macrostates.
+        color
+            Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
+        time_key
+            Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
+        title
+            Title of the plot.
+        same_plot
+            Whether to plot the data on the same plot or not. Only use when ``mode = {m.EMBEDDING!r}``.
+            If `True` and ``discrete = False``, ``color`` is ignored.
+        cmap
+            Colormap for continuous annotations.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+        if self.absorption_probabilities is None:
+            raise RuntimeError(
+                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+            )
+
+        return self._plot_continuous(
+            _data=self.absorption_probabilities,
+            _colors=self.absorption_probabilities.colors,
+            _title="absorption probabilities",
+            states=states,
+            color=color,
+            mode=mode,
+            time_key=time_key,
+            same_plot=same_plot,
+            title=title,
+            cmap=cmap,
+            **kwargs,
         )
 
     @d.dedent
@@ -627,7 +697,3 @@ class AbsProbsMixin:
             raise RuntimeError(
                 f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
             ) from None
-
-    plot_absorption_probabilities = register_plotter(
-        fwd_attr="absorption_probabilities"
-    )
