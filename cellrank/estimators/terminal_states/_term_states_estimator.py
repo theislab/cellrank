@@ -349,6 +349,6 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return fmt + f", initial_states={init_states}, terminal_states={term_states}"
         # fmt: on
 
-    plot_states = register_plotter(
+    plot_macrostates = register_plotter(
         fwd_attr="_term_states", bwd_attr="_init_states", macro_attr=None
     )

@@ -41,7 +41,7 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_spectrum(real_only=True)
 
         estimator_fwd.predict(use=1, method="leiden")
-        estimator_fwd.plot_states()
+        estimator_fwd.plot_macrostates()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.plot_absorption_probabilities()
@@ -64,7 +64,7 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_spectrum(real_only=True)
 
         estimator_bwd.predict(use=1, method="kmeans")
-        estimator_bwd.plot_states()
+        estimator_bwd.plot_macrostates()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.plot_absorption_probabilities()
@@ -87,13 +87,13 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_schur(5, method="brandts")
 
         estimator_fwd.compute_macrostates(3, n_cells=10)
-        estimator_fwd.plot_states(which="macro")
+        estimator_fwd.plot_macrostates(which="macro")
         estimator_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_fwd.plot_schur_matrix()
 
         # select all states
         estimator_fwd.set_states_from_macrostates(n_cells=10)
-        estimator_fwd.plot_states()
+        estimator_fwd.plot_macrostates()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -105,7 +105,7 @@ class TestLowLevelPipeline:
             n_cells=16,
             names=estimator_fwd.macrostates.cat.categories[:2],
         )
-        estimator_fwd.plot_states()
+        estimator_fwd.plot_macrostates()
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -128,13 +128,13 @@ class TestLowLevelPipeline:
         estimator_bwd.compute_schur(5, method="brandts")
 
         estimator_bwd.compute_macrostates(3, n_cells=16)
-        estimator_bwd.plot_states(which="macro")
+        estimator_bwd.plot_macrostates(which="macro")
         estimator_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_bwd.plot_schur_matrix()
 
         # select all cells
         estimator_bwd.set_states_from_macrostates(n_cells=16)
-        estimator_bwd.plot_states()
+        estimator_bwd.plot_macrostates()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -146,7 +146,7 @@ class TestLowLevelPipeline:
             n_cells=16,
             names=estimator_bwd.macrostates.cat.categories[:2],
         )
-        estimator_bwd.plot_states()
+        estimator_bwd.plot_macrostates()
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)

@@ -1229,6 +1229,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         abs_time_ok = self._read_absorption_times(adata)
         return sg.ok and abs_prob_ok and abs_time_ok
 
-    plot_states = register_plotter(
+    plot_macrostates = register_plotter(
         fwd_attr="_term_states", bwd_attr="_init_states", macro_attr="_macrostates"
     )
