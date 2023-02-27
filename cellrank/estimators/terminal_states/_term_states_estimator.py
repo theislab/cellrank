@@ -90,55 +90,96 @@ class TermStatesEstimator(BaseEstimator, ABC):
         return self._init_states.probs
 
     @d.dedent
-    def set_states(
+    def set_terminal_states(
         self,
-        labels: Union[pd.Series, Dict[str, Sequence[Any]]],
-        which: Literal["initial", "terminal"] = "terminal",
+        states: Union[pd.Series, Dict[str, Sequence[Any]]],
         cluster_key: Optional[str] = None,
         allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "TermStatesEstimator":
-        """
-        Manually define initial or terminal states.
+        """Set :attr:`terminal_states`.
 
         Parameters
         ----------
-        labels
-            Defines the states. Valid options are:
+        states
+            States to select. Valid options are:
 
-                - categorical :class:`pandas.Series` where each category corresponds to an individual state.
+                - categorical :class:`~pandas.Series` where each category corresponds to an individual state.
                   `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
                 - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
                   annotations in :attr:`anndata.AnnData.obs_names`.
                   If only 1 key is provided, values should correspond to clusters if a categorical
-                  :class:`pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
-        which
-            Whether to set initial or terminal states.
+                  :class:`~pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states` or
-            :attr:`initial_states`. Each state will be given the name and color corresponding to the cluster it
-            mostly overlaps with.
+            Key in :attr:`anndata.AnnData.obs` to associate names and colors with :attr:`terminal_states`.
+            Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
         %(allow_overlap)s
+        kwargs
+            Additional keyword arguments.
 
         Returns
         -------
-        If ``which = 'terminal'``, returns self and updates the following fields:
+        Returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+        """
+        states, colors = self._set_categorical_labels(
+            categories=states,
+            cluster_key=cluster_key,
+            existing=None,
+        )
+        self._write_states(
+            "terminal",
+            states=states,
+            colors=colors,
+            allow_overlap=allow_overlap,
+            **kwargs,
+        )
+        return self
 
-        Otherwise, returns self and updates the following fields:
+    @d.dedent
+    def set_initial_states(
+        self,
+        states: Union[pd.Series, Dict[str, Sequence[Any]]],
+        cluster_key: Optional[str] = None,
+        allow_overlap: bool = False,
+        **kwargs: Any,
+    ) -> "TermStatesEstimator":
+        """Set :attr:`initial_states`.
+
+        Parameters
+        ----------
+        states
+            Which states to select. Valid options are:
+
+                - categorical :class:`~pandas.Series` where each category corresponds to an individual state.
+                  `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
+                - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
+                  annotations in :attr:`anndata.AnnData.obs_names`.
+                  If only 1 key is provided, values should correspond to clusters if a categorical
+                  :class:`~pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
+        cluster_key
+            Key in :attr:`anndata.AnnData.obs` to associate names and colors :attr:`initial_states`.
+            Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
+        %(allow_overlap)s
+        kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Returns self and updates the following fields:
 
             - :attr:`initial_states` - %(tse_init_states.summary)s
             - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
         """
         states, colors = self._set_categorical_labels(
-            categories=labels,
+            categories=states,
             cluster_key=cluster_key,
             existing=None,
         )
         self._write_states(
-            which,
+            "initial",
             states=states,
             colors=colors,
             allow_overlap=allow_overlap,

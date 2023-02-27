@@ -92,7 +92,7 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_schur_matrix()
 
         # select all states
-        estimator_fwd.set_states_from_macrostates(n_cells=10)
+        estimator_fwd.set_terminal_states(n_cells=10)
         estimator_fwd.plot_macrostates(which="terminal")
 
         estimator_fwd.compute_absorption_probabilities()
@@ -101,9 +101,9 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata)
 
         # select a subset of states
-        estimator_fwd.set_states_from_macrostates(
+        estimator_fwd.set_terminal_states(
             n_cells=16,
-            names=estimator_fwd.macrostates.cat.categories[:2],
+            states=estimator_fwd.macrostates.cat.categories[:2],
         )
         estimator_fwd.plot_macrostates(which="terminal")
 
@@ -133,7 +133,7 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_schur_matrix()
 
         # select all cells
-        estimator_bwd.set_states_from_macrostates(n_cells=16)
+        estimator_bwd.set_terminal_states(n_cells=16)
         estimator_bwd.plot_macrostates(which="terminal")
 
         estimator_bwd.compute_absorption_probabilities()
@@ -142,9 +142,9 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, bwd=True)
 
         # select a subset of states
-        estimator_bwd.set_states_from_macrostates(
+        estimator_bwd.set_terminal_states(
             n_cells=16,
-            names=estimator_bwd.macrostates.cat.categories[:2],
+            states=estimator_bwd.macrostates.cat.categories[:2],
         )
         estimator_bwd.plot_macrostates(which="terminal")
 

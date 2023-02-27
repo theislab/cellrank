@@ -464,7 +464,7 @@ class TestCFLARE:
         zero_mask = original == "0"
 
         cells = list(adata[zero_mask].obs_names)
-        mc_fwd.set_states({"foo": cells})
+        mc_fwd.set_terminal_states({"foo": cells})
 
         assert (adata.obs[key][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[key][~zero_mask]).all()
@@ -476,7 +476,9 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.set_states({"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]})
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
@@ -499,7 +501,9 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.set_states({"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]})
+        mc.set_terminal_states(
+            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
+        )
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))

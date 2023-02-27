@@ -273,11 +273,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             logg.warning(
                 "Found only one macrostate, making it the single terminal state"
             )
-            return self.set_states_from_macrostates(
-                names=None,
-                n_cells=n_cells,
-                which="terminal",
-                params=self._create_params(),
+            return self.set_terminal_states(
+                states=None, n_cells=n_cells, params=self._create_states()
             )
 
         method = TermStatesMethod(method)
@@ -303,23 +300,17 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            return self.set_states_from_macrostates(
-                names,
-                n_cells=n_cells,
-                which="terminal",
-                params=self._create_params()
-            )
+            return self.set_terminal_states(names, n_cells=n_cells, params=self._create_params())
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
 
         names = coarse_T.columns[np.argsort(np.diag(coarse_T))][-n_states:]
-        return self.set_states_from_macrostates(
+        return self.set_terminal_states(
             names,
             n_cells=n_cells,
-            which="terminal",
-            params=self._create_params(),
             allow_overlap=allow_overlap,
+            params=self._create_params(),
         )
 
     @d.dedent
@@ -359,57 +350,63 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         if probs.shape[1] == 1:
-            return self.set_states_from_macrostates(
-                n_cells=n_cells, which="initial", allow_overlap=allow_overlap
-            )
+            return self.set_initial_states(n_cells=n_cells, allow_overlap=allow_overlap)
 
         stat_dist = self.coarse_stationary_distribution
         if stat_dist is None:
             raise RuntimeError("No coarse-grained stationary distribution found.")
 
         states = list(stat_dist[np.argsort(stat_dist)][:n_states].index)
-        return self.set_states_from_macrostates(
-            states, n_cells=n_cells, which="initial", allow_overlap=allow_overlap
+        return self.set_initial_states(
+            states, n_cells=n_cells, allow_overlap=allow_overlap
         )
 
-    @d.dedent
-    def set_states_from_macrostates(
+    def set_terminal_states(
         self,
-        names: Optional[Union[str, Sequence[str], Mapping[str, str]]] = None,
+        states: Optional[
+            Union[str, Sequence[str], Dict[str, Sequence[str]], pd.Series]
+        ] = None,
         n_cells: int = 30,
-        which: Literal["initial", "terminal"] = "terminal",
         allow_overlap: bool = False,
+        cluster_key: Optional[str] = None,
         **kwargs: Any,
     ) -> "GPCCA":
-        """
-        Manually select initial or terminal states from macrostates.
+        """Set :attr:`terminal_states`.
 
         Parameters
         ----------
-        names
-            Macrostates to select. Multiple states can be combined using `','`, such as `["Alpha, Beta", "Epsilon"]`.
-            If a :class:`dict`, keys correspond to the names of the macrostates and the values to the new names.
-            If `None`, select all macrostates.
+        states
+            Which states to select. Valid options are:
+
+                - :class:`str`, :class:`~typing.Sequence` - subset of :attr:`macrostates`. Multiple states can be
+                  combined using ``','``, such as ``['Alpha, Beta', 'Epsilon']``.
+                - :class:`dict` - keys correspond to terminal states and values to cell IDs in
+                  :attr:`~anndata.AnnData.obs_names`.
+                - :class:`~pandas.Series` - categorical series where each category corresponds to a macrostate.
+                  `NaN` values mark cells that should not be marked as :attr:`terminal_states`.
+                - :obj:`None` - select all :attr:`macrostates`.
         %(n_cells)s
-        %(which)s
         %(allow_overlap)s
+        cluster_key
+            Key in :attr:`anndata.AnnData.obs` to associate names and colors with :attr:`terminal_states`.
+            Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
+            Only used when ``states`` is a :class:`dict` or :class:`~pandas.Series`.
         kwargs
-            Unused keyword arguments.
+            Additional keyword arguments.
 
         Returns
         -------
-        If ``which = 'terminal'``, returns self and updates the following fields:
+        Returns self and updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
             - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
-
-        Otherwise, returns self and updates the following fields:
-
-            - :attr:`initial_states` - %(tse_init_states.summary)s
-            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
         """
+        if isinstance(states, (dict, pd.Series)):
+            return super().set_terminal_states(
+                states, cluster_key=cluster_key, allow_overlap=allow_overlap, **kwargs
+            )
+
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
@@ -417,28 +414,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if memberships is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
-        if names is None:
-            names = memberships.names
-        if isinstance(names, str):
-            names = [names]
-        if not isinstance(names, dict):
-            names = {n: n for n in names}  # identity
-        if not len(names):  # unset the states
+        if states is None:
+            states = memberships.names
+        elif isinstance(states, str):
+            states = [states]
+        if not len(states):  # unset the states
             raise ValueError("No macrostates have been selected.")
 
-        # we do this also here because if `rename_states` fails
-        # invalid states would've been written to this object and nothing to adata
-        names = {str(k): str(v) for k, v in names.items()}
-        names_after_renaming = {names.get(n, n) for n in memberships.names}
-        if len(names_after_renaming) != memberships.shape[1]:
-            raise ValueError(
-                f"After renaming, {which} state names will no longer be unique: `{names_after_renaming}`."
-            )
-
-        # this also checks that the names are correct before renaming
         is_singleton = memberships.shape[1] == 1
-        memberships = memberships[list(names.keys())].copy()
-        memberships.names = list(names.values())
+        memberships = memberships[list(states)].copy()
 
         states = self._create_states(memberships, n_cells=n_cells, check_row_sums=False)
         if is_singleton:
@@ -450,7 +434,90 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         probs = pd.Series(probs, index=self.adata.obs_names)
 
         self._write_states(
-            which,
+            "terminal",
+            states=states,
+            colors=colors,
+            probs=probs,
+            memberships=memberships,
+            params=kwargs.pop("params", {}),
+            allow_overlap=allow_overlap,
+        )
+        return self
+
+    def set_initial_states(
+        self,
+        states: Optional[
+            Union[str, Sequence[str], Dict[str, Sequence[str]], pd.Series]
+        ] = None,
+        n_cells: int = 30,
+        allow_overlap: bool = False,
+        cluster_key: Optional[str] = None,
+        **kwargs: Any,
+    ) -> "GPCCA":
+        """Set :attr:`initial_states`.
+
+        Parameters
+        ----------
+        states
+            Which states to select. Valid options are:
+
+                - :class:`str`, :class:`~typing.Sequence` - subset of :attr:`macrostates`. Multiple states can be
+                  combined using ``','``, such as ``['Alpha, Beta', 'Epsilon']``.
+                - :class:`dict` - keys correspond to initial states and values to cell IDs in
+                  :attr:`~anndata.AnnData.obs_names`.
+                - :class:`~pandas.Series` - categorical series where each category corresponds to a macrostate.
+                  `NaN` values mark cells that should not be marked as :attr:`initial_states`.
+                - :obj:`None` - select all :attr:`macrostates`.
+        %(n_cells)s
+        %(allow_overlap)s
+        cluster_key
+            Key in :attr:`anndata.AnnData.obs` to associate names and colors with :attr:`initial_states`.
+            Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
+            Only used when ``states`` is a :class:`dict` or :class:`~pandas.Series`.
+        kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Returns self and updates the following fields:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
+        """
+        if isinstance(states, (pd.Series, dict)):
+            return super().set_initial_states(
+                states, cluster_key=cluster_key, allow_overlap=allow_overlap, **kwargs
+            )
+
+        if n_cells <= 0:
+            raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
+
+        memberships = self.macrostates_memberships
+        if memberships is None:
+            raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
+
+        if states is None:
+            states = memberships.names
+        elif isinstance(states, str):
+            states = [states]
+        if not len(states):  # unset the states
+            raise ValueError("No macrostates have been selected.")
+
+        is_singleton = memberships.shape[1] == 1
+        memberships = memberships[list(states)].copy()
+
+        states = self._create_states(memberships, n_cells=n_cells, check_row_sums=False)
+        if is_singleton:
+            colors = self._macrostates.colors.copy()
+            probs = memberships.X.squeeze() / memberships.X.max()
+        else:
+            colors = memberships[list(states.cat.categories)].colors
+            probs = (memberships.X / memberships.X.max(axis=0)).max(axis=1)
+        probs = pd.Series(probs, index=self.adata.obs_names)
+
+        self._write_states(
+            "initial",
             states=states,
             colors=colors,
             probs=probs,

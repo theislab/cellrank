@@ -218,16 +218,15 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         labels = pd.Series(labels, index=self.adata.obs_names, dtype="category")
         labels = labels.cat.rename_categories({c: str(c) for c in labels.cat.categories})
 
-        # filtering to get rid of some of the left over transient states
+        # filtering to get rid of some of the leftover transient states
         if n_matches_min > 0:
             logg.debug(f"Filtering according to `n_matches_min={n_matches_min}`")
             distances = _get_connectivities(self.adata, mode="distances", n_neighbors=n_neighbors_filtering)
             labels = _filter_cells(distances, rc_labels=labels, n_matches_min=n_matches_min)
         # fmt: on
 
-        return self.set_states(
-            labels=labels,
-            which="terminal",
+        return self.set_terminal_states(
+            states=labels,
             cluster_key=cluster_key,
             probs=self._compute_term_states_probs(eig, use),
             params=self._create_params(),
