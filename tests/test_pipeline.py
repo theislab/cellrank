@@ -87,7 +87,7 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_schur(5, method="brandts")
 
         estimator_fwd.compute_macrostates(3, n_cells=10)
-        estimator_fwd.plot_macrostates(which="macro")
+        estimator_fwd.plot_macrostates(which="all")
         estimator_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_fwd.plot_schur_matrix()
 
@@ -128,7 +128,7 @@ class TestLowLevelPipeline:
         estimator_bwd.compute_schur(5, method="brandts")
 
         estimator_bwd.compute_macrostates(3, n_cells=16)
-        estimator_bwd.plot_macrostates(which="macro")
+        estimator_bwd.plot_macrostates(which="all")
         estimator_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_bwd.plot_schur_matrix()
 
