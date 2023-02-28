@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple, Union, Literal, Mapping, Optional, Sequence
+from typing import Any, Dict, Tuple, Union, Literal, Optional, Sequence
 
 from abc import ABC
 from types import MappingProxyType
@@ -190,82 +190,115 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
-    def rename_states(  # TODO(michalk8): override in GPCCA to handle macrostates
-        self,
-        old_new: Mapping[str, str],
-        which: Literal["initial", "terminal"] = "terminal",
-    ) -> "TermStatesEstimator":
-        """
-        Rename :attr:`terminal_states` or :attr:`initial_states`.
+    def rename_terminal_states(self, old_new: Dict[str, str]) -> "TermStatesEstimator":
+        """Rename :attr:`terminal_states`.
 
         Parameters
         ----------
         old_new
-            Mapping where keys correspond to the old names and the values to the new names.
-            The new names must be unique.
-        %(which)s
+            Dictionary that maps old names to unique new names.
 
         Returns
         -------
-        If ``which = 'terminal'``, returns self and updates the following field:
+        Returns self and updates the following field:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
-
-        Otherwise, returns self and updates the following field:
-
-            - :attr:`initial_states` - %(tse_init_states.summary)s
         """
-        backward = which == "initial"
-        states = self.initial_states if backward else self.terminal_states
+        states = self.terminal_states
         if states is None:
             raise RuntimeError(
-                f"Compute {which} states first as `.predict_{which}_states(...)` or "
-                f"set them manually as `.set_states(..., which={which!r})`."
+                "Compute terminal states first as `.predict_terminal_states()` or "
+                "set them manually as `.set_terminal_states()`."
             )
 
         # fmt: off
-        if not isinstance(old_new, Mapping):
-            raise TypeError(f"Expected new names to be a `Mapping`, found `{type(old_new)}`.")
+        if not isinstance(old_new, dict):
+            raise TypeError(f"Expected new names to be a `dict`, found `{type(old_new)}`.")
         if not len(old_new):
             return self
 
         old_names = states.cat.categories
-        old_new = {str(k): str(v) for k, v in old_new.items()}
         mask = np.isin(list(old_new.keys()), old_names)
         if not np.all(mask):
             invalid = sorted(np.array(list(old_new.keys()))[~mask])
-            raise ValueError(f"Invalid {which} states names: `{invalid}`. Valid names are: `{sorted(old_names)}`.")
+            raise ValueError(f"Invalid terminal states names: `{invalid}`. Valid names are: `{sorted(old_names)}`.")
 
         names_after_renaming = [old_new.get(n, n) for n in old_names]
         if len(set(names_after_renaming)) != len(old_names):
-            raise ValueError(f"After renaming, {which} states will no longer unique: `{names_after_renaming}`.")
+            raise ValueError(f"After renaming, terminal states will no longer unique: `{names_after_renaming}`.")
         # fmt: on
 
-        if backward:
-            assignment = states.cat.rename_categories(old_new)
-            memberships = self._init_states.memberships
-            self._write_states(
-                which,
-                states=assignment,
-                colors=self._init_states.colors,
-                probs=self.initial_states_probabilities,
-                log=False,
-            )
-            self._init_states = self._init_states.set(assignment=assignment)
-        else:
-            assignment = states.cat.rename_categories(old_new)
-            memberships = self._term_states.memberships
-            self._write_states(
-                which,
-                states=assignment,
-                colors=self._term_states.colors,
-                probs=self.terminal_states_probabilities,
-                log=False,
-            )
-            self._term_states = self._term_states.set(assignment=assignment)
+        assignment = states.cat.rename_categories(old_new)
+        memberships = self._term_states.memberships  # save before overwriting
+        self._write_states(
+            "terminal",
+            states=assignment,
+            colors=self._term_states.colors,
+            probs=self.terminal_states_probabilities,
+            log=False,
+        )
         if memberships is not None:
             memberships.names = [old_new.get(n, n) for n in memberships.names]
 
+        self._term_states = self._term_states.set(
+            assignment=assignment, memberships=memberships
+        )
+        return self
+
+    @d.dedent
+    def rename_initial_states(self, old_new: Dict[str, str]) -> "TermStatesEstimator":
+        """Rename :attr:`initial_states`.
+
+        Parameters
+        ----------
+        old_new
+            Dictionary that maps old names to unique new names.
+
+        Returns
+        -------
+        Returns self and updates the following field:
+
+            - :attr:`initial_states` - %(tse_init_states.summary)s
+        """
+        states = self.initial_states
+        if states is None:
+            raise RuntimeError(
+                "Compute initial states first as `.predict_initial_states()` or "
+                "set them manually as `.set_initial_states()`."
+            )
+
+        # fmt: off
+        if not isinstance(old_new, dict):
+            raise TypeError(f"Expected new names to be a `dict`, found `{type(old_new)}`.")
+        if not len(old_new):
+            return self
+
+        old_names = states.cat.categories
+        mask = np.isin(list(old_new.keys()), old_names)
+        if not np.all(mask):
+            invalid = sorted(np.array(list(old_new.keys()))[~mask])
+            raise ValueError(f"Invalid terminal states names: `{invalid}`. Valid names are: `{sorted(old_names)}`.")
+
+        names_after_renaming = [old_new.get(n, n) for n in old_names]
+        if len(set(names_after_renaming)) != len(old_names):
+            raise ValueError(f"After renaming, terminal states will no longer unique: `{names_after_renaming}`.")
+        # fmt: on
+
+        assignment = states.cat.rename_categories(old_new)
+        memberships = self._init_states.memberships  # save overwriting
+        self._write_states(
+            "initial",
+            states=assignment,
+            colors=self._init_states.colors,
+            probs=self.initial_states_probabilities,
+            log=False,
+        )
+        if memberships is not None:
+            memberships.names = [old_new.get(n, n) for n in memberships.names]
+
+        self._init_states = self._init_states.set(
+            assignment=assignment, memberships=memberships
+        )
         return self
 
     @d.dedent

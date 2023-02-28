@@ -81,7 +81,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         with pytest.raises(RuntimeError):
-            mc.rename_states({"foo": "bar"})
+            mc.rename_terminal_states({"foo": "bar"})
 
     def test_rename_terminal_states_invalid_old_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -92,7 +92,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
         with pytest.raises(ValueError):
-            mc.rename_states({"foo": "bar"})
+            mc.rename_terminal_states({"foo": "bar"})
 
     def test_rename_terminal_states_invalid_new_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -103,7 +103,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
         with pytest.raises(ValueError):
-            mc.rename_states({"0": "1"})
+            mc.rename_terminal_states({"0": "1"})
 
     def test_rename_terminal_states_try_joining_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -114,7 +114,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
         with pytest.raises(ValueError):
-            mc.rename_states({"0, 1": "foo"})
+            mc.rename_terminal_states({"0, 1": "foo"})
 
     def test_rename_terminal_states_empty_mapping(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -126,7 +126,7 @@ class TestCFLARE:
         mc.predict(use=2)
 
         orig_cats = list(mc.terminal_states.cat.categories)
-        mc.rename_states({})
+        mc = mc.rename_terminal_states({})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, orig_cats)
 
@@ -138,7 +138,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
-        mc.rename_states({"0": "foo", "1": "bar"})
+        mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
         np.testing.assert_array_equal(

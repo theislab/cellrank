@@ -1107,6 +1107,27 @@ class TestGPCCASerialization:
         g.set_initial_states(initial_states, allow_overlap=True)
         assert g.initial_states is not None
 
+    @pytest.mark.parametrize("initial", [False, True])
+    def test_rename_states_normal_run(self, adata_large: AnnData, initial: bool):
+        g = _fit_gpcca(adata_large, State.MACRO)
+        expected = ["foo", "bar"]
+
+        if initial:
+            g = g.set_initial_states(states=None)
+            g = g.rename_initial_states({"0": expected[0], "1": expected[1]})
+            np.testing.assert_array_equal(g.initial_states.cat.categories, expected)
+            np.testing.assert_array_equal(g.initial_states_memberships.names, expected)
+        else:
+            g = g.set_terminal_states(states=None)
+            g = g.rename_terminal_states({"0": expected[0], "1": expected[1]})
+            np.testing.assert_array_equal(g.terminal_states.cat.categories, expected)
+            np.testing.assert_array_equal(g.terminal_states_memberships.names, expected)
+
+        np.testing.assert_array_equal(
+            g.adata.obs[Key.obs.term_states(g.backward, bwd=initial)].cat.categories,
+            expected,
+        )
+
 
 class TestGPCCAIO:
     @pytest.mark.parametrize("deep", [False, True])
