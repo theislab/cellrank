@@ -10,6 +10,7 @@ ent
 eps
 figsize
 fischer
+fisher
 fname
 gaussian
 gcrotmk

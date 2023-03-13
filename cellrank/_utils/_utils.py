@@ -58,7 +58,7 @@ EPS = np.finfo(np.float64).eps
 
 
 class TestMethod(ModeEnum):  # noqa
-    FISCHER = "fischer"
+    FISHER = "fisher"
     PERM_TEST = "perm_test"
 
 
@@ -393,7 +393,7 @@ def _correlation_test(
     X: Union[np.ndarray, spmatrix],
     Y: "Lineage",  # noqa: F821
     gene_names: Sequence[str],
-    method: TestMethod = TestMethod.FISCHER,
+    method: TestMethod = TestMethod.FISHER,
     confidence_level: float = 0.95,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
@@ -477,7 +477,7 @@ def _correlation_test(
 def _correlation_test_helper(
     X: Union[np.ndarray, spmatrix],
     Y: np.ndarray,
-    method: TestMethod = TestMethod.FISCHER,
+    method: TestMethod = TestMethod.FISHER,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
     confidence_level: float = 0.95,
@@ -537,7 +537,7 @@ def _correlation_test_helper(
 
     corr = _mat_mat_corr_sparse(X, Y) if issparse(X) else _mat_mat_corr_dense(X, Y)
 
-    if method == TestMethod.FISCHER:
+    if method == TestMethod.FISHER:
         # see: https://en.wikipedia.org/wiki/Pearson_correlation_coefficient#Using_the_Fisher_transformation
         mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
         z_score = (np.arctanh(corr) - np.arctanh(0)) * np.sqrt(n - 3)
