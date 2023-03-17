@@ -2156,7 +2156,9 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(mode="time", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(
+            mode="time", time_key="latent_time", dpi=DPI, save=fpath
+        )
 
 
 class TestGPCCA:
