@@ -319,10 +319,10 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         self,
         gene: str,
         lineage: Optional[str],
+        time_key: str,
         backward: bool = False,
         time_range: Optional[Union[float, Tuple[float, float]]] = None,
         data_key: Optional[str] = "X",
-        time_key: str = "latent_time",
         use_raw: bool = False,
         threshold: Optional[float] = None,
         weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
@@ -338,13 +338,13 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             Gene in :attr:`anndata.AnnData.var_names`.
         lineage
             Name of the lineage. If `None`, all weights will be set to `1`.
+        time_key
+            Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
         %(backward)s
         %(time_range)s
         data_key
             Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X`.
             If ``use_raw = True``, it's always set to `'X'`.
-        time_key
-            Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
         use_raw
             Whether to access :attr:`anndata.AnnData.raw`.
         threshold

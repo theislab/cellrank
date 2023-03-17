@@ -2412,7 +2412,7 @@ class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2420,7 +2420,7 @@ class TestModel:
     @compare(kind="bwd")
     def test_model_default_bwd(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "0", backward=True)
+        model.prepare(adata.var_names[0], "0", "latent_time", backward=True)
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2431,7 +2431,7 @@ class TestModel:
         gene = adata.X[:, 0]
         adata.obs["foo"] = gene.A if issparse(gene) else gene
 
-        model.prepare("foo", "1", data_key="obs")
+        model.prepare("foo", "1", "latent_time", data_key="obs")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2439,7 +2439,7 @@ class TestModel:
     @compare()
     def test_model_no_lineage(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], None)
+        model.prepare(adata.var_names[0], None, "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2447,14 +2447,14 @@ class TestModel:
     @compare()
     def test_model_no_lineage_show_lin_probs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], None)
+        model.prepare(adata.var_names[0], None, "latent_time")
         model.fit().predict()
         model.plot(save=fpath, dpi=DPI, lineage_probability=True)
 
     @compare()
     def test_model_no_legend(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI, loc=None)
@@ -2463,7 +2463,7 @@ class TestModel:
     @compare()
     def test_model_show_lin_prob_cells_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2477,7 +2477,7 @@ class TestModel:
     @compare()
     def test_model_show_lin_prob_cells_lineage_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2495,7 +2495,9 @@ class TestModel:
             np.ones((adata.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata)
-        model = model.prepare(adata.var_names[0], "foo", n_test_points=100).fit()
+        model = model.prepare(
+            adata.var_names[0], "foo", "latent_time", n_test_points=100
+        ).fit()
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI, conf_int=True)
@@ -2505,7 +2507,7 @@ class TestModel:
 class TestGAMR:
     @compare(kind="gamr")
     def test_gamr_default(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.plot(
             save=fpath,
@@ -2514,7 +2516,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_ci_50(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=0.5)
         model.plot(
             conf_int=True,
@@ -2524,7 +2526,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_no_ci(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=None)
         model.plot(
             conf_int=False,
@@ -2534,7 +2536,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_no_cbar(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=0.95)
         model.plot(
             cbar=False,
@@ -2544,7 +2546,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_lineage_prob(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=0.95)
         model.plot(
             lineage_probability=True,
