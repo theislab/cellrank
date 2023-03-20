@@ -323,11 +323,11 @@ class TermStatesEstimator(BaseEstimator, ABC):
         which
             Which macrostates to plot. Valid options are:
 
-                - ``'macro'`` - plot the macrostates.
-                - ``'initial'`` - plot the macrostates marked as initial states.
-                - ``'terminal'`` - plot the macrostates marked as terminal terminal.
+                - ``'all'`` - plot all macrostates.
+                - ``'initial'`` - plot macrostates marked as :attr:`initial_states`.
+                - ``'terminal'`` - plot macrostates marked as :attr:`terminal_states`.
         states
-            Subset of the macrostates to show. If ``None``, plot all macrostates.
+            Subset of the macrostates to show. If obj:`None`, plot all macrostates.
         color
             Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
         discrete
