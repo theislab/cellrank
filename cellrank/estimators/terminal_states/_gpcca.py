@@ -162,7 +162,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Self and updates the following fields:
+        Returns self and updates the following fields:
 
             - :attr:`macrostates` - %(gpcca_macro.summary)s
             - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
@@ -219,7 +219,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @d.dedent
     def predict(self, *args: Any, **kwargs: Any) -> "GPCCA":
-        """Automatically select terminal states from macrostates, alias for :meth:`predict_terminal_states`."""
+        """Alias for :meth:`predict_terminal_states`."""
         return self.predict_terminal_states(*args, **kwargs)
 
     @d.dedent
@@ -264,14 +264,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
-            - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
+            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
         """
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
 
         if len(self.macrostates.cat.categories) == 1:
             logg.warning(
-                "Found only one macrostate, making it the single terminal state"
+                "Found only one macrostate, making it the singular terminal state"
             )
             return self.set_terminal_states(
                 states=None, n_cells=n_cells, params=self._create_states()
@@ -333,7 +333,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             - :attr:`initial_states` - %(tse_init_states.summary)s
             - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
+            - :attr:`initial_states_memberships` - %(gpcca_init_states_memberships.summary)s
         """
 
         if n_states <= 0:
@@ -361,6 +361,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             states, n_cells=n_cells, allow_overlap=allow_overlap
         )
 
+    @d.dedent
     def set_terminal_states(
         self,
         states: Optional[
@@ -400,7 +401,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
-            - :attr:`terminal_states_probabilities_memberships` - %(gpcca_term_states_memberships.summary)s
+            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
         """
         if isinstance(states, (dict, pd.Series)):
             return super().set_terminal_states(
@@ -444,6 +445,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
         return self
 
+    @d.dedent
     def set_initial_states(
         self,
         states: Optional[
@@ -483,7 +485,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
             - :attr:`initial_states` - %(tse_init_states.summary)s
             - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-            - :attr:`initial_states_probabilities_memberships` - %(gpcca_init_states_memberships.summary)s
+            - :attr:`initial_states_memberships` - %(gpcca_init_states_memberships.summary)s
         """
         if isinstance(states, (pd.Series, dict)):
             return super().set_initial_states(
@@ -871,7 +873,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Position of the legend. If `None`, don't show legend.
         %(plotting)s
         show
-            If `False`, return :class:`matplotlib.pyplot.Axes`.
+            If `False`, return :class:`~matplotlib.axes.Axes`.
 
         Returns
         -------

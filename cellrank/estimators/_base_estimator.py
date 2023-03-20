@@ -332,8 +332,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         *,
         copy: Union[bool, Sequence[Attr_t]] = True,
     ) -> AnnData:
-        """
-        %(to_adata.full_desc)s
+        """%(to_adata.full_desc)s
 
         Parameters
         ----------
@@ -351,7 +350,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
         Returns
         -------
-        %(adata)s
+        Annotated data object.
         """  # noqa: D400
 
         def handle_attribute(attr: Attr_t, keys: List[str], *, copy: bool) -> None:

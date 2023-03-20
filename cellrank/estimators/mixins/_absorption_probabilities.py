@@ -244,8 +244,7 @@ class AbsProbsMixin:
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
-        """
-        Compute absorption probabilities.
+        """Compute absorption probabilities.
 
         For each cell, this computes the probability of being absorbed in any of the :attr:`terminal_states`. In
         particular, this corresponds to the probability that a random walk initialized in transient cell :math:`i`
@@ -294,6 +293,7 @@ class AbsProbsMixin:
             time=start,
         )
 
+    @d.dedent
     def plot_absorption_probabilities(
         self: AbsProbsProtocol,
         states: Optional[Union[str, Sequence[str]]] = None,
@@ -314,11 +314,11 @@ class AbsProbsMixin:
         color
             Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
         time_key
-            Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
+            Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
         title
             Title of the plot.
         same_plot
-            Whether to plot the data on the same plot or not. Only use when ``mode = {m.EMBEDDING!r}``.
+            Whether to plot the data on the same plot or not. Only use when ``mode = 'embedding'``.
             If `True` and ``discrete = False``, ``color`` is ignored.
         cmap
             Colormap for continuous annotations.

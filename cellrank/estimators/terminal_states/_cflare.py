@@ -52,7 +52,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Self and modifies the following field:
+        Returns self and modifies the following field:
 
             - :attr:`eigendecomposition` - %(eigen.summary)s
         """
@@ -118,7 +118,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Self and just updates the following fields:
+        Returns self and just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s

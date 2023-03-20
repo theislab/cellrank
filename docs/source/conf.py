@@ -63,7 +63,7 @@ intersphinx_mapping = {
     "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
     "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
     "squidpy": ("https://squidpy.readthedocs.io/en/latest/", None),
-    "scvelo": ("https://scvelo.readthedocs.io/", None),
+    "scvelo": ("https://scvelo.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3", None),
     "numpy": ("https://docs.scipy.org/doc/numpy/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
