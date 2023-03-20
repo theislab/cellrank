@@ -18,7 +18,7 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
 
     # lineages
     abs_probs = adata.obsm[Key.obsm.abs_probs(bwd)]
-    assert isinstance(abs_probs, cr._utils.Lineage)
+    assert isinstance(abs_probs, cr.Lineage)
     np.testing.assert_array_equal(abs_probs.names, adata.obs[key].cat.categories)
     np.testing.assert_array_equal(abs_probs.colors, adata.uns[Key.uns.colors(key)])
     np.testing.assert_allclose(abs_probs.X.sum(1), 1.0, rtol=1e-3)
@@ -40,8 +40,8 @@ class TestLowLevelPipeline:
         estimator_fwd.plot_spectrum()
         estimator_fwd.plot_spectrum(real_only=True)
 
-        estimator_fwd.compute_terminal_states(use=1, method="leiden")
-        estimator_fwd.plot_terminal_states()
+        estimator_fwd.predict(use=1, method="leiden")
+        estimator_fwd.plot_macrostates(which="terminal")
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.plot_absorption_probabilities()
@@ -63,8 +63,8 @@ class TestLowLevelPipeline:
         estimator_bwd.plot_spectrum()
         estimator_bwd.plot_spectrum(real_only=True)
 
-        estimator_bwd.compute_terminal_states(use=1, method="kmeans")
-        estimator_bwd.plot_terminal_states()
+        estimator_bwd.predict(use=1, method="kmeans")
+        estimator_bwd.plot_macrostates(which="terminal")
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.plot_absorption_probabilities()
@@ -87,13 +87,13 @@ class TestLowLevelPipeline:
         estimator_fwd.compute_schur(5, method="brandts")
 
         estimator_fwd.compute_macrostates(3, n_cells=10)
-        estimator_fwd.plot_macrostates()
+        estimator_fwd.plot_macrostates(which="all")
         estimator_fwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_fwd.plot_schur_matrix()
 
         # select all states
-        estimator_fwd.set_terminal_states_from_macrostates(n_cells=10)
-        estimator_fwd.plot_terminal_states()
+        estimator_fwd.set_terminal_states(n_cells=10)
+        estimator_fwd.plot_macrostates(which="terminal")
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -101,11 +101,11 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata)
 
         # select a subset of states
-        estimator_fwd.set_terminal_states_from_macrostates(
+        estimator_fwd.set_terminal_states(
             n_cells=16,
-            names=estimator_fwd.macrostates.cat.categories[:2],
+            states=estimator_fwd.macrostates.cat.categories[:2],
         )
-        estimator_fwd.plot_terminal_states()
+        estimator_fwd.plot_macrostates(which="terminal")
 
         estimator_fwd.compute_absorption_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -128,13 +128,13 @@ class TestLowLevelPipeline:
         estimator_bwd.compute_schur(5, method="brandts")
 
         estimator_bwd.compute_macrostates(3, n_cells=16)
-        estimator_bwd.plot_macrostates()
+        estimator_bwd.plot_macrostates(which="all")
         estimator_bwd.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True)
         estimator_bwd.plot_schur_matrix()
 
         # select all cells
-        estimator_bwd.set_terminal_states_from_macrostates(n_cells=16)
-        estimator_bwd.plot_terminal_states()
+        estimator_bwd.set_terminal_states(n_cells=16)
+        estimator_bwd.plot_macrostates(which="terminal")
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -142,11 +142,11 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata, bwd=True)
 
         # select a subset of states
-        estimator_bwd.set_terminal_states_from_macrostates(
+        estimator_bwd.set_terminal_states(
             n_cells=16,
-            names=estimator_bwd.macrostates.cat.categories[:2],
+            states=estimator_bwd.macrostates.cat.categories[:2],
         )
-        estimator_bwd.plot_terminal_states()
+        estimator_bwd.plot_macrostates(which="terminal")
 
         estimator_bwd.compute_absorption_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)

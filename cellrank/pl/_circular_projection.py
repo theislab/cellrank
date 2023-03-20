@@ -254,7 +254,6 @@ def circular_projection(
 
     _i, lineage_key = 0, Key.obsm.abs_probs(backward)
     for _i, (k, ax) in enumerate(zip(keys, axes)):
-
         set_lognorm, colorbar = False, kwargs.pop("colorbar", True)
         try:
             _ = PrimingDegree(k)

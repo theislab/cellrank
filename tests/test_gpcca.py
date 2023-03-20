@@ -62,7 +62,7 @@ class State(str, Enum):
         if self.value == "macro":
             return Key.obs.macrostates(bwd)
         if self.value == "term":
-            return Key.obs.term_states(bwd)
+            return Key.obs.term_states(False, bwd=bwd)
         if self.value == "abs":
             return Key.obsm.abs_probs(bwd)
         if self.value == "lin":
@@ -83,7 +83,7 @@ class State(str, Enum):
             key3 = Key.obsm.memberships(key1)
             return ("obs", key1), ("uns", key2), ("obsm", key3)
         if self.value == "term":
-            key1 = Key.obs.term_states(bwd)
+            key1 = Key.obs.term_states(False, bwd=bwd)
             key2 = Key.obs.probs(key1)
             key3 = Key.uns.colors(key1)
             return ("obs", key1), ("obs", key2), ("uns", key3)
@@ -103,12 +103,11 @@ class State(str, Enum):
             return ("_eigendecomposition", dict), ("_schur_vectors", np.ndarray), ("_schur_matrix", np.ndarray)
         if self.value == "macro":
             return (
-                ("_macrostates", pd.Series), ("_macrostates_colors", np.ndarray),
-                ("_macrostates_memberships", Lineage), ("_coarse_tmat", pd.DataFrame),
+                ("macrostates", pd.Series), ("macrostates_memberships", Lineage), ("_coarse_tmat", pd.DataFrame),
                 ("_coarse_init_dist", pd.Series), ("_coarse_stat_dist", pd.Series)
             )
         if self.value == "term":
-            return ("_term_states", pd.Series), ("_term_states_probs", pd.Series), ("_term_states_colors", np.ndarray)
+            return ("terminal_states", pd.Series), ("terminal_states_probabilities", pd.Series)
         if self.value == "abs":
             return (
                 ("_absorption_probabilities", Lineage), ("_absorption_times", pd.DataFrame),
@@ -145,7 +144,7 @@ def _check_eigdecomposition(mc: cr.estimators.GPCCA) -> None:
 
 def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
     assert isinstance(mc.macrostates, pd.Series)
-    assert len(mc._macrostates_colors) == len(mc.macrostates.cat.categories)
+    assert len(mc._macrostates.colors) == len(mc.macrostates.cat.categories)
 
     if "stationary_dist" in mc.eigendecomposition:  # one state
         assert isinstance(mc.macrostates_memberships, cr.Lineage)
@@ -193,7 +192,7 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     # macrostates
     assert isinstance(mc.macrostates, pd.Series)
     assert isinstance(mc.macrostates_memberships, cr.Lineage)
-    np.testing.assert_array_equal(mc._macrostates_colors, mc.macrostates_memberships.colors)
+    np.testing.assert_array_equal(mc._macrostates.colors, mc.macrostates_memberships.colors)
 
     # term states
     key = Key.obs.term_states(mc.backward)
@@ -201,7 +200,7 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     # TODO(michalk8): assert series equal from pandas
     assert_array_nan_equal(mc.adata.obs[key], mc.terminal_states)
     np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc.absorption_probabilities.colors)
-    np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc._term_states_colors)
+    np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc._term_states.colors)
     assert isinstance(mc.terminal_states_probabilities, pd.Series)
     np.testing.assert_array_equal(mc.adata.obs[Key.obs.probs(key)], mc.terminal_states_probabilities)
 
@@ -234,7 +233,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
     mc.compute_macrostates(n_states=2)
     if state == State.MACRO:
         return mc
-    mc.set_terminal_states_from_macrostates()
+    mc.set_terminal_states()
     if state == State.TERM:
         return mc
     mc.compute_absorption_probabilities()
@@ -284,12 +283,12 @@ def _assert_adata(
         else:
             for attr, key in state.attr_keys:
                 obj = getattr(adata, attr)
-                assert key not in obj, sorted(obj.keys())
+                assert key not in obj, (state, attr, key)
         _assert_adata(adata, state.next, fwd=True, init=False)
     else:
         for attr, key in state.attr_keys:
             obj = getattr(adata, attr)
-            assert key in obj, sorted(obj.keys())
+            assert key in obj, (state, attr, key)
         _assert_adata(adata, state.prev, fwd=False)
 
 
@@ -513,19 +512,14 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
-        obsm_keys = set(mc.adata.obsm.keys())
-        # TODO
-        mc._set_initial_states_from_macrostates("0")
+        mc.set_initial_states("0")
 
-        key = Key.obs.term_states(not mc.backward)
+        key = Key.obs.term_states(mc.backward, bwd=True)
 
         assert key in mc.adata.obs
         np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, ["0"])
         assert Key.obs.probs(key) in mc.adata.obs
         assert Key.uns.colors(key) in mc.adata.uns
-
-        # make sure that we don't write anything there - it's useless
-        assert set(mc.adata.obsm.keys()) == obsm_keys
 
     def test_compute_initial_states_from_forward_no_macro(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
@@ -537,13 +531,10 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
-        with pytest.raises(RuntimeError):
-            # TODO
-            mc._compute_initial_states(1)
+        with pytest.raises(RuntimeError, match=r"Compute macro"):
+            mc.predict_initial_states(n_states=1)
 
-    def test_compute_initial_states_from_forward_too_many_states(
-        self, adata_large: AnnData
-    ):
+    def test_compute_initial_states_from_forward(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -551,43 +542,12 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
 
-        mc.compute_macrostates(n_states=2, n_cells=5)
-        with pytest.raises(ValueError):
-            mc._compute_initial_states(42)
+        mc.compute_macrostates(n_states=4, n_cells=5)
+        mc.predict_initial_states(n_states=3)
 
-    def test_compute_initial_states_from_forward_too_few_states(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
-            softmax_scale=4
-        )
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=2, n_cells=5)
-        with pytest.raises(ValueError):
-            mc._compute_initial_states(0)
-
-    def test_compute_initial_states_from_forward_no_stat_dist(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
-            softmax_scale=4
-        )
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=2, n_cells=5)
-        mc._coarse_stat_dist = None
-
-        with pytest.raises(ValueError):
-            mc._compute_initial_states(0)
+        assert mc.terminal_states is None
+        assert len(mc.initial_states.cat.categories) == 3
+        assert mc.initial_states_memberships.shape == (adata_large.n_obs, 3)
 
     def test_compute_initial_states_from_forward_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
@@ -600,21 +560,15 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
-        obsm_keys = set(mc.adata.obsm.keys())
-        csd = mc.coarse_stationary_distribution
-        expected = csd.index[np.argmin(csd)]
 
-        mc._compute_initial_states(1)
+        mc.predict_initial_states(n_states=1)
 
-        key = Key.obs.term_states(not mc.backward)
+        key = Key.obs.term_states(mc.backward, bwd=True)
 
         assert key in mc.adata.obs
-        np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, [expected])
+        np.testing.assert_array_equal(mc.adata.obs[key].cat.categories, ["0"])
         assert Key.obs.probs(key) in mc.adata.obs
         assert Key.uns.colors(key) in mc.adata.uns
-
-        # make sure that we don't write anything there - it's useless
-        assert set(mc.adata.obsm.keys()) == obsm_keys
 
     def test_set_terminal_states_from_macrostates(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -625,110 +579,11 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=5)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
         _check_abs_probs(mc)
-
-    def test_set_terminal_states_from_macrostates_rename_states_invalid(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=2, n_cells=5)
-        with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates({"0": "1"})
-        _check_renaming_no_write_terminal(mc)
-
-    def test_set_terminal_states_from_macrostates_rename_not_unique_new_names(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=3, n_cells=5)
-        with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates({"0": "1", "1": "1"})
-        _check_renaming_no_write_terminal(mc)
-
-    def test_set_terminal_states_from_macrostates_rename_overlapping_old_keys(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=3, n_cells=5)
-        with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates({"0, 1": "foo", "1, 2": "bar"})
-        _check_renaming_no_write_terminal(mc)
-
-    def test_set_terminal_states_from_macrostates_rename_states(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=2, n_cells=5)
-        mc.set_terminal_states_from_macrostates({"0": "foo"})
-        mc.compute_absorption_probabilities()
-        mc.compute_lineage_priming()
-
-        _check_abs_probs(mc)
-
-        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo"])
-        np.testing.assert_array_equal(mc.terminal_states_memberships.names, ["foo"])
-
-    def test_set_terminal_states_from_macrostates_join_and_rename_states(
-        self, adata_large: AnnData
-    ):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=3, n_cells=5)
-        mc.set_terminal_states_from_macrostates({"0, 1": "foo", "2": "bar"})
-        mc.compute_absorption_probabilities()
-        mc.compute_lineage_priming()
-
-        _check_abs_probs(mc)
-
-        np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
-        np.testing.assert_array_equal(
-            mc.terminal_states_memberships.names, ["foo", "bar"]
-        )
-
-    def test_set_terminal_states_from_macrostates_no_cells(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=2, n_cells=None)
-        with pytest.raises(TypeError):
-            mc.set_terminal_states_from_macrostates(n_cells=None)
 
     def test_set_terminal_states_from_macrostates_non_positive_cells(
         self, adata_large: AnnData
@@ -742,7 +597,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=None)
         with pytest.raises(ValueError):
-            mc.set_terminal_states_from_macrostates(n_cells=0)
+            mc.set_terminal_states(n_cells=0)
 
     def test_set_terminal_states_from_macrostates_invalid_name(
         self, adata_large: AnnData
@@ -756,7 +611,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(KeyError):
-            mc.set_terminal_states_from_macrostates(names=["foobar"])
+            mc.set_terminal_states(states=["foobar"])
 
     @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
     def test_set_terminal_states_clusters(
@@ -789,7 +644,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(method="foobar")
+            mc.predict(method="foobar")
 
     def test_compute_terminal_states_no_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -801,7 +656,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(TypeError):
-            mc.compute_terminal_states(n_cells=None)
+            mc.predict(n_cells=None)
 
     def test_compute_terminal_states_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -813,7 +668,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(n_cells=0)
+            mc.predict(n_cells=0)
 
     def test_compute_terminal_states_eigengap(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -824,7 +679,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5, method="eigengap")
+        mc.predict(n_cells=5, method="eigengap")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -839,7 +694,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5, method="top_n", n_states=1)
+        mc.predict(n_cells=5, method="top_n", n_states=1)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -855,9 +710,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=5)
-        mc.compute_terminal_states(
-            n_cells=5, method="stability", stability_threshold=thresh
-        )
+        mc.predict(n_cells=5, method="stability", stability_threshold=thresh)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -879,10 +732,8 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        with pytest.raises(ValueError):
-            mc.compute_terminal_states(
-                n_cells=5, method="stability", stability_threshold=42
-            )
+        with pytest.raises(ValueError, match=r"No macrostates"):
+            mc.predict(n_cells=5, method="stability", stability_threshold=42)
 
     def test_compute_terminal_states_too_many_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -894,7 +745,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(n_cells=4200)
+            mc.predict(n_cells=4200)
 
     def test_compute_terminal_states_default(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -905,7 +756,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        mc.compute_terminal_states(n_cells=5)
+        mc.predict(n_cells=5)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -919,7 +770,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
@@ -933,7 +784,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(KeyError):
@@ -949,7 +800,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -969,7 +820,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
 
         with pytest.raises(RuntimeError):
@@ -983,7 +834,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -998,7 +849,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -1013,7 +864,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -1027,7 +878,7 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
         mc.compute_absorption_probabilities()
 
         cat = adata_large.obs["clusters"].cat.categories[0]
@@ -1053,9 +904,9 @@ class TestGPCCA:
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
-        mc.set_terminal_states_from_macrostates()
+        mc.set_terminal_states()
 
-        key = Key.obsm.memberships(Key.obs.term_states(mc.backward))
+        key = Key.obsm.memberships(Key.obs.term_states(estim_bwd=mc.backward))
         assert len(mc.terminal_states.cat.categories) == 2
         assert adata_large.obsm[key].shape == (adata_large.n_obs, 2)
 
@@ -1112,7 +963,7 @@ class TestGPCCA:
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         g = cr.estimators.GPCCA(ck)
         g.fit(n_states=n_states)
-        g.set_terminal_states_from_macrostates()
+        g.set_terminal_states()
         g.compute_absorption_probabilities()
         g.compute_absorption_times(keys=keys)
 
@@ -1128,7 +979,7 @@ class TestGPCCASerialization:
         _assert_adata(adata, state, fwd=True)
 
     @pytest.mark.parametrize("copy", [False, True])
-    @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers")])
+    @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers",)])
     def test_to_adata_keep(
         self, adata_large: AnnData, keep: Union[str, Sequence[str]], copy: bool
     ):
@@ -1138,12 +989,10 @@ class TestGPCCASerialization:
             res = shares_mem(adata.X, g.adata.X)
             assert not res if copy else res
         if "obs" in keep:
-            # we don't save macrostates in the underlying object, only during serialization
-            key = Key.obs.macrostates(g.backward)
-            cols = [c for c in adata.obs.columns if c != key]
-            obs = adata.obs[cols]
-            np.testing.assert_array_equal(obs.shape, g.adata.obs.shape)
-            assert_frame_equal(obs, g.adata.obs[cols])
+            columns = adata.obs.columns
+            np.testing.assert_array_equal(adata.obs.shape, g.adata.obs.shape)
+            # reorder columns
+            assert_frame_equal(adata.obs, g.adata.obs[columns])
         if "obsm" in keep:
             for key in g.adata.obsm.keys():
                 res = shares_mem(adata.obsm[key], g.adata.obsm[key])
@@ -1174,10 +1023,11 @@ class TestGPCCASerialization:
         _assert_adata(g2.adata, state, fwd=True)
         assert_estimators_equal(g1, g2, from_adata=True)
 
+    # TODO(michalk8): parametrize by bwd, needs attr_keys modification
     @pytest.mark.parametrize("state", list(State))
     def test_from_adata_incomplete(self, adata_large: AnnData, state: State):
-        if state in (State.SCHUR, State.MACRO):
-            pytest.skip("See the reintroduce TODO in GPCCA")
+        if state == State.SCHUR:
+            pytest.xfail("Schur decomposition is not needed.")
         g_orig = _fit_gpcca(adata_large, State.LIN)
         adata = g_orig.to_adata()
 
@@ -1209,18 +1059,74 @@ class TestGPCCASerialization:
 
         for key in keys:
             assert isinstance(adata.obsm[key], Lineage)
-            adata.obsm[key] = np.array(adata.obsm[key])
+            adata.obsm[key] = np.array(adata.obsm[key], copy=True)
             assert isinstance(adata.obsm[key], np.ndarray)
 
         g = cr.estimators.GPCCA.from_adata(adata, obsp_key=Key.uns.kernel(bwd))
         for attr, key in zip(attrs, keys):
             obj = getattr(g, attr)
-            assert isinstance(obj, Lineage)
+            assert isinstance(obj, Lineage), attr
             np.testing.assert_allclose(obj.X, bdata.obsm[key].X)
             np.testing.assert_array_equal(obj.names, bdata.obsm[key].names)
             np.testing.assert_array_equal(obj.colors, bdata.obsm[key].colors)
 
         assert_estimators_equal(g_orig, g, from_adata=True)
+
+    def test_overlapping_states_predict(self, adata_large: AnnData):
+        g = _fit_gpcca(adata_large, State.MACRO, backward=False)
+        n_states = g.macrostates_memberships.shape[1]
+
+        g.predict_initial_states(n_states=n_states)
+        with pytest.raises(ValueError, match=r"Found \`\d+\` overlapping"):
+            g.predict_terminal_states(method="top_n", n_states=n_states)
+
+        g.predict_terminal_states(method="top_n", n_states=n_states, allow_overlap=True)
+
+        pd.testing.assert_series_equal(g.initial_states, g.terminal_states)
+
+    def test_overlapping_states_from_macro(self, adata_large: AnnData):
+        g = _fit_gpcca(adata_large, State.TERM, backward=False)
+        initial_states = g.terminal_states.cat.categories
+
+        with pytest.raises(ValueError, match=r"Found \`\d+\` overlapping"):
+            g.set_initial_states(initial_states)
+        assert g.initial_states is None
+
+        g.set_initial_states(initial_states, allow_overlap=True)
+
+        pd.testing.assert_series_equal(g.initial_states, g.terminal_states)
+
+    def test_overlapping_states_explicit(self, adata_large: AnnData):
+        g = _fit_gpcca(adata_large, State.TERM, backward=False)
+        initial_states = {"overlapping_initial_state": g.adata.obs_names[:20]}
+
+        with pytest.raises(ValueError, match=r"Found \`\d+\` overlapping"):
+            g.set_initial_states(initial_states)
+        assert g.initial_states is None
+
+        g.set_initial_states(initial_states, allow_overlap=True)
+        assert g.initial_states is not None
+
+    @pytest.mark.parametrize("initial", [False, True])
+    def test_rename_states_normal_run(self, adata_large: AnnData, initial: bool):
+        g = _fit_gpcca(adata_large, State.MACRO)
+        expected = ["foo", "bar"]
+
+        if initial:
+            g = g.set_initial_states(states=None)
+            g = g.rename_initial_states({"0": expected[0], "1": expected[1]})
+            np.testing.assert_array_equal(g.initial_states.cat.categories, expected)
+            np.testing.assert_array_equal(g.initial_states_memberships.names, expected)
+        else:
+            g = g.set_terminal_states(states=None)
+            g = g.rename_terminal_states({"0": expected[0], "1": expected[1]})
+            np.testing.assert_array_equal(g.terminal_states.cat.categories, expected)
+            np.testing.assert_array_equal(g.terminal_states_memberships.names, expected)
+
+        np.testing.assert_array_equal(
+            g.adata.obs[Key.obs.term_states(g.backward, bwd=initial)].cat.categories,
+            expected,
+        )
 
 
 class TestGPCCAIO:

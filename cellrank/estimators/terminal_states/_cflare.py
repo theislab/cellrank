@@ -52,7 +52,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Self and modifies the following field:
+        Returns self and modifies the following field:
 
             - :attr:`eigendecomposition` - %(eigen.summary)s
         """
@@ -77,8 +77,8 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         """
         Find approximate recurrent classes of the Markov chain.
 
-        Filter to obtain recurrent states in left eigenvectors.
-        Cluster to obtain approximate recurrent classes in right eigenvectors.
+        Filter to obtain recurrent states from left eigenvectors.
+        Cluster to obtain approximate recurrent classes from right eigenvectors.
 
         Parameters
         ----------
@@ -98,7 +98,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         n_clusters_kmeans
             If `None`, this is set to ``use + 1``.
         n_neighbors
-            Number of neighbors in a KNN graph. This is the :math:`K` parameter for that,
+            Number of neighbors in a kNN graph. This is the :math:`K` parameter for that,
             the number of neighbors for each cell. Only used when ``method = 'leiden'``.
         resolution
             Resolution parameter for :func:`scanpy.tl.leiden`. Should be chosen relatively small.
@@ -118,7 +118,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Self and just updates the following fields:
+        Returns self and just updates the following fields:
 
             - :attr:`terminal_states` - %(tse_term_states.summary)s
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
@@ -218,22 +218,20 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         labels = pd.Series(labels, index=self.adata.obs_names, dtype="category")
         labels = labels.cat.rename_categories({c: str(c) for c in labels.cat.categories})
 
-        # filtering to get rid of some of the left over transient states
+        # filtering to get rid of some of the leftover transient states
         if n_matches_min > 0:
             logg.debug(f"Filtering according to `n_matches_min={n_matches_min}`")
             distances = _get_connectivities(self.adata, mode="distances", n_neighbors=n_neighbors_filtering)
             labels = _filter_cells(distances, rc_labels=labels, n_matches_min=n_matches_min)
         # fmt: on
 
-        self.set_terminal_states(
-            labels=labels,
+        return self.set_terminal_states(
+            states=labels,
             cluster_key=cluster_key,
             probs=self._compute_term_states_probs(eig, use),
             params=self._create_params(),
             time=start,
         )
-
-        return self
 
     def _compute_term_states_probs(
         self, eig: Dict[str, Any], use: List[int]
@@ -261,9 +259,9 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         ok = super()._read_from_adata(adata, **kwargs)
+        ok = ok and self._read_eigendecomposition(adata, allow_missing=False)
         return (
             ok
-            and self._read_eigendecomposition(adata, allow_missing=False)
             and self._read_absorption_probabilities(adata)
             and self._read_absorption_times(adata)
         )

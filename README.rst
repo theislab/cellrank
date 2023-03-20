@@ -4,8 +4,8 @@ CellRank for directed single-cell fate mapping
 ==============================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
-   :width: 600px
-   :align: center
+    :width: 600px
+    :align: center
 
 .. sidebar:: Key Contributors
 

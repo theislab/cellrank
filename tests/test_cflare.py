@@ -8,6 +8,7 @@ import cellrank as cr
 from anndata import AnnData
 from cellrank.kernels import VelocityKernel, ConnectivityKernel
 from cellrank._utils._key import Key
+from cellrank.estimators.mixins._utils import StatesHolder
 
 import numpy as np
 import pandas as pd
@@ -43,7 +44,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_terminal_states(use=2)
+            mc.predict(use=2)
 
     def test_compute_terminal_states_too_large_use(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -53,7 +54,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
         with pytest.raises(ValueError):
-            mc.compute_terminal_states(use=1000)
+            mc.predict(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -62,7 +63,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
 
         assert is_categorical_dtype(mc.terminal_states)
         assert mc.terminal_states_probabilities is not None
@@ -89,7 +90,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"foo": "bar"})
 
@@ -100,7 +101,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.predict(use=2, method="kmeans")
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"0": "1"})
 
@@ -111,7 +112,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         with pytest.raises(ValueError):
             mc.rename_terminal_states({"0, 1": "foo"})
 
@@ -122,10 +123,10 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
 
         orig_cats = list(mc.terminal_states.cat.categories)
-        mc.rename_terminal_states({})
+        mc = mc.rename_terminal_states({})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, orig_cats)
 
@@ -136,7 +137,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.predict(use=2, method="kmeans")
         mc.rename_terminal_states({"0": "foo", "1": "bar"})
 
         np.testing.assert_array_equal(mc.terminal_states.cat.categories, ["foo", "bar"])
@@ -161,7 +162,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.predict(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_priming()
 
@@ -187,7 +188,7 @@ class TestCFLARE:
         np.testing.assert_array_equal(
             mc.absorption_probabilities.colors, mc.adata.uns[key]
         )
-        np.testing.assert_array_equal(mc._term_states_colors, mc.adata.uns[key])
+        np.testing.assert_array_equal(mc._term_states.colors, mc.adata.uns[key])
         np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1, rtol=1e-6)
 
     def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
@@ -198,7 +199,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="direct")
@@ -219,7 +220,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.predict(use=2, method="kmeans")
 
         # compute lin probs using direct solver
         mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
@@ -269,7 +270,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         with pytest.raises(RuntimeError):
             mc.compute_lineage_drivers()
 
@@ -280,7 +281,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
@@ -292,7 +293,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         mc.compute_absorption_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -306,7 +307,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2, method="kmeans")
+        mc.predict(use=2, method="kmeans")
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -325,7 +326,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         mc.compute_absorption_probabilities()
 
         with pytest.raises(RuntimeError):
@@ -338,7 +339,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -352,7 +353,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
@@ -366,7 +367,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.compute_terminal_states(use=2)
+        mc.predict(use=2)
         mc.compute_absorption_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
         mc.plot_lineage_drivers("0", use_raw=False)
@@ -379,13 +380,13 @@ class TestCFLARE:
 
         mc_fwd = cr.estimators.CFLARE(terminal_kernel)
         mc_fwd.compute_eigendecomposition()
-        mc_fwd.compute_terminal_states(use=3, method="kmeans")
+        mc_fwd.predict(use=3, method="kmeans")
 
         arcs = ["0", "2"]
         arc_colors = [
             c
             for arc, c in zip(
-                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states_colors
+                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states.colors
             )
             if arc in arcs
         ]
@@ -436,8 +437,9 @@ class TestCFLARE:
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._term_states = state_annotation
-        c._term_states_colors = np.array(["#000000", "#ffffff"])
+        c._term_states = StatesHolder(
+            assignment=state_annotation, colors=np.array(["#000000", "#ffffff"])
+        )
 
         # compute absorption probabilities
         c.compute_absorption_probabilities()
@@ -457,7 +459,7 @@ class TestCFLARE:
         mc_fwd.compute_eigendecomposition()
         key = Key.obs.term_states(mc_fwd.backward)
 
-        mc_fwd.compute_terminal_states(use=3)
+        mc_fwd.predict(use=3)
         original = np.array(adata.obs[key].copy())
         zero_mask = original == "0"
 

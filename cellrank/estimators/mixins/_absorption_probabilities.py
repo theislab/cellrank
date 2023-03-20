@@ -26,11 +26,12 @@ from cellrank._utils._utils import (
 from cellrank._utils._lineage import Lineage
 from cellrank._utils._linear_solver import _solve_lin_system
 from cellrank.estimators.mixins._utils import (
+    PlotMode,
     SafeGetter,
     BaseProtocol,
+    StatesHolder,
     logger,
     shadow,
-    register_plotter,
 )
 
 import numpy as np
@@ -52,7 +53,7 @@ class RecTransStates(NamedTuple):
 
 
 class AbsProbsProtocol(BaseProtocol):
-    _term_states_colors: np.ndarray
+    _term_states: StatesHolder
 
     @property
     def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
@@ -101,7 +102,14 @@ class AbsProbsProtocol(BaseProtocol):
     ) -> RecTransStates:
         ...
 
-    def _ensure_lineage_object(self, attr: str, **kwargs: Any) -> None:
+    def _ensure_lineage_object(
+        self,
+        obj: Union[str, np.ndarray, Lineage],
+        *,
+        kind: Literal["macrostates", "term_states", "abs_probs"],
+        backward: bool,
+        **kwargs: Any,
+    ) -> Lineage:
         ...
 
     def _write_absorption_probabilities(
@@ -121,6 +129,22 @@ class AbsProbsProtocol(BaseProtocol):
         self,
         priming_degree: Optional[pd.Series],
     ) -> str:
+        ...
+
+    def _plot_continuous(
+        self,
+        _data: Lineage,
+        _colors: Optional[np.ndarray] = None,
+        _title: Optional[str] = None,
+        states: Optional[Union[str, Sequence[str]]] = None,
+        color: Optional[str] = None,
+        mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
+        time_key: str = "latent_time",
+        title: Optional[Union[str, Sequence[str]]] = None,
+        same_plot: bool = True,
+        cmap: str = "viridis",
+        **kwargs: Any,
+    ) -> None:
         ...
 
 
@@ -220,8 +244,7 @@ class AbsProbsMixin:
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
-        """
-        Compute absorption probabilities.
+        """Compute absorption probabilities.
 
         For each cell, this computes the probability of being absorbed in any of the :attr:`terminal_states`. In
         particular, this corresponds to the probability that a random walk initialized in transient cell :math:`i`
@@ -268,6 +291,61 @@ class AbsProbsMixin:
             abs_probs,
             params=params,
             time=start,
+        )
+
+    @d.dedent
+    def plot_absorption_probabilities(
+        self: AbsProbsProtocol,
+        states: Optional[Union[str, Sequence[str]]] = None,
+        color: Optional[str] = None,
+        mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
+        time_key: str = "latent_time",
+        same_plot: bool = True,
+        title: Optional[Union[str, Sequence[str]]] = None,
+        cmap: str = "viridis",
+        **kwargs: Any,
+    ) -> None:
+        """Plot absorption probabilities.
+
+        Parameters
+        ----------
+        states
+            Subset of the macrostates to show. If ``None``, plot all macrostates.
+        color
+            Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
+        time_key
+            Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
+        title
+            Title of the plot.
+        same_plot
+            Whether to plot the data on the same plot or not. Only use when ``mode = 'embedding'``.
+            If `True` and ``discrete = False``, ``color`` is ignored.
+        cmap
+            Colormap for continuous annotations.
+        kwargs
+            Keyword arguments for :func:`scvelo.pl.scatter`.
+
+        Returns
+        -------
+        %(just_plots)s
+        """
+        if self.absorption_probabilities is None:
+            raise RuntimeError(
+                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+            )
+
+        return self._plot_continuous(
+            _data=self.absorption_probabilities,
+            _colors=self.absorption_probabilities.colors,
+            _title="absorption probabilities",
+            states=states,
+            color=color,
+            mode=mode,
+            time_key=time_key,
+            same_plot=same_plot,
+            title=title,
+            cmap=cmap,
+            **kwargs,
         )
 
     @d.dedent
@@ -409,7 +487,7 @@ class AbsProbsMixin:
 
         # process the current annotations according to `keys`
         term_states, colors = _process_series(
-            series=self.terminal_states, keys=keys, colors=self._term_states_colors
+            series=self.terminal_states, keys=keys, colors=self._term_states.colors
         )
         # warn in case only one state is left
         keys = list(term_states.cat.categories)
@@ -556,43 +634,66 @@ class AbsProbsMixin:
         # fmt: on
 
     def _read_absorption_probabilities(self: AbsProbsProtocol, adata: AnnData) -> bool:
-        # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key1 = Key.obsm.abs_probs(self.backward)
-            self._get("_absorption_probabilities", self.adata.obsm, key=key1, where="obsm", dtype=(np.ndarray, Lineage))
-            self._ensure_lineage_object("_absorption_probabilities", kind="abs_probs")
+            abs_probs = self._get(
+                obj=adata.obsm,
+                key=key1,
+                shadow_attr="obsm",
+                dtype=(np.ndarray, Lineage),
+            )
+            self._absorption_probabilities = self._ensure_lineage_object(
+                abs_probs, backward=self.backward, kind="abs_probs"
+            )
             key = Key.obs.priming_degree(self.backward)
-            self._get("_priming_degree", self.adata.obs, key=key, where="obs", dtype=pd.Series, allow_missing=True)
+            self._priming_degree = self._get(
+                obj=adata.obs,
+                key=key,
+                shadow_attr="obs",
+                dtype=pd.Series,
+                allow_missing=True,
+            )
             self.params[key1] = self._read_params(key1)
-        # fmt: on
 
         return sg.ok
 
     def _read_absorption_times(self: AbsProbsProtocol, adata: AnnData) -> bool:
-        # fmt: off
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obsm.abs_times(self.backward)
-            self._get("_absorption_times", self.adata.obsm, key=key, where="obsm", dtype=pd.DataFrame,
-                      allow_missing=True)
+            self._absorption_times = self._get(
+                obj=adata.obsm,
+                key=key,
+                shadow_attr="obsm",
+                dtype=pd.DataFrame,
+                allow_missing=True,
+            )
             self.params[key] = self._read_params(key)
-        # fmt: on
 
         return sg.ok
 
     def _ensure_lineage_object(
-        self: AbsProbsProtocol, attr: str, **kwargs: Any
-    ) -> None:
-        if not isinstance(getattr(self, attr), Lineage):
-            try:
-                lineage = Lineage.from_adata(
-                    self.adata, backward=self.backward, copy=True, **kwargs
-                )
-                setattr(self, attr, lineage)
-            except Exception as e:  # noqa: B902
-                raise RuntimeError(
-                    f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
-                ) from None
+        self: AbsProbsProtocol,
+        obj: Union[str, np.ndarray, Lineage],
+        *,
+        kind: Literal["macrostates", "term_states", "abs_probs"],
+        backward: bool,
+        **kwargs: Any,
+    ) -> Lineage:
+        if isinstance(obj, str):
+            obj = getattr(self, obj)
+        if isinstance(obj, Lineage):
+            return obj
 
-    plot_absorption_probabilities = register_plotter(
-        continuous="absorption_probabilities"
-    )
+        try:
+            return Lineage.from_adata(
+                self.adata,
+                backward=backward,
+                kind=kind,
+                estimator_backward=self.backward,
+                copy=True,
+                **kwargs,
+            )
+        except Exception as e:  # noqa: B902
+            raise RuntimeError(
+                f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
+            ) from None

@@ -584,15 +584,20 @@ class LinDriversMixin(AbsProbsMixin):
         if not ok:
             return False
 
-        # fmt: off
         key = Key.varm.lineage_drivers(self.backward)
         with SafeGetter(self, allowed=(KeyError, AttributeError)) as sg:
             self.params[key] = self._read_params(key)
             if self.params[key].get("use_raw", False):
-                self._get("_lineage_drivers", self.adata.raw.varm, key=key, where="varm", dtype=pd.DataFrame)
+                self._lineage_drivers = self._get(
+                    obj=self.adata.raw.varm,
+                    key=key,
+                    shadow_attr="varm",
+                    dtype=pd.DataFrame,
+                )
             else:
-                self._get("_lineage_drivers", self.adata.varm, key=key, where="varm", dtype=pd.DataFrame)
-        # fmt: on
+                self._lineage_drivers = self._get(
+                    obj=self.adata.varm, key=key, shadow_attr="varm", dtype=pd.DataFrame
+                )
 
         return sg.ok
 
