@@ -62,7 +62,7 @@ class LinDriversMixin(AbsProbsMixin):
     def compute_lineage_drivers(
         self: LinDriversProtocol,
         lineages: Optional[Union[str, Sequence]] = None,
-        method: Literal["fischer", "perm_test"] = TestMethod.FISCHER,
+        method: Literal["fisher", "perm_test"] = TestMethod.FISHER,
         cluster_key: Optional[str] = None,
         clusters: Optional[Union[str, Sequence]] = None,
         layer: Optional[str] = None,
@@ -85,7 +85,7 @@ class LinDriversMixin(AbsProbsMixin):
         method
             Mode to use when calculating p-values and confidence intervals. Valid options are:
 
-                - `{tm.FISCHER!r}` - use Fischer transformation :cite:`fischer:21`.
+                - `{tm.FISHER!r}` - use Fisher transformation :cite:`fisher:21`.
                 - `{tm.PERM_TEST!r}` - use permutation test.
         cluster_key
             Key from :attr:`anndata.AnnData.obs` to obtain cluster annotations. These are considered for ``clusters``.
