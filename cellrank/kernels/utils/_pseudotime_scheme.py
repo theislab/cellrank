@@ -49,7 +49,6 @@ class ThresholdSchemeABC(ABC):
         queue=None,
         **kwargs: Any,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-
         indices, indptr, data = [], [], []
 
         for i in ixs:

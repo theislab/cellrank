@@ -374,11 +374,15 @@ class EigenMixin:
     def _read_eigendecomposition(
         self: EigenProtocol, adata: AnnData, allow_missing: bool = True
     ) -> bool:
-        # fmt: off
         key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
-            self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
+            self._eigendecomposition = self._get(
+                obj=adata.uns,
+                key=key,
+                shadow_attr="uns",
+                dtype=dict,
+                allow_missing=allow_missing,
+            )
             self.params[key] = self._read_params(key)
-        # fmt: on
 
         return sg.ok

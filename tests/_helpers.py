@@ -255,13 +255,25 @@ def assert_estimators_equal(
     from_adata: bool = False,
 ) -> None:
     def check_arrays(x, y):
-        if isinstance(x, (np.ndarray, list, tuple)):
-            try:
-                np.testing.assert_array_compare(np.array_equal, x, y, equal_nan=True)
-            except:
-                np.testing.assert_array_compare(np.allclose, x, y, equal_nan=True)
+        if isinstance(x, cr.Lineage):
+            check_arrays(x.X, y.X)
+            check_arrays(x.names, y.names)
+            check_arrays(x.colors, y.colors)
+        elif isinstance(x, tuple) and hasattr(x, "_fields") and hasattr(x, "_asdict"):
+            # namedtuple
+            x, y = x._asdict(), y._asdict()
+            assert x.keys() == y.keys()
+            for xx, yy in zip(x.values(), y.values()):
+                check_arrays(xx, yy)
         elif isinstance(x, pd.Series):
             assert_series_equal(x, y, check_names=False)
+        elif isinstance(x, (np.ndarray, list, tuple)):
+            try:
+                np.testing.assert_array_compare(np.array_equal, x, y, equal_nan=True)
+            except AssertionError:
+                raise
+            except Exception:
+                np.testing.assert_array_compare(np.allclose, x, y, equal_nan=True)
         elif isinstance(x, pd.DataFrame):
             assert_frame_equal(x, y, check_dtype=False)
 
@@ -295,7 +307,7 @@ def assert_estimators_equal(
         if attr == "_invalid_n_states" and from_adata:
             continue
         actual_val, expected_val = getattr(actual, attr), getattr(expected, attr)
-        if isinstance(actual_val, cr._utils.Lineage):
+        if isinstance(actual_val, cr.Lineage):
             assert actual_val is not expected_val, attr
             assert_array_nan_equal(actual_val.X, expected_val.X)
         elif isinstance(actual_val, (np.ndarray, pd.Series, pd.DataFrame, list, tuple)):

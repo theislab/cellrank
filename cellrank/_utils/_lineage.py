@@ -858,6 +858,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         cls,
         adata: AnnData,
         backward: bool = False,
+        estimator_backward: Optional[bool] = None,
         kind: Literal["macrostates", "term_states", "abs_probs"] = LinKind.ABS_PROBS,
         copy: bool = False,
     ) -> "Lineage":
@@ -886,10 +887,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             nkey = Key.obs.macrostates(backward)
             key = Key.obsm.memberships(nkey)
         elif kind == LinKind.TERM_STATES:
-            nkey = Key.obs.term_states(backward)
+            nkey = Key.obs.term_states(estim_bwd=estimator_backward, bwd=backward)
             key = Key.obsm.memberships(nkey)
         elif kind == LinKind.ABS_PROBS:
-            nkey = Key.obs.term_states(backward)
+            nkey = Key.obs.term_states(estim_bwd=estimator_backward, bwd=backward)
             key = Key.obsm.abs_probs(backward)
         else:
             raise NotImplementedError(f"Lineage kind `{kind}` is not yet implemented.")

@@ -129,7 +129,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         shadow_only: bool = False,
     ) -> None:
         """
-        Set an attribute and optionally update ``obj[{key}]``.
+        Set an attribute and optionally update ``obj['{key}']``.
 
         Parameters
         ----------
@@ -137,16 +137,16 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
             Attribute to set. Only updated when we're not in the shadow. If `None`, don't update anything.
             See :attr:`_in_shadow` and ``obj`` for more information.
         obj
-            Object which to update with ``value`` alongside the ``attr`.
+            Object which to update with ``value`` alongside the ``attr``.
             Usually, an attribute of :attr:`adata` is passed here.
         key
             Key in ``obj`` to update with ``value``. Only used when ``obj != None``.
         value
-            Value to set. If `None` and ``key != None``, it removes the values under ``obj[key]``, if present.
+            Value to set. If `None` and ``key != None``, it removes the values under ``obj['{key}']``, if present.
         copy
             Whether to copy the ``value`` before setting it in ``obj``.
         shadow_only
-            Whether or not to update the ``obj`` if we are not in the shadow.
+            Whether to update the ``obj`` if we are not in the shadow.
 
         Returns
         -------
@@ -179,37 +179,35 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
     def _get(
         self,
-        attr: str,
+        *,
         obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
-        where: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
+        shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
-    ) -> None:
+    ) -> Any:
         """
         Get data from an object and set an attribute.
 
         Parameters
         ----------
-        attr
-            Attribute to set.
         obj
             Object from which to extract the data.
         key
             Key in ``obj`` where the data is stored.
-        where
+        shadow_attr
             Attribute of :attr:`_shadow_adata` where to save the extracted data. If `None`, don't update it.
         dtype
             Valid type(s) of the extracted data.
         copy
-            Copy the data before setting the ``attr``.
+            Copy the data before setting the ``self_attr``.
         allow_missing
-            Whether or not to allow ``key`` to be missing in ``obj``.
+            Whether to allow ``key`` to be missing in ``obj``.
 
         Returns
         -------
-        Nothing, just updates ``attr`` with the extracted values and optionally :attr:`_shadow_adata`.
+        The extracted values and optionally updates :attr:`_shadow_adata` ``.{shadow_attr}``.
 
         Raises
         ------
@@ -220,23 +218,24 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         KeyError
             If ``allow_missing = False`` and ``key`` was not found in ``obj``.
         """
-        if not hasattr(self, attr):
-            raise AttributeError(attr)
+        if shadow_attr is not None and not hasattr(self._shadow_adata, shadow_attr):
+            raise AttributeError(shadow_attr)
 
         try:
             data = obj[key]
             if dtype is not None and not isinstance(data, dtype):
                 raise TypeError(
-                    f"Expected `.{attr}` to be of type `{dtype}`, found `{type(data).__name__}`."
+                    f"Expected object to be of type `{dtype}`, found `{type(data).__name__}`."
                 )
             if copy:
                 data = copy_(data)
-            setattr(self, attr, data)
-            if where is not None:
-                getattr(self._shadow_adata, where)[key] = data
+            if shadow_attr is not None:
+                getattr(self._shadow_adata, shadow_attr)[key] = data
+            return data
         except KeyError:
             if not allow_missing:
                 raise
+            return None
 
     @property
     @contextmanager
@@ -333,8 +332,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         *,
         copy: Union[bool, Sequence[Attr_t]] = True,
     ) -> AnnData:
-        """
-        %(to_adata.full_desc)s
+        """%(to_adata.full_desc)s
 
         Parameters
         ----------
@@ -347,12 +345,12 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                   which to keep from this attribute. If the values are specified either as `True` or `'all'`,
                   everything from this attribute will be kept.
         copy
-            Whether to copy the data. Can be specified on per-attribute basis. Useful for attributes that store arrays.
-            Attributes not specified here will not be copied.
+            Whether to copy the data. Can be specified on per-attribute basis.
+            Useful for attributes that are array-like.
 
         Returns
         -------
-        %(adata)s
+        Annotated data object.
         """  # noqa: D400
 
         def handle_attribute(attr: Attr_t, keys: List[str], *, copy: bool) -> None:

@@ -63,6 +63,7 @@ class SchurMixin:
         real-valued, square matrix :math:`A`. It is given by :math:`A = Q R Q^T`, where :math:`Q` contains the
         real Schur vectors and :math:`R` is the Schur matrix. :math:`Q` is orthogonal and :math:`R` is quasi-upper
         triangular with 1x1 and 2x2 blocks on the diagonal.
+
         If PETSc and SLEPc are installed, only the leading Schur vectors are computed.
         """
         return self._schur_vectors
@@ -82,8 +83,8 @@ class SchurMixin:
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
         """Eigendecomposition of :attr:`transition_matrix`.
 
-        For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
-        compute both left and right eigenvectors.
+        For non-symmetric real matrices, left and right eigenvectors will in general be different and complex.
+        We compute both left and right eigenvectors.
 
         Returns
         -------
@@ -308,18 +309,32 @@ class SchurMixin:
     def _read_schur_decomposition(
         self: SchurProtocol, adata: AnnData, allow_missing: bool = True
     ) -> bool:
-        # fmt: off
         key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
-            self._get("_eigendecomposition", adata.uns, key=key, where="uns", dtype=dict, allow_missing=allow_missing)
+            self._eigendecomposition = self._get(
+                obj=adata.uns,
+                key=key,
+                shadow_attr="uns",
+                dtype=dict,
+                allow_missing=allow_missing,
+            )
             key = Key.obsm.schur_vectors(self.backward)
-            self._get("_schur_vectors", self.adata.obsm, key=key, where="obsm", dtype=np.ndarray,
-                      allow_missing=allow_missing)
+            self._schur_vectors = self._get(
+                obj=self.adata.obsm,
+                key=key,
+                shadow_attr="obsm",
+                dtype=np.ndarray,
+                allow_missing=allow_missing,
+            )
             key = Key.uns.schur_matrix(self.backward)
-            self._get("_schur_matrix", self.adata.uns, key=key, where="uns", dtype=np.ndarray,
-                      allow_missing=allow_missing)
+            self._schur_matrix = self._get(
+                obj=self.adata.uns,
+                key=key,
+                shadow_attr="uns",
+                dtype=np.ndarray,
+                allow_missing=allow_missing,
+            )
             key = f"schur_decomposition_{Key.backward(self.backward)}"
             self.params[key] = self._read_params(key)
-        # fmt: on
 
         return sg.ok

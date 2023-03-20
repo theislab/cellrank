@@ -4,8 +4,8 @@ CellRank: dynamics from multi-view single-cell data
 ===================================================
 
 .. image:: https://raw.githubusercontent.com/theislab/cellrank/master/docs/source/_static/img/cellrank_overview.png
-   :width: 600px
-   :align: center
+    :width: 600px
+    :align: center
 
 **CellRank** :cite:`lange:22` is a modular framework to study cellular dynamics based on Markov state modeling of
 multi-view single-cell data. It estimates differentiation direction based on a varied (and growing!) number of
