@@ -85,7 +85,7 @@ class LinDriversMixin(AbsProbsMixin):
         method
             Mode to use when calculating p-values and confidence intervals. Valid options are:
 
-                - `{tm.FISHER!r}` - use Fisher transformation :cite:`Fisher:21`.
+                - `{tm.FISHER!r}` - use Fisher transformation :cite:`fisher:21`.
                 - `{tm.PERM_TEST!r}` - use permutation test.
         cluster_key
             Key from :attr:`anndata.AnnData.obs` to obtain cluster annotations. These are considered for ``clusters``.
