@@ -1,0 +1,1 @@
+Use :mod:`rpy2`'s local converter.
