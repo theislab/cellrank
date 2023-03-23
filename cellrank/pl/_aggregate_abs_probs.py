@@ -473,17 +473,15 @@ def aggregate_absorption_probabilities(
     probs = probs[:, lineages]
 
     if mode == mode.VIOLIN and not is_all:
-        adata = adata[np.isin(adata.obs[cluster_key], clusters)].copy()
+        mask = np.isin(adata.obs[cluster_key], clusters)
+        adata = adata[mask].copy()
+        probs = probs[mask]
 
     d = odict()
     for name in clusters:
-        mask = (
-            np.ones((adata.n_obs,), dtype=bool)
-            if is_all
-            else (adata.obs[cluster_key] == name).values
+        data = (
+            probs.X if is_all else probs.X[(adata.obs[cluster_key] == name).to_numpy()]
         )
-        mask = np.asarray(mask, dtype=bool)
-        data = probs[mask, :].X
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
