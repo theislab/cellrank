@@ -187,11 +187,12 @@ class GAMR(BaseModel):
         """  # noqa
 
         import rpy2.robjects as ro
+        from rpy2.robjects import pandas2ri
         from rpy2.robjects.conversion import localconverter
 
         super().fit(x, y, w, **kwargs)
 
-        with localconverter(ro.pandas2ri.converter):
+        with localconverter(pandas2ri.converter):
             family = getattr(ro.r, self._family)
             kwargs = {}
             if self._knotslocs != KnotLocs.AUTO:
@@ -249,6 +250,7 @@ class GAMR(BaseModel):
         %(base_model_predict.returns)s
         """  # noqa
         import rpy2.robjects as ro
+        from rpy2.robjects import pandas2ri
         from rpy2.robjects.conversion import localconverter
 
         if self.model is None:
@@ -267,7 +269,7 @@ class GAMR(BaseModel):
 
         newdata = self._get_x_test(x_test)
 
-        with localconverter(ro.pandas2ri.converter):
+        with localconverter(pandas2ri.converter):
             res = ro.r.predict(
                 self.model,
                 newdata=ro.pandas2ri.py2rpy(newdata),
