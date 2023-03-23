@@ -1,4 +1,4 @@
-CellRank dev (2023-03-20)
+CellRank dev (2023-03-23)
 =========================
 
 Features
@@ -98,6 +98,9 @@ Bugfixes
 
 - Fix sparse array conversion in ``networkx>=3.0``.
   `#978 <https://github.com/theislab/cellrank/pull/978>`__
+
+- Fix cluster subsetting in :func:`cellrank.pl.aggregate_absorption_probabilities` and ``mode = 'violin'``.
+  `#1007 <https://github.com/theislab/cellrank/pull/1007>`__
 
 
 Miscellaneous
