@@ -1,0 +1,1 @@
+Fix cluster subsetting in :func:`cellrank.pl.aggregate_absorption_probabilities` and ``mode = 'violin'``.
