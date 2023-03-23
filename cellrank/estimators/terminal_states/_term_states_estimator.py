@@ -524,7 +524,10 @@ class TermStatesEstimator(BaseEstimator, ABC):
         if mode == PlotMode.TIME:
             kwargs.setdefault("legend_loc", "best")
             if time_key is None:
-                raise KeyError("The name of the column in `adata.obs` defining the pseudotime needs to be defined via the `time_key` argument.")
+                raise KeyError(
+                    "The name of the column in `adata.obs` defining the pseudotime needs to be defined via the "
+                    "`time_key` argument."
+                )
             if title is None:
                 title = [f"{_title} {state}" for state in states]
             if time_key not in self.adata.obs:
