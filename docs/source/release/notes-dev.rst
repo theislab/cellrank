@@ -124,6 +124,9 @@ Miscellaneous
 - Use ``", "`` instead of ``" or "`` when joining states.
   `#954 <https://github.com/theislab/cellrank/pull/954>`__
 
+- Use :mod:`rpy2`'s local converter.
+  `#1008 <https://github.com/theislab/cellrank/pull/1008>`__
+
 
 Documentation
 -------------
