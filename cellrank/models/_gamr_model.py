@@ -186,35 +186,32 @@ class GAMR(BaseModel):
             - :attr:`w` - %(base_model_w.summary)s
         """  # noqa
 
-        from rpy2.robjects import Formula, r, pandas2ri
+        import rpy2.robjects as ro
+        from rpy2.robjects.conversion import localconverter
 
         super().fit(x, y, w, **kwargs)
 
-        pandas2ri.activate()
+        with localconverter(ro.pandas2ri.converter):
+            family = getattr(ro.r, self._family)
+            kwargs = {}
+            if self._knotslocs != KnotLocs.AUTO:
+                kwargs["knots"] = pd.DataFrame(
+                    _get_knotlocs(
+                        self.x,
+                        self._n_knots,
+                        uniform=False,
+                    ),
+                    columns=["x"],
+                )
 
-        family = getattr(r, self._family)
-
-        kwargs = {}
-        if self._knotslocs != KnotLocs.AUTO:
-            kwargs["knots"] = pd.DataFrame(
-                _get_knotlocs(
-                    self.x,
-                    self._n_knots,
-                    uniform=False,
-                ),
-                columns=["x"],
+            self._model = self._lib.gam(
+                ro.Formula(self._formula),
+                data=self._design_mat,
+                family=family,
+                weights=pd.Series(self.w),
+                control=self._lib.gam_control(**self._control_kwargs),
+                **kwargs,
             )
-
-        self._model = self._lib.gam(
-            Formula(self._formula),
-            data=self._design_mat,
-            family=family,
-            weights=pd.Series(self.w),
-            control=self._lib.gam_control(**self._control_kwargs),
-            **kwargs,
-        )
-
-        pandas2ri.deactivate()
 
         return self
 
@@ -251,9 +248,8 @@ class GAMR(BaseModel):
         -------
         %(base_model_predict.returns)s
         """  # noqa
-
-        from rpy2 import robjects
-        from rpy2.robjects import pandas2ri
+        import rpy2.robjects as ro
+        from rpy2.robjects.conversion import localconverter
 
         if self.model is None:
             raise RuntimeError(
@@ -271,14 +267,13 @@ class GAMR(BaseModel):
 
         newdata = self._get_x_test(x_test)
 
-        pandas2ri.activate()
-        res = robjects.r.predict(
-            self.model,
-            newdata=pandas2ri.py2rpy(newdata),
-            type="response",
-            se=level is not None,
-        )
-        pandas2ri.deactivate()
+        with localconverter(ro.pandas2ri.converter):
+            res = ro.r.predict(
+                self.model,
+                newdata=ro.pandas2ri.py2rpy(newdata),
+                type="response",
+                se=level is not None,
+            )
 
         if level is None:
             self._y_test = np.array(res).squeeze().astype(self._dtype)
