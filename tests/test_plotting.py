@@ -208,6 +208,18 @@ class TestAggregateAbsorptionProbabilities:
             save=fpath,
         )
 
+    @compare(tol=50)
+    def test_bar_cluster_subset_violin(self, adata: AnnData, fpath: str):
+        print(adata.obs["clusters"].cat.categories)
+        cr.pl.aggregate_absorption_probabilities(
+            adata,
+            cluster_key="clusters",
+            mode="violin",
+            clusters=["Endothelial"],
+            dpi=DPI,
+            save=fpath,
+        )
+
     @compare()
     def test_bar_lineage_subset(self, adata: AnnData, fpath: str):
         cr.pl.aggregate_absorption_probabilities(
