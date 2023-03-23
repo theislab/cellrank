@@ -192,7 +192,7 @@ class GAMR(BaseModel):
 
         super().fit(x, y, w, **kwargs)
 
-        with localconverter(pandas2ri.converter):
+        with localconverter(ro.default_converter + pandas2ri.converter):
             family = getattr(ro.r, self._family)
             kwargs = {}
             if self._knotslocs != KnotLocs.AUTO:
@@ -269,7 +269,7 @@ class GAMR(BaseModel):
 
         newdata = self._get_x_test(x_test)
 
-        with localconverter(pandas2ri.converter):
+        with localconverter(ro.default_converter + pandas2ri.converter):
             res = ro.r.predict(
                 self.model,
                 newdata=ro.pandas2ri.py2rpy(newdata),
