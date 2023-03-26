@@ -283,11 +283,3 @@ class CytoTRACEKernel(PseudotimeKernel):
             raise NotImplementedError(f"Aggregation method `{aggregation}` is not yet implemented.")
         # fmt: on
         return cytotrace_score, top_genes
-
-    def __invert__(self) -> "CytoTRACEKernel":
-        ck = self._copy_ignore("_transition_matrix")
-        if ck.pseudotime is not None:  # already computed
-            ck._pseudotime = np.max(ck.pseudotime) - ck.pseudotime
-        ck._backward = not self.backward
-        ck._params = {}
-        return ck
