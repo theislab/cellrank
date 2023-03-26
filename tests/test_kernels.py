@@ -1244,6 +1244,14 @@ class TestCytoTRACEKernel:
         pt = adata.obs[Key.cytotrace("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
 
+    def test_inversion_bwd(self, adata: AnnData):
+        k = CytoTRACEKernel(adata, backward=True).compute_cytotrace(
+            use_raw=False, layer="X", aggregation="mean"
+        )
+
+        pt = adata.obs[Key.cytotrace("pseudotime")].values
+        np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
+
 
 class TestTransportMapKernel:
     @pytest.mark.parametrize("reuse", [False, True])

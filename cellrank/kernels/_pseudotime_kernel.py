@@ -28,8 +28,7 @@ class ThresholdScheme(ModeEnum):
 
 @d.dedent
 class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
-    """
-    Kernel which computes directed transition probabilities based on a KNN graph and pseudotime.
+    """Kernel which computes directed transition probabilities based on a kNN graph and pseudotime.
 
     The kNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime
@@ -39,6 +38,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     ----------
     %(adata)s
     %(backward)s
+        If `True`, :attr:`pseudotime` will be set to ``max(pseudotime) - pseudotime``.
     time_key
         Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     kwargs
@@ -67,7 +67,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
             raise KeyError(f"Unable to find pseudotime in `adata.obs[{time_key!r}]`.")
 
         self._pseudotime = np.array(self.adata.obs[time_key]).astype(np.float64, copy=True)
-        if np.any(np.isnan(self.pseudotime)):
+        if np.any(np.isnan(self._pseudotime)):
             raise ValueError("Encountered NaN values in pseudotime.")
         # fmt: on
 
@@ -176,12 +176,19 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
 
     @property
     def pseudotime(self) -> Optional[np.array]:
-        """Pseudotemporal ordering of cells."""
+        """Pseudotemporal ordering of cells.
+
+        If :attr:`backward = True <backward>`, it will be set to
+        ``max(pseudotime) - pseudotime``.
+        """
+        if self._pseudotime is None:
+            return None
+        if self.backward:
+            return np.max(self._pseudotime) - self._pseudotime
         return self._pseudotime
 
     def __invert__(self) -> "PseudotimeKernel":
         pk = self._copy_ignore("_transition_matrix")
-        pk._pseudotime = np.max(pk.pseudotime) - pk.pseudotime
         pk._backward = not self.backward
         pk._params = {}
         return pk
