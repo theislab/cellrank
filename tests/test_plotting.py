@@ -540,8 +540,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -554,9 +554,9 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "0",
+            "latent_time",
             random_state=0,
             backward=True,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -569,8 +569,8 @@ class TestClusterTrends:
             model,
             RAW_GENES[:5],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
             use_raw=True,
@@ -584,8 +584,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             norm=False,
             dpi=DPI,
             save=fpath,
@@ -599,8 +599,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             data_key="Ms",
             norm=False,
             dpi=DPI,
@@ -615,7 +615,7 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
-            time_key="latent_time",
+            "latent_time",
             random_state=42,
             dpi=DPI,
             save=fpath,
@@ -629,8 +629,8 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -643,8 +643,8 @@ class TestClusterTrends:
             {GENES[0]: fm, GENES[5]: fm, "*": fm.model},
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             key="foobar",
             dpi=DPI,
             save=fpath,
@@ -660,8 +660,8 @@ class TestClusterTrends:
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
             "1",
+            "latent_time",
             random_state=0,
-            time_key="latent_time",
             return_models=True,
         )
 
@@ -683,7 +683,7 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
-            time_key="latent_time",
+            "latent_time",
             random_state=42,
             key="foo",
         )
@@ -693,7 +693,7 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
-            time_key="latent_time",
+            "latent_time",
             random_state=42,
             key="bar",
         )
@@ -704,7 +704,14 @@ class TestClusterTrends:
 
     def test_cluster_lineage_writes(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        cr.pl.cluster_trends(adata_cflare, model, GENES[:10], "0", n_test_points=200)
+        cr.pl.cluster_trends(
+            adata_cflare,
+            model,
+            GENES[:10],
+            "0",
+            time_key="latent_time",
+            n_test_points=200,
+        )
 
         assert isinstance(adata_cflare.uns["lineage_0_trend"], AnnData)
         assert adata_cflare.uns["lineage_0_trend"].shape == (10, 200)
@@ -713,7 +720,13 @@ class TestClusterTrends:
     def test_cluster_lineage_key(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
         cr.pl.cluster_trends(
-            adata_cflare, model, GENES[:10], "0", n_test_points=200, key="foobar"
+            adata_cflare,
+            model,
+            GENES[:10],
+            "0",
+            "latent_time",
+            n_test_points=200,
+            key="foobar",
         )
 
         assert isinstance(adata_cflare.uns["foobar"], AnnData)
@@ -728,9 +741,9 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             covariate_key=["clusters", "latent_time"],
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -743,10 +756,10 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             covariate_key="latent_time",
             cmap="inferno",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -759,10 +772,10 @@ class TestClusterTrends:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             covariate_key="latent_time",
             ratio=0.25,
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -775,9 +788,9 @@ class TestClusterTrends:
             model,
             [f"{g}:gs" for g in GENES[:10]],
             "1",
+            "latent_time",
             gene_symbols="symbol",
             random_state=0,
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -791,8 +804,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -804,9 +817,9 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             backward=True,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -818,8 +831,8 @@ class TestHeatmap:
             adata,
             model,
             RAW_GENES[:5],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             use_raw=True,
             dpi=DPI,
             save=fpath,
@@ -832,8 +845,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -845,9 +858,9 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             cluster_genes=False,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -859,9 +872,9 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             lineages="1",
             mode="lineages",
-            time_key="latent_time",
             cluster_genes=True,
             dpi=DPI,
             save=fpath,
@@ -874,8 +887,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             lineage_height=0.2,
             dpi=DPI,
             save=fpath,
@@ -888,8 +901,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             time_range=(0.2, 0.5),
             dpi=DPI,
             save=fpath,
@@ -902,8 +915,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             cmap=cm.viridis,
             dpi=DPI,
             save=fpath,
@@ -916,8 +929,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             cbar=False,
             dpi=DPI,
             save=fpath,
@@ -930,8 +943,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             cbar=False,
             dpi=DPI,
             save=fpath,
@@ -944,8 +957,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             show_absorption_probabilities=True,
             dpi=DPI,
             save=fpath,
@@ -958,8 +971,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             show_absorption_probabilities=True,
             dpi=DPI,
             save=fpath,
@@ -972,8 +985,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             n_convolve=None,
             dpi=DPI,
             save=fpath,
@@ -986,8 +999,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             scale=False,
             dpi=DPI,
             save=fpath,
@@ -1000,8 +1013,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             scale=False,
             dpi=DPI,
             save=fpath,
@@ -1014,9 +1027,9 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             lineages="1",
             mode="lineages",
-            time_key="latent_time",
             scale=False,
             cluster_genes=True,
             dpi=DPI,
@@ -1030,8 +1043,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             cluster_genes=False,
             dpi=DPI,
             save=fpath,
@@ -1044,10 +1057,10 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             cluster_key="clusters",
             show_absorption_probabilities=False,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1059,10 +1072,10 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             cluster_key="clusters",
             show_absorption_probabilities=True,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1074,10 +1087,10 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1091,8 +1104,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1105,12 +1118,12 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             n_jobs=2,
             backend="threading",
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1123,12 +1136,12 @@ class TestHeatmap:
             adata,
             model,
             GENES[:5],
+            "latent_time",
             n_jobs=2,
             backend="loky",  # uses pickling of objects, such as Lineage
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
             show_absorption_probabilities=True,
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1140,8 +1153,8 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             keep_gene_order=True,
             dpi=DPI,
             save=fpath,
@@ -1154,9 +1167,9 @@ class TestHeatmap:
             adata,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
             lineages="1",
-            time_key="latent_time",
             cluster_genes=True,
             dendrogram=True,
             dpi=DPI,
@@ -1170,8 +1183,8 @@ class TestHeatmap:
             adata,
             {g: {"0": fm, "*": fm.model} for g in GENES[:10]},
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1183,8 +1196,8 @@ class TestHeatmap:
             adata,
             {GENES[0]: fm, "*": fm.model},
             GENES[:10],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1196,8 +1209,8 @@ class TestHeatmap:
             adata,
             model,
             [f"{g}:gs" for g in GENES[:10]],
+            "latent_time",
             gene_symbols="symbol",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )
@@ -1210,8 +1223,8 @@ class TestHeatmapReturns:
             adata_cflare,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             return_genes=True,
             dpi=DPI,
         )
@@ -1229,8 +1242,8 @@ class TestHeatmapReturns:
             adata_cflare,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             return_models=True,
             dpi=DPI,
         )
@@ -1248,8 +1261,8 @@ class TestHeatmapReturns:
             adata_cflare,
             model,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             return_models=True,
             return_genes=True,
             dpi=DPI,
@@ -1274,8 +1287,8 @@ class TestHeatmapReturns:
             adata_cflare,
             model,
             genes,
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             return_genes=True,
             dpi=DPI,
         )
@@ -1293,9 +1306,9 @@ class TestHeatmapReturns:
             adata_cflare,
             model,
             GENES[:10],
+            "latent_time",
             keep_gene_order=True,
             mode="lineages",
-            time_key="latent_time",
             return_genes=True,
             dpi=DPI,
         )
@@ -1317,8 +1330,8 @@ class TestHeatmapReturns:
             adata_cflare,
             model,
             GENES[:10],
+            "latent_time",
             mode="genes",
-            time_key="latent_time",
             cluster_genes=True,
             dendrogram=True,
             return_genes=True,
@@ -1336,6 +1349,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             data_key="Ms",
             dpi=DPI,
             save=fpath,
@@ -1348,6 +1362,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             backward=True,
             data_key="Ms",
             dpi=DPI,
@@ -1361,6 +1376,7 @@ class TestGeneTrend:
             adata,
             model,
             RAW_GENES[:5],
+            time_key="latent_time",
             data_key="X",
             use_raw=True,
             dpi=DPI,
@@ -1374,6 +1390,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             dpi=DPI,
@@ -1387,6 +1404,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             hide_cells=True,
@@ -1401,6 +1419,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             conf_int=False,
@@ -1415,6 +1434,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             data_key="Ms",
             sharey="row",
             dpi=DPI,
@@ -1428,6 +1448,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:10],
+            time_key="latent_time",
             ncols=3,
             data_key="Ms",
             sharex="all",
@@ -1442,6 +1463,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:10],
+            time_key="latent_time",
             gene_as_title=False,
             same_plot=True,
             data_key="Ms",
@@ -1457,6 +1479,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:10],
+            time_key="latent_time",
             legend_loc=None,
             data_key="Ms",
             dpi=DPI,
@@ -1470,6 +1493,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:2],
+            time_key="latent_time",
             same_plot=True,
             legend_loc="bottom right out",
             data_key="Ms",
@@ -1484,6 +1508,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             cbar=False,
@@ -1498,6 +1523,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             lineage_cmap=cm.Set2,
@@ -1512,6 +1538,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=False,
             hide_cells=False,
@@ -1527,6 +1554,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             cell_color="red",
@@ -1541,6 +1569,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             cell_color=adata.var_names[0],
@@ -1555,6 +1584,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             cell_color="clusters",
@@ -1571,6 +1601,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             cell_color="clusters",
@@ -1586,6 +1617,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             lw=10,
@@ -1600,6 +1632,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:10],
+            time_key="latent_time",
             suptitle="FOOBAR",
             data_key="Ms",
             dpi=DPI,
@@ -1613,6 +1646,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             size=30,
@@ -1627,6 +1661,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             margins=0.2,
@@ -1641,6 +1676,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             cell_alpha=0,
@@ -1655,6 +1691,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             lineage_alpha=1,
@@ -1669,6 +1706,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:10],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=False,
             time_range=(0, 0.5),
@@ -1683,6 +1721,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:10],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=False,
             perc=(0, 50),
@@ -1697,6 +1736,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             figsize=(5, 5),
             data_key="Ms",
             same_plot=False,
@@ -1726,6 +1766,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:5],
+            time_key="latent_time",
             transpose=False,
             data_key="Ms",
             same_plot=True,
@@ -1741,6 +1782,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[:5],
+            time_key="latent_time",
             transpose=True,
             data_key="Ms",
             same_plot=True,
@@ -1756,6 +1798,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=False,
             transpose=True,
@@ -1772,6 +1815,7 @@ class TestGeneTrend:
             adata,
             model,
             GENES[0],
+            time_key="latent_time",
             data_key="Ms",
             same_plot=True,
             transpose=True,
@@ -2037,6 +2081,7 @@ class TestGeneTrend:
             adata,
             model,
             [f"{g}:gs" for g in GENES[:3]],
+            time_key="latent_time",
             gene_symbols="symbol",
             data_key="Ms",
             dpi=DPI,
@@ -2111,7 +2156,9 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(mode="time", dpi=DPI, save=fpath)
+        mc.plot_absorption_probabilities(
+            mode="time", time_key="latent_time", dpi=DPI, save=fpath
+        )
 
 
 class TestGPCCA:
@@ -2367,7 +2414,7 @@ class TestModel:
     @compare()
     def test_model_default(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2375,7 +2422,7 @@ class TestModel:
     @compare(kind="bwd")
     def test_model_default_bwd(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "0", backward=True)
+        model.prepare(adata.var_names[0], "0", "latent_time", backward=True)
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2386,7 +2433,7 @@ class TestModel:
         gene = adata.X[:, 0]
         adata.obs["foo"] = gene.A if issparse(gene) else gene
 
-        model.prepare("foo", "1", data_key="obs")
+        model.prepare("foo", "1", "latent_time", data_key="obs")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2394,7 +2441,7 @@ class TestModel:
     @compare()
     def test_model_no_lineage(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], None)
+        model.prepare(adata.var_names[0], None, "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI)
@@ -2402,14 +2449,14 @@ class TestModel:
     @compare()
     def test_model_no_lineage_show_lin_probs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], None)
+        model.prepare(adata.var_names[0], None, "latent_time")
         model.fit().predict()
         model.plot(save=fpath, dpi=DPI, lineage_probability=True)
 
     @compare()
     def test_model_no_legend(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI, loc=None)
@@ -2418,7 +2465,7 @@ class TestModel:
     @compare()
     def test_model_show_lin_prob_cells_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2432,7 +2479,7 @@ class TestModel:
     @compare()
     def test_model_show_lin_prob_cells_lineage_ci(self, adata: AnnData, fpath: str):
         model = create_model(adata)
-        model.prepare(adata.var_names[0], "1")
+        model.prepare(adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.confidence_interval()
         model.plot(
@@ -2450,7 +2497,9 @@ class TestModel:
             np.ones((adata.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata)
-        model = model.prepare(adata.var_names[0], "foo", n_test_points=100).fit()
+        model = model.prepare(
+            adata.var_names[0], "foo", "latent_time", n_test_points=100
+        ).fit()
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI, conf_int=True)
@@ -2460,7 +2509,7 @@ class TestModel:
 class TestGAMR:
     @compare(kind="gamr")
     def test_gamr_default(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict()
         model.plot(
             save=fpath,
@@ -2469,7 +2518,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_ci_50(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=0.5)
         model.plot(
             conf_int=True,
@@ -2479,7 +2528,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_no_ci(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=None)
         model.plot(
             conf_int=False,
@@ -2489,7 +2538,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_no_cbar(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=0.95)
         model.plot(
             cbar=False,
@@ -2499,7 +2548,7 @@ class TestGAMR:
 
     @compare(kind="gamr")
     def test_gamr_lineage_prob(self, model: GAMR, fpath: str):
-        model.prepare(model.adata.var_names[0], "1")
+        model.prepare(model.adata.var_names[0], "1", "latent_time")
         model.fit().predict(level=0.95)
         model.plot(
             lineage_probability=True,
@@ -2514,6 +2563,7 @@ class TestGAMR:
             model.adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             conf_int=1,
             backward=False,
             data_key="Ms",
@@ -2527,6 +2577,7 @@ class TestGAMR:
             model.adata,
             model,
             GENES[:3],
+            time_key="latent_time",
             conf_int=0.2,
             backward=False,
             data_key="Ms",
@@ -2644,6 +2695,7 @@ class TestFittedModel:
             adata,
             {GENES[0]: fm1, GENES[1]: fm2},
             GENES[:2],
+            time_key="latent_time",
             data_key="Ms",
             dpi=DPI,
             save=fpath,
@@ -2662,8 +2714,8 @@ class TestFittedModel:
             model,
             GENES[:10],
             "1",
+            "latent_time",
             n_points=100,
-            time_key="latent_time",
             random_state=49,
             dpi=DPI,
             save=fpath,
@@ -2681,8 +2733,8 @@ class TestFittedModel:
             adata,
             fm,
             GENES[:10],
+            "latent_time",
             mode="lineages",
-            time_key="latent_time",
             dpi=DPI,
             save=fpath,
         )

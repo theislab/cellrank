@@ -62,10 +62,10 @@ def heatmap(
     adata: AnnData,
     model: _input_model_type,
     genes: Sequence[str],
+    time_key: str,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     mode: Literal["genes", "lineages"] = HeatmapMode.LINEAGES,
-    time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
@@ -108,6 +108,8 @@ def heatmap(
     %(adata)s
     %(model)s
     %(genes)s
+    time_key
+        Key in attr:`anndata.AnnData.obs` where the pseudotime is stored.
     lineages
         Names of the lineages for which to plot. If `None`, plot all lineages.
     %(backward)s
@@ -116,8 +118,6 @@ def heatmap(
 
             - `{m.LINEAGES!r}` - group by ``genes`` for each lineage in ``lineages``.
             - `{m.GENES!r}` - group by ``lineages`` for each gene in ``genes``.
-    time_key
-        Key in attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(time_range)s
 
         This can also be specified on per-lineage basis.
