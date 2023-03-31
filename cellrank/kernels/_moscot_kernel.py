@@ -10,7 +10,8 @@ from cellrank.kernels._transport_map_kernel import TransportMapKernel
 
 
 class MoscotKernel(TransportMapKernel):
-    """Kernel for all moscot problems with a transport matrix as output"""
+    """Kernel for all moscot problems with a transport matrix as output."""
+
     def __init__(
         self, *args: Any, problem: Optional[Type[CompoundProblem]] = None, **kwargs: Any
     ):
@@ -24,7 +25,7 @@ class MoscotKernel(TransportMapKernel):
         backward: bool = False,
         **kwargs: Any,
     ) -> "MoscotKernel":
-        """Load from a moscot model."
+        """Load from a moscot model."""
         return MoscotKernel(
             adata=problem.adata,
             time_key=problem.temporal_key,
