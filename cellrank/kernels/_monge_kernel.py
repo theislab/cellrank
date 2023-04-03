@@ -39,7 +39,7 @@ class MongeKernel(VelocityKernel):
         backward: bool = False,
         attr: _ATTR_OPTIONS = "obsm",
         xkey: Optional[str] = "X_pca",
-        vkey: Optional[str] = "velocity",
+        vkey: Optional[str] = "Monge_velocities",
         **kwargs: Any,
     ):
         super().__init__(
@@ -56,7 +56,7 @@ class MongeKernel(VelocityKernel):
         self,
         attr: _ATTR_OPTIONS = "obsm",
         xkey: Optional[str] = "X_pca",
-        vkey: Optional[str] = "MongeVelocities",
+        vkey: Optional[str] = "Monge_velocities",
         gene_subset: Optional[Union[str, Sequence[str]]] = None,
         **kwargs: Any,
     ) -> None:
