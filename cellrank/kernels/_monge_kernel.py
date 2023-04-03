@@ -2,20 +2,13 @@ from typing import Any, Tuple, Union, Literal, Callable, Optional, Sequence
 
 from moscot.problems.time import TemporalNeuralProblem
 
-from anndata import AnnData
-from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank.kernels.utils import Deterministic
-from cellrank.kernels.mixins import ConnectivityMixin
 from scvelo.preprocessing.moments import get_moments
-from cellrank.kernels._base_kernel import BidirectionalKernel
 from cellrank.kernels._velocity_kernel import VelocityKernel
-from cellrank.kernels.utils._similarity import Similarity, SimilarityABC
+from cellrank.kernels.utils._similarity import Similarity
 from cellrank.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 import numpy as np
-from scipy.sparse import issparse
 
 __all__ = ["MongeKernel"]
 
@@ -47,7 +40,7 @@ class MongeKernel(VelocityKernel):
             backward=backward,
             xkey=xkey,
             vkey=vkey,
-            attr=attr,  # this will be passed to _read_from_adata()
+            attr=attr,
             **kwargs,
         )
         self._logits: Optional[np.ndarray] = None
@@ -60,22 +53,17 @@ class MongeKernel(VelocityKernel):
         gene_subset: Optional[Union[str, Sequence[str]]] = None,
         **kwargs: Any,
     ) -> None:
-        super(VelocityKernel, self)._read_from_adata(
-            **kwargs
-        )  # TODO: Is there a better way?
+        super(VelocityKernel, self)._read_from_adata(**kwargs)
 
         if attr == "layers":
             self._xdata = self._extract_layer(xkey, subset=gene_subset)
             self._vdata = self._extract_layer(vkey, subset=gene_subset)
         elif attr == "obsm":
             self._xdata = self.adata.obsm[xkey]
-            self._vdata = np.array(
-                self.adata.obsm[vkey]
-            )  # TODO: I dont think we need self._vdata to be of type
-            # 'jaxlib.xla_extension.ArrayImpl', therefore I am converting to numpy array here. But not sure if this is
-            # the best way of doing so? Could velocities also be sparse? (jaxlib.xla_extension.ArrayImpl type causes
-            # errors in compute_transition_matrix() -> ModelABC.__init__() as jax' astype does not have keyword `copy`:
-            # Signature (dtype: Union[Any, str, numpy.dtype, jax._src.SupportsDType]) -> jax.Array
+            self._vdata = np.array(self.adata.obsm[vkey])
+            # NOTE: jaxlib.xla_extension.ArrayImpl type causes errors in
+            # compute_transition_matrix() -> ModelABC.__init__() as jax' astype does not have keyword `copy`.
+            # Converting to numpy array here to avoid this issue.
         else:
             raise ValueError(f"Invalid attr {attr}. Valid choices are {_ATTR_OPTIONS}")
 
@@ -97,11 +85,8 @@ class MongeKernel(VelocityKernel):
             Callable[[np.ndarray, np.ndarray, float], Tuple[np.ndarray, np.ndarray]],
         ] = Similarity.CORRELATION,
         softmax_scale: Optional[float] = None,
-        seed: Optional[
-            int
-        ] = None,  # TODO: does the seed impact results for the deterministic model?
         **kwargs: Any,
-    ) -> "VelocityKernel":
+    ) -> "MongeKernel":
         """
         Compute transition matrix based on velocity directions on the local manifold.
 
@@ -113,45 +98,19 @@ class MongeKernel(VelocityKernel):
         %(velocity_backward_mode)s
         %(softmax_scale)s
         %(velocity_scheme)s
-        n_samples
-            Number of samples when ``mode = {m.MONTE_CARLO!r}``.
-        seed
-            Random seed when ``mode = {m.MONTE_CARLO!r}``.
         %(parallel)s
         kwargs
-            Keyword arguments for the underlying ``model``.
+            Keyword arguments for the underlying the Deterministic VelocityModel.
 
         Returns
         -------
         Self and updates :attr:`transition_matrix`, :attr:`logits` and :attr:`params`.
         """
-        start = logg.info("Computing transition matrix.")
-
-        # fmt: off
-        params = {"model": "deterministic", "similarity": str(similarity), "softmax_scale": softmax_scale}
-        if self.backward:
-            params["bwd_mode"] = str(backward_mode)
-
-        if self._reuse_cache(params, time=start):
-            return self
-
-        if softmax_scale is None:
-            softmax_scale = self._estimate_softmax_scale(backward_mode=backward_mode, similarity=similarity)
-            logg.info(f"Using `softmax_scale={softmax_scale:.4f}`")
-            params["softmax_scale"] = softmax_scale
-        # fmt: on
-
-        model = self._create_model(
-            params["model"],
+        super().compute_transition_matrix(
+            model=VelocityModel.DETERMINISTIC,
             backward_mode=backward_mode,
             similarity=similarity,
             softmax_scale=softmax_scale,
-            n_samples=1000,  # will be ignored for Deterministic model
-            seed=seed,
+            **kwargs,
         )
-
-        self.transition_matrix, self._logits = model(**kwargs)
-
-        logg.info("    Finish", time=start)
-
         return self
