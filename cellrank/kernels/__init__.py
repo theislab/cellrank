@@ -1,6 +1,6 @@
 from cellrank.kernels import utils
 from cellrank.kernels._base_kernel import Kernel
-from cellrank.kernels._monge_kernel import MongeKernel  # depends on VelocityKernel
+from cellrank.kernels._monge_kernel import MongeKernel
 from cellrank.kernels._velocity_kernel import VelocityKernel
 from cellrank.kernels._cytotrace_kernel import CytoTRACEKernel
 from cellrank.kernels._pseudotime_kernel import PseudotimeKernel
