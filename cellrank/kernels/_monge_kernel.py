@@ -4,13 +4,13 @@ from moscot.problems.time import TemporalNeuralProblem
 
 from anndata import AnnData
 from cellrank import logging as logg
-from cellrank.kernels import VelocityKernel
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
 from cellrank.kernels.utils import Deterministic
 from cellrank.kernels.mixins import ConnectivityMixin
 from scvelo.preprocessing.moments import get_moments
 from cellrank.kernels._base_kernel import BidirectionalKernel
+from cellrank.kernels._velocity_kernel import VelocityKernel
 from cellrank.kernels.utils._similarity import Similarity, SimilarityABC
 from cellrank.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
