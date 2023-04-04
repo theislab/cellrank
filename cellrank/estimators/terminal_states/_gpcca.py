@@ -274,7 +274,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 "Found only one macrostate, making it the singular terminal state"
             )
             return self.set_terminal_states(
-                states=None, n_cells=n_cells, params=self._create_states()
+                states=None,
+                n_cells=n_cells,
+                allow_overlap=allow_overlap,
+                params=self._create_states(),
             )
 
         method = TermStatesMethod(method)
@@ -300,7 +303,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 raise ValueError("Expected `stability_threshold != None` for `method='stability'`.")
             stability = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
             names = stability[stability.values >= stability_threshold].index
-            return self.set_terminal_states(names, n_cells=n_cells, params=self._create_params())
+            return self.set_terminal_states(
+                names,
+                n_cells=n_cells,
+                allow_overlap=allow_overlap,
+                params=self._create_params()
+            )
         else:
             raise NotImplementedError(f"Method `{method}` is not yet implemented.")
         # fmt: on
@@ -350,7 +358,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             )
 
         if probs.shape[1] == 1:
-            return self.set_initial_states(n_cells=n_cells, allow_overlap=allow_overlap)
+            return self.set_initial_states(
+                states=None, n_cells=n_cells, allow_overlap=allow_overlap
+            )
 
         stat_dist = self.coarse_stationary_distribution
         if stat_dist is None:
