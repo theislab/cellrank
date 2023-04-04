@@ -1,4 +1,4 @@
-CellRank dev (2023-03-31)
+CellRank dev (2023-04-04)
 =========================
 
 Features
@@ -104,6 +104,9 @@ Bugfixes
 
 - Fix cluster subsetting in :func:`cellrank.pl.aggregate_absorption_probabilities` and ``mode = 'violin'``.
   `#1007 <https://github.com/theislab/cellrank/pull/1007>`__
+
+- Fix not being able to save :class:`~anndata.AnnData` after :class:`~cellrank.kernels.CytoTRACEKernel` was run.
+  `#1019 <https://github.com/theislab/cellrank/pull/1019>`__
 
 
 Miscellaneous
