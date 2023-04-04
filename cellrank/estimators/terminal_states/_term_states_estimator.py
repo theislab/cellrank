@@ -643,7 +643,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
                 if overlap:
                     raise ValueError(
                         f"Found `{overlap}` overlapping cells between initial and terminal states. "
-                        f"If this is intended, use `allow_overlap=True`."
+                        f"If this is intended, please use `allow_overlap=True`."
                     )
 
         key = Key.obs.term_states(self.backward, bwd=backward)
