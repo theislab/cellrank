@@ -107,7 +107,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             This filters out some cells which are transient but have been misassigned.
         n_neighbors_filtering
             Parameter for filtering cells. Cells are filtered out if they don't have at least ``n_matches_min``
-            neighbors among their ``n_neighbors_filtering`` the nearest cells.
+            neighbors among their ``n_neighbors_filtering`` nearest cells.
         basis
             Key from :attr:`anndata.AnnData.obsm` as additional features for clustering.
             If `None`, use only the right eigenvectors.
