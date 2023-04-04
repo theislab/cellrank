@@ -40,31 +40,33 @@ class TestModel:
     def test_prepare_invalid_gene(self, adata_cflare):
         model = create_model(adata_cflare)
         with pytest.raises(KeyError):
-            model.prepare("foo", "0")
+            model.prepare("foo", "0", "latent_time")
 
     def test_prepare_invalid_lineage(self, adata_cflare):
         model = create_model(adata_cflare)
         with pytest.raises(KeyError):
-            model.prepare(adata_cflare.var_names[0], "foo")
+            model.prepare(adata_cflare.var_names[0], "foo", "latent_time")
 
     def test_prepare_invalid_data_key(self, adata_cflare):
         model = create_model(adata_cflare)
         with pytest.raises(KeyError):
-            model.prepare(adata_cflare.var_names[0], "0", data_key="foo")
+            model.prepare(adata_cflare.var_names[0], "0", "latent_time", data_key="foo")
 
     def test_prepare_invalid_time_key(self, adata_cflare):
         model = create_model(adata_cflare)
         with pytest.raises(KeyError):
-            model.prepare(adata_cflare.var_names[0], "0", time_key="foo")
+            model.prepare(adata_cflare.var_names[0], "0", "foo")
 
     def test_prepare_invalid_time_range(self, adata_cflare):
         model = create_model(adata_cflare)
         with pytest.raises(ValueError):
-            model.prepare(adata_cflare.var_names[0], "0", time_range=(0, 1, 2))
+            model.prepare(
+                adata_cflare.var_names[0], "0", "latent_time", time_range=(0, 1, 2)
+            )
 
     def test_prepare_normal_run(self, adata_cflare):
         model = create_model(adata_cflare)
-        model = model.prepare(adata_cflare.var_names[0], "0")
+        model = model.prepare(adata_cflare.var_names[0], "0", "latent_time")
 
         assert isinstance(model.x, np.ndarray)
         assert isinstance(model.w, np.ndarray)
@@ -76,13 +78,15 @@ class TestModel:
 
     def test_prepare_n_test_points(self, adata_cflare):
         model = create_model(adata_cflare)
-        model = model.prepare(adata_cflare.var_names[0], "0", n_test_points=300)
+        model = model.prepare(
+            adata_cflare.var_names[0], "0", "latent_time", n_test_points=300
+        )
 
         assert len(model.x_test) == 300
 
     def test_predict(self, adata_cflare):
         model = create_model(adata_cflare)
-        model = model.prepare(adata_cflare.var_names[0], "0").fit()
+        model = model.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
         y_hat = model.predict()
 
         assert isinstance(model.y_test, np.ndarray)
@@ -93,7 +97,7 @@ class TestModel:
 
     def test_confidence_interval(self, adata_cflare):
         model = create_model(adata_cflare)
-        model = model.prepare(adata_cflare.var_names[0], "0").fit()
+        model = model.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
         _ = model.predict()
         ci = model.confidence_interval()
 
@@ -106,7 +110,9 @@ class TestModel:
             np.ones((adata_cflare.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata_cflare)
-        model = model.prepare(adata_cflare.var_names[0], "foo", n_test_points=100).fit()
+        model = model.prepare(
+            adata_cflare.var_names[0], "foo", "latent_time", n_test_points=100
+        ).fit()
         _ = model.predict()
 
         assert model.x_test.shape == (100, 1)
@@ -118,11 +124,11 @@ class TestModel:
     def test_prepare_resets_fields(self, adata_cflare: AnnData):
         g = GAM(adata_cflare)
 
-        _ = g.prepare(adata_cflare.var_names[0], "0").fit()
+        _ = g.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
         _ = g.predict()
         _ = g.confidence_interval()
 
-        _ = g.prepare(adata_cflare.var_names[1], "0").fit()
+        _ = g.prepare(adata_cflare.var_names[1], "0", "latent_time").fit()
         assert isinstance(g.x_test, np.ndarray)
         assert g.y_test is None
         assert g.x_hat is None
@@ -313,7 +319,9 @@ class TestGAMR:
 
     def test_density_knotlocs(self, adata_cflare: AnnData):
         g = GAMR(adata_cflare, knotlocs="density")
-        g.prepare(adata_cflare.var_names[0], "0", n_test_points=300).fit()
+        g.prepare(
+            adata_cflare.var_names[0], "0", "latent_time", n_test_points=300
+        ).fit()
         g.predict(level=0.95)
 
         assert g.y_test.shape == (300,)
@@ -357,7 +365,11 @@ class TestGAMR:
         assert g._offset is None
 
     def test_manually_call_conf_int_not_in_predict(self, adata_cflare: AnnData):
-        g = GAMR(adata_cflare).prepare(adata_cflare.var_names[0], "1").fit()
+        g = (
+            GAMR(adata_cflare)
+            .prepare(adata_cflare.var_names[0], "1", "latent_time")
+            .fit()
+        )
         g.predict(level=None)
         assert g.conf_int is None
 
@@ -401,12 +413,12 @@ class TestSKLearnModel:
     def test_svr_correct_no_weights(self, adata_cflare: AnnData):
         model = (
             SKLearnModel(adata_cflare, SVR(), weight_name="")
-            .prepare(adata_cflare.var_names[0], "0")
+            .prepare(adata_cflare.var_names[0], "0", "latent_time")
             .fit()
         )
         model_w = (
             SKLearnModel(adata_cflare, SVR())
-            .prepare(adata_cflare.var_names[0], "0")
+            .prepare(adata_cflare.var_names[0], "0", "latent_time")
             .fit()
         )
 
@@ -422,7 +434,7 @@ class TestSKLearnModel:
     def test_svr_invalid_weight_name_no_raise_fit(self, adata_cflare: AnnData):
         model = SKLearnModel(
             adata_cflare, SVR(), weight_name="w", ignore_raise=True
-        ).prepare(adata_cflare.var_names[0], "0")
+        ).prepare(adata_cflare.var_names[0], "0", "latent_time")
 
         with pytest.raises(TypeError):
             model.fit()
@@ -456,7 +468,7 @@ class TestGAM:
     def test_default_grid(self, adata_cflare: AnnData):
         g = GAM(adata_cflare, grid="default")
 
-        g.prepare(adata_cflare.var_names[0], "0")
+        g.prepare(adata_cflare.var_names[0], "0", "latent_time")
         g.fit()
         g.predict()
         g.confidence_interval()
@@ -469,7 +481,7 @@ class TestGAM:
     def test_custom_grid(self, adata_cflare: AnnData):
         g = GAM(adata_cflare, grid={"lam": [0.1, 1, 10]})
 
-        g.prepare(adata_cflare.var_names[0], "0")
+        g.prepare(adata_cflare.var_names[0], "0", "latent_time")
         g.fit()
         g.predict()
         g.confidence_interval()
@@ -488,7 +500,7 @@ class TestGAM:
     def test_expectile_sets_correct_distribution_and_link(self, adata_cflare: AnnData):
         g = GAM(adata_cflare, expectile=0.2)
 
-        g.prepare(adata_cflare.var_names[0], "0")
+        g.prepare(adata_cflare.var_names[0], "0", "latent_time")
         g.fit()
         g.predict()
         g.confidence_interval()
@@ -806,12 +818,18 @@ class TestFittedModel:
             FittedModel.from_model(m.model)
 
     def test_from_model_not_fitted_model(self, adata_cflare: AnnData):
-        m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1")
+        m = create_model(adata_cflare).prepare(
+            adata_cflare.var_names[0], "1", "latent_time"
+        )
         with pytest.raises(ValueError):
             FittedModel.from_model(m)
 
     def test_from_model_normal_run(self, adata_cflare: AnnData):
-        m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1").fit()
+        m = (
+            create_model(adata_cflare)
+            .prepare(adata_cflare.var_names[0], "1", "latent_time")
+            .fit()
+        )
         m.predict()
         m.confidence_interval()
 

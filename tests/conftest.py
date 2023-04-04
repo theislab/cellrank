@@ -100,7 +100,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
 def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
     try:
         m = GAMR(_adata)
-        m.prepare(_adata.var_names[0], "0").fit()
+        m.prepare(_adata.var_names[0], "0", "latent_time").fit()
         m.predict(level=0.95)
         return m
     except Exception:
@@ -183,7 +183,7 @@ def gamr_model(
 @pytest.fixture
 def pygam_model(adata_cflare: AnnData) -> GAM:
     m = GAM(adata_cflare)
-    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
     m.predict()
     m.confidence_interval()
 
@@ -195,7 +195,7 @@ def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     m = create_model(adata_cflare)
     assert isinstance(m, SKLearnModel), m
 
-    m.prepare(adata_cflare.var_names[0], "0").fit()
+    m.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
     m.predict()
     m.confidence_interval()
 
