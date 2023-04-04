@@ -474,7 +474,7 @@ class AbsProbsMixin:
     ) -> RecTransStates:
         if self.terminal_states is None:
             raise RuntimeError(
-                "Compute terminal states first as `.compute_terminal_states()`."
+                "Compute terminal states first as `.predict_terminal_states()`."
             )
         if keys is not None:
             keys = sorted(set(keys))
