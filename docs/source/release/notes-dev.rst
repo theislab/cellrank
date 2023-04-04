@@ -108,6 +108,9 @@ Bugfixes
 - Fix not being able to save :class:`~anndata.AnnData` after :class:`~cellrank.kernels.CytoTRACEKernel` was run.
   `#1019 <https://github.com/theislab/cellrank/pull/1019>`__
 
+- Fix not passing ``allow_overlap`` in some places.
+  `#1020 <https://github.com/theislab/cellrank/pull/1020>`__
+
 
 Miscellaneous
 -------------
