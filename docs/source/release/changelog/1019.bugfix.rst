@@ -1,0 +1,1 @@
+Fix not being able to save :class:`~anndata.AnnData` after :class:`~cellrank.kernels.CytoTRACEKernel` was run.

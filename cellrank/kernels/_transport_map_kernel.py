@@ -193,7 +193,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         """
         cache_params = dict(kwargs)
         cache_params["threshold"] = threshold
-        cache_params["self_transitions"] = self_transitions
+        cache_params["self_transitions"] = str(self_transitions)
         if self._reuse_cache(cache_params):
             return self
 
