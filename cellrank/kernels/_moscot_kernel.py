@@ -2,11 +2,13 @@ from typing import Any, Dict, Type, Tuple, Union, Literal, Mapping, Optional, Se
 
 from types import MappingProxyType
 from moscot.base.output import BaseSolverOutput
-from moscot.problems.base import CompoundProblem
+from moscot.base.problems import CompoundProblem
 
 import scanpy as sc
 import anndata
 from cellrank.kernels._transport_map_kernel import TransportMapKernel
+
+__all__ = ["MoscotKernel"]
 
 
 class MoscotKernel(TransportMapKernel):

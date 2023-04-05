@@ -15,3 +15,4 @@ scvelo>=0.2.4
 seaborn>=0.10.0
 setuptools>=41.0.1
 wrapt>=1.12.1
+git+https://github.com/theislab/moscot

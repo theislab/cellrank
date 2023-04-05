@@ -378,3 +378,43 @@ def test_matrix_4() -> np.ndarray:
     # fmt: on
 
     return p
+
+
+from moscot.datasets import simulate_data
+from moscot.problems import LineageProblem, TemporalProblem, SpatioTemporalProblem
+
+
+@pytest.fixture()
+def adata_moscot() -> AnnData:
+    adata_1 = simulate_data(
+        n_distributions=3, cells_per_distribution=20, key="day", quad_term="barcode"
+    )
+    adata_2 = simulate_data(
+        n_distributions=3, cells_per_distribution=20, key="day", quad_term="spatial"
+    )
+    adata_1.obsm["spatial"] = adata_2.obsm["spatial"].copy()
+    return adata_1
+
+
+@pytest.fixture()
+def moscot_tp(adata_moscot: AnnData) -> TemporalProblem:
+    tp = TemporalProblem(adata_moscot)
+    tp = tp.prepare(time_key="day")
+    tp = tp.solve(max_iterations=5)
+    return tp
+
+
+@pytest.fixture()
+def moscot_lp(adata_moscot: AnnData) -> LineageProblem:
+    lp = LineageProblem(adata_moscot)
+    lp = lp.prepare(time_key="day")
+    lp = lp.solve(max_iterations=2)
+    return lp
+
+
+@pytest.fixture()
+def moscot_stp(adata_moscot: AnnData) -> SpatioTemporalProblem:
+    stp = SpatioTemporalProblem(adata_moscot)
+    stp = stp.prepare(time_key="day")
+    stp = stp.solve(max_iterations=2)
+    return stp
