@@ -407,7 +407,11 @@ def moscot_tp(adata_moscot: AnnData) -> TemporalProblem:
 @pytest.fixture()
 def moscot_lp(adata_moscot: AnnData) -> LineageProblem:
     lp = LineageProblem(adata_moscot)
-    lp = lp.prepare(time_key="day")
+    lp = lp.prepare(
+        time_key="day",
+        lineage_attr={"attr": "obsm", "key": "barcode"},
+        cost={"x": "barcode_distance", "y": "barcode_distance"},
+    )
     lp = lp.solve(max_iterations=2)
     return lp
 
