@@ -277,7 +277,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 states=None,
                 n_cells=n_cells,
                 allow_overlap=allow_overlap,
-                params=self._create_states(),
+                params=self._create_params(),
             )
 
         method = TermStatesMethod(method)
