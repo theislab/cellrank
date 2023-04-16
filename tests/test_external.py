@@ -28,15 +28,6 @@ def _wot_not_installed() -> bool:
         return True
 
 
-def _moscot_not_installed() -> bool:
-    try:
-        import moscot
-
-        return False
-    except ImportError:
-        return True
-
-
 def _statot_not_installed() -> bool:
     try:
         import statot

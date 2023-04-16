@@ -1,8 +1,6 @@
 from typing import Any, Dict, Type, Tuple, Union, Literal, Mapping, Optional, Sequence
 
 from types import MappingProxyType
-from moscot.base.output import BaseSolverOutput
-from moscot.base.problems import CompoundProblem
 
 import scanpy as sc
 import anndata
@@ -11,6 +9,16 @@ from cellrank.kernels._transport_map_kernel import TransportMapKernel
 import numpy as np
 import scipy.sparse as sp
 
+try:
+    from moscot.base.output import BaseSolverOutput
+    from moscot.base.problems import CompoundProblem
+
+except ImportError:
+    from cellrank.external.kernels._import_error_kernel import ErroredKernel as Kernel
+
+    BaseSolverOutput = None
+    CompoundProblem = None
+
 __all__ = ["MoscotKernel"]
 
 
@@ -18,26 +26,12 @@ class MoscotKernel(TransportMapKernel):
     """Kernel for all moscot problems with a transport matrix as output."""
 
     def __init__(
-        self, *args: Any, problem: Optional[Type[CompoundProblem]] = None, **kwargs: Any
+        self, problem: Type[CompoundProblem], backward: bool = False, **kwargs: Any
     ):
-        super().__init__(*args, **kwargs)
-        self._problem = problem
-
-    @classmethod
-    def load(
-        cls,
-        problem: Type[CompoundProblem],
-        backward: bool = False,
-        **kwargs: Any,
-    ) -> "MoscotKernel":
-        """Load from a moscot model."""
-        return MoscotKernel(
-            adata=problem.adata,
-            problem=problem,
-            time_key=problem.temporal_key,
-            backward=backward,
-            **kwargs,
+        super().__init__(
+            problem.adata, time_key=problem.temporal_key, backward=backward, **kwargs
         )
+        self._problem = problem
 
     def compute_transition_matrix(
         self,

@@ -1,4 +1,6 @@
 import pytest
+from moscot.datasets import simulate_data
+from moscot.problems import LineageProblem, TemporalProblem, SpatioTemporalProblem
 
 import scanpy as sc
 import cellrank.external as cre
@@ -17,63 +19,73 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 
 
-def _moscot_not_installed() -> bool:
-    try:
-        import moscot
-
-        return False
-    except ImportError:
-        return True
-
-
-moscot_not_installed_skip = pytest.mark.skipif(
-    _moscot_not_installed(), reason="moscot is not installed."
-)
+@pytest.fixture(scope="session")
+def adata_moscot() -> AnnData:
+    adata_1 = simulate_data(
+        n_distributions=3, cells_per_distribution=20, key="day", quad_term="barcode"
+    )
+    adata_2 = simulate_data(
+        n_distributions=3, cells_per_distribution=20, key="day", quad_term="spatial"
+    )
+    adata_1.obsm["spatial"] = adata_2.obsm["spatial"].copy()
+    return adata_1
 
 
-@moscot_not_installed_skip
+@pytest.fixture(scope="session")
+def moscot_tp(adata_moscot: AnnData) -> TemporalProblem:
+    tp = TemporalProblem(adata_moscot)
+    tp = tp.prepare(time_key="day")
+    tp = tp.solve(max_iterations=5)
+    return tp
+
+
+@pytest.fixture(scope="session")
+def moscot_lp(adata_moscot: AnnData) -> LineageProblem:
+    lp = LineageProblem(adata_moscot)
+    lp = lp.prepare(
+        time_key="day",
+        lineage_attr={"attr": "obsm", "key": "barcode"},
+        cost={"x": "barcode_distance", "y": "barcode_distance"},
+    )
+    lp = lp.solve(max_iterations=2)
+    return lp
+
+
+@pytest.fixture(scope="session")
+def moscot_stp(adata_moscot: AnnData) -> SpatioTemporalProblem:
+    stp = SpatioTemporalProblem(adata_moscot)
+    stp = stp.prepare(time_key="day")
+    stp = stp.solve(max_iterations=2)
+    return stp
+
+
 class TestMoscotKernel:
-    from moscot.problems import LineageProblem, TemporalProblem, SpatioTemporalProblem
-
-    def test_init_from_adata(self, adata_moscot: AnnData):
-        pass
-
-    @pytest.mark.parametrize("backward", [True, False])
     def test_init_from_TemporalProblem(
-        self, moscot_tp: TemporalProblem, backward: bool
+        self,
+        moscot_tp: TemporalProblem,
     ):
-        from moscot.problems import TemporalProblem
-
-        mk = MoscotKernel.load(moscot_tp, backward=backward)
+        mk = MoscotKernel.load(moscot_tp)
         assert mk.transport_maps is None
         assert mk.obs is None
         assert isinstance(mk.problem, TemporalProblem)
 
-    @pytest.mark.parametrize("backward", [True, False])
-    def test_init_from_SpatioTemporalProblem(
-        self, moscot_stp: SpatioTemporalProblem, backward: bool
-    ):
-        from moscot.problems import SpatioTemporalProblem
-
-        mk = MoscotKernel.load(moscot_stp, backward=backward)
+    def test_init_from_SpatioTemporalProblem(self, moscot_stp: SpatioTemporalProblem):
+        mk = MoscotKernel.load(moscot_stp)
         assert mk.transport_maps is None
         assert mk.obs is None
         assert isinstance(mk.problem, SpatioTemporalProblem)
 
-    @pytest.mark.parametrize("backward", [True, False])
-    def test_init_from_LineageProblem(self, moscot_lp: LineageProblem, backward: bool):
-        from moscot.problems import LineageProblem
-
-        mk = MoscotKernel.load(moscot_lp, backward=backward)
+    def test_init_from_LineageProblem(self, moscot_lp: LineageProblem):
+        mk = MoscotKernel.load(moscot_lp)
         assert mk.transport_maps is None
         assert mk.obs is None
         assert isinstance(mk.problem, LineageProblem)
 
-    @pytest.mark.parametrize("backward", [True, False])
     def test_compute_transition_matrix(
-        self, moscot_tp: TemporalProblem, backward: bool
+        self,
+        moscot_tp: TemporalProblem,
     ):
-        mk = MoscotKernel.load(moscot_tp, backward=backward)
+        mk = MoscotKernel.load(moscot_tp)
         assert mk.transport_maps is None
         assert mk.obs is None
 
@@ -82,11 +94,8 @@ class TestMoscotKernel:
         assert len(mk.transport_maps) == 2
         assert mk.transition_matrix is not None
 
-    @pytest.mark.parametrize("backward", [True, False])
-    def test_compute_transition_matrix_from_output(
-        self, moscot_tp: TemporalProblem, backward: bool
-    ):
-        mk = MoscotKernel.load(moscot_tp, backward=backward)
+    def test_compute_transition_matrix_from_output(self, moscot_tp: TemporalProblem):
+        mk = MoscotKernel.load(moscot_tp)
         assert mk.transport_maps is None
         assert mk.obs is None
 
