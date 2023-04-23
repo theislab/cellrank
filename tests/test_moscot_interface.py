@@ -64,19 +64,19 @@ class TestMoscotKernel:
         self,
         moscot_tp: TemporalProblem,
     ):
-        mk = MoscotKernel.load(moscot_tp)
+        mk = MoscotKernel(moscot_tp)
         assert mk.transport_maps is None
         assert mk.obs is None
         assert isinstance(mk.problem, TemporalProblem)
 
     def test_init_from_SpatioTemporalProblem(self, moscot_stp: SpatioTemporalProblem):
-        mk = MoscotKernel.load(moscot_stp)
+        mk = MoscotKernel(moscot_stp)
         assert mk.transport_maps is None
         assert mk.obs is None
         assert isinstance(mk.problem, SpatioTemporalProblem)
 
     def test_init_from_LineageProblem(self, moscot_lp: LineageProblem):
-        mk = MoscotKernel.load(moscot_lp)
+        mk = MoscotKernel(moscot_lp)
         assert mk.transport_maps is None
         assert mk.obs is None
         assert isinstance(mk.problem, LineageProblem)
@@ -85,7 +85,7 @@ class TestMoscotKernel:
         self,
         moscot_tp: TemporalProblem,
     ):
-        mk = MoscotKernel.load(moscot_tp)
+        mk = MoscotKernel(moscot_tp)
         assert mk.transport_maps is None
         assert mk.obs is None
 
@@ -95,7 +95,7 @@ class TestMoscotKernel:
         assert mk.transition_matrix is not None
 
     def test_compute_transition_matrix_from_output(self, moscot_tp: TemporalProblem):
-        mk = MoscotKernel.load(moscot_tp)
+        mk = MoscotKernel(moscot_tp)
         assert mk.transport_maps is None
         assert mk.obs is None
 
@@ -107,7 +107,7 @@ class TestMoscotKernel:
 
     def test_inversion_updates_adata(self, moscot_tp: TemporalProblem):
         key = "day"
-        mk = MoscotKernel.load(moscot_tp, time_key=key)
+        mk = MoscotKernel(moscot_tp)
         assert is_categorical_dtype(moscot_tp.adata.obs[key])
         assert moscot_tp.adata.obs[key].cat.ordered
         np.testing.assert_array_equal(mk.experimental_time, moscot_tp.adata.obs[key])
@@ -133,7 +133,7 @@ class TestMoscotKernel:
     @pytest.mark.parametrize("cmap", ["inferno", "viridis"])
     def test_update_colors(self, moscot_tp: TemporalProblem, cmap: str):
         ckey = "day_colors"
-        _ = MoscotKernel.load(moscot_tp, cmap=cmap)
+        _ = MoscotKernel(moscot_tp, cmap=cmap)
 
         colors = moscot_tp.adata.uns[ckey]
         cmap = get_cmap(cmap)
@@ -148,7 +148,7 @@ class TestMoscotKernel:
         key = "day"
         conn_kwargs = {"n_neighbors": 11}
 
-        mk = MoscotKernel.load(moscot_tp).compute_transition_matrix(
+        mk = MoscotKernel(moscot_tp).compute_transition_matrix(
             self_transitions=st,
             conn_weight=0.2,
             conn_kwargs=conn_kwargs,
