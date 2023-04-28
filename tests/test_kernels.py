@@ -700,6 +700,74 @@ class TestKernel:
         np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
 
 
+class TestVelocityKernelReadData:
+    def test_read_correct_from_layers(self, adata: AnnData):
+        xkey = "Ms"
+        vkey = "velocity"
+        gene_subset = adata.var[f"{vkey}_genes"]
+        nans_v = np.isnan(np.sum(adata.layers[vkey], axis=0))
+        gene_subset_reduced = adata.var[f"{vkey}_genes"].copy()
+        gene_subset_reduced[10:] = False
+
+        vk = VelocityKernel(
+            adata,
+            xkey=xkey,
+            vkey=vkey,
+            attr="layers",
+            gene_subset=None,
+        )
+        assert np.all(
+            vk._xdata == adata.layers[xkey][:, np.asarray(gene_subset) & ~nans_v]
+        )
+        assert np.all(
+            vk._vdata == adata.layers[vkey][:, np.asarray(gene_subset) & ~nans_v]
+        )
+
+        vk_red = VelocityKernel(
+            adata,
+            xkey=xkey,
+            vkey=vkey,
+            attr="layers",
+            gene_subset=gene_subset_reduced,
+        )
+
+        assert np.all(
+            vk_red._vdata
+            == adata.layers[vkey][:, np.asarray(gene_subset_reduced) & ~nans_v]
+        )
+        assert np.all(
+            vk_red._xdata
+            == adata.layers[xkey][:, np.asarray(gene_subset_reduced) & ~nans_v]
+        )
+
+    def test_read_correct_from_obsm(self, adata: AnnData):
+        xkey = "X_pca"
+        vkey = "MongeVelocities"
+        adata.obsm[vkey] = adata.layers["velocity"][:, : adata.obsm[xkey].shape[1]]
+        gene_subset = np.arange(adata.shape[1]) % 2 == 0
+        nans_v = np.isnan(np.sum(adata.obsm[vkey], axis=0))
+
+        vk = VelocityKernel(
+            adata,
+            xkey=xkey,
+            vkey=vkey,
+            attr="obsm",
+            gene_subset=None,
+        )
+        assert np.all(vk._xdata == adata.obsm[xkey][:, ~nans_v])
+        assert np.all(vk._vdata == adata.obsm[vkey][:, ~nans_v])
+
+        vk_red = VelocityKernel(
+            adata,
+            xkey=xkey,
+            vkey=vkey,
+            attr="obsm",
+            gene_subset=gene_subset,
+        )
+        assert np.all(vk_red._xdata == vk._xdata)
+        assert np.all(vk_red._vdata == vk._vdata)
+
+
 class TestKernelAddition:
     def test_simple_addition(self, adata: AnnData):
         vk, ck = create_kernels(adata)  # diagonal + upper diag
