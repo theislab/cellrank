@@ -48,6 +48,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         backward: bool = False,
         xkey: Optional[str] = "Ms",
         vkey: Optional[str] = "velocity",
+        attr: Optional[Literal["layers", "obsm"]] = "layers",
         **kwargs: Any,
     ):
         super().__init__(
@@ -55,6 +56,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             backward=backward,
             xkey=xkey,
             vkey=vkey,
+            attr=attr,
             **kwargs,
         )
         self._logits: Optional[np.ndarray] = None
@@ -63,16 +65,31 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self,
         xkey: Optional[str] = "Ms",
         vkey: Optional[str] = "velocity",
+        attr: Optional[Literal["layers", "obsm"]] = "layers",
         gene_subset: Optional[Union[str, Sequence[str]]] = None,
         **kwargs: Any,
     ) -> None:
         super()._read_from_adata(**kwargs)
 
-        if gene_subset is None and f"{vkey}_genes" in self.adata.var:
+        if attr not in ["layers", "obsm"]:
+            raise ValueError(
+                f"Invalid attribute `{attr!r}`. Valid options are: `'obsm', 'layers'`."
+            )
+        elif (
+            attr == "layers"
+            and gene_subset is None
+            and f"{vkey}_genes" in self.adata.var
+        ):
             gene_subset = self.adata.var[f"{vkey}_genes"]
+        elif attr == "obsm" and gene_subset is not None:
+            logg.warning(
+                "Found `gene_subset = {model!r}` but `gene_subset` is not supported for `attr = {model!r}`. "
+                "Setting `gene_subset = None`."
+            )
+            gene_subset = None
 
-        self._xdata = self._extract_layer(xkey, subset=gene_subset)
-        self._vdata = self._extract_layer(vkey, subset=gene_subset)
+        self._xdata = self._extract_data(key=xkey, attr=attr, subset=gene_subset)
+        self._vdata = self._extract_data(key=vkey, attr=attr, subset=gene_subset)
 
         nans = np.isnan(np.sum(self._vdata, axis=0))
         if np.any(nans):
@@ -239,16 +256,19 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         _, logits = model(n_jobs, backend)
         return 1.0 / np.median(np.abs(logits.data))
 
-    def _extract_layer(
+    def _extract_data(
         self,
         key: Optional[str] = None,
+        attr: Optional[Union[None, Literal["layers", "obsm"]]] = None,
         subset: Optional[Union[str, Sequence[str]]] = None,
         dtype: np.dtype = np.float64,
     ) -> np.ndarray:
         if key in (None, "X"):
             data = self.adata.X
-        elif key in self.adata.layers:
+        elif attr == "layers" and key in self.adata.layers:
             data = self.adata.layers[key]
+        elif attr == "obsm" and key in self.adata.obsm:
+            data = np.asarray(self.adata.obsm[key])
         else:
             raise KeyError(f"Unable to find data in `adata.layers[{key}]`.")
 
