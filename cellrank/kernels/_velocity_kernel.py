@@ -90,6 +90,9 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
 
         self._xdata = self._extract_data(key=xkey, attr=attr, subset=gene_subset)
         self._vdata = self._extract_data(key=vkey, attr=attr, subset=gene_subset)
+        assert np.all(
+            self._xdata.shape == self._vdata.shape
+        ), f"Shape mismatch: {self._xdata.shape} vs {self._vdata.shape}"
 
         nans = np.isnan(np.sum(self._vdata, axis=0))
         if np.any(nans):
