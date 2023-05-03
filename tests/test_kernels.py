@@ -701,71 +701,45 @@ class TestKernel:
 
 
 class TestVelocityKernelReadData:
-    def test_read_correct_from_layers(self, adata: AnnData):
-        xkey = "Ms"
-        vkey = "velocity"
+    @pytest.mark.parametrize("attr", ["layers", "obsm"])
+    @pytest.mark.parametrize("use_gene_subset", [True, False])
+    def test_read_correct_from_layers(
+        self,
+        adata: AnnData,
+        attr: str,
+        use_gene_subset: bool,
+        xkey: str = "Ms",
+        vkey: str = "velocity",
+    ):
+        if attr == "layers":
+            nans_v = np.isnan(np.sum(adata.layers[vkey], axis=0))
+        else:  # attr == "obsm"
+            xkey = "X_pca"
+            # setup reading from obsm: copy subset that matches X_pca shape to obsm
+            adata.obsm[vkey] = adata.layers[vkey][:, : adata.obsm[xkey].shape[1]]
+            nans_v = np.isnan(np.sum(adata.obsm[vkey], axis=0))
+
         gene_subset = adata.var[f"{vkey}_genes"]
-        nans_v = np.isnan(np.sum(adata.layers[vkey], axis=0))
-        gene_subset_reduced = adata.var[f"{vkey}_genes"].copy()
-        gene_subset_reduced[10:] = False
+        if use_gene_subset:
+            gene_subset[10:] = False
 
         vk = VelocityKernel(
             adata,
             xkey=xkey,
             vkey=vkey,
-            attr="layers",
-            gene_subset=None,
+            attr=attr,
+            gene_subset=(None if not use_gene_subset else gene_subset),
         )
-        np.testing.assert_array_equal(
-            x=vk._xdata, y=adata.layers[xkey][:, np.asarray(gene_subset) & ~nans_v]
-        )
-        np.testing.assert_array_equal(
-            x=vk._vdata, y=adata.layers[vkey][:, np.asarray(gene_subset) & ~nans_v]
-        )
-
-        vk_red = VelocityKernel(
-            adata,
-            xkey=xkey,
-            vkey=vkey,
-            attr="layers",
-            gene_subset=gene_subset_reduced,
-        )
-
-        np.testing.assert_array_equal(
-            x=vk_red._vdata,
-            y=adata.layers[vkey][:, np.asarray(gene_subset_reduced) & ~nans_v],
-        )
-        np.testing.assert_array_equal(
-            x=vk_red._xdata,
-            y=adata.layers[xkey][:, np.asarray(gene_subset_reduced) & ~nans_v],
-        )
-
-    def test_read_correct_from_obsm(self, adata: AnnData):
-        xkey = "X_pca"
-        vkey = "MongeVelocities"
-        adata.obsm[vkey] = adata.layers["velocity"][:, : adata.obsm[xkey].shape[1]]
-        gene_subset = np.arange(adata.shape[1]) % 2 == 0
-        nans_v = np.isnan(np.sum(adata.obsm[vkey], axis=0))
-
-        vk = VelocityKernel(
-            adata,
-            xkey=xkey,
-            vkey=vkey,
-            attr="obsm",
-            gene_subset=None,
-        )
-        np.testing.assert_array_equal(x=vk._xdata, y=adata.obsm[xkey][:, ~nans_v])
-        np.testing.assert_array_equal(x=vk._vdata, y=adata.obsm[vkey][:, ~nans_v])
-
-        vk_red = VelocityKernel(
-            adata,
-            xkey=xkey,
-            vkey=vkey,
-            attr="obsm",
-            gene_subset=gene_subset,
-        )
-        np.testing.assert_array_equal(x=vk_red._xdata, y=vk._xdata)
-        np.testing.assert_array_equal(x=vk_red._vdata, y=vk._vdata)
+        if attr == "layers":
+            np.testing.assert_array_equal(
+                x=vk._xdata, y=adata.layers[xkey][:, np.asarray(gene_subset) & ~nans_v]
+            )
+            np.testing.assert_array_equal(
+                x=vk._vdata, y=adata.layers[vkey][:, np.asarray(gene_subset) & ~nans_v]
+            )
+        else:
+            np.testing.assert_array_equal(x=vk._xdata, y=adata.obsm[xkey][:, ~nans_v])
+            np.testing.assert_array_equal(x=vk._vdata, y=adata.obsm[vkey][:, ~nans_v])
 
 
 class TestKernelAddition:
