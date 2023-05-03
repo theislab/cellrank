@@ -84,14 +84,14 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             gene_subset = self.adata.var[f"{vkey}_genes"]
         elif attr == "obsm" and gene_subset is not None:
             logg.warning(
-                "Found `gene_subset = {model!r}` but `gene_subset` is not supported for `attr = {model!r}`. "
-                "Setting `gene_subset = None`."
+                f"Found `gene_subset = {gene_subset!r}` but `gene_subset` is not supported for "
+                f"`attr = {gene_subset!r}`. Setting `gene_subset = None`."
             )
             gene_subset = None
 
         self._xdata = self._extract_data(key=xkey, attr=attr, subset=gene_subset)
         self._vdata = self._extract_data(key=vkey, attr=attr, subset=gene_subset)
-        assert np.testing.assert_array_equal(
+        np.testing.assert_array_equal(
             x=self._xdata.shape,
             y=self._vdata.shape,
             err_msg=f"Shape mismatch: {self._xdata.shape} vs {self._vdata.shape}",
