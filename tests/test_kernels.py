@@ -716,11 +716,11 @@ class TestVelocityKernelReadData:
             attr="layers",
             gene_subset=None,
         )
-        assert np.all(
-            vk._xdata == adata.layers[xkey][:, np.asarray(gene_subset) & ~nans_v]
+        np.testing.assert_array_equal(
+            x=vk._xdata, y=adata.layers[xkey][:, np.asarray(gene_subset) & ~nans_v]
         )
-        assert np.all(
-            vk._vdata == adata.layers[vkey][:, np.asarray(gene_subset) & ~nans_v]
+        np.testing.assert_array_equal(
+            x=vk._vdata, y=adata.layers[vkey][:, np.asarray(gene_subset) & ~nans_v]
         )
 
         vk_red = VelocityKernel(
@@ -731,13 +731,13 @@ class TestVelocityKernelReadData:
             gene_subset=gene_subset_reduced,
         )
 
-        assert np.all(
-            vk_red._vdata
-            == adata.layers[vkey][:, np.asarray(gene_subset_reduced) & ~nans_v]
+        np.testing.assert_array_equal(
+            x=vk_red._vdata,
+            y=adata.layers[vkey][:, np.asarray(gene_subset_reduced) & ~nans_v],
         )
-        assert np.all(
-            vk_red._xdata
-            == adata.layers[xkey][:, np.asarray(gene_subset_reduced) & ~nans_v]
+        np.testing.assert_array_equal(
+            x=vk_red._xdata,
+            y=adata.layers[xkey][:, np.asarray(gene_subset_reduced) & ~nans_v],
         )
 
     def test_read_correct_from_obsm(self, adata: AnnData):
@@ -754,8 +754,8 @@ class TestVelocityKernelReadData:
             attr="obsm",
             gene_subset=None,
         )
-        assert np.all(vk._xdata == adata.obsm[xkey][:, ~nans_v])
-        assert np.all(vk._vdata == adata.obsm[vkey][:, ~nans_v])
+        np.testing.assert_array_equal(x=vk._xdata, y=adata.obsm[xkey][:, ~nans_v])
+        np.testing.assert_array_equal(x=vk._vdata, y=adata.obsm[vkey][:, ~nans_v])
 
         vk_red = VelocityKernel(
             adata,
@@ -764,8 +764,8 @@ class TestVelocityKernelReadData:
             attr="obsm",
             gene_subset=gene_subset,
         )
-        assert np.all(vk_red._xdata == vk._xdata)
-        assert np.all(vk_red._vdata == vk._vdata)
+        np.testing.assert_array_equal(x=vk_red._xdata, y=vk._xdata)
+        np.testing.assert_array_equal(x=vk_red._vdata, y=vk._vdata)
 
 
 class TestKernelAddition:
