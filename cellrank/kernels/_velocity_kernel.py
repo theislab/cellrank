@@ -76,11 +76,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     ) -> None:
         super()._read_from_adata(**kwargs)
 
-        if attr not in ["layers", "obsm"]:
-            raise ValueError(
-                f"Invalid attribute `{attr!r}`. Valid options are: `'obsm', 'layers'`."
-            )
-        elif (
+        if (
             attr == "layers"
             and gene_subset is None
             and f"{vkey}_genes" in self.adata.var
@@ -95,9 +91,11 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
 
         self._xdata = self._extract_data(key=xkey, attr=attr, subset=gene_subset)
         self._vdata = self._extract_data(key=vkey, attr=attr, subset=gene_subset)
-        assert np.all(
-            self._xdata.shape == self._vdata.shape
-        ), f"Shape mismatch: {self._xdata.shape} vs {self._vdata.shape}"
+        assert np.testing.assert_array_equal(
+            x=self._xdata.shape,
+            y=self._vdata.shape,
+            err_msg=f"Shape mismatch: {self._xdata.shape} vs {self._vdata.shape}",
+        )
 
         nans = np.isnan(np.sum(self._vdata, axis=0))
         if np.any(nans):
