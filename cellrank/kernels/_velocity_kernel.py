@@ -31,13 +31,18 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     ----------
     %(adata)s
     %(backward)s
+    attr
+        Attribute of `anndata.AnnData` to be read from. Should be `anndata.AnnData.layers` or `anndata.AnnData.obsm`.
+        Default is `anndata.AnnData.layers`.
     xkey
-        Key in :attr:`anndata.AnnData.layers` where expected gene expression counts are stored.
+        Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where expected gene expression counts are
+        stored.
     vkey
-        Key in :attr:`anndata.AnnData.layers` where velocities are stored.
+        Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where velocities are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
         If not specified, genes from :attr:`anndata.AnnData.var` ``['{vkey}_genes']`` are used.
+        This feature is only available when reading from `anndata.AnnData.layers` and will be ignored otherwise.
     kwargs
         Keyword arguments for the parent class.
     """
