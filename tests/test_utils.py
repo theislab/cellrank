@@ -856,6 +856,7 @@ class TestCreateCallbacks:
             {g: {"0": cb1, "1": cb2}},
             [g],
             ["0", "1"],
+            time_key="latent_time",
         )
 
         assert cbs.keys() == {g}

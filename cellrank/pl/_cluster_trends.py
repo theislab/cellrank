@@ -45,11 +45,11 @@ def cluster_trends(
     model: _input_model_type,
     genes: Sequence[str],
     lineage: str,
+    time_key: str,
     backward: bool = False,
     time_range: _time_range_type = None,
     clusters: Optional[Sequence[str]] = None,
     n_points: int = 200,
-    time_key: str = "latent_time",
     covariate_key: Optional[Union[str, Sequence[str]]] = None,
     ratio: float = 0.05,
     cmap: Optional[str] = "viridis",
@@ -86,6 +86,8 @@ def cluster_trends(
     %(genes)s
     lineage
         Name of the lineage for which to cluster the genes.
+    time_key
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(backward)s
     %(time_range)s
     clusters
@@ -93,8 +95,6 @@ def cluster_trends(
         plotting previously computed clusters.
     n_points
         Number of points used for prediction.
-    time_key
-        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     covariate_key
         Key(s) in :attr:`anndata.AnnData.obs` containing observations to be plotted at the bottom of each plot.
     %(gene_symbols)s

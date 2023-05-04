@@ -139,7 +139,7 @@ class AbsProbsProtocol(BaseProtocol):
         states: Optional[Union[str, Sequence[str]]] = None,
         color: Optional[str] = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
-        time_key: str = "latent_time",
+        time_key: Optional[str] = None,
         title: Optional[Union[str, Sequence[str]]] = None,
         same_plot: bool = True,
         cmap: str = "viridis",
@@ -299,7 +299,7 @@ class AbsProbsMixin:
         states: Optional[Union[str, Sequence[str]]] = None,
         color: Optional[str] = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
-        time_key: str = "latent_time",
+        time_key: Optional[str] = None,
         same_plot: bool = True,
         title: Optional[Union[str, Sequence[str]]] = None,
         cmap: str = "viridis",
@@ -474,7 +474,7 @@ class AbsProbsMixin:
     ) -> RecTransStates:
         if self.terminal_states is None:
             raise RuntimeError(
-                "Compute terminal states first as `.compute_terminal_states()`."
+                "Compute terminal states first as `.predict_terminal_states()`."
             )
         if keys is not None:
             keys = sorted(set(keys))
