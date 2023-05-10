@@ -709,8 +709,8 @@ class TestVelocityKernelReadData:
         attr: Literal["layers", "obsm"],
         use_gene_subset: bool,
     ):
-        xkey = ("Ms",)
-        vkey = ("velocity",)
+        xkey = "Ms"
+        vkey = "velocity"
         if attr == "layers":
             nans_v = np.isnan(np.sum(adata.layers[vkey], axis=0))
         else:  # attr == "obsm"
