@@ -32,8 +32,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     %(adata)s
     %(backward)s
     attr
-        Attribute of `anndata.AnnData` to be read from. Should be `anndata.AnnData.layers` or `anndata.AnnData.obsm`.
-        Default is `anndata.AnnData.layers`.
+        Attribute of :class:`~anndata.AnnData` to read from.
     xkey
         Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where expected gene expression counts are
         stored.
@@ -42,7 +41,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     gene_subset
         List of genes to be used to compute transition probabilities.
         If not specified, genes from :attr:`anndata.AnnData.var` ``['{vkey}_genes']`` are used.
-        This feature is only available when reading from `anndata.AnnData.layers` and will be ignored otherwise.
+        This feature is only available when reading from :attr:`anndata.AnnData.layers` and will be ignored otherwise.
     kwargs
         Keyword arguments for the parent class.
     """
@@ -51,9 +50,9 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self,
         adata: AnnData,
         backward: bool = False,
+        attr: Optional[Literal["layers", "obsm"]] = "layers",
         xkey: Optional[str] = "Ms",
         vkey: Optional[str] = "velocity",
-        attr: Optional[Literal["layers", "obsm"]] = "layers",
         **kwargs: Any,
     ):
         super().__init__(
@@ -84,8 +83,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             gene_subset = self.adata.var[f"{vkey}_genes"]
         elif attr == "obsm" and gene_subset is not None:
             logg.warning(
-                f"Found `gene_subset = {gene_subset!r}` but `gene_subset` is not supported for "
-                f"`attr = {gene_subset!r}`. Setting `gene_subset = None`."
+                f"Found `gene_subset != None`, but it is not supported for `adata.{attr}`. Using `gene_subset = None`."
             )
             gene_subset = None
 
@@ -276,7 +274,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         elif attr == "obsm" and key in self.adata.obsm:
             data = np.asarray(self.adata.obsm[key])
         else:
-            raise KeyError(f"Unable to find data in `adata.layers[{key}]`.")
+            raise KeyError(f"Unable to find data in `adata.{attr}[{key!r}]`.")
 
         if subset is not None:
             if isinstance(subset, str):

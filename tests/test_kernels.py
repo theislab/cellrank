@@ -706,11 +706,11 @@ class TestVelocityKernelReadData:
     def test_read_correct_from_layers(
         self,
         adata: AnnData,
-        attr: str,
+        attr: Literal["layers", "obsm"],
         use_gene_subset: bool,
-        xkey: str = "Ms",
-        vkey: str = "velocity",
     ):
+        xkey = ("Ms",)
+        vkey = ("velocity",)
         if attr == "layers":
             nans_v = np.isnan(np.sum(adata.layers[vkey], axis=0))
         else:  # attr == "obsm"
@@ -722,13 +722,15 @@ class TestVelocityKernelReadData:
         gene_subset = adata.var[f"{vkey}_genes"]
         if use_gene_subset:
             gene_subset[10:] = False
+        else:
+            gene_subset = None
 
         vk = VelocityKernel(
             adata,
             xkey=xkey,
             vkey=vkey,
             attr=attr,
-            gene_subset=(None if not use_gene_subset else gene_subset),
+            gene_subset=gene_subset,
         )
         if attr == "layers":
             np.testing.assert_array_equal(
