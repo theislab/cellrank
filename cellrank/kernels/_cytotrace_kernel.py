@@ -208,7 +208,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         self.adata.var[Key.cytotrace("correlates")] = False
         self.adata.var.loc[pos_top_genes, Key.cytotrace("correlates")] = True
         self.adata.uns[Key.cytotrace("params")] = {
-            "aggregation": aggregation,
+            "aggregation": str(aggregation),
             "layer": layer,
             "use_raw": use_raw,
             "n_genes": len(pos_top_genes),

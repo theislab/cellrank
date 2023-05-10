@@ -43,10 +43,10 @@ def gene_trends(
     adata: AnnData,
     model: _input_model_type,
     genes: Union[str, Sequence[str]],
+    time_key: str,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     data_key: str = "X",
-    time_key: str = "latent_time",
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     transpose: bool = False,
     callback: _callback_type = None,
@@ -93,13 +93,13 @@ def gene_trends(
     %(adata)s
     %(model)s
     %(genes)s
+    time_key
+        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     lineages
         Names of the lineages to plot. If `None`, plot all lineages.
     %(backward)s
     data_key
         Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X` where the data is stored.
-    time_key
-        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
     %(time_range)s
 
         This can also be specified on per-lineage basis.

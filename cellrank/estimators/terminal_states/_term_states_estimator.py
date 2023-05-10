@@ -523,6 +523,11 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         if mode == PlotMode.TIME:
             kwargs.setdefault("legend_loc", "best")
+            if time_key is None:
+                raise KeyError(
+                    "The name of the column in `adata.obs` defining the pseudotime needs to be defined via the "
+                    "`time_key` argument."
+                )
             if title is None:
                 title = [f"{_title} {state}" for state in states]
             if time_key not in self.adata.obs:
@@ -638,7 +643,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
                 if overlap:
                     raise ValueError(
                         f"Found `{overlap}` overlapping cells between initial and terminal states. "
-                        f"If this is intended, use `allow_overlap=True`."
+                        f"If this is intended, please use `allow_overlap=True`."
                     )
 
         key = Key.obs.term_states(self.backward, bwd=backward)
