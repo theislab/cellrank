@@ -1,4 +1,4 @@
-from typing import Any, Type, Tuple, Union, Callable, Optional
+from typing import Any, Type, Tuple, Union, Literal, Callable, Optional
 
 import pickle
 import pytest
