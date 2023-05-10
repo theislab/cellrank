@@ -733,11 +733,15 @@ class TestVelocityKernelReadData:
             gene_subset=gene_subset,
         )
         if attr == "layers":
+            if use_gene_subset:
+                _subset = np.asarray(gene_subset)
+            else:
+                _subset = np.asarray(adata.var[f"{vkey}_genes"])
             np.testing.assert_array_equal(
-                x=vk._xdata, y=adata.layers[xkey][:, np.asarray(gene_subset) & ~nans_v]
+                x=vk._xdata, y=adata.layers[xkey][:, _subset & ~nans_v]
             )
             np.testing.assert_array_equal(
-                x=vk._vdata, y=adata.layers[vkey][:, np.asarray(gene_subset) & ~nans_v]
+                x=vk._vdata, y=adata.layers[vkey][:, _subset & ~nans_v]
             )
         else:
             np.testing.assert_array_equal(x=vk._xdata, y=adata.obsm[xkey][:, ~nans_v])
