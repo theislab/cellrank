@@ -1,4 +1,4 @@
-from typing import Any, Type, Tuple, Union, Callable, Optional
+from typing import Any, Type, Tuple, Union, Literal, Callable, Optional
 
 import pickle
 import pytest
@@ -698,6 +698,54 @@ class TestKernel:
         assert key == ck.params["key"]
         assert T_cr is not adata.obsp[key]
         np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
+
+
+class TestVelocityKernelReadData:
+    @pytest.mark.parametrize("attr", ["layers", "obsm"])
+    @pytest.mark.parametrize("use_gene_subset", [True, False])
+    def test_read_correct_from_layers(
+        self,
+        adata: AnnData,
+        attr: Literal["layers", "obsm"],
+        use_gene_subset: bool,
+    ):
+        xkey = "Ms"
+        vkey = "velocity"
+        if attr == "layers":
+            nans_v = np.isnan(np.sum(adata.layers[vkey], axis=0))
+        else:  # attr == "obsm"
+            xkey = "X_pca"
+            # setup reading from obsm: copy subset that matches X_pca shape to obsm
+            adata.obsm[vkey] = adata.layers[vkey][:, : adata.obsm[xkey].shape[1]]
+            nans_v = np.isnan(np.sum(adata.obsm[vkey], axis=0))
+
+        gene_subset = adata.var[f"{vkey}_genes"]
+        if use_gene_subset:
+            gene_subset[10:] = False
+        else:
+            gene_subset = None
+
+        vk = VelocityKernel(
+            adata,
+            xkey=xkey,
+            vkey=vkey,
+            attr=attr,
+            gene_subset=gene_subset,
+        )
+        if attr == "layers":
+            if use_gene_subset:
+                _subset = np.asarray(gene_subset)
+            else:
+                _subset = np.asarray(adata.var[f"{vkey}_genes"])
+            np.testing.assert_array_equal(
+                x=vk._xdata, y=adata.layers[xkey][:, _subset & ~nans_v]
+            )
+            np.testing.assert_array_equal(
+                x=vk._vdata, y=adata.layers[vkey][:, _subset & ~nans_v]
+            )
+        else:
+            np.testing.assert_array_equal(x=vk._xdata, y=adata.obsm[xkey][:, ~nans_v])
+            np.testing.assert_array_equal(x=vk._vdata, y=adata.obsm[vkey][:, ~nans_v])
 
 
 class TestKernelAddition:

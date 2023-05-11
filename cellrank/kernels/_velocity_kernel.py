@@ -31,13 +31,17 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     ----------
     %(adata)s
     %(backward)s
+    attr
+        Attribute of :class:`~anndata.AnnData` to read from.
     xkey
-        Key in :attr:`anndata.AnnData.layers` where expected gene expression counts are stored.
+        Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where expected gene expression counts are
+        stored.
     vkey
-        Key in :attr:`anndata.AnnData.layers` where velocities are stored.
+        Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where velocities are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
         If not specified, genes from :attr:`anndata.AnnData.var` ``['{vkey}_genes']`` are used.
+        This feature is only available when reading from :attr:`anndata.AnnData.layers` and will be ignored otherwise.
     kwargs
         Keyword arguments for the parent class.
     """
@@ -46,6 +50,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self,
         adata: AnnData,
         backward: bool = False,
+        attr: Optional[Literal["layers", "obsm"]] = "layers",
         xkey: Optional[str] = "Ms",
         vkey: Optional[str] = "velocity",
         **kwargs: Any,
@@ -55,6 +60,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             backward=backward,
             xkey=xkey,
             vkey=vkey,
+            attr=attr,
             **kwargs,
         )
         self._logits: Optional[np.ndarray] = None
@@ -63,16 +69,31 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self,
         xkey: Optional[str] = "Ms",
         vkey: Optional[str] = "velocity",
+        attr: Optional[Literal["layers", "obsm"]] = "layers",
         gene_subset: Optional[Union[str, Sequence[str]]] = None,
         **kwargs: Any,
     ) -> None:
         super()._read_from_adata(**kwargs)
 
-        if gene_subset is None and f"{vkey}_genes" in self.adata.var:
+        if (
+            attr == "layers"
+            and gene_subset is None
+            and f"{vkey}_genes" in self.adata.var
+        ):
             gene_subset = self.adata.var[f"{vkey}_genes"]
+        elif attr == "obsm" and gene_subset is not None:
+            logg.warning(
+                f"Found `gene_subset != None`, but it is not supported for `adata.{attr}`. Using `gene_subset = None`."
+            )
+            gene_subset = None
 
-        self._xdata = self._extract_layer(xkey, subset=gene_subset)
-        self._vdata = self._extract_layer(vkey, subset=gene_subset)
+        self._xdata = self._extract_data(key=xkey, attr=attr, subset=gene_subset)
+        self._vdata = self._extract_data(key=vkey, attr=attr, subset=gene_subset)
+        np.testing.assert_array_equal(
+            x=self._xdata.shape,
+            y=self._vdata.shape,
+            err_msg=f"Shape mismatch: {self._xdata.shape} vs {self._vdata.shape}",
+        )
 
         nans = np.isnan(np.sum(self._vdata, axis=0))
         if np.any(nans):
@@ -239,18 +260,21 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         _, logits = model(n_jobs, backend)
         return 1.0 / np.median(np.abs(logits.data))
 
-    def _extract_layer(
+    def _extract_data(
         self,
         key: Optional[str] = None,
+        attr: Optional[Union[None, Literal["layers", "obsm"]]] = None,
         subset: Optional[Union[str, Sequence[str]]] = None,
         dtype: np.dtype = np.float64,
     ) -> np.ndarray:
         if key in (None, "X"):
             data = self.adata.X
-        elif key in self.adata.layers:
+        elif attr == "layers" and key in self.adata.layers:
             data = self.adata.layers[key]
+        elif attr == "obsm" and key in self.adata.obsm:
+            data = np.asarray(self.adata.obsm[key])
         else:
-            raise KeyError(f"Unable to find data in `adata.layers[{key}]`.")
+            raise KeyError(f"Unable to find data in `adata.{attr}[{key!r}]`.")
 
         if subset is not None:
             if isinstance(subset, str):
