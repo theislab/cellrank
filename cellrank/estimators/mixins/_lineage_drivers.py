@@ -523,8 +523,9 @@ class LinDriversMixin(AbsProbsMixin):
                     start = logg.info("Adjusting text position")
                     adjustText.adjust_text(
                         annots,
-                        x=adata.varm[dkey][key1].values,
-                        y=adata.varm[dkey][key2].values,
+                        # https://github.com/theislab/cellrank/issues/1033
+                        x=np.array(adata.varm[dkey][key1], copy=True),
+                        y=np.array(adata.varm[dkey][key2], copy=True),
                         ax=ax,
                     )
                     logg.info("    Finish", time=start)
