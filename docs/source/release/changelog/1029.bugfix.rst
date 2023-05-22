@@ -1,0 +1,1 @@
+Very minor fix to adapt the allowed options in macrostate plotting.
