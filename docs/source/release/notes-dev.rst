@@ -1,4 +1,4 @@
-CellRank dev (2023-05-11)
+CellRank dev (2023-05-22)
 =========================
 
 Features
@@ -110,6 +110,9 @@ Bugfixes
 
 - Fix not passing ``allow_overlap`` in some places.
   `#1020 <https://github.com/theislab/cellrank/pull/1020>`__
+
+- Fix `adjustText` modifying data in-place.
+  `#1034 <https://github.com/theislab/cellrank/pull/1034>`__
 
 
 Miscellaneous
