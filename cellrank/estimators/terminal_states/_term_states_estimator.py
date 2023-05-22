@@ -360,7 +360,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         else:
             raise ValueError(
                 f"Unable to plot `{which!r}` states. "
-                f"Valid options are: `{['macro', 'initial', 'terminal']}`."
+                f"Valid options are: `{['all', 'initial', 'terminal']}`."
             )
 
         name = "macrostates" if which == "macro" else f"{which} states"
