@@ -1,4 +1,4 @@
-CellRank dev (2023-05-22)
+CellRank dev (2023-05-23)
 =========================
 
 Features
@@ -116,6 +116,9 @@ Bugfixes
 
 - Fix `adjustText` modifying data in-place.
   `#1034 <https://github.com/theislab/cellrank/pull/1034>`__
+
+- Adds a reference for Hhex
+  `#1035 <https://github.com/theislab/cellrank/pull/1035>`__
 
 
 Miscellaneous
