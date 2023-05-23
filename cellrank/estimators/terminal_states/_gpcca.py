@@ -452,6 +452,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             memberships=memberships,
             params=kwargs.pop("params", {}),
             allow_overlap=allow_overlap,
+            **kwargs,
         )
         return self
 
@@ -536,6 +537,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             memberships=memberships,
             params=kwargs.pop("params", {}),
             allow_overlap=allow_overlap,
+            **kwargs,
         )
         return self
 
