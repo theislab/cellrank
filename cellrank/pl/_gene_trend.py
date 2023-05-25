@@ -55,7 +55,7 @@ def gene_trends(
     hide_cells: bool = False,
     perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
-    abs_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
+    fate_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
     cell_color: Optional[str] = None,
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
@@ -122,8 +122,8 @@ def gene_trends(
     lineage_cmap
         Categorical colormap to use when coloring in the lineages. If `None` and ``same_plot``,
         use the corresponding colors in :attr:`anndata.AnnData.uns`, otherwise use `'black'`.
-    abs_prob_cmap
-        Continuous colormap to use when visualizing the absorption probabilities for each lineage.
+    fate_prob_cmap
+        Continuous colormap to use when visualizing the fate probabilities for each lineage.
         Only used when ``same_plot = False``.
     cell_color
         Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
@@ -306,7 +306,7 @@ def gene_trends(
                 hide_cells=hide_cells,
                 perc=perc,
                 lineage_cmap=lineage_cmap,
-                abs_prob_cmap=abs_prob_cmap,
+                fate_prob_cmap=fate_prob_cmap,
                 lineage_probability_color=lpc,
                 cell_color=cell_color,
                 alpha=cell_alpha,

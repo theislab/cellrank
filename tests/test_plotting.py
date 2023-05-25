@@ -182,13 +182,13 @@ def compare(
 class TestAggregateAbsorptionProbabilities:
     @compare()
     def test_bar(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="bar", dpi=DPI, save=fpath
         )
 
     @compare(kind="bwd")
     def test_bar_bwd(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             backward=True,
@@ -199,7 +199,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_bar_cluster_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="bar",
@@ -211,7 +211,7 @@ class TestAggregateAbsorptionProbabilities:
     @compare(tol=50)
     def test_bar_cluster_subset_violin(self, adata: AnnData, fpath: str):
         print(adata.obs["clusters"].cat.categories)
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="violin",
@@ -222,7 +222,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_bar_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="bar",
@@ -233,13 +233,13 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare(tol=250)
     def test_paga_pie(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="paga_pie", dpi=DPI, save=fpath
         )
 
     @compare(tol=250)
     def test_paga_pie_title(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -250,7 +250,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga_pie_embedding(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -261,13 +261,13 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="paga", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga",
@@ -278,25 +278,25 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_violin(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_violin_no_cluster_key(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, mode="violin", cluster_key=None, dpi=DPI, save=fpath
         )
 
     @compare()
     def test_violin_cluster_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="violin",
@@ -307,7 +307,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="violin",
@@ -318,7 +318,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga_pie_legend_simple(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -329,7 +329,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga_pie_legend_position(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -342,7 +342,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga_pie_no_legend(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -354,8 +354,8 @@ class TestAggregateAbsorptionProbabilities:
         )
 
     @compare()
-    def test_paga_pie_only_abs_prob(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+    def test_paga_pie_only_fate_prob(self, adata: AnnData, fpath: str):
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -368,7 +368,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga_pie_only_clusters(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -381,7 +381,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga_pie_legend_position_out(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="paga_pie",
@@ -395,7 +395,7 @@ class TestAggregateAbsorptionProbabilities:
     def test_invalid_mode(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.aggregate_absorption_probabilities(
+            cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="foobar",
@@ -404,7 +404,7 @@ class TestAggregateAbsorptionProbabilities:
     def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.aggregate_absorption_probabilities(
+            cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -414,7 +414,7 @@ class TestAggregateAbsorptionProbabilities:
     def test_paga_pie_wrong_legend_kind_2(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.aggregate_absorption_probabilities(
+            cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -424,7 +424,7 @@ class TestAggregateAbsorptionProbabilities:
     def test_paga_pie_wrong_legend_kind_3(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.aggregate_absorption_probabilities(
+            cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -434,7 +434,7 @@ class TestAggregateAbsorptionProbabilities:
     def test_paga_pie_wrong_legend_kind_4(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
         with pytest.raises(ValueError):
-            cr.pl.aggregate_absorption_probabilities(
+            cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
@@ -443,13 +443,13 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_heatmap(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="heatmap", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_mode_heatmap_format(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -460,7 +460,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_heatmap_title(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -471,7 +471,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_heatmap_cmap(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -482,7 +482,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_heatmap_xticks_rotation(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -493,7 +493,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_heatmap_clusters(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -504,7 +504,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_heatmap_lineages(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="heatmap",
@@ -515,13 +515,13 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_clustermap(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata, cluster_key="clusters", mode="clustermap", dpi=DPI, save=fpath
         )
 
     @compare()
     def test_mode_clustermap_format(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_absorption_probabilities(
+        cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
             mode="clustermap",
@@ -950,8 +950,8 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_abs_probs_lineages")
-    def test_heatmap_abs_probs_lineages(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_fate_probs_lineages")
+    def test_heatmap_fate_probs_lineages(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -959,13 +959,13 @@ class TestHeatmap:
             GENES[:5],
             "latent_time",
             mode="lineages",
-            show_absorption_probabilities=True,
+            show_fate_probabilities=True,
             dpi=DPI,
             save=fpath,
         )
 
     @compare()
-    def test_heatmap_abs_probs_genes(self, adata: AnnData, fpath: str):
+    def test_heatmap_fate_probs_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -973,7 +973,7 @@ class TestHeatmap:
             GENES[:5],
             "latent_time",
             mode="genes",
-            show_absorption_probabilities=True,
+            show_fate_probabilities=True,
             dpi=DPI,
             save=fpath,
         )
@@ -1050,8 +1050,8 @@ class TestHeatmap:
             save=fpath,
         )
 
-    @compare(dirname="heatmap_cluster_key_no_abs_probs")
-    def test_heatmap_cluster_key_no_abs_probs(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_cluster_key_no_fate_probs")
+    def test_heatmap_cluster_key_no_fate_probs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -1059,14 +1059,14 @@ class TestHeatmap:
             GENES[:5],
             "latent_time",
             cluster_key="clusters",
-            show_absorption_probabilities=False,
+            show_fate_probabilities=False,
             mode="lineages",
             dpi=DPI,
             save=fpath,
         )
 
-    @compare(dirname="heatmap_cluster_key_abs_probs")
-    def test_heatmap_cluster_key_abs_probs(self, adata: AnnData, fpath: str):
+    @compare(dirname="heatmap_cluster_key_fate_probs")
+    def test_heatmap_cluster_key_fate_probs(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -1074,7 +1074,7 @@ class TestHeatmap:
             GENES[:5],
             "latent_time",
             cluster_key="clusters",
-            show_absorption_probabilities=True,
+            show_fate_probabilities=True,
             mode="lineages",
             dpi=DPI,
             save=fpath,
@@ -1089,7 +1089,7 @@ class TestHeatmap:
             GENES[:5],
             "latent_time",
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
-            show_absorption_probabilities=True,
+            show_fate_probabilities=True,
             mode="lineages",
             dpi=DPI,
             save=fpath,
@@ -1122,7 +1122,7 @@ class TestHeatmap:
             n_jobs=2,
             backend="threading",
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
-            show_absorption_probabilities=True,
+            show_fate_probabilities=True,
             mode="lineages",
             dpi=DPI,
             save=fpath,
@@ -1140,7 +1140,7 @@ class TestHeatmap:
             n_jobs=2,
             backend="loky",  # uses pickling of objects, such as Lineage
             cluster_key=["clusters", "clusters_enlarged", "clusters"],
-            show_absorption_probabilities=True,
+            show_fate_probabilities=True,
             mode="lineages",
             dpi=DPI,
             save=fpath,
@@ -1231,7 +1231,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
+            df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
         )
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
@@ -1251,7 +1251,7 @@ class TestHeatmapReturns:
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
         np.testing.assert_array_equal(
-            models.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
+            models.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
         )
         assert np.all(models.astype(bool))
 
@@ -1268,7 +1268,7 @@ class TestHeatmapReturns:
             dpi=DPI,
         )
 
-        lnames = adata_cflare.obsm[Key.obsm.abs_probs(False)].names
+        lnames = adata_cflare.obsm[Key.obsm.fate_probs(False)].names
 
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
@@ -1295,7 +1295,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
+            df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
         )
         assert len(df) == len(genes)
         assert set(df.iloc[:, 0].values) == set(genes)
@@ -1315,7 +1315,7 @@ class TestHeatmapReturns:
 
         assert isinstance(df, pd.DataFrame)
         np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[Key.obsm.abs_probs(False)].names
+            df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
         )
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
@@ -1532,7 +1532,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trends_abs_prob_cmap(self, adata: AnnData, fpath: str):
+    def test_trends_fate_prob_cmap(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1542,7 +1542,7 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=False,
             hide_cells=False,
-            abs_prob_cmap=cm.inferno,
+            fate_prob_cmap=cm.inferno,
             dpi=DPI,
             save=fpath,
         )
@@ -2140,23 +2140,23 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(dpi=DPI, save=fpath)
+        mc.plot_fate_probabilities(dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_clusters(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(color="clusters", dpi=DPI, save=fpath)
+        mc.plot_fate_probabilities(color="clusters", dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_cmap(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(cmap=cm.inferno, dpi=DPI, save=fpath)
+        mc.plot_fate_probabilities(cmap=cm.inferno, dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_lineages(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(states=["0"], dpi=DPI, save=fpath)
+        mc.plot_fate_probabilities(states=["0"], dpi=DPI, save=fpath)
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
-        mc.plot_absorption_probabilities(
+        mc.plot_fate_probabilities(
             mode="time", time_key="latent_time", dpi=DPI, save=fpath
         )
 
@@ -2311,18 +2311,18 @@ class TestGPCCA:
         mc.plot_macrostates(which="terminal", mode="time", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_abs_probs_cont_same_no_clusters(self, mc: GPCCA, fpath: str):
-        mc.plot_absorption_probabilities(same_plot=True, dpi=DPI, save=fpath)
+    def test_scvelo_gpcca_fate_probs_cont_same_no_clusters(self, mc: GPCCA, fpath: str):
+        mc.plot_fate_probabilities(same_plot=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_abs_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
-        mc.plot_absorption_probabilities(
+    def test_scvelo_gpcca_fate_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
+        mc.plot_fate_probabilities(
             color="clusters", same_plot=True, dpi=DPI, save=fpath
         )
 
     @compare(kind="gpcca")
-    def test_scvelo_gpcca_abs_probs_cont_not_same(self, mc: GPCCA, fpath: str):
-        mc.plot_absorption_probabilities(
+    def test_scvelo_gpcca_fate_probs_cont_not_same(self, mc: GPCCA, fpath: str):
+        mc.plot_fate_probabilities(
             color="clusters", same_plot=False, dpi=DPI, save=fpath
         )
 
@@ -2493,7 +2493,7 @@ class TestModel:
 
     @compare()
     def test_model_1_lineage(self, adata: AnnData, fpath: str):
-        adata.obsm[Key.obsm.abs_probs(False)] = Lineage(
+        adata.obsm[Key.obsm.fate_probs(False)] = Lineage(
             np.ones((adata.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata)
@@ -2743,7 +2743,7 @@ class TestFittedModel:
 class TestCircularProjection:
     def test_proj_too_few_lineages(self, adata_gpcca_fwd):
         adata, _ = adata_gpcca_fwd
-        lineages = adata.obsm[Key.obsm.abs_probs(False)].names[:2]
+        lineages = adata.obsm[Key.obsm.fate_probs(False)].names[:2]
 
         with pytest.raises(ValueError, match=r"Expected at least `3` lineages"):
             cr.pl.circular_projection(
@@ -2826,7 +2826,7 @@ class TestCircularProjection:
             adata, keys=["kl_divergence", "entropy"], dpi=DPI, save=fpath
         )
 
-        apk = Key.obsm.abs_probs(False)
+        apk = Key.obsm.fate_probs(False)
         assert f"{apk}_kl_divergence" in adata.obs
         assert f"{apk}_entropy" in adata.obs
 

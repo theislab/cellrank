@@ -252,7 +252,7 @@ def circular_projection(
     text_kwargs["ha"] = "center"
     text_kwargs["va"] = "center"
 
-    _i, lineage_key = 0, Key.obsm.abs_probs(backward)
+    _i, lineage_key = 0, Key.obsm.fate_probs(backward)
     for _i, (k, ax) in enumerate(zip(keys, axes)):
         set_lognorm, colorbar = False, kwargs.pop("colorbar", True)
         try:
@@ -322,7 +322,7 @@ def circular_projection(
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
             cmap = LinearSegmentedColormap.from_list(
-                "abs_prob_cmap", [color, probs.colors[next]], N=_N
+                "fate_prob_cmap", [color, probs.colors[next]], N=_N
             )
             lc = LineCollection(segments, cmap=cmap, zorder=-1)
             lc.set_array(np.linspace(0, 1, _N))

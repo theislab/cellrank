@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 from seaborn import heatmap, clustermap
 from matplotlib import cm
 
-__all__ = ["aggregate_absorption_probabilities"]
+__all__ = ["aggregate_fate_probabilities"]
 
 
 class AggregationMode(ModeEnum):
@@ -46,7 +46,7 @@ class AggregationMode(ModeEnum):
 
 @d.dedent
 @inject_docs(m=AggregationMode)
-def aggregate_absorption_probabilities(
+def aggregate_fate_probabilities(
     adata: AnnData,
     mode: Literal[
         "bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"
@@ -88,7 +88,7 @@ def aggregate_absorption_probabilities(
             - `{m.CLUSTERMAP!r}` - same as a heatmap, but with a dendrogram.
     %(backward)s
     lineages
-        Lineages for which to visualize absorption probabilities. If `None`, use all lineages.
+        Lineages for which to visualize fate probabilities. If `None`, use all lineages.
     cluster_key
         Key in :attr:`anndata.AnnData.obs` containing the clusters.
     clusters
@@ -110,7 +110,7 @@ def aggregate_absorption_probabilities(
     legend_kwargs
         Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
         For ``mode = {m.PAGA_PIE!r}`` and ``basis = '...'``, this controls the placement of the
-        absorption probabilities legend.
+        fate probabilities legend.
     %(plotting)s
     kwargs
         Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
@@ -157,7 +157,7 @@ def aggregate_absorption_probabilities(
             current_ax.set_xticklabels(probs.names, rotation=xrot)
             if not is_all:
                 current_ax.set_xlabel(term_states)
-            current_ax.set_ylabel("absorption probability")
+            current_ax.set_ylabel("fate probability")
             current_ax.set_title(k)
 
         return fig
@@ -208,7 +208,7 @@ def aggregate_absorption_probabilities(
                 ticks=np.linspace(norm.vmin, norm.vmax, 5),
                 norm=norm,
                 cmap=kwargs["cmap"],
-                label="average absorption probability",
+                label="average fate probability",
             )
 
         for ax in axes[i + 1 :]:
@@ -321,9 +321,7 @@ def aggregate_absorption_probabilities(
             for _i, (name, key, ax) in enumerate(zip(probs.names, keys, axes)):
                 adata.obs[key] = probs[name].X[:, 0]
                 ax.set_title(f"{direction} {name}")
-                violin(
-                    adata, ylabel="absorption probability", keys=key, ax=ax, **kwargs
-                )
+                violin(adata, ylabel="fate probability", keys=key, ax=ax, **kwargs)
             for ax in axes[_i + 1 :]:
                 ax.remove()
 
@@ -341,7 +339,7 @@ def aggregate_absorption_probabilities(
 
         data = np.ravel(probs.X.T)[..., None]
         tmp = AnnData(csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
-        tmp.obs["absorption probability"] = data
+        tmp.obs["fate probability"] = data
         tmp.obs[term_states] = (
             pd.Series(
                 np.concatenate(
@@ -361,7 +359,7 @@ def aggregate_absorption_probabilities(
         )
         ax.set_title(term_states.capitalize())
 
-        violin(tmp, keys=["absorption probability"], ax=ax, **kwargs)
+        violin(tmp, keys=["fate probability"], ax=ax, **kwargs)
 
         return fig
 

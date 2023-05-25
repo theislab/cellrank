@@ -146,16 +146,16 @@ class TestCFLARE:
             ["foo", "bar"],
         )
 
-    def test_compute_absorption_probabilities_no_args(self, adata_large: AnnData):
+    def test_compute_fate_probabilities_no_args(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_absorption_probabilities()
+            mc.compute_fate_probabilities()
 
-    def test_compute_absorption_probabilities_normal_run(self, adata_large: AnnData):
+    def test_compute_fate_probabilities_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -163,7 +163,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         key = Key.obs.priming_degree(mc.backward)
@@ -171,27 +171,25 @@ class TestCFLARE:
         assert key in mc.adata.obs
         np.testing.assert_array_equal(mc.priming_degree, mc.adata.obs[key])
 
-        key = Key.obsm.abs_probs(mc.backward)
-        assert isinstance(mc.absorption_probabilities, cr.Lineage)
-        assert mc.absorption_probabilities.shape == (mc.adata.n_obs, 2)
+        key = Key.obsm.fate_probs(mc.backward)
+        assert isinstance(mc.fate_probabilities, cr.Lineage)
+        assert mc.fate_probabilities.shape == (mc.adata.n_obs, 2)
         assert key in mc.adata.obsm
         assert isinstance(mc.adata.obsm[key], cr.Lineage)
-        np.testing.assert_array_equal(mc.absorption_probabilities.X, mc.adata.obsm[key])
+        np.testing.assert_array_equal(mc.fate_probabilities.X, mc.adata.obsm[key])
 
         np.testing.assert_array_equal(
-            mc.absorption_probabilities.names,
+            mc.fate_probabilities.names,
             mc.adata.obs[Key.obs.term_states(mc.backward)].cat.categories,
         )
 
         key = Key.uns.colors(Key.obs.term_states(mc.backward))
         assert key in mc.adata.uns
-        np.testing.assert_array_equal(
-            mc.absorption_probabilities.colors, mc.adata.uns[key]
-        )
+        np.testing.assert_array_equal(mc.fate_probabilities.colors, mc.adata.uns[key])
         np.testing.assert_array_equal(mc._term_states.colors, mc.adata.uns[key])
-        np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1, rtol=1e-6)
+        np.testing.assert_allclose(mc.fate_probabilities.X.sum(1), 1, rtol=1e-6)
 
-    def test_compute_absorption_probabilities_solver(self, adata_large: AnnData):
+    def test_compute_fate_probabilities_solver(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -202,17 +200,17 @@ class TestCFLARE:
         mc.predict(use=2)
 
         # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(solver="direct")
-        l_direct = mc.absorption_probabilities.copy()
+        mc.compute_fate_probabilities(solver="direct")
+        l_direct = mc.fate_probabilities.copy()
 
         # compute lin probs using iterative solver
-        mc.compute_absorption_probabilities(solver="gmres", tol=tol)
-        l_iterative = mc.absorption_probabilities.copy()
+        mc.compute_fate_probabilities(solver="gmres", tol=tol)
+        l_iterative = mc.fate_probabilities.copy()
 
         assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
         np.testing.assert_allclose(l_direct.X, l_iterative.X, rtol=0, atol=tol)
 
-    def test_compute_absorption_probabilities_solver_petsc(self, adata_large: AnnData):
+    def test_compute_fate_probabilities_solver_petsc(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -223,12 +221,12 @@ class TestCFLARE:
         mc.predict(use=2, method="kmeans")
 
         # compute lin probs using direct solver
-        mc.compute_absorption_probabilities(solver="gmres", use_petsc=False, tol=tol)
-        l_iter = mc.absorption_probabilities.copy()
+        mc.compute_fate_probabilities(solver="gmres", use_petsc=False, tol=tol)
+        l_iter = mc.fate_probabilities.copy()
 
         # compute lin probs using petsc iterative solver
-        mc.compute_absorption_probabilities(solver="gmres", use_petsc=True, tol=tol)
-        l_iter_petsc = mc.absorption_probabilities.copy()
+        mc.compute_fate_probabilities(solver="gmres", use_petsc=True, tol=tol)
+        l_iter_petsc = mc.fate_probabilities.copy()
 
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
@@ -282,7 +280,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
@@ -294,7 +292,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
                 use_raw=False, cluster_key="clusters", clusters=["foo"]
@@ -308,7 +306,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         key = Key.varm.lineage_drivers(False)
@@ -327,7 +325,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
 
         with pytest.raises(RuntimeError):
             mc.plot_lineage_drivers("0")
@@ -340,7 +338,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(KeyError):
@@ -354,7 +352,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(ValueError):
@@ -368,11 +366,11 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_absorption_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
         mc.plot_lineage_drivers("0", use_raw=False)
 
-    def test_compute_absorption_probabilities_keys_colors(self, adata_large: AnnData):
+    def test_compute_fate_probabilities_keys_colors(self, adata_large: AnnData):
         adata = adata_large
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
@@ -391,12 +389,12 @@ class TestCFLARE:
             if arc in arcs
         ]
 
-        mc_fwd.compute_absorption_probabilities(keys=arcs)
-        lin_colors = mc_fwd.absorption_probabilities[arcs].colors
+        mc_fwd.compute_fate_probabilities(keys=arcs)
+        lin_colors = mc_fwd.fate_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
 
-    def test_compare_absorption_probabilities_with_reference(self):
+    def test_compare_fate_probabilities_with_reference(self):
         # define a reference transition matrix. This is an absorbing MC with 2 absorbing states
         transition_matrix = np.array(
             [
@@ -416,7 +414,7 @@ class TestCFLARE:
             ]
         )
 
-        absorption_probabilities_reference = np.array(
+        fate_probabilities_reference = np.array(
             [
                 [0.5, 0.5],
                 [0.5, 0.5],
@@ -441,13 +439,10 @@ class TestCFLARE:
             assignment=state_annotation, colors=np.array(["#000000", "#ffffff"])
         )
 
-        # compute absorption probabilities
-        c.compute_absorption_probabilities()
-        absorption_probabilities_query = c.absorption_probabilities[
-            state_annotation.isna()
-        ]
+        c.compute_fate_probabilities()
+        fate_probabilities_query = c.fate_probabilities[state_annotation.isna()]
 
-        np.allclose(absorption_probabilities_query, absorption_probabilities_reference)
+        np.allclose(fate_probabilities_query, fate_probabilities_reference)
 
     def test_manual_approx_rc_set(self, adata_large):
         adata = adata_large
@@ -469,7 +464,7 @@ class TestCFLARE:
         assert (adata.obs[key][zero_mask] == "foo").all()
         assert pd.isna(adata.obs[key][~zero_mask]).all()
 
-    def test_abs_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
+    def test_fate_probs_do_not_sum_to_1(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -481,20 +476,20 @@ class TestCFLARE:
         )
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
-        abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
-        abs_prob[:, 0] = 1.0
-        abs_prob[0, 0] = 1.01
+        fate_prob = np.zeros((adata_large.n_obs - n_term, n_term))
+        fate_prob[:, 0] = 1.0
+        fate_prob[0, 0] = 1.01
         mocker.patch(
-            "cellrank.estimators.mixins._absorption_probabilities._solve_lin_system",
-            return_value=abs_prob,
+            "cellrank.estimators.mixins._fate_probabilities._solve_lin_system",
+            return_value=fate_prob,
         )
 
         with pytest.raises(
             ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."
         ):
-            mc.compute_absorption_probabilities()
+            mc.compute_fate_probabilities()
 
-    def test_abs_probs_negative(self, adata_large: AnnData, mocker):
+    def test_fate_probs_negative(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -506,17 +501,17 @@ class TestCFLARE:
         )
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
-        abs_prob = np.zeros((adata_large.n_obs - n_term, n_term))
-        abs_prob[:, 0] = 1.0
-        abs_prob[0, 0] = -0.5
-        abs_prob[0, 1] = -1.5
+        fate_prob = np.zeros((adata_large.n_obs - n_term, n_term))
+        fate_prob[:, 0] = 1.0
+        fate_prob[0, 0] = -0.5
+        fate_prob[0, 1] = -1.5
         mocker.patch(
-            "cellrank.estimators.mixins._absorption_probabilities._solve_lin_system",
-            return_value=abs_prob,
+            "cellrank.estimators.mixins._fate_probabilities._solve_lin_system",
+            return_value=fate_prob,
         )
 
         with pytest.raises(ValueError, match=r"`2` value\(s\) are negative."):
-            mc.compute_absorption_probabilities()
+            mc.compute_fate_probabilities()
 
 
 class TestCFLAREIO:

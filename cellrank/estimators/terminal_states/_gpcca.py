@@ -1233,7 +1233,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         msg = "\n".join(msg.split("\n")[:-1])
         msg += f"\n       `.{which}_states_memberships\n    Finish`"
 
-        self._write_absorption_probabilities(None, log=False)
+        self._write_fate_probabilities(None, log=False)
         # TODO(michalk8): CFLARE doesn't remove the downstream properties
         self._write_absorption_times(None, log=False)
 
@@ -1300,6 +1300,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 self._set(obj=self._shadow_adata.obsm, key=key, value=memberships)
         # fmt: on
 
-        abs_prob_ok = self._read_absorption_probabilities(adata)
+        fate_prob_ok = self._read_fate_probabilities(adata)
         abs_time_ok = self._read_absorption_times(adata)
-        return sg.ok and abs_prob_ok and abs_time_ok
+        return sg.ok and fate_prob_ok and abs_time_ok

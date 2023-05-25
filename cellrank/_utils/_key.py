@@ -62,7 +62,7 @@ class Key:
             return f"macrostates_{Key.backward(bwd)}"
 
         @classmethod
-        def abs_probs(cls, bwd: Optional[bool]) -> str:
+        def fate_probs(cls, bwd: Optional[bool]) -> str:
             return f"lineages_{Key.backward(bwd)}"
 
         @classmethod

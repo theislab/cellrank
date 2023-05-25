@@ -14,4 +14,4 @@ or :doc:`models <models>`.
     pl.log_odds
     pl.heatmap
     pl.cluster_trends
-    pl.aggregate_absorption_probabilities
+    pl.aggregate_fate_probabilities

@@ -719,7 +719,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         same_plot: bool = False,
         hide_cells: bool = False,
         perc: Tuple[float, float] = None,
-        abs_prob_cmap: mcolors.ListedColormap = cm.viridis,
+        fate_prob_cmap: mcolors.ListedColormap = cm.viridis,
         cell_color: Optional[str] = None,
         lineage_color: str = "black",
         alpha: float = 0.8,
@@ -755,9 +755,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         hide_cells
             Whether to hide the cells.
         perc
-            Percentile by which to clip the absorption probabilities.
-        abs_prob_cmap
-            Colormap to use when coloring in the absorption probabilities.
+            Percentile by which to clip the fate probabilities.
+        fate_prob_cmap
+            Colormap to use when coloring in the fate probabilities.
         cell_color
             Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
         lineage_color
@@ -858,7 +858,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                 scaler(self.y_all.squeeze()),
                 c=color,
                 s=size,
-                cmap=abs_prob_cmap,
+                cmap=fate_prob_cmap,
                 vmin=vmin,
                 vmax=vmax,
                 alpha=alpha,
@@ -950,7 +950,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             _ = mpl.colorbar.ColorbarBase(
                 cax,
                 norm=norm,
-                cmap=abs_prob_cmap,
+                cmap=fate_prob_cmap,
                 ticks=np.linspace(norm.vmin, norm.vmax, 5),
             )
             cax.set_ylabel(key)
@@ -1228,7 +1228,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         if same_plot or np.allclose(self.w_all, 1.0):
             return None, "black", ColorType.STR, None
 
-        return "absorption probability", np.squeeze(self.w_all), ColorType.CONT, None
+        return "fate probability", np.squeeze(self.w_all), ColorType.CONT, None
 
     def _create_scaler(self, show_lineage_probability: bool, show_conf_int: bool):
         if not show_lineage_probability:
@@ -1475,7 +1475,7 @@ class FittedModel(BaseModel):
         # w_all does not need to be defined
         if same_plot or self.w_all is None or np.allclose(self.w_all, 1.0):
             return None, "black", ColorType.STR, None
-        return "absorption probability", np.squeeze(self.w_all), ColorType.CONT, None
+        return "fate probability", np.squeeze(self.w_all), ColorType.CONT, None
 
     def prepare(self, *_args, **_kwargs) -> "FittedModel":
         """Do nothing and return self."""

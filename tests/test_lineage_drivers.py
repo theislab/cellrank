@@ -11,7 +11,7 @@ class TestLineageDrivers:
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_normal_run(self, g: GPCCA, use_raw: bool):
         key = Key.varm.lineage_drivers(False)
-        names = g.absorption_probabilities.names
+        names = g.fate_probabilities.names
         if use_raw:
             g.adata.raw = g.adata.copy()
 
