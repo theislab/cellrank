@@ -106,7 +106,7 @@ class TestModel:
         assert ci is model.conf_int
 
     def test_model_1_lineage(self, adata_cflare):
-        adata_cflare.obsm[Key.obsm.abs_probs(False)] = Lineage(
+        adata_cflare.obsm[Key.obsm.fate_probs(False)] = Lineage(
             np.ones((adata_cflare.n_obs, 1)), names=["foo"]
         )
         model = create_model(adata_cflare)

@@ -61,11 +61,11 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
 
     mc.compute_eigendecomposition()
     mc.predict(use=2, method="kmeans")
-    mc.compute_absorption_probabilities(use_petsc=False)
+    mc.compute_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
-    np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
+    np.testing.assert_allclose(mc.fate_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
 
@@ -88,11 +88,11 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
     mc.compute_schur(method="krylov")
     mc.compute_macrostates(n_states=2)
     mc.set_terminal_states()
-    mc.compute_absorption_probabilities(use_petsc=False)
+    mc.compute_probabilities(use_petsc=False)
     mc.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
     assert adata is mc.adata
-    np.testing.assert_allclose(mc.absorption_probabilities.X.sum(1), 1.0, rtol=1e-6)
+    np.testing.assert_allclose(mc.fate_probabilities.X.sum(1), 1.0, rtol=1e-6)
 
     return adata, mc
 

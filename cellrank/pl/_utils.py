@@ -433,7 +433,7 @@ def _trends_helper(
     show_xticks_and_label: Union[bool, np.ndarray] = True,
     lineage_cmap: Optional[Union[mpl.colors.ListedColormap, Sequence]] = None,
     lineage_probability_color: Optional[str] = None,
-    abs_prob_cmap=cm.viridis,
+    fate_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
     cell_color: Optional[str] = None,
     legend_loc: Optional[str] = "best",
@@ -469,8 +469,8 @@ def _trends_helper(
     lineage_probability_color
         Actual color of 1 ``lineage``. Only used when ``same_plot=True`` and ``transpose=True`` and
         ``lineage_probability=True``.
-    abs_prob_cmap:
-        Colormap to use when coloring in the absorption probabilities, if they are being plotted.
+    fate_prob_cmap:
+        Colormap to use when coloring in the fate probabilities, if they are being plotted.
     gene_as_title
         Whether to use the gene names as titles (with lineage names as well) or on the y-axis.
     legend_loc
@@ -618,7 +618,7 @@ def _trends_helper(
             same_plot=same_plot,
             lineage_color=lineage_color_mapper[name],
             lineage_probability_color=lineage_probability_color,
-            abs_prob_cmap=abs_prob_cmap,
+            fate_prob_cmap=fate_prob_cmap,
             lineage_probability=show_prob,
             ylabel=ylabel,
             **kwargs,
@@ -666,7 +666,7 @@ def _trends_helper(
             _ = mpl.colorbar.ColorbarBase(
                 cax,
                 norm=norm,
-                cmap=abs_prob_cmap,
+                cmap=fate_prob_cmap,
                 label=key,
                 ticks=np.linspace(norm.vmin, norm.vmax, 5),
             )

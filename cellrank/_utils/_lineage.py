@@ -77,7 +77,7 @@ class Reduction(ModeEnum):  # noqa: D101
 class LinKind(ModeEnum):  # noqa: D101
     MACROSTATES = auto()
     TERM_STATES = auto()
-    ABS_PROBS = auto()
+    FATE_PROBS = auto()
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -859,7 +859,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         adata: AnnData,
         backward: bool = False,
         estimator_backward: Optional[bool] = None,
-        kind: Literal["macrostates", "term_states", "abs_probs"] = LinKind.ABS_PROBS,
+        kind: Literal["macrostates", "term_states", "fate_probs"] = LinKind.FATE_PROBS,
         copy: bool = False,
     ) -> "Lineage":
         """
@@ -874,7 +874,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
                 - `{lk.MACROSTATES!r}`- macrostates memberships from :class:`cellrank.estimators.GPCCA`.
                 - `{lk.TERM_STATES!r}`- terminal states memberships from :class:`cellrank.estimators.GPCCA`.
-                - `{lk.ABS_PROBS!r}`- the absorption probabilities.
+                - `{lk.FATE_PROBS!r}`- fate probabilities.
         copy
             Whether to return a copy of the underlying array.
 
@@ -889,9 +889,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         elif kind == LinKind.TERM_STATES:
             nkey = Key.obs.term_states(estim_bwd=estimator_backward, bwd=backward)
             key = Key.obsm.memberships(nkey)
-        elif kind == LinKind.ABS_PROBS:
+        elif kind == LinKind.FATE_PROBS:
             nkey = Key.obs.term_states(estim_bwd=estimator_backward, bwd=backward)
-            key = Key.obsm.abs_probs(backward)
+            key = Key.obsm.fate_probs(backward)
         else:
             raise NotImplementedError(f"Lineage kind `{kind}` is not yet implemented.")
 

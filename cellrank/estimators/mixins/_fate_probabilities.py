@@ -39,7 +39,7 @@ import pandas as pd
 from scipy.sparse import issparse, spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
-__all__ = ["AbsProbsMixin"]
+__all__ = ["FateProbsMixin"]
 
 
 class RecTransStates(NamedTuple):
@@ -52,7 +52,7 @@ class RecTransStates(NamedTuple):
     term_states_colors: Sequence[Any]
 
 
-class AbsProbsProtocol(BaseProtocol):
+class FateProbsProtocol(BaseProtocol):
     _term_states: StatesHolder
 
     @property
@@ -64,7 +64,7 @@ class AbsProbsProtocol(BaseProtocol):
         ...
 
     @property
-    def absorption_probabilities(self) -> Optional[Lineage]:
+    def fate_probabilities(self) -> Optional[Lineage]:
         ...
 
     @property
@@ -78,7 +78,7 @@ class AbsProbsProtocol(BaseProtocol):
     def __len__(self) -> int:
         ...
 
-    def _compute_absorption_probabilities(
+    def _compute_fate_probabilities(
         self,
         q: Union[np.ndarray, spmatrix],
         s: Union[np.ndarray, spmatrix],
@@ -98,7 +98,7 @@ class AbsProbsProtocol(BaseProtocol):
         self,
         keys: Optional[Sequence[str]],
         *,
-        ctx: Literal["abs_probs", "time_to_absorption"],
+        ctx: Literal["fate_probs", "time_to_absorption"],
     ) -> RecTransStates:
         ...
 
@@ -106,15 +106,15 @@ class AbsProbsProtocol(BaseProtocol):
         self,
         obj: Union[str, np.ndarray, Lineage],
         *,
-        kind: Literal["macrostates", "term_states", "abs_probs"],
+        kind: Literal["macrostates", "term_states", "fate_probs"],
         backward: bool,
         **kwargs: Any,
     ) -> Lineage:
         ...
 
-    def _write_absorption_probabilities(
+    def _write_fate_probabilities(
         self,
-        abs_probs: Optional[Lineage],
+        fate_probs: Optional[Lineage],
     ) -> str:
         ...
 
@@ -184,20 +184,20 @@ def _normalize_abs_times(
     return res
 
 
-class AbsProbsMixin:
-    """Mixin that supports computation of absorption probabilities and mean times to absorption."""
+class FateProbsMixin:
+    """Mixin that supports computation of fate probabilities and mean times to absorption."""
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
-        self._absorption_probabilities: Optional[Lineage] = None
+        self._fate_probabilities: Optional[Lineage] = None
         self._absorption_times: Optional[pd.DataFrame] = None
         self._priming_degree: Optional[pd.Series] = None
 
     @property
-    @d.get_summary(base="abs_probs")
-    def absorption_probabilities(self) -> Optional[Lineage]:
-        """Absorption probabilities.
+    @d.get_summary(base="fate_probs")
+    def fate_probabilities(self) -> Optional[Lineage]:
+        """Fate probabilities.
 
         Informally, given a (finite, discrete) Markov chain with a set of transient states :math:`T` and
         a set of absorbing states :math:`A`, the absorption probability for cell :math:`i` from :math:`T`
@@ -207,7 +207,7 @@ class AbsProbsMixin:
         In our context, states correspond to cells, in particular, absorbing states correspond to cells in terminal
         states.
         """
-        return self._absorption_probabilities
+        return self._fate_probabilities
 
     @property
     @d.get_summary(base="abs_times")
@@ -231,8 +231,8 @@ class AbsProbsMixin:
         return self._priming_degree
 
     @d.dedent
-    def compute_absorption_probabilities(
-        self: AbsProbsProtocol,
+    def compute_probabilities(
+        self: FateProbsProtocol,
         keys: Optional[Sequence[str]] = None,
         solver: Union[
             str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]
@@ -244,7 +244,7 @@ class AbsProbsMixin:
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
-        """Compute absorption probabilities.
+        """Compute fate probabilities.
 
         For each cell, this computes the probability of being absorbed in any of the :attr:`terminal_states`. In
         particular, this corresponds to the probability that a random walk initialized in transient cell :math:`i`
@@ -253,7 +253,7 @@ class AbsProbsMixin:
         Parameters
         ----------
         keys
-            Terminal states for which to compute the absorption probabilities.
+            Terminal states for which to compute the fate probabilities.
             If `None`, use all states defined in :attr:`terminal_states`.
         %(absorption_utils)s
 
@@ -261,11 +261,11 @@ class AbsProbsMixin:
         -------
         Nothing, just updates the following field:
 
-            - :attr:`absorption_probabilities` - %(abs_probs.summary)s
+            - :attr:`fate_probabilities` - %(fate_probs.summary)s
         """
-        start = logg.info("Computing absorption probabilities")
-        data = self._rec_trans_states(keys, ctx="abs_probs")
-        abs_probs = self._compute_absorption_probabilities(
+        start = logg.info("Computing fate probabilities")
+        data = self._rec_trans_states(keys, ctx="fate_probs")
+        fate_probs = self._compute_fate_probabilities(
             data.q,
             data.s,
             trans_indices=data.trans_indices,
@@ -278,8 +278,8 @@ class AbsProbsMixin:
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
         )
-        abs_probs = Lineage(
-            abs_probs,
+        fate_probs = Lineage(
+            fate_probs,
             names=list(data.term_states.cat.categories),
             colors=data.term_states_colors,
         )
@@ -287,15 +287,15 @@ class AbsProbsMixin:
         params = self._create_params(
             remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
         )
-        self._write_absorption_probabilities(
-            abs_probs,
+        self._write_fate_probabilities(
+            fate_probs,
             params=params,
             time=start,
         )
 
     @d.dedent
-    def plot_absorption_probabilities(
-        self: AbsProbsProtocol,
+    def plot_fate_probabilities(
+        self: FateProbsProtocol,
         states: Optional[Union[str, Sequence[str]]] = None,
         color: Optional[str] = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
@@ -305,7 +305,7 @@ class AbsProbsMixin:
         cmap: str = "viridis",
         **kwargs: Any,
     ) -> None:
-        """Plot absorption probabilities.
+        """Plot fate probabilities.
 
         Parameters
         ----------
@@ -329,15 +329,15 @@ class AbsProbsMixin:
         -------
         %(just_plots)s
         """
-        if self.absorption_probabilities is None:
+        if self.fate_probabilities is None:
             raise RuntimeError(
-                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+                "Compute fate probabilities first as `.compute_fate_probabilities()`."
             )
 
         return self._plot_continuous(
-            _data=self.absorption_probabilities,
-            _colors=self.absorption_probabilities.colors,
-            _title="absorption probabilities",
+            _data=self.fate_probabilities,
+            _colors=self.fate_probabilities.colors,
+            _title="fate probabilities",
             states=states,
             color=color,
             mode=mode,
@@ -350,7 +350,7 @@ class AbsProbsMixin:
 
     @d.dedent
     def compute_absorption_times(
-        self: AbsProbsProtocol,
+        self: FateProbsProtocol,
         keys: Optional[Sequence[str]] = None,
         calculate_variance: bool = False,
         solver: Union[
@@ -363,13 +363,12 @@ class AbsProbsMixin:
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
     ) -> None:
-        """
-        Compute the mean time to absorption and optionally its variance.
+        """Compute the mean time to absorption and optionally its variance.
 
         Parameters
         ----------
         keys
-            Terminal states for which to compute the absorption probabilities.
+            Terminal states for which to compute the fate probabilities.
             If `None`, use all states defined in :attr:`terminal_states`.
         calculate_variance
             Whether to calculate the variance.
@@ -414,7 +413,7 @@ class AbsProbsMixin:
 
     @d.dedent
     def compute_lineage_priming(
-        self: AbsProbsProtocol,
+        self: FateProbsProtocol,
         method: Literal["kl_divergence", "entropy"] = "kl_divergence",
         early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
     ) -> pd.Series:
@@ -435,10 +434,10 @@ class AbsProbsMixin:
 
             - :attr:`priming_degree` - %(priming_degree.summary)s
         """  # noqa: D400
-        abs_probs = self.absorption_probabilities
-        if abs_probs is None:
+        fate_probs = self.fate_probabilities
+        if fate_probs is None:
             raise RuntimeError(
-                "Compute absorption probabilities first as `.compute_absorption_probabilities()`."
+                "Compute fate probabilities first as `.compute_fate_probabilities()`."
             )
         if isinstance(early_cells, dict):
             if len(early_cells) != 1:
@@ -460,17 +459,17 @@ class AbsProbsMixin:
                 early_cells = np.isin(self.adata.obs_names, early_cells)
 
         values = pd.Series(
-            abs_probs.priming_degree(method, early_cells), index=self.adata.obs_names
+            fate_probs.priming_degree(method, early_cells), index=self.adata.obs_names
         )
         self._write_lineage_priming(values)
 
         return values
 
     def _rec_trans_states(
-        self: AbsProbsProtocol,
+        self: FateProbsProtocol,
         keys: Optional[Sequence[str]] = None,
         *,
-        ctx: Literal["abs_probs", "time_to_absorption"],
+        ctx: Literal["fate_probs", "time_to_absorption"],
     ) -> RecTransStates:
         if self.terminal_states is None:
             raise RuntimeError(
@@ -491,7 +490,7 @@ class AbsProbsMixin:
         )
         # warn in case only one state is left
         keys = list(term_states.cat.categories)
-        if ctx == "abs_probs" and len(keys) == 1:
+        if ctx == "fate_probs" and len(keys) == 1:
             logg.warning(
                 "There is only `1` terminal state, all cells will have probability `1` of going there"
             )
@@ -528,8 +527,8 @@ class AbsProbsMixin:
             term_states_colors=colors,
         )
 
-    def _compute_absorption_probabilities(
-        self: AbsProbsProtocol,
+    def _compute_fate_probabilities(
+        self: FateProbsProtocol,
         q: Union[np.ndarray, spmatrix],
         s: Union[np.ndarray, spmatrix],
         trans_indices: np.ndarray,
@@ -581,28 +580,28 @@ class AbsProbsMixin:
 
     @logger
     @shadow
-    def _write_absorption_probabilities(
-        self: AbsProbsProtocol,
-        abs_probs: Optional[Lineage],
+    def _write_fate_probabilities(
+        self: FateProbsProtocol,
+        fate_probs: Optional[Lineage],
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         # fmt: off
-        key = Key.obsm.abs_probs(self.backward)
-        self._set("_absorption_probabilities", self.adata.obsm, key=key, value=abs_probs)
+        key = Key.obsm.fate_probs(self.backward)
+        self._set("_fate_probabilities", self.adata.obsm, key=key, value=fate_probs)
         self._write_lineage_priming(None, log=False)
         self.params[key] = dict(params)
         # fmt: on
 
         return (
             f"Adding `adata.obsm[{key!r}]`\n"
-            f"       `.absorption_probabilities`\n"
+            f"       `.fate_probabilities`\n"
             f"    Finish"
         )
 
     @logger
     @shadow
     def _write_absorption_times(
-        self: AbsProbsProtocol,
+        self: FateProbsProtocol,
         abs_times: Optional[pd.DataFrame],
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
@@ -619,7 +618,7 @@ class AbsProbsMixin:
     @logger
     @shadow
     def _write_lineage_priming(
-        self: AbsProbsProtocol, priming_degree: Optional[pd.Series]
+        self: FateProbsProtocol, priming_degree: Optional[pd.Series]
     ) -> str:
         self._priming_degree = priming_degree
         key = Key.obs.priming_degree(self.backward)
@@ -633,17 +632,17 @@ class AbsProbsMixin:
         )
         # fmt: on
 
-    def _read_absorption_probabilities(self: AbsProbsProtocol, adata: AnnData) -> bool:
+    def _read_fate_probabilities(self: FateProbsProtocol, adata: AnnData) -> bool:
         with SafeGetter(self, allowed=KeyError) as sg:
-            key1 = Key.obsm.abs_probs(self.backward)
-            abs_probs = self._get(
+            key1 = Key.obsm.fate_probs(self.backward)
+            fate_probs = self._get(
                 obj=adata.obsm,
                 key=key1,
                 shadow_attr="obsm",
                 dtype=(np.ndarray, Lineage),
             )
-            self._absorption_probabilities = self._ensure_lineage_object(
-                abs_probs, backward=self.backward, kind="abs_probs"
+            self._fate_probabilities = self._ensure_lineage_object(
+                fate_probs, backward=self.backward, kind="fate_probs"
             )
             key = Key.obs.priming_degree(self.backward)
             self._priming_degree = self._get(
@@ -657,7 +656,7 @@ class AbsProbsMixin:
 
         return sg.ok
 
-    def _read_absorption_times(self: AbsProbsProtocol, adata: AnnData) -> bool:
+    def _read_absorption_times(self: FateProbsProtocol, adata: AnnData) -> bool:
         with SafeGetter(self, allowed=KeyError) as sg:
             key = Key.obsm.abs_times(self.backward)
             self._absorption_times = self._get(
@@ -672,10 +671,10 @@ class AbsProbsMixin:
         return sg.ok
 
     def _ensure_lineage_object(
-        self: AbsProbsProtocol,
+        self: FateProbsProtocol,
         obj: Union[str, np.ndarray, Lineage],
         *,
-        kind: Literal["macrostates", "term_states", "abs_probs"],
+        kind: Literal["macrostates", "term_states", "fate_probs"],
         backward: bool,
         **kwargs: Any,
     ) -> Lineage:
@@ -695,5 +694,5 @@ class AbsProbsMixin:
             )
         except Exception as e:  # noqa: B902
             raise RuntimeError(
-                f"Unable to reconstruct `.absorption_probabilities`. Reason: `{e}`."
+                f"Unable to reconstruct `.fate_probabilities`. Reason: `{e}`."
             ) from None

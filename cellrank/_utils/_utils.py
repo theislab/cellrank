@@ -409,7 +409,7 @@ def _correlation_test(
     X
         Array or sparse matrix of shape ``(n_cells, n_genes)`` containing the expression.
     Y
-        Array of shape ``(n_cells, n_lineages)`` containing the absorption probabilities.
+        Array of shape ``(n_cells, n_lineages)`` containing the fate probabilities.
     gene_names
         Sequence of shape ``(n_genes,)`` containing the gene names.
     method
@@ -426,7 +426,7 @@ def _correlation_test(
     -------
     Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, one for each lineage:
 
-        - ``{lineage}_corr`` - correlation between the gene expression and absorption probabilities.
+        - ``{lineage}_corr`` - correlation between the gene expression and fate probabilities.
         - ``{lineage}_pval`` - calculated p-values for double-sided test.
         - ``{lineage}_qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
         - ``{lineage}_ci_low`` - lower bound of the ``confidence_level`` correlation confidence interval.

@@ -23,8 +23,8 @@ class State(str, Enum):
     SCHUR = "schur"
     MACRO = "macro"
     TERM = "term"
-    ABS = "abs"
-    LIN = "lin"
+    FATE_PROBS = "fate"
+    DRIVERS = "lin"
 
     @property
     def prev(self) -> Optional["State"]:
@@ -34,10 +34,10 @@ class State(str, Enum):
             return State.SCHUR
         if self.value == "term":
             return State.MACRO
-        if self.value == "abs":
+        if self.value == "fate":
             return State.TERM
         if self.value == "lin":
-            return State.ABS
+            return State.FATE_PROBS
         return None
 
     @property
@@ -47,9 +47,9 @@ class State(str, Enum):
         if self.value == "macro":
             return State.TERM
         if self.value == "term":
-            return State.ABS
-        if self.value == "abs":
-            return State.LIN
+            return State.FATE_PROBS
+        if self.value == "fate":
+            return State.DRIVERS
         if self.value == "lin":
             return None
         return None
@@ -63,8 +63,8 @@ class State(str, Enum):
             return Key.obs.macrostates(bwd)
         if self.value == "term":
             return Key.obs.term_states(False, bwd=bwd)
-        if self.value == "abs":
-            return Key.obsm.abs_probs(bwd)
+        if self.value == "fate":
+            return Key.obsm.fate_probs(bwd)
         if self.value == "lin":
             return Key.varm.lineage_drivers(bwd)
         return None
@@ -87,8 +87,8 @@ class State(str, Enum):
             key2 = Key.obs.probs(key1)
             key3 = Key.uns.colors(key1)
             return ("obs", key1), ("obs", key2), ("uns", key3)
-        if self.value == "abs":
-            key1 = Key.obsm.abs_probs(bwd)
+        if self.value == "fate":
+            key1 = Key.obsm.fate_probs(bwd)
             key2 = Key.obsm.abs_times(bwd)
             key3 = Key.obs.priming_degree(bwd)
             return ("obsm", key1), ("obsm", key2), ("obs", key3)
@@ -108,9 +108,9 @@ class State(str, Enum):
             )
         if self.value == "term":
             return ("terminal_states", pd.Series), ("terminal_states_probabilities", pd.Series)
-        if self.value == "abs":
+        if self.value == "fate":
             return (
-                ("_absorption_probabilities", Lineage), ("_absorption_times", pd.DataFrame),
+                ("_fate_probabilities", Lineage), ("_absorption_times", pd.DataFrame),
                 ("_priming_degree", pd.Series)
             )
         if self.value == "lin":
@@ -187,7 +187,7 @@ def _check_renaming_no_write_terminal(mc: cr.estimators.GPCCA) -> None:
     assert Key.uns.colors(key) not in mc.adata.uns
 
 
-def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
+def _check_fate_probs(mc: cr.estimators.GPCCA) -> None:
     # fmt: off
     # macrostates
     assert isinstance(mc.macrostates, pd.Series)
@@ -199,17 +199,17 @@ def _check_abs_probs(mc: cr.estimators.GPCCA) -> None:
     assert isinstance(mc.terminal_states, pd.Series)
     # TODO(michalk8): assert series equal from pandas
     assert_array_nan_equal(mc.adata.obs[key], mc.terminal_states)
-    np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc.absorption_probabilities.colors)
+    np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc.fate_probabilities.colors)
     np.testing.assert_array_equal(mc.adata.uns[Key.uns.colors(key)], mc._term_states.colors)
     assert isinstance(mc.terminal_states_probabilities, pd.Series)
     np.testing.assert_array_equal(mc.adata.obs[Key.obs.probs(key)], mc.terminal_states_probabilities)
 
-    # abs probs
-    key = Key.obsm.abs_probs(mc.backward)
-    assert isinstance(mc.absorption_probabilities, cr.Lineage)
-    np.testing.assert_array_almost_equal(mc.absorption_probabilities.sum(1), 1.0)
+    # fate probs
+    key = Key.obsm.fate_probs(mc.backward)
+    assert isinstance(mc.fate_probabilities, cr.Lineage)
+    np.testing.assert_array_almost_equal(mc.fate_probabilities.sum(1), 1.0)
     assert isinstance(mc.adata.obsm[key], cr.Lineage)
-    np.testing.assert_array_equal(mc.adata.obsm[key], mc.absorption_probabilities.X)
+    np.testing.assert_array_equal(mc.adata.obsm[key], mc.fate_probabilities.X)
 
     # priming
     key = Key.obs.priming_degree(mc.backward)
@@ -236,13 +236,13 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
     mc.set_terminal_states()
     if state == State.TERM:
         return mc
-    mc.compute_absorption_probabilities()
+    mc.compute_probabilities()
     mc.compute_absorption_times()
     mc.compute_lineage_priming()
-    if state == State.ABS:
+    if state == State.FATE_PROBS:
         return mc
     mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
-    if state == State.LIN:
+    if state == State.DRIVERS:
         return mc
 
     raise NotImplementedError(state)
@@ -580,10 +580,10 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=5)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_priming()
 
-        _check_abs_probs(mc)
+        _check_fate_probs(mc)
 
     def test_set_terminal_states_from_macrostates_non_positive_cells(
         self, adata_large: AnnData
@@ -680,10 +680,10 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         mc.predict(n_cells=5, method="eigengap")
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_priming()
 
-        _check_abs_probs(mc)
+        _check_fate_probs(mc)
 
     def test_compute_terminal_states_n_main_states(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -695,10 +695,10 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         mc.predict(n_cells=5, method="top_n", n_states=1)
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_priming()
 
-        _check_abs_probs(mc)
+        _check_fate_probs(mc)
 
     def test_compute_terminal_states_stability(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -711,7 +711,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=5)
         mc.predict(n_cells=5, method="stability", stability_threshold=thresh)
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_priming()
 
         coarse_T = mc.coarse_T
@@ -721,7 +721,7 @@ class TestGPCCA:
         np.testing.assert_array_equal(
             set(names), set(mc.terminal_states.cat.categories)
         )
-        _check_abs_probs(mc)
+        _check_fate_probs(mc)
 
     def test_compute_terminal_states_no_selected(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -757,10 +757,10 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         mc.predict(n_cells=5)
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_priming()
 
-        _check_abs_probs(mc)
+        _check_fate_probs(mc)
 
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -771,7 +771,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
 
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
@@ -785,7 +785,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
 
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -801,7 +801,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         key = Key.varm.lineage_drivers(False)
@@ -821,7 +821,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
 
         with pytest.raises(RuntimeError):
             mc.plot_lineage_drivers("0")
@@ -835,7 +835,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(KeyError):
@@ -850,7 +850,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(ValueError):
@@ -865,7 +865,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         mc.plot_lineage_drivers("0", use_raw=False)
@@ -879,7 +879,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_absorption_probabilities()
+        mc.compute_probabilities()
 
         cat = adata_large.obs["clusters"].cat.categories[0]
         deg1 = mc.compute_lineage_priming(
@@ -947,7 +947,7 @@ class TestGPCCA:
         g = cr.estimators.GPCCA(ck)
         g.fit(n_states=2)
         g.predict()
-        g.compute_absorption_probabilities()
+        g.compute_probabilities()
 
         drivers = g.compute_lineage_drivers(use_raw=False)
 
@@ -964,7 +964,7 @@ class TestGPCCA:
         g = cr.estimators.GPCCA(ck)
         g.fit(n_states=n_states)
         g.set_terminal_states()
-        g.compute_absorption_probabilities()
+        g.compute_probabilities()
         g.compute_absorption_times(keys=keys)
 
         np.testing.assert_array_equal(g.absorption_times.shape, (len(g), n_expected))
@@ -1028,7 +1028,7 @@ class TestGPCCASerialization:
     def test_from_adata_incomplete(self, adata_large: AnnData, state: State):
         if state == State.SCHUR:
             pytest.xfail("Schur decomposition is not needed.")
-        g_orig = _fit_gpcca(adata_large, State.LIN)
+        g_orig = _fit_gpcca(adata_large, State.DRIVERS)
         adata = g_orig.to_adata()
 
         for attr, key in state.attr_keys:
@@ -1043,18 +1043,18 @@ class TestGPCCASerialization:
 
     @pytest.mark.parametrize("bwd", [False, True])
     def test_reconstruct_lineage(self, adata_large: AnnData, bwd: bool):
-        g_orig = _fit_gpcca(adata_large, State.LIN, backward=bwd)
+        g_orig = _fit_gpcca(adata_large, State.DRIVERS, backward=bwd)
         adata = g_orig.to_adata()
         bdata = adata.copy()
         keys = [
             Key.obsm.memberships(Key.obs.macrostates(bwd)),
             Key.obsm.memberships(Key.obs.term_states(bwd)),
-            Key.obsm.abs_probs(bwd),
+            Key.obsm.fate_probs(bwd),
         ]
         attrs = [
             "macrostates_memberships",
             "terminal_states_memberships",
-            "absorption_probabilities",
+            "fate_probabilities",
         ]
 
         for key in keys:

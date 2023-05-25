@@ -262,6 +262,6 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         ok = ok and self._read_eigendecomposition(adata, allow_missing=False)
         return (
             ok
-            and self._read_absorption_probabilities(adata)
+            and self._read_fate_probabilities(adata)
             and self._read_absorption_times(adata)
         )

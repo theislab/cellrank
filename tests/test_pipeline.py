@@ -16,12 +16,12 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
     assert Key.obs.probs(key) in adata.obs
     assert Key.uns.colors(key) in adata.uns
 
-    # lineages
-    abs_probs = adata.obsm[Key.obsm.abs_probs(bwd)]
-    assert isinstance(abs_probs, cr.Lineage)
-    np.testing.assert_array_equal(abs_probs.names, adata.obs[key].cat.categories)
-    np.testing.assert_array_equal(abs_probs.colors, adata.uns[Key.uns.colors(key)])
-    np.testing.assert_allclose(abs_probs.X.sum(1), 1.0, rtol=1e-3)
+    # fate probabilities
+    fate_probs = adata.obsm[Key.obsm.fate_probs(bwd)]
+    assert isinstance(fate_probs, cr.Lineage)
+    np.testing.assert_array_equal(fate_probs.names, adata.obs[key].cat.categories)
+    np.testing.assert_array_equal(fate_probs.colors, adata.uns[Key.uns.colors(key)])
+    np.testing.assert_allclose(fate_probs.X.sum(1), 1.0, rtol=1e-3)
 
     # drivers
     assert isinstance(adata.varm[Key.varm.lineage_drivers(bwd)], pd.DataFrame)
@@ -43,8 +43,8 @@ class TestLowLevelPipeline:
         estimator_fwd.predict(use=1, method="leiden")
         estimator_fwd.plot_macrostates(which="terminal")
 
-        estimator_fwd.compute_absorption_probabilities()
-        estimator_fwd.plot_absorption_probabilities()
+        estimator_fwd.compute_probabilities()
+        estimator_fwd.plot_fate_probabilities()
 
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
@@ -66,8 +66,8 @@ class TestLowLevelPipeline:
         estimator_bwd.predict(use=1, method="kmeans")
         estimator_bwd.plot_macrostates(which="terminal")
 
-        estimator_bwd.compute_absorption_probabilities()
-        estimator_bwd.plot_absorption_probabilities()
+        estimator_bwd.compute_probabilities()
+        estimator_bwd.plot_fate_probabilities()
 
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
@@ -95,7 +95,7 @@ class TestLowLevelPipeline:
         estimator_fwd.set_terminal_states(n_cells=10)
         estimator_fwd.plot_macrostates(which="terminal")
 
-        estimator_fwd.compute_absorption_probabilities()
+        estimator_fwd.compute_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata)
@@ -107,7 +107,7 @@ class TestLowLevelPipeline:
         )
         estimator_fwd.plot_macrostates(which="terminal")
 
-        estimator_fwd.compute_absorption_probabilities()
+        estimator_fwd.compute_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata)
@@ -136,7 +136,7 @@ class TestLowLevelPipeline:
         estimator_bwd.set_terminal_states(n_cells=16)
         estimator_bwd.plot_macrostates(which="terminal")
 
-        estimator_bwd.compute_absorption_probabilities()
+        estimator_bwd.compute_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, bwd=True)
@@ -148,7 +148,7 @@ class TestLowLevelPipeline:
         )
         estimator_bwd.plot_macrostates(which="terminal")
 
-        estimator_bwd.compute_absorption_probabilities()
+        estimator_bwd.compute_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, bwd=True)

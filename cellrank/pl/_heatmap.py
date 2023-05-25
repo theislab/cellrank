@@ -69,7 +69,7 @@ def heatmap(
     time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
     callback: _callback_type = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
-    show_absorption_probabilities: bool = False,
+    show_fate_probabilities: bool = False,
     cluster_genes: bool = False,
     keep_gene_order: bool = False,
     scale: bool = True,
@@ -126,8 +126,8 @@ def heatmap(
     cluster_key
         Key(s) in :attr:`anndata.AnnData.obs` containing categorical observations to be plotted on the top of heatmap.
         Only available when ``mode = {m.LINEAGES!r}``.
-    show_absorption_probabilities
-        Whether to also plot absorption probabilities alongside the smoothed expression.
+    show_fate_probabilities
+        Whether to also plot fate probabilities alongside the smoothed expression.
         Only available when ``mode = {m.LINEAGES!r}``.
     cluster_genes
         Whether to cluster genes using :func:`seaborn.clustermap` when ``mode = 'lineages'``.
@@ -137,7 +137,7 @@ def heatmap(
     scale
         Whether to normalize the gene expression `[0, 1]` range.
     n_convolve
-        Size of the convolution window when smoothing absorption probabilities.
+        Size of the convolution window when smoothing fate probabilities.
     show_all_genes
         Whether to show all genes on y-axis.
     cbar
@@ -268,7 +268,7 @@ def heatmap(
             ax.plot(x, y2, lw=0)
 
         fig, axes = plt.subplots(
-            nrows=len(genes) + show_absorption_probabilities,
+            nrows=len(genes) + show_fate_probabilities,
             figsize=(12, len(genes) + len(lineages) * lineage_height)
             if figsize is None
             else figsize,
@@ -280,8 +280,8 @@ def heatmap(
             axes = [axes]
         axes = np.ravel(axes)
 
-        if show_absorption_probabilities:
-            data["absorption probability"] = data[next(iter(data.keys()))]
+        if show_fate_probabilities:
+            data["fate probability"] = data[next(iter(data.keys()))]
 
         for ax, (gene, models) in zip(axes, data.items()):
             if scale:
@@ -295,7 +295,7 @@ def heatmap(
             ix = 0
             ys = [ix]
 
-            if gene == "absorption probability":
+            if gene == "fate probability":
                 norm = mcolors.Normalize(vmin=0, vmax=1)
                 for ln, x in ((ln, m.x_test) for ln, m in models.items()):
                     y = np.ones_like(x)
@@ -343,7 +343,7 @@ def heatmap(
                     norm=norm,
                     cmap=cmap,
                     label="value"
-                    if gene == "absorption probability"
+                    if gene == "fate probability"
                     else "scaled expression"
                     if scale
                     else "expression",
@@ -412,7 +412,7 @@ def heatmap(
                     axis=0,
                 )
 
-            if show_absorption_probabilities:
+            if show_fate_probabilities:
                 col_colors, col_cmap, col_norm = create_col_colors(
                     lname, np.linspace(x_min, x_max, df.shape[1])
                 )
@@ -459,13 +459,13 @@ def heatmap(
                         0.25,
                         cmap=col_cmap,
                         norm=col_norm,
-                        label="absorption probability",
+                        label="fate probability",
                     )
                     g.fig.add_axes(cax)
 
             if g.ax_col_colors:
                 main_bbox = _get_ax_bbox(g.fig, g.ax_heatmap)
-                n_bars = show_absorption_probabilities + (
+                n_bars = show_fate_probabilities + (
                     len(cluster_key) if cluster_key is not None else 0
                 )
                 _set_ax_height_to_cm(

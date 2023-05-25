@@ -13,7 +13,7 @@ from cellrank._utils._utils import RandomKeys, TestMethod, save_fig, _correlatio
 from cellrank._utils._colors import _create_categorical_colors
 from cellrank._utils._lineage import Lineage
 from cellrank.estimators.mixins._utils import SafeGetter, BaseProtocol, logger, shadow
-from cellrank.estimators.mixins._absorption_probabilities import AbsProbsMixin
+from cellrank.estimators.mixins._fate_probabilities import FateProbsMixin
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ class LinDriversProtocol(BaseProtocol):
         ...
 
     @property
-    def absorption_probabilities(self) -> Optional[Lineage]:
+    def fate_probabilities(self) -> Optional[Lineage]:
         ...
 
     @property
@@ -48,7 +48,7 @@ class LinDriversProtocol(BaseProtocol):
         ...
 
 
-class LinDriversMixin(AbsProbsMixin):
+class LinDriversMixin(FateProbsMixin):
     """Mixin that computes potential driver genes for lineages."""
 
     def __init__(self, **kwargs: Any):
@@ -72,8 +72,7 @@ class LinDriversMixin(AbsProbsMixin):
         seed: Optional[int] = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
-        """
-        Compute driver genes per lineage.
+        """Compute driver genes per lineage.
 
         Correlates gene expression with lineage probabilities, for a given lineage and set of clusters.
         Often, it makes sense to restrict this to a set of clusters which are relevant for the specified lineages.
@@ -81,7 +80,7 @@ class LinDriversMixin(AbsProbsMixin):
         Parameters
         ----------
         lineages
-            Lineage names from :attr:`absorption_probabilities`. If `None`, use all lineages.
+            Lineage names from :attr:`fate_probabilities`. If `None`, use all lineages.
         method
             Mode to use when calculating p-values and confidence intervals. Valid options are:
 
@@ -115,13 +114,13 @@ class LinDriversMixin(AbsProbsMixin):
 
         # check that lineage probs have been computed
         method = TestMethod(method)
-        abs_probs = self.absorption_probabilities
-        if abs_probs is None:
+        fate_probs = self.fate_probabilities
+        if fate_probs is None:
             raise RuntimeError(
-                "Compute `.absorption_probabilities` first as `.compute_absorption_probabilities()`."
+                "Compute `.fate_probabilities` first as `.compute_fate_probabilities()`."
             )
 
-        if abs_probs.shape[1] == 1:
+        if fate_probs.shape[1] == 1:
             logg.warning(
                 "There is only 1 lineage present. Using stationary distribution instead"
             )
@@ -130,19 +129,19 @@ class LinDriversMixin(AbsProbsMixin):
                 raise RuntimeError(
                     "No stationary distribution found in `.eigendecomposition['stationary_dist']`."
                 )
-            abs_probs = Lineage(
+            fate_probs = Lineage(
                 stat_dist,
-                names=abs_probs.names,
-                colors=abs_probs.colors,
+                names=fate_probs.names,
+                colors=fate_probs.colors,
             )
 
         # check all lin_keys exist in self.lin_names
         if isinstance(lineages, str):
             lineages = [lineages]
         if lineages is not None:
-            _ = abs_probs[lineages]
+            _ = fate_probs[lineages]
         else:
-            lineages = abs_probs.names
+            lineages = fate_probs.names
         lineages = list(lineages)
 
         if not len(lineages):
@@ -167,10 +166,10 @@ class LinDriversMixin(AbsProbsMixin):
                 )
             subset_mask = np.in1d(self.adata.obs[cluster_key], clusters)
             adata_comp = self.adata[subset_mask]
-            lin_probs = abs_probs[subset_mask, :]
+            lin_probs = fate_probs[subset_mask, :]
         else:
             adata_comp = self.adata
-            lin_probs = abs_probs
+            lin_probs = fate_probs
 
         # check that the layer exists, and that use raw is only used with layer X
         if layer in (None, "X"):
@@ -467,7 +466,7 @@ class LinDriversMixin(AbsProbsMixin):
                 try:
                     # fmt: off
                     sets = list(gene_sets.keys())
-                    gene_sets_colors = self.absorption_probabilities[sets].colors
+                    gene_sets_colors = self.fate_probabilities[sets].colors
                     # fmt: on
                 except KeyError:
                     logg.warning(
@@ -544,9 +543,9 @@ class LinDriversMixin(AbsProbsMixin):
 
     @logger
     @shadow
-    def _write_absorption_probabilities(
+    def _write_fate_probabilities(
         self: LinDriversProtocol,
-        abs_probs: Optional[Lineage],
+        fate_probs: Optional[Lineage],
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         self._write_lineage_drivers(None, use_raw=False, log=False)
@@ -554,9 +553,7 @@ class LinDriversMixin(AbsProbsMixin):
             self._write_lineage_drivers(None, use_raw=True, log=False)
         except AttributeError:
             pass
-        return super()._write_absorption_probabilities(
-            abs_probs, params=params, log=False
-        )
+        return super()._write_fate_probabilities(fate_probs, params=params, log=False)
 
     @logger
     @shadow
@@ -578,10 +575,8 @@ class LinDriversMixin(AbsProbsMixin):
             "    Finish"
         )
 
-    def _read_absorption_probabilities(
-        self: LinDriversProtocol, adata: AnnData
-    ) -> bool:
-        ok = super()._read_absorption_probabilities(adata)
+    def _read_fate_probabilities(self: LinDriversProtocol, adata: AnnData) -> bool:
+        ok = super()._read_fate_probabilities(adata)
         if not ok:
             return False
 
