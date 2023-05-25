@@ -1,1 +1,1 @@
-Fix `adjustText` modifying data in-place.
+Fix ``adjustText`` modifying data in-place.

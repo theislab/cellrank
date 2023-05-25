@@ -114,7 +114,7 @@ Bugfixes
 - Very minor fix to adapt the allowed options in macrostate plotting.
   `#1029 <https://github.com/theislab/cellrank/pull/1029>`__
 
-- Fix `adjustText` modifying data in-place.
+- Fix ``adjustText`` modifying data in-place.
   `#1034 <https://github.com/theislab/cellrank/pull/1034>`__
 
 - Adds a reference for Hhex
