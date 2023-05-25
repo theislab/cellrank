@@ -120,6 +120,9 @@ Bugfixes
 - Adds a reference for Hhex
   `#1035 <https://github.com/theislab/cellrank/pull/1035>`__
 
+- Fix lineage color map in :func:`cellrank.pl.gene_trends`.
+  `#1043 <https://github.com/theislab/cellrank/pull/1043>`__
+
 
 Miscellaneous
 -------------
