@@ -43,7 +43,7 @@ class TestLowLevelPipeline:
         estimator_fwd.predict(use=1, method="leiden")
         estimator_fwd.plot_macrostates(which="terminal")
 
-        estimator_fwd.compute_probabilities()
+        estimator_fwd.compute_fate_probabilities()
         estimator_fwd.plot_fate_probabilities()
 
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -66,7 +66,7 @@ class TestLowLevelPipeline:
         estimator_bwd.predict(use=1, method="kmeans")
         estimator_bwd.plot_macrostates(which="terminal")
 
-        estimator_bwd.compute_probabilities()
+        estimator_bwd.compute_fate_probabilities()
         estimator_bwd.plot_fate_probabilities()
 
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
@@ -95,7 +95,7 @@ class TestLowLevelPipeline:
         estimator_fwd.set_terminal_states(n_cells=10)
         estimator_fwd.plot_macrostates(which="terminal")
 
-        estimator_fwd.compute_probabilities()
+        estimator_fwd.compute_fate_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata)
@@ -107,7 +107,7 @@ class TestLowLevelPipeline:
         )
         estimator_fwd.plot_macrostates(which="terminal")
 
-        estimator_fwd.compute_probabilities()
+        estimator_fwd.compute_fate_probabilities()
         estimator_fwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata)
@@ -136,7 +136,7 @@ class TestLowLevelPipeline:
         estimator_bwd.set_terminal_states(n_cells=16)
         estimator_bwd.plot_macrostates(which="terminal")
 
-        estimator_bwd.compute_probabilities()
+        estimator_bwd.compute_fate_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, bwd=True)
@@ -148,7 +148,7 @@ class TestLowLevelPipeline:
         )
         estimator_bwd.plot_macrostates(which="terminal")
 
-        estimator_bwd.compute_probabilities()
+        estimator_bwd.compute_fate_probabilities()
         estimator_bwd.compute_lineage_drivers(cluster_key="clusters", use_raw=False)
 
         _assert_has_all_keys(adata, bwd=True)

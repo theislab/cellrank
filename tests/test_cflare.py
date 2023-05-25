@@ -153,7 +153,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         with pytest.raises(RuntimeError):
-            mc.compute_probabilities()
+            mc.compute_fate_probabilities()
 
     def test_compute_fate_probabilities_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -163,7 +163,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         key = Key.obs.priming_degree(mc.backward)
@@ -200,11 +200,11 @@ class TestCFLARE:
         mc.predict(use=2)
 
         # compute lin probs using direct solver
-        mc.compute_probabilities(solver="direct")
+        mc.compute_fate_probabilities(solver="direct")
         l_direct = mc.fate_probabilities.copy()
 
         # compute lin probs using iterative solver
-        mc.compute_probabilities(solver="gmres", tol=tol)
+        mc.compute_fate_probabilities(solver="gmres", tol=tol)
         l_iterative = mc.fate_probabilities.copy()
 
         assert not np.shares_memory(l_direct.X, l_iterative.X)  # sanity check
@@ -221,11 +221,11 @@ class TestCFLARE:
         mc.predict(use=2, method="kmeans")
 
         # compute lin probs using direct solver
-        mc.compute_probabilities(solver="gmres", use_petsc=False, tol=tol)
+        mc.compute_fate_probabilities(solver="gmres", use_petsc=False, tol=tol)
         l_iter = mc.fate_probabilities.copy()
 
         # compute lin probs using petsc iterative solver
-        mc.compute_probabilities(solver="gmres", use_petsc=True, tol=tol)
+        mc.compute_fate_probabilities(solver="gmres", use_petsc=True, tol=tol)
         l_iter_petsc = mc.fate_probabilities.copy()
 
         assert not np.shares_memory(l_iter.X, l_iter_petsc.X)  # sanity check
@@ -280,7 +280,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
@@ -292,7 +292,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
                 use_raw=False, cluster_key="clusters", clusters=["foo"]
@@ -306,7 +306,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         key = Key.varm.lineage_drivers(False)
@@ -325,7 +325,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
 
         with pytest.raises(RuntimeError):
             mc.plot_lineage_drivers("0")
@@ -338,7 +338,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(KeyError):
@@ -352,7 +352,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(ValueError):
@@ -366,7 +366,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
         mc.plot_lineage_drivers("0", use_raw=False)
 
@@ -389,7 +389,7 @@ class TestCFLARE:
             if arc in arcs
         ]
 
-        mc_fwd.compute_probabilities(keys=arcs)
+        mc_fwd.compute_fate_probabilities(keys=arcs)
         lin_colors = mc_fwd.fate_probabilities[arcs].colors
 
         np.testing.assert_array_equal(arc_colors, lin_colors)
@@ -439,7 +439,7 @@ class TestCFLARE:
             assignment=state_annotation, colors=np.array(["#000000", "#ffffff"])
         )
 
-        c.compute_probabilities()
+        c.compute_fate_probabilities()
         fate_probabilities_query = c.fate_probabilities[state_annotation.isna()]
 
         np.allclose(fate_probabilities_query, fate_probabilities_reference)
@@ -487,7 +487,7 @@ class TestCFLARE:
         with pytest.raises(
             ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."
         ):
-            mc.compute_probabilities()
+            mc.compute_fate_probabilities()
 
     def test_fate_probs_negative(self, adata_large: AnnData, mocker):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -511,7 +511,7 @@ class TestCFLARE:
         )
 
         with pytest.raises(ValueError, match=r"`2` value\(s\) are negative."):
-            mc.compute_probabilities()
+            mc.compute_fate_probabilities()
 
 
 class TestCFLAREIO:

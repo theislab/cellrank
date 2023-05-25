@@ -236,7 +236,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
     mc.set_terminal_states()
     if state == State.TERM:
         return mc
-    mc.compute_probabilities()
+    mc.compute_fate_probabilities()
     mc.compute_absorption_times()
     mc.compute_lineage_priming()
     if state == State.FATE_PROBS:
@@ -580,7 +580,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2, n_cells=5)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         _check_fate_probs(mc)
@@ -680,7 +680,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         mc.predict(n_cells=5, method="eigengap")
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         _check_fate_probs(mc)
@@ -695,7 +695,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         mc.predict(n_cells=5, method="top_n", n_states=1)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         _check_fate_probs(mc)
@@ -711,7 +711,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=5)
         mc.predict(n_cells=5, method="stability", stability_threshold=thresh)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         coarse_T = mc.coarse_T
@@ -757,7 +757,7 @@ class TestGPCCA:
 
         mc.compute_macrostates(n_states=2)
         mc.predict(n_cells=5)
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_priming()
 
         _check_fate_probs(mc)
@@ -771,7 +771,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
 
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
@@ -785,7 +785,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
 
         with pytest.raises(KeyError):
             mc.compute_lineage_drivers(
@@ -801,7 +801,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         key = Key.varm.lineage_drivers(False)
@@ -821,7 +821,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
 
         with pytest.raises(RuntimeError):
             mc.plot_lineage_drivers("0")
@@ -835,7 +835,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(KeyError):
@@ -850,7 +850,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         with pytest.raises(ValueError):
@@ -865,7 +865,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
         mc.plot_lineage_drivers("0", use_raw=False)
@@ -879,7 +879,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
         mc.compute_macrostates(n_states=2)
         mc.set_terminal_states()
-        mc.compute_probabilities()
+        mc.compute_fate_probabilities()
 
         cat = adata_large.obs["clusters"].cat.categories[0]
         deg1 = mc.compute_lineage_priming(
@@ -947,7 +947,7 @@ class TestGPCCA:
         g = cr.estimators.GPCCA(ck)
         g.fit(n_states=2)
         g.predict()
-        g.compute_probabilities()
+        g.compute_fate_probabilities()
 
         drivers = g.compute_lineage_drivers(use_raw=False)
 
@@ -964,7 +964,7 @@ class TestGPCCA:
         g = cr.estimators.GPCCA(ck)
         g.fit(n_states=n_states)
         g.set_terminal_states()
-        g.compute_probabilities()
+        g.compute_fate_probabilities()
         g.compute_absorption_times(keys=keys)
 
         np.testing.assert_array_equal(g.absorption_times.shape, (len(g), n_expected))

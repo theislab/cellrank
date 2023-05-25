@@ -231,7 +231,7 @@ class FateProbsMixin:
         return self._priming_degree
 
     @d.dedent
-    def compute_probabilities(
+    def compute_fate_probabilities(
         self: FateProbsProtocol,
         keys: Optional[Sequence[str]] = None,
         solver: Union[
