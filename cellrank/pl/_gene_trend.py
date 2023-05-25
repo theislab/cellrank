@@ -189,7 +189,6 @@ def gene_trends(
         cbar = False
         logg.debug("All lineages are `None`, setting the weights to `1`")
     lineages = _unique_order_preserving(lineages)
-    probs = probs[lineages]
 
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
@@ -221,6 +220,7 @@ def gene_trends(
     )
 
     lineages = sorted(lineages)
+    probs = probs[lineages]
     if lineage_cmap is None and not transpose:
         lineage_cmap = probs.colors
 
