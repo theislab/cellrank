@@ -1,4 +1,4 @@
-CellRank dev (2023-05-23)
+CellRank dev (2023-05-25)
 =========================
 
 Features
@@ -144,6 +144,9 @@ Miscellaneous
 
 - Use :mod:`rpy2`'s local converter.
   `#1008 <https://github.com/theislab/cellrank/pull/1008>`__
+
+- TODO.
+  `#1040 <https://github.com/theislab/cellrank/pull/1040>`__
 
 
 Documentation
