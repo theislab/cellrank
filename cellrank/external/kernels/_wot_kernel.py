@@ -9,7 +9,7 @@ from cellrank._utils._docs import d
 from cellrank._utils._utils import _maybe_subset_hvgs
 from cellrank.external.kernels._utils import MarkerGenes
 from cellrank.kernels.utils._tmat_flow import Numeric_t
-from cellrank.kernels._transport_map_kernel import Pair_t, Threshold_t, SelfTransitions
+from cellrank.kernels._transport_map_kernel import Key_t, Threshold_t, SelfTransitions
 
 import numpy as np
 import pandas as pd
@@ -249,7 +249,7 @@ class WOTKernel(Kernel, error=_error):
     @d.dedent
     def compute_transition_matrix(
         self,
-        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
+        cost_matrices: Optional[Union[str, Mapping[Key_t, np.ndarray]]] = None,
         lambda1: float = 1,
         lambda2: float = 50,
         epsilon: float = 0.05,
@@ -348,7 +348,7 @@ class WOTKernel(Kernel, error=_error):
         self,
         t1: Numeric_t,
         t2: Numeric_t,
-        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
+        cost_matrices: Optional[Union[str, Mapping[Key_t, np.ndarray]]] = None,
         use_highly_variable: Optional[Union[str, bool]] = True,
         **kwargs: Any,
     ) -> AnnData:
@@ -407,7 +407,7 @@ class WOTKernel(Kernel, error=_error):
         t1: Numeric_t,
         t2: Numeric_t,
         adata: AnnData,  # is possibly subsetted by HVGs
-        cost_matrices: Optional[Union[str, Mapping[Pair_t, np.ndarray]]] = None,
+        cost_matrices: Optional[Union[str, Mapping[Key_t, np.ndarray]]] = None,
     ) -> Optional[np.ndarray]:
         if cost_matrices is None:  # default cost matrix
             return None
