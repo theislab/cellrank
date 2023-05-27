@@ -10,7 +10,6 @@ from typing import (
     Sequence,
 )
 
-from abc import ABC, abstractmethod
 from types import MappingProxyType
 from tqdm.auto import tqdm
 from contextlib import contextmanager
@@ -22,11 +21,11 @@ from cellrank.settings import settings
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._utils import _normalize
-from cellrank.kernels._experimental_time_kernel import ExperimentalTimeKernel
+from cellrank.kernels._base_kernel import UnidirectionalKernel
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import bmat, spdiags, spmatrix, csr_matrix
+import scipy.sparse as sp
 
 __all__ = ["TransportMapKernel"]
 
@@ -43,67 +42,114 @@ Pair_t = Tuple[Numeric_t, Numeric_t]
 Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
 
 
-class TransportMapKernel(ExperimentalTimeKernel, ABC):
+class TransportMapKernel(UnidirectionalKernel):
     """Kernel base class which computes transition matrix based on transport maps for consecutive time point pairs."""
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
-        self._tmaps: Optional[Dict[Pair_t, AnnData]] = None
+    def __init__(
+        self,
+        adata: AnnData,
+        batch_key: str,
+        couplings: Optional[
+            Mapping[Pair_t, Union[np.ndarray, sp.spmatrix, AnnData]]
+        ] = None,
+        policy: Literal["sequential", "star"] = "sequential",
+        reference: Optional[str] = None,
+        **kwargs: AnnData,
+    ):
+        super().__init__(
+            adata, batch_key=batch_key, reference=reference, backward=False, **kwargs
+        )
+        self._couplings: Optional[Dict[Pair_t, AnnData]] = None
+        self._precomputed_couplings = couplings
         self._obs: Optional[pd.DataFrame] = None
 
-    @abstractmethod
-    def _compute_tmap(
-        self, t1: Numeric_t, t2: Numeric_t, **kwargs: Any
-    ) -> Union[np.ndarray, spmatrix, AnnData]:
-        """
-        Compute transport matrix for a time point pair.
+        if policy == "sequential":
+            batch = sorted(self.batch.cat.categories)
+            self._keys = list(zip(batch[:-1], batch[1:]))
+            self._reference = batch[-1]
+        elif policy == "star":
+            if reference not in self._batch_to_ix:
+                raise ValueError("TODO")
+            self._keys = [(c, reference) for c in self._batch_to_ix if c != reference]
+            self._reference = reference
+        else:
+            raise NotImplementedError("TODO")
+
+    def _read_from_adata(
+        self,
+        batch_key: str,
+        reference: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        super()._read_from_adata(**kwargs)
+        self._batch = self.adata.obs[batch_key].astype("category")
+        cats = self.batch.cat.categories
+        self._batch_to_ix = dict(zip(cats, range(len(cats))))
+
+    def compute_coupling(
+        self, src: Any, tgt: Any, **kwargs: Any
+    ) -> Union[np.ndarray, sp.spmatrix, AnnData]:
+        """Compute transport matrix for a time point pair.
+
+        See :meth:`from_moscot` or :meth:`from_wot`.
 
         Parameters
         ----------
-        t1
-            Earlier time point in :attr:`experimental_time`.
-        t2
-            Later time point in :attr:`experimental_time`.
+        src
+            Source key in :attr:`batch`.
+        tgt
+            Target key in :attr:`batch`.
         kwargs
             Additional keyword arguments.
 
         Returns
         -------
-        Array of shape ``(n_cells_early, n_cells_late)``. If :class:`anndata.AnnData`, :attr:`anndata.AnnData.obs_names`
-        and :attr:`anndata.AnnData.var_names` correspond to subsets of observations from :attr:`adata`.
+        Array of shape ``(n_source_cells, n_target_cells)``. If :class:`anndata.AnnData`,
+        :attr:`anndata.AnnData.obs_names` and :attr:`anndata.AnnData.var_names` correspond to subsets of observations
+        from :attr:`adata`.
         """
+        del kwargs
+        if self._precomputed_couplings is None:
+            raise NotImplementedError("TODO")
+        return self._precomputed_couplings[src, tgt]
 
     @d.get_sections(base="tmk_thresh", sections=["Parameters"])
-    def _threshold_transport_maps(
+    def _sparsify_couplings(
         self,
-        tmaps: Dict[Pair_t, AnnData],
+        couplings: Dict[Pair_t, AnnData],
         threshold: Threshold_t,
         copy: bool = False,
     ) -> Optional[Mapping[Pair_t, AnnData]]:
-        """
-        Remove small non-zero values from :attr:`transition_matrix`.
+        """Remove small non-zero values from :attr:`transition_matrix`.
+
+        .. warning::
+            Only dense :attr:`anndata.AnnData.X` will be sparsified.
 
         Parameters
         ----------
+        couplings
+            Optimal transport couplings to sparsify.
         threshold
             How to remove small non-zero values from the transition matrix. Valid options are:
 
                 - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
                 - `'auto_local'` - same as above, but done for each transport separately.
-                - :class:`float` - value in `[0, 100]` corresponding to a percentage of non-zeros to remove in each
-                  transport map.
+                - :class:`float` - value in :math:`[0, 100]` corresponding to a percentage of non-zeros to remove in
+                  the couplings.
 
-            Rows where all values are removed will have uniform distribution and a warning will be issued.
+            Rows where all values are removed will have a uniform distribution and a warning will be issued.
         copy
-            Whether to return a copy of the ``tmaps`` or modify in-place.
+            Whether to return a copy of the ``couplings`` or modify in-place.
 
         Returns
         -------
-        If ``copy = True``, returns a thresholded transport maps. Otherwise, modifies ``tmaps`` in-place.
+        If ``copy = True``, returns sparsified couplings. Otherwise, modifies ``couplings`` in-place.
         """
         if threshold == "auto":
             thresh = min(
-                adata.X[i].max() for adata in tmaps.values() for i in range(adata.n_obs)
+                adata.X[i].max()
+                for adata in couplings.values()
+                for i in range(adata.n_obs)
             )
             logg.info(f"Using automatic `threshold={thresh}`")
         elif threshold == "auto_local":
@@ -113,7 +159,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
             )
 
-        for key, adata in tmaps.items():
+        for key, adata in couplings.items():
+            if sp.issparse(adata.X):
+                continue
             if copy:
                 adata = adata.copy()
             tmat = adata.X
@@ -125,7 +173,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 thresh = np.percentile(tmat.data, threshold)
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
 
-            tmat = csr_matrix(tmat, dtype=tmat.dtype)
+            tmat = sp.csr_matrix(tmat, dtype=tmat.dtype)
             tmat.data[tmat.data < thresh] = 0.0
             zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
             if np.any(zeros_mask):
@@ -139,9 +187,11 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
             # after `zeros_mask` has been handled, to have access to removed row indices
             tmat.eliminate_zeros()
-            tmaps[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
+            couplings[key] = AnnData(
+                tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype
+            )
 
-        return tmaps if copy else None
+        return couplings if copy else None
 
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
@@ -157,12 +207,19 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         conn_kwargs: Mapping[str, Any] = MappingProxyType({}),
         **kwargs: Any,
     ) -> "TransportMapKernel":
-        """
-        Compute transition matrix using transport maps.
+        """Compute transition matrix from optimal transport couplings.
 
         Parameters
         ----------
-        %(tmk_thresh.parameters)s
+        threshold
+            How to remove small non-zero values from the transition matrix. Valid options are:
+
+                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
+                - `'auto_local'` - same as above, but done for each transport separately.
+                - :class:`float` - value in :math:`[0, 100]` corresponding to a percentage of non-zeros to remove in
+                  the couplings.
+
+            Rows where all values are removed will have a uniform distribution and a warning will be issued.
         self_transitions
             How to define transitions within the diagonal blocks that correspond to transitions within the same
             time point. Valid options are:
@@ -173,7 +230,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                   Only applied to the last time point.
                 - :class:`typing.Sequence` - sequence of source time points defining which blocks should be weighted
                   by connectivities. Always applied to the last time point.
-                - `{st.ALL!r}` - same as above, but for all time points.
+                - `{st.ALL!r}` - same as above, but for all keys.
         conn_weight
             Weight of connectivities self transitions. Only used when ``self_transitions = {st.ALL!r}`` or a sequence
             of source time points is passed.
@@ -204,21 +261,16 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 f"Expected `conn_weight` to be in interval `(0, 1)`, found `{conn_weight}`."
             )
 
-        timepoints = self.experimental_time.cat.categories
-        timepoints = list(zip(timepoints[:-1], timepoints[1:]))
-
-        self._tmaps = {}
-        for t1, t2 in tqdm(timepoints, unit="time pair"):
-            tmat = self._compute_tmap(t1, t2, **kwargs)
-            self.transport_maps[t1, t2] = self._tmat_to_adata(t1, t2, tmat)
+        self._couplings = {}
+        for src, tgt in tqdm(self._keys, unit="batch"):
+            coupling = self.compute_coupling(src, tgt, **kwargs)
+            self.couplings[src, tgt] = self._coupling_to_adata(src, tgt, coupling)
 
         if threshold is not None:
-            self._threshold_transport_maps(
-                self.transport_maps, threshold=threshold, copy=False
-            )
+            self._sparsify_couplings(self.couplings, threshold=threshold, copy=False)
 
-        tmap = self._restich_tmaps(
-            self.transport_maps,
+        tmap = self._restich_couplings(
+            self.couplings,
             self_transitions=self_transitions,
             conn_weight=conn_weight,
             **conn_kwargs,
@@ -230,9 +282,9 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         return self
 
     @d.dedent
-    def _restich_tmaps(
+    def _restich_couplings(
         self,
-        tmaps: Mapping[Pair_t, AnnData],
+        couplings: Mapping[Pair_t, AnnData],
         self_transitions: Union[
             str, SelfTransitions, Sequence[Numeric_t]
         ] = SelfTransitions.DIAGONAL,
@@ -244,8 +296,8 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         Parameters
         ----------
-        tmaps
-            Sorted transport maps as ``{{(t1, t2): tmat_2, (t2, t3): tmat_2, ...}}``.
+        couplings
+            Optimal transport couplings.
         %(tmk_tmat.parameters)s
 
         Returns
@@ -255,54 +307,66 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
         if isinstance(self_transitions, (str, SelfTransitions)):
             self_transitions = SelfTransitions(self_transitions)
             if self_transitions == SelfTransitions.ALL:
-                self_transitions = tuple(t1 for (t1, _) in tmaps.keys())
+                self_transitions = tuple(src for (src, _) in couplings.keys())
         elif isinstance(self_transitions, Iterable):
             self_transitions = tuple(self_transitions)
         else:
             raise TypeError(
                 f"Expected `self_transitions` to be a `str` or a `Sequence`, "
-                f"found `{type(self_transitions).__name__}`."
+                f"found `{type(self_transitions)}`."
             )
-        tmaps = self._validate_tmaps(tmaps)
+        self._validate_couplings(couplings)
 
         conn_kwargs = dict(kwargs)
         conn_kwargs["copy"] = False
         _ = conn_kwargs.pop("key_added", None)
 
-        blocks = [[None] * (len(tmaps) + 1) for _ in range(len(tmaps) + 1)]
-        nrows, ncols = 0, 0
-        obs_names, obs = [], []
+        obs_names, obs = {}, {}
+        blocks = [
+            [None] * (len(self._batch_to_ix)) for _ in range(len(self._batch_to_ix))
+        ]
+        for (src, tgt), coupling in couplings.items():
+            src_ix = self._batch_to_ix[src]
+            tgt_ix = self._batch_to_ix[tgt]
+            blocks[src_ix][tgt_ix] = coupling.X
+            obs_names[src_ix] = coupling.obs_names
+            obs[src_ix] = coupling.obs
+            # to prevent blocks from disappearing
+            n = np.sum(self.batch == src)
+            blocks[src_ix][src_ix] = sp.spdiags([0] * n, 0, n, n)
+        obs_names[tgt_ix] = coupling.var_names
+        obs_names = np.ravel([obs_names[ix] for ix in range(len(blocks))])
 
-        for i, tmap in enumerate(tmaps.values()):
-            blocks[i][i + 1] = tmap.X
-            nrows += tmap.n_obs
-            ncols += tmap.n_vars
-            obs_names.extend(tmap.obs_names)
-            obs.append(tmap.obs)
-        obs_names.extend(tmap.var_names)
+        # if policy='sequential', reference is the last key
+        # if policy='star', reference is supplied by the user
+        ref_ix = self._batch_to_ix[self._reference]
+        ref_mask = self.batch == self._reference
+        n = int(np.sum(ref_mask))
 
-        n = self.adata.n_obs - nrows
         if self_transitions == SelfTransitions.DIAGONAL:
-            blocks[-1][-1] = spdiags([1] * n, 0, n, n)
+            blocks[ref_ix][ref_ix] = sp.spdiags([1] * n, 0, n, n)
         elif self_transitions == SelfTransitions.UNIFORM:
-            blocks[-1][-1] = np.ones((n, n)) / float(n)
+            blocks[ref_ix][ref_ix] = np.ones((n, n)) / float(n)
         elif self_transitions == SelfTransitions.CONNECTIVITIES:
-            blocks[-1][-1] = self._compute_connectivity_tmat(
-                self.adata[tmap.var_names], **conn_kwargs
+            blocks[ref_ix][ref_ix] = self._compute_connectivity_tmat(
+                self.adata[ref_mask], **conn_kwargs
             )
         elif isinstance(self_transitions, tuple):
             verbosity = settings.verbosity
             try:  # ignore overly verbose logging
                 settings.verbosity = 0
-                for i, ((t1, _), tmap) in enumerate(tmaps.items()):
-                    if t1 not in self_transitions:
+                for (src, tgt), coupling in couplings.items():
+                    # fmt: off
+                    if src not in self_transitions:
                         continue
-                    blocks[i][i] = conn_weight * self._compute_connectivity_tmat(
-                        self.adata[tmap.obs_names], **conn_kwargs
+                    src_ix, tgt_ix = self._batch_to_ix[src], self._batch_to_ix[tgt]
+                    blocks[src_ix][src_ix] = conn_weight * self._compute_connectivity_tmat(
+                        self.adata[coupling.obs_names], **conn_kwargs
                     )
-                    blocks[i][i + 1] = (1 - conn_weight) * _normalize(blocks[i][i + 1])
-                blocks[-1][-1] = self._compute_connectivity_tmat(
-                    self.adata[tmap.var_names], **conn_kwargs
+                    blocks[src_ix][tgt_ix] = (1 - conn_weight) * _normalize(blocks[src_ix][tgt_ix])
+                    # fmt: on
+                blocks[ref_ix][ref_ix] = self._compute_connectivity_tmat(
+                    self.adata[ref_mask], **conn_kwargs
                 )
             finally:
                 settings.verbosity = verbosity
@@ -311,19 +375,14 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 f"Self transitions' mode `{self_transitions}` is not yet implemented."
             )
 
-        if not isinstance(self_transitions, tuple):
-            # prevent the last block from disappearing
-            n = blocks[0][1].shape[0]
-            blocks[0][0] = spdiags([], 0, n, n)
-
-        tmp = AnnData(bmat(blocks, format="csr"), dtype="float64")
+        tmp = AnnData(sp.bmat(blocks, format="csr"), dtype="float64")
         tmp.obs_names = obs_names
         tmp.var_names = obs_names
         tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
 
         tmp.obs = pd.merge(
             tmp.obs,
-            pd.concat(obs),
+            pd.concat([obs.get(ix, None) for ix in range(len(blocks))]),
             left_index=True,
             right_index=True,
             how="left",
@@ -331,64 +390,29 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
 
         return tmp
 
-    def _validate_tmaps(
+    def _validate_couplings(
         self,
-        tmaps: Dict[Pair_t, AnnData],
-        allow_reorder: bool = True,
-    ) -> Mapping[Pair_t, AnnData]:
+        couplings: Mapping[Pair_t, AnnData],
+    ) -> None:
         """
         Validate that transport maps conform to various invariants.
 
         Parameters
         ----------
-        tmaps
+        couplings
             Transport maps where :attr:`anndata.AnnData.var_names` in the earlier time point must correspond to
             :attr:`anndata.AnnData.obs_names` in the later time point.
-        allow_reorder
-            Whether the target cells in the earlier transport map can be used to reorder
-            the source cells of the later transport map.
 
         Returns
         -------
         Possibly reordered transport maps.
-
-        Raises
-        ------
-        ValueError
-            If ``allow_subset = False`` and the target/source cell names on earlier/later transport map don't match.
-        KeyError
-            If ``allow_subset = True`` and the target cells in earlier transport map are not found in the later one or
-            if the transport maps haven't been computed for all cells in :attr:`adata`.
         """
-        if not len(tmaps):
-            raise ValueError("No transport maps have been computed.")
-
-        tps, tmap2 = list(tmaps.keys()), None
-        for (t1, t2), (t3, t4) in zip(tps[:-1], tps[1:]):
-            tmap1, tmap2 = tmaps[t1, t2], tmaps[t3, t4]
-            try:
-                np.testing.assert_array_equal(tmap1.var_names, tmap2.obs_names)
-            except AssertionError:
-                if not allow_reorder:
-                    raise ValueError(
-                        f"Target cells of coupling with shape `{tmap1.shape}` at `{(t1, t2)}` does not "
-                        f"match the source cells of coupling with shape `{tmap2.shape}` at `{(t3, t4)}`"
-                    ) from None
-                try:
-                    # if a subset happens, we still assume that the transport maps cover all cells from `adata`
-                    # i.e. the transport maps define a superset
-                    tmaps[t3, t4] = tmap2[tmap1.var_names]  # keep the view
-                except KeyError as e:
-                    raise KeyError(
-                        f"Unable to reorder transport map at `{(t3, t4)}` "
-                        f"using transport map at `{(t1, t2)}`."
-                    ) from e
-
         seen_obs = []
-        for tmap in tmaps.values():
-            seen_obs.extend(tmap.obs_names)
-        seen_obs.extend(tmap.var_names)
+        for coupling in couplings.values():
+            seen_obs.extend(coupling.obs_names)
+        seen_obs.extend(coupling.var_names)
 
+        # this invariant holds for both policies
         try:
             pd.testing.assert_series_equal(
                 pd.Series(sorted(seen_obs)),
@@ -403,33 +427,42 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
                 "the observations from the underlying `AnnData` object."
             ) from e
 
-        return tmaps
-
-    def _tmat_to_adata(
-        self, t1: Numeric_t, t2: Numeric_t, tmat: Union[np.ndarray, spmatrix, AnnData]
+    def _coupling_to_adata(
+        self, src: Any, tgt: Any, coupling: Union[np.ndarray, sp.spmatrix, AnnData]
     ) -> AnnData:
-        """Convert transport map ``tmat`` to :class:`anndata.AnnData`. Do nothing if ``tmat`` is of the correct type."""
-        if isinstance(tmat, AnnData):
-            return tmat
+        """Convert the coupling to :class:`~anndata.AnnData`."""
+        if not isinstance(coupling, AnnData):
+            coupling = AnnData(X=coupling, dtype=coupling.dtype)
+            coupling.obs_names = self.adata[self.batch == src].obs_names
+            coupling.var_names = self.adata[self.batch == tgt].obs_names
 
-        tmat = AnnData(X=tmat, dtype=tmat.dtype)
-        tmat.obs_names = self.adata[self.adata.obs[self._time_key] == t1].obs_names
-        tmat.var_names = self.adata[self.adata.obs[self._time_key] == t2].obs_names
+        if sp.issparse(coupling.X) and not sp.isspmatrix_csr(coupling.X):
+            coupling.X = coupling.X.tocsr()
 
-        return tmat
+        return coupling
 
     @contextmanager
     def _tmap_as_tmat(self, **kwargs: Any) -> None:
-        """Temporarily set :attr:`transport_maps` as :attr:`transition_matrix`."""
-        if self.transport_maps is None:
+        """Temporarily set :attr:`transport_mats` as :attr:`transition_matrix`.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments for :meth:`_restich_tmaps`.
+
+        Returns
+        -------
+        Nothing.
+        """
+        if self.couplings is None:
             raise RuntimeError(
-                "Compute transport maps first as `.compute_transition_matrix()`."
+                "Compute transport matrices first as `.compute_transition_matrix()`."
             )
 
         tmat = self._transition_matrix
         try:
             # fmt: off
-            self._transition_matrix = self._restich_tmaps(self.transport_maps, **kwargs).X
+            self._transition_matrix = self._restich_couplings(self.couplings, **kwargs).X
             # fmt: on
             yield
         finally:
@@ -438,7 +471,7 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
     @staticmethod
     def _compute_connectivity_tmat(
         adata: AnnData, **kwargs: Any
-    ) -> Union[np.ndarray, spmatrix]:
+    ) -> Union[np.ndarray, sp.spmatrix]:
         from cellrank.kernels import ConnectivityKernel
 
         # same default as in `ConnectivityKernel`
@@ -451,47 +484,17 @@ class TransportMapKernel(ExperimentalTimeKernel, ABC):
             .transition_matrix
         )
 
-    @d.dedent
-    def plot_single_flow(
-        self,
-        cluster: str,
-        cluster_key: str,
-        time_key: Optional[str] = None,
-        use_transport_maps: bool = False,
-        threshold: Optional[Union[float, Literal["auto"]]] = None,
-        **kwargs: Any,
-    ) -> None:
-        """
-        %(plot_single_flow.full_desc)s
-
-        Parameters
-        ----------
-        %(plot_single_flow.parameters)s
-
-        Returns
-        -------
-        %(plot_single_flow.returns)s
-        """  # noqa: D400
-        if use_transport_maps:
-            with self._tmap_as_tmat(threshold):
-                return super().plot_single_flow(
-                    cluster, cluster_key, time_key=time_key, **kwargs
-                )
-        return super().plot_single_flow(
-            cluster, cluster_key, time_key=time_key, **kwargs
-        )
+    @property
+    def couplings(self) -> Optional[Dict[Pair_t, AnnData]]:
+        """Optimal transport couplings."""
+        return self._couplings
 
     @property
-    def transport_maps(self) -> Optional[Dict[Pair_t, AnnData]]:
-        """Transport maps for consecutive time pairs."""
-        return self._tmaps
+    def batch(self) -> pd.Series:
+        """TODO."""
+        return self._batch
 
     @property
     def obs(self) -> Optional[pd.DataFrame]:
         """Cell-level metadata."""
         return self._obs
-
-    def __invert__(self) -> "TransportMapKernel":
-        tk = super().__invert__("_tmaps")  # don't copy transport maps
-        tk._tmaps = None
-        return tk
