@@ -100,7 +100,7 @@ def pancreas(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
     """
     return _load_dataset_from_url(path, *_datasets["pancreas"], **kwargs)
 
@@ -120,7 +120,7 @@ def pancreas_preprocessed(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
     """
     return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed"], **kwargs)
 
@@ -147,7 +147,7 @@ def lung(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
     """
     return _load_dataset_from_url(path, *_datasets["lung"], **kwargs)
 
@@ -186,7 +186,7 @@ def reprogramming_morris(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
 
     Notes
     -----
@@ -234,7 +234,7 @@ def reprogramming_schiebinger(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
 
     Notes
     -----
@@ -265,7 +265,7 @@ def zebrafish(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
     """
     return _load_dataset_from_url(path, *_datasets["zebrafish"], **kwargs)
 
@@ -287,6 +287,6 @@ def bone_marrow(
 
     Returns
     -------
-    %(adata)s
+    Annotated data object.
     """
     return _load_dataset_from_url(path, *_datasets["bone_marrow"], **kwargs)
