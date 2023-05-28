@@ -61,12 +61,12 @@ class TransportMapKernel(UnidirectionalKernel):
     adata
         Annotated data object.
     batch_key
-        Key in :attr:`anndata.AnnData.obs` TODO.
+        Key in :attr:`anndata.AnnData.obs` by which to split :attr:`adata` to define the couplings.
     couplings
         Pre-computed transport couplings. The keys should correspond to a
         :class:`tuple` of categories from the :attr:`batch`.
     policy
-        How to construct the keys when ``couplings = None``:
+        How to construct the keys from the :attr:`batch` when ``couplings = None``:
 
             - if ``policy = 'sequential'``, the keys will be set to ``[(c1, c2), (c2, c3), ...]``.
             - if ``policy = 'star'``, the keys will be set to ``[(c1, reference), (c2, reference), ...]``.
@@ -74,7 +74,7 @@ class TransportMapKernel(UnidirectionalKernel):
         Key which defines the coupling without any outgoing transitions:
 
             - if ``policy = 'sequential'``, this should correspond to the last time point.
-            - if ``policy = 'star'``, this should correspond to the (spatial) reference.
+            - if ``policy = 'star'``, this should correspond to, e.g., the spatial reference.
     kwargs
         Keyword arguments for the parent class.
     """
@@ -104,12 +104,12 @@ class TransportMapKernel(UnidirectionalKernel):
             raise TypeError(
                 f"Expected `adata.obs[{batch_key!r}]` to be categorical, found `{infer_dtype(self._batch)}`."
             )
-        self._batch = self.batch.cat.remove_unused_categories()
-        cats = self.batch.cat.categories
+        self._batch = self._batch.cat.remove_unused_categories()
+        cats = self._batch.cat.categories
         self._batch_to_ix = dict(zip(cats, range(len(cats))))
 
     def compute_coupling(self, src: Any, tgt: Any, **kwargs: Any) -> Coupling_t:
-        """Compute transport matrix for a time point pair.
+        """Compute transport matrix for a pair.
 
         See :meth:`from_moscot` or :meth:`from_wot`.
 
@@ -128,7 +128,7 @@ class TransportMapKernel(UnidirectionalKernel):
         """
         del kwargs
         if (src, tgt) not in self.couplings:
-            raise KeyError(f"Key `{src, tgt}` not found in the `.couplings`.")
+            raise KeyError(f"Key `{src, tgt}` not found in the `couplings`.")
         if self.couplings[src, tgt] is None:
             raise ValueError(
                 f"Coupling for `{src, tgt}` is not computed. "
@@ -164,23 +164,24 @@ class TransportMapKernel(UnidirectionalKernel):
 
             Rows where all values are removed will have a uniform distribution and a warning will be issued.
         self_transitions
-            How to define transitions within the diagonal blocks that correspond to transitions within the same
-            time point. Valid options are:
+            How to define transitions within the diagonal blocks that correspond to transitions within the same key.
+            Valid options are:
 
-                - `{st.UNIFORM!r}` - row-normalized matrix of 1s for transitions. Only applied to the reference.
-                - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal. Only applied to the reference.
-                - `{st.CONNECTIVITIES!r}` - use transition matrix from :class:`cellrank.kernels.ConnectivityKernel`.
-                  Only applied to the last time point.
-                - :class:`typing.Sequence` - sequence of source time points defining which blocks should be weighted
-                  by connectivities. Always applied to the last time point.
+                - `{st.UNIFORM!r}` - row-normalized matrix of 1s for transitions.
+                - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
+                - `{st.CONNECTIVITIES!r}` - transition matrix from the :class:`~cellrank.kernels.ConnectivityKernel`.
+                - :class:`~typing.Sequence` - sequence of source keys defining which blocks should be weighted
+                  by the connectivities.
                 - `{st.ALL!r}` - same as above, but for all keys.
+
+            The first 3 options are applied to the block specified by the :attr:`reference`.
         conn_weight
-            Weight of connectivities self transitions. Only used when ``self_transitions = {st.ALL!r}`` or a sequence
-            of source time points is passed.
+            Weight of connectivities' self transitions. Only used when ``self_transitions = {st.ALL!r}`` or
+            a sequence of source keys is passed.
         conn_kwargs
             Keyword arguments for :func:`scanpy.pp.neighbors` when using ``self_transitions`` use
-            :class:`cellrank.kernels.ConnectivityKernel`. Can contain `'density_normalize'` for
-            :meth:`cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
+            :class:`~cellrank.kernels.ConnectivityKernel`. Can contain `'density_normalize'` for
+            :meth:`~cellrank.kernels.ConnectivityKernel.compute_transition_matrix`.
         kwargs
             Additional keyword arguments.
 
@@ -189,7 +190,7 @@ class TransportMapKernel(UnidirectionalKernel):
         Self and updates the following attributes:
 
             - :attr:`transition_matrix` - transition matrix.
-            - :attr:`transport_maps` - transport maps between consecutive time points.
+            - :attr:`couplings` - transport maps.
         """
         cache_params = dict(kwargs)
         cache_params["threshold"] = threshold
@@ -232,18 +233,19 @@ class TransportMapKernel(UnidirectionalKernel):
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> "TransportMapKernel":
-        """Construct a kernel from a :mod:`moscot` problem.
+        """Construct a kernel from a :mod:`moscot` problem :cite:`klein:23`.
 
         Parameters
         ----------
         problem
             A :mod:`moscot` problem.
         allow_subset
-            Whether to
+            Whether to subset :attr:`~moscot.base.problems.CompoundProblem.adata` if the solutions
+            do not completely partition it.
         sparsify
             Whether to sparsify the transport maps using :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
         sparsify_kwargs
-            Keyword arguments for sparsification.
+            Keyword arguments for the sparsification.
         kwargs
             Additional keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
 
@@ -264,7 +266,9 @@ class TransportMapKernel(UnidirectionalKernel):
         )
 
         if not problem.solutions:
-            raise RuntimeError("Problem contains no solutions.")
+            raise RuntimeError(
+                "Problem contains no solutions. Please run `problem.solve(...)` first."
+            )
 
         if isinstance(problem, TemporalMixin):
             batch_key = problem.temporal_key
@@ -368,14 +372,14 @@ class TransportMapKernel(UnidirectionalKernel):
             obs_names[src_ix] = coupling.obs_names
             obs[src_ix] = coupling.obs
             # to prevent blocks from disappearing
-            n = np.sum(self.batch == src)
+            n = np.sum(self._batch == src)
             blocks[src_ix][src_ix] = sp.spdiags([0] * n, 0, n, n)
         obs_names[tgt_ix] = coupling.var_names
 
         # if policy='sequential', reference is the last key
         # if policy='star', reference is supplied by the user
         ref_ix = self._batch_to_ix[self.reference]
-        ref_mask = self.batch == self.reference
+        ref_mask = self._batch == self.reference
         n = int(np.sum(ref_mask))
 
         if self_transitions == SelfTransitions.DIAGONAL:
@@ -469,7 +473,7 @@ class TransportMapKernel(UnidirectionalKernel):
             )
             logg.info(f"Using automatic `threshold={thresh}`")
         elif threshold == "auto_local":
-            logg.info("Using automatic `threshold` for each time point pair separately")
+            logg.info("Using automatic `threshold` for each src/tgt key separately")
         elif not (0 <= threshold <= 100):
             raise ValueError(
                 f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
@@ -519,8 +523,7 @@ class TransportMapKernel(UnidirectionalKernel):
         Parameters
         ----------
         couplings
-            Transport maps where :attr:`anndata.AnnData.var_names` in the earlier time point must correspond to
-            :attr:`anndata.AnnData.obs_names` in the later time point.
+            Optimal transport couplings.
 
         Returns
         -------
@@ -550,8 +553,8 @@ class TransportMapKernel(UnidirectionalKernel):
         """Convert the coupling to :class:`~anndata.AnnData`."""
         if not isinstance(coupling, AnnData):
             coupling = AnnData(X=coupling, dtype=coupling.dtype)
-            coupling.obs_names = self.adata[self.batch == src].obs_names
-            coupling.var_names = self.adata[self.batch == tgt].obs_names
+            coupling.obs_names = self.adata[self._batch == src].obs_names
+            coupling.var_names = self.adata[self._batch == tgt].obs_names
 
         if sp.issparse(coupling.X) and not sp.isspmatrix_csr(coupling.X):
             coupling.X = coupling.X.tocsr()
@@ -563,7 +566,7 @@ class TransportMapKernel(UnidirectionalKernel):
         couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]],
         policy: Literal["sequential", "star"],
     ) -> Dict[Key_t, Optional[Coupling_t]]:
-        cats = self.batch.cat.categories
+        cats = self._batch.cat.categories
         if couplings is None:
             if policy == "sequential":
                 couplings = {(src, tgt): None for src, tgt in zip(cats[:-1], cats[:-1])}
@@ -576,7 +579,8 @@ class TransportMapKernel(UnidirectionalKernel):
 
         for keys in couplings:
             for key in keys:
-                raise ValueError(f"Key `{key}` is not in `{sorted(cats)}`.")
+                if key not in cats:
+                    raise ValueError(f"Key `{key}` is not in `{sorted(cats)}`.")
 
         return dict(couplings)
 
@@ -602,13 +606,8 @@ class TransportMapKernel(UnidirectionalKernel):
         return self._couplings
 
     @property
-    def batch(self) -> pd.Series:
-        """TODO."""
-        return self._batch
-
-    @property
     def reference(self) -> Any:
-        """TODO."""
+        """Reference key used to determine the coupling with no outgoing transitions."""
         return self._reference
 
     @property
