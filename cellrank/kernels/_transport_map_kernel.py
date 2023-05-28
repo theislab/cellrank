@@ -1,4 +1,5 @@
 from typing import (
+    TYPE_CHECKING,
     Any,
     Dict,
     Tuple,
@@ -27,6 +28,9 @@ import pandas as pd
 import scipy.sparse as sp
 
 __all__ = ["TransportMapKernel"]
+
+if TYPE_CHECKING:
+    from moscot.base.problems import CompoundProblem
 
 
 class SelfTransitions(ModeEnum):
@@ -217,6 +221,81 @@ class TransportMapKernel(UnidirectionalKernel):
             raise NotImplementedError("TODO")
         return self._precomputed_couplings[src, tgt]
 
+    @classmethod
+    def from_moscot(
+        cls,
+        problem: "CompoundProblem",
+        batch_key: Optional[str] = None,
+        allow_subset: bool = False,
+        sparsify: bool = False,
+        sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
+        **kwargs: Any,
+    ) -> "TransportMapKernel":
+        """TODO."""
+        from moscot.problems.time import TemporalMixin
+        from moscot.problems.space import SpatialAlignmentMixin
+        from moscot.utils.subset_policy import (
+            StarPolicy,
+            SequentialPolicy,
+            ExternalStarPolicy,
+        )
+
+        if not len(problem.solutions):
+            raise RuntimeError("TODO")
+
+        if isinstance(problem, TemporalMixin):
+            batch_key = problem.temporal_key if batch_key is None else batch_key
+        elif isinstance(problem, SpatialAlignmentMixin):
+            batch_key = problem.batch_key if batch_key is None else batch_key
+        else:
+            raise ValueError("TODO")
+
+        policy = problem._policy
+        if isinstance(policy, SequentialPolicy):
+            reference = None
+            policy = "sequential"
+        elif isinstance(policy, (StarPolicy, ExternalStarPolicy)):
+            reference = policy.reference
+            policy = "star"
+        else:
+            raise NotImplementedError("TODO")
+
+        obs_names, couplings = set(), {}
+        for (t1, t2), solution in problem.solutions.items():
+            adata_src = problem[t1, t2].adata_src
+            adata_tgt = problem[t1, t2].adata_tgt
+            if sparsify:
+                solution = solution.sparsify(**sparsify_kwargs)
+            coupling = solution.transport_matrix
+            if not (isinstance(coupling, np.ndarray) or sp.issparse(coupling)):
+                # convert from, e.g., `jax`
+                coupling = np.asarray(coupling)
+            couplings[t1, t2] = AnnData(coupling, obs=adata_src.obs, var=adata_tgt.obs)
+            for adata in [adata_src, adata_tgt]:
+                obs_names.update(adata.obs_names)
+                obs_names.update(adata.var_names)
+
+        adata = problem.adata
+        if allow_subset:
+            obs_names = adata.obs_names.intersection(obs_names)
+            adata = adata[obs_names].copy()
+            if not adata.n_obs:
+                raise RuntimeError("TODO")
+
+        return cls(
+            adata,
+            couplings=couplings,
+            batch_key=batch_key,
+            policy=policy,
+            reference=reference,
+            **kwargs,
+        )
+
+    @classmethod
+    def from_wot(cls) -> "TransportMapKernel":
+        """Not implemented."""
+        raise NotImplementedError("TODO")
+
     @d.dedent
     def _restich_couplings(
         self,
@@ -227,8 +306,7 @@ class TransportMapKernel(UnidirectionalKernel):
         conn_weight: Optional[float] = None,
         **kwargs: Any,
     ) -> AnnData:
-        """
-        Group individual transport maps into 1 matrix aligned with :attr:`adata`.
+        """Group individual transport maps into 1 matrix aligned with :attr:`adata`.
 
         Parameters
         ----------
@@ -238,7 +316,7 @@ class TransportMapKernel(UnidirectionalKernel):
 
         Returns
         -------
-        Merged transport maps into one :class:`anndata.AnnData` object.
+        Merged transport maps into one :class:`~anndata.AnnData` object.
         """
         if isinstance(self_transitions, (str, SelfTransitions)):
             self_transitions = SelfTransitions(self_transitions)
