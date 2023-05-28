@@ -26,6 +26,7 @@ from cellrank.kernels._base_kernel import UnidirectionalKernel
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+from pandas.api.types import infer_dtype, is_categorical_dtype
 
 __all__ = ["TransportMapKernel"]
 
@@ -42,69 +43,98 @@ class SelfTransitions(ModeEnum):
 
 Key_t = Tuple[Any, Any]
 Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
+Coupling_t = Union[np.ndarray, sp.spmatrix, AnnData]
 
 
-# TODO(michalk8): make bi-directional?
+@d.dedent
 class TransportMapKernel(UnidirectionalKernel):
-    """Kernel which computes transition matrix using optimal transport maps.
+    """Kernel which computes transition matrix using optimal transport couplings.
+
+    This class should be constructed using either:
+
+        1. the :meth:`from_moscot` or :meth:`from_wot` methods,
+        2. explicitly passing the pre-computed couplings, or
+        3. overriding the :meth:`compute_coupling` method.
 
     Parameters
     ----------
     adata
-        TODO.
+        Annotated data object.
     batch_key
-        TODO.
+        Key in :attr:`anndata.AnnData.obs` TODO.
     couplings
-        TODO.
+        Pre-computed transport couplings. The keys should correspond to a
+        :class:`tuple` of categories from the :attr:`batch`.
     policy
-        TODO.
+        How to construct the keys when ``couplings = None``:
+
+            - if ``policy = 'sequential'``, the keys will be set to ``[(c1, c2), (c2, c3), ...]``.
+            - if ``policy = 'star'``, the keys will be set to ``[(c1, reference), (c2, reference), ...]``.
     reference
-        TODO.
+        Key which defines the coupling without any outgoing transitions:
+
+            - if ``policy = 'sequential'``, this should correspond to the last time point.
+            - if ``policy = 'star'``, this should correspond to the (spatial) reference.
     kwargs
-        TODO.
+        Keyword arguments for the parent class.
     """
 
     def __init__(
         self,
         adata: AnnData,
         batch_key: str,
-        couplings: Optional[
-            Mapping[Key_t, Union[np.ndarray, sp.spmatrix, AnnData]]
-        ] = None,
+        couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]] = None,
         policy: Literal["sequential", "star"] = "sequential",
-        reference: Optional[str] = None,
-        **kwargs: AnnData,
+        reference: Optional[Any] = None,
+        **kwargs: Any,
     ):
-        super().__init__(
-            adata, batch_key=batch_key, reference=reference, backward=False, **kwargs
-        )
-        self._couplings: Optional[Dict[Key_t, AnnData]] = None
-        self._precomputed_couplings = couplings
+        super().__init__(adata, batch_key=batch_key, **kwargs)
         self._obs: Optional[pd.DataFrame] = None
-
-        if policy == "sequential":
-            batch = sorted(self.batch.cat.categories)
-            self._keys = list(zip(batch[:-1], batch[1:]))
-            self._reference = batch[-1]
-        elif policy == "star":
-            if reference not in self._batch_to_ix:
-                raise ValueError("TODO")
-            self._keys = [(c, reference) for c in self._batch_to_ix if c != reference]
-            self._reference = reference
-        else:
-            raise NotImplementedError("TODO")
+        self._reference = reference
+        self._couplings = self._get_default_coupling(couplings, policy)
 
     def _read_from_adata(
         self,
         batch_key: str,
-        reference: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         super()._read_from_adata(**kwargs)
-        # TODO(michalk8): don't convert to a categorical
-        self._batch = self.adata.obs[batch_key].astype("category")
+        self._batch = self.adata.obs[batch_key].copy()
+        if not is_categorical_dtype(self._batch):
+            raise TypeError(
+                f"Expected `adata.obs[{batch_key!r}]` to be categorical, found `{infer_dtype(self._batch)}`."
+            )
+        self._batch = self.batch.cat.remove_unused_categories()
         cats = self.batch.cat.categories
         self._batch_to_ix = dict(zip(cats, range(len(cats))))
+
+    def compute_coupling(self, src: Any, tgt: Any, **kwargs: Any) -> Coupling_t:
+        """Compute transport matrix for a time point pair.
+
+        See :meth:`from_moscot` or :meth:`from_wot`.
+
+        Parameters
+        ----------
+        src
+            Source key in :attr:`batch`.
+        tgt
+            Target key in :attr:`batch`.
+        kwargs
+            Additional keyword arguments.
+
+        Returns
+        -------
+        Array of shape ``(n_source_cells, n_target_cells)``.
+        """
+        del kwargs
+        if (src, tgt) not in self.couplings:
+            raise KeyError(f"Key `{src, tgt}` not found in the `.couplings`.")
+        if self.couplings[src, tgt] is None:
+            raise ValueError(
+                f"Coupling for `{src, tgt}` is not computed. "
+                f"Consider overriding the `compute_coupling` method."
+            )
+        return self.couplings[src, tgt]
 
     @d.get_sections(base="tmk_tmat", sections=["Parameters"])
     @d.dedent
@@ -137,8 +167,8 @@ class TransportMapKernel(UnidirectionalKernel):
             How to define transitions within the diagonal blocks that correspond to transitions within the same
             time point. Valid options are:
 
-                - `{st.UNIFORM!r}` - row-normalized matrix of 1s for transitions. Only applied to the last time point.
-                - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal. Only applied to the last time point.
+                - `{st.UNIFORM!r}` - row-normalized matrix of 1s for transitions. Only applied to the reference.
+                - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal. Only applied to the reference.
                 - `{st.CONNECTIVITIES!r}` - use transition matrix from :class:`cellrank.kernels.ConnectivityKernel`.
                   Only applied to the last time point.
                 - :class:`typing.Sequence` - sequence of source time points defining which blocks should be weighted
@@ -174,8 +204,7 @@ class TransportMapKernel(UnidirectionalKernel):
                 f"Expected `conn_weight` to be in interval `(0, 1)`, found `{conn_weight}`."
             )
 
-        self._couplings = {}
-        for src, tgt in tqdm(self._keys, unit="batch"):
+        for src, tgt in tqdm(self._couplings, unit="batch"):
             coupling = self.compute_coupling(src, tgt, **kwargs)
             self.couplings[src, tgt] = self._coupling_to_adata(src, tgt, coupling)
 
@@ -194,44 +223,38 @@ class TransportMapKernel(UnidirectionalKernel):
 
         return self
 
-    def compute_coupling(
-        self, src: Any, tgt: Any, **kwargs: Any
-    ) -> Union[np.ndarray, sp.spmatrix, AnnData]:
-        """Compute transport matrix for a time point pair.
-
-        See :meth:`from_moscot` or :meth:`from_wot`.
-
-        Parameters
-        ----------
-        src
-            Source key in :attr:`batch`.
-        tgt
-            Target key in :attr:`batch`.
-        kwargs
-            Additional keyword arguments.
-
-        Returns
-        -------
-        Array of shape ``(n_source_cells, n_target_cells)``. If :class:`anndata.AnnData`,
-        :attr:`anndata.AnnData.obs_names` and :attr:`anndata.AnnData.var_names` correspond to subsets of observations
-        from :attr:`adata`.
-        """
-        del kwargs
-        if self._precomputed_couplings is None:
-            raise NotImplementedError("TODO")
-        return self._precomputed_couplings[src, tgt]
-
     @classmethod
     def from_moscot(
         cls,
         problem: "CompoundProblem",
-        batch_key: Optional[str] = None,
         allow_subset: bool = False,
         sparsify: bool = False,
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> "TransportMapKernel":
-        """TODO."""
+        """Construct a kernel from a :mod:`moscot` problem.
+
+        Parameters
+        ----------
+        problem
+            A :mod:`moscot` problem.
+        allow_subset
+            Whether to
+        sparsify
+            Whether to sparsify the transport maps using :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
+        sparsify_kwargs
+            Keyword arguments for sparsification.
+        kwargs
+            Additional keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
+
+        Returns
+        -------
+        The kernel.
+
+        Notes
+        -----
+        If ``allow_subset = True``, :attr:`adata` will be a view.
+        """
         from moscot.problems.time import TemporalMixin
         from moscot.problems.space import SpatialAlignmentMixin
         from moscot.utils.subset_policy import (
@@ -240,25 +263,27 @@ class TransportMapKernel(UnidirectionalKernel):
             ExternalStarPolicy,
         )
 
-        if not len(problem.solutions):
-            raise RuntimeError("TODO")
+        if not problem.solutions:
+            raise RuntimeError("Problem contains no solutions.")
 
         if isinstance(problem, TemporalMixin):
-            batch_key = problem.temporal_key if batch_key is None else batch_key
+            batch_key = problem.temporal_key
         elif isinstance(problem, SpatialAlignmentMixin):
-            batch_key = problem.batch_key if batch_key is None else batch_key
+            batch_key = problem.batch_key
         else:
-            raise ValueError("TODO")
+            raise NotImplementedError(
+                f"Problem of type `{type(problem)}` is not yet implemented."
+            )
 
         policy = problem._policy
         if isinstance(policy, SequentialPolicy):
-            reference = None
-            policy = "sequential"
+            reference = sorted(k for key in problem.solutions for k in key)[-1]
         elif isinstance(policy, (StarPolicy, ExternalStarPolicy)):
             reference = policy.reference
-            policy = "star"
         else:
-            raise NotImplementedError("TODO")
+            raise NotImplementedError(
+                f"Handling `{type(policy)}` policy is not yet implemented."
+            )
 
         obs_names, couplings = set(), {}
         for (t1, t2), solution in problem.solutions.items():
@@ -278,23 +303,20 @@ class TransportMapKernel(UnidirectionalKernel):
         adata = problem.adata
         if allow_subset:
             obs_names = adata.obs_names.intersection(obs_names)
-            adata = adata[obs_names].copy()
-            if not adata.n_obs:
-                raise RuntimeError("TODO")
+            adata = adata[obs_names]
 
         return cls(
             adata,
             couplings=couplings,
             batch_key=batch_key,
-            policy=policy,
             reference=reference,
             **kwargs,
         )
 
     @classmethod
     def from_wot(cls) -> "TransportMapKernel":
-        """Not implemented."""
-        raise NotImplementedError("TODO")
+        """Not yet implemented."""
+        raise NotImplementedError()
 
     @d.dedent
     def _restich_couplings(
@@ -352,8 +374,8 @@ class TransportMapKernel(UnidirectionalKernel):
 
         # if policy='sequential', reference is the last key
         # if policy='star', reference is supplied by the user
-        ref_ix = self._batch_to_ix[self._reference]
-        ref_mask = self.batch == self._reference
+        ref_ix = self._batch_to_ix[self.reference]
+        ref_mask = self.batch == self.reference
         n = int(np.sum(ref_mask))
 
         if self_transitions == SelfTransitions.DIAGONAL:
@@ -524,9 +546,7 @@ class TransportMapKernel(UnidirectionalKernel):
                 "the observations from the underlying `AnnData` object."
             ) from e
 
-    def _coupling_to_adata(
-        self, src: Any, tgt: Any, coupling: Union[np.ndarray, sp.spmatrix, AnnData]
-    ) -> AnnData:
+    def _coupling_to_adata(self, src: Any, tgt: Any, coupling: Coupling_t) -> AnnData:
         """Convert the coupling to :class:`~anndata.AnnData`."""
         if not isinstance(coupling, AnnData):
             coupling = AnnData(X=coupling, dtype=coupling.dtype)
@@ -537,6 +557,28 @@ class TransportMapKernel(UnidirectionalKernel):
             coupling.X = coupling.X.tocsr()
 
         return coupling
+
+    def _get_default_coupling(
+        self,
+        couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]],
+        policy: Literal["sequential", "star"],
+    ) -> Dict[Key_t, Optional[Coupling_t]]:
+        cats = self.batch.cat.categories
+        if couplings is None:
+            if policy == "sequential":
+                couplings = {(src, tgt): None for src, tgt in zip(cats[:-1], cats[:-1])}
+            elif policy == "star":
+                couplings = {
+                    (src, self.reference) for src in cats if src != self.reference
+                }
+            else:
+                raise NotImplementedError(policy)
+
+        for keys in couplings:
+            for key in keys:
+                raise ValueError(f"Key `{key}` is not in `{sorted(cats)}`.")
+
+        return dict(couplings)
 
     @staticmethod
     def _compute_connectivity_tmat(
@@ -563,6 +605,11 @@ class TransportMapKernel(UnidirectionalKernel):
     def batch(self) -> pd.Series:
         """TODO."""
         return self._batch
+
+    @property
+    def reference(self) -> Any:
+        """TODO."""
+        return self._reference
 
     @property
     def obs(self) -> Optional[pd.DataFrame]:
