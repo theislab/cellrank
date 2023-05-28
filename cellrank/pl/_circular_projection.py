@@ -121,7 +121,7 @@ def circular_projection(
     lineage_order
         Can be one of the following:
 
-            - `None` - it will determined automatically, based on the number of lineages.
+            - `None` - it will be determined automatically, based on the number of lineages.
             - `'optimal'` - order lineages optimally by solving the Traveling salesman problem (TSP).
               Recommended for <= `20` lineages.
             - `'default'` - use the order as specified by ``lineages``.
@@ -161,11 +161,11 @@ def circular_projection(
     Returns
     -------
     %(just_plots)s
-        Also updates ``adata`` with the following fields:
+    Also updates ``adata`` with the following fields:
 
-            - :attr:`anndata.AnnData.obsm` ``['{key_added}']`` - the circular projection.
-            - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']`` - the priming degree,
-              if a method is present in ``keys``.
+        - :attr:`anndata.AnnData.obsm` ``['{key_added}']`` - the circular projection.
+        - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']`` - the priming degree,
+          if a method is present in ``keys``.
     """
     if label_distance is not None and label_distance < 0:
         raise ValueError(

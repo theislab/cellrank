@@ -159,8 +159,7 @@ class WOTKernel(Kernel, error=_error):
 
         Returns
         -------
-        :class:`pandas.Series`
-            The estimated initial growth rates if ``key_added = None``, otherwise `None`.
+        The estimated initial growth rates if ``key_added = None``, otherwise `None`.
 
         Notes
         -----
