@@ -11,7 +11,9 @@ from typing import (
     Sequence,
 )
 
+import os
 import types
+import pathlib
 from tqdm.auto import tqdm
 
 import scanpy as sc
@@ -233,7 +235,7 @@ class TransportMapKernel(UnidirectionalKernel):
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> "TransportMapKernel":
-        """Construct a kernel from a :mod:`moscot` problem :cite:`klein:23`.
+        """Construct the kernel from :mod:`moscot` :cite:`klein:23`.
 
         Parameters
         ----------
@@ -318,9 +320,47 @@ class TransportMapKernel(UnidirectionalKernel):
         )
 
     @classmethod
-    def from_wot(cls) -> "TransportMapKernel":
-        """Not yet implemented."""
-        raise NotImplementedError()
+    def from_wot(
+        cls,
+        adata: AnnData,
+        path: Union[str, pathlib.Path],
+        batch_key: str,
+        **kwargs: Any,
+    ) -> "TransportMapKernel":
+        """Construct the kernel from Waddington OT :cite:`schiebinger:19`.
+
+        Parameters
+        ----------
+        adata
+            Annotated data object.
+        path
+            Directory where the couplings are stored.
+        batch_key
+            Key in :attr:`anndata.AnnData.obs` by which to split :attr:`adata` to define the couplings.
+        kwargs
+            Additional keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
+
+        Returns
+        -------
+        The kernel.
+        """
+        path = pathlib.Path(path)
+        dtype = type(adata.obs[batch_key].iloc[0])
+
+        couplings = {}
+        for fname in path.glob("*h5ad"):
+            name, _ = os.path.splitext(fname)
+            *_, src, tgt = name.split("_")
+            couplings[dtype(src), dtype(tgt)] = sc.read(fname)
+        reference = sorted(k for keys in couplings for k in keys)[-1]
+
+        return cls(
+            adata,
+            couplings=couplings,
+            batch_key=batch_key,
+            reference=reference,
+            **kwargs,
+        )
 
     @d.dedent
     def _restich_couplings(
@@ -374,7 +414,8 @@ class TransportMapKernel(UnidirectionalKernel):
             # to prevent blocks from disappearing
             n = np.sum(self._batch == src)
             blocks[src_ix][src_ix] = sp.spdiags([0] * n, 0, n, n)
-        obs_names[tgt_ix] = coupling.var_names
+            if tgt == self.reference:
+                obs_names[tgt_ix] = coupling.var_names
 
         # if policy='sequential', reference is the last key
         # if policy='star', reference is supplied by the user
@@ -423,14 +464,14 @@ class TransportMapKernel(UnidirectionalKernel):
         tmp.var_names = index
         tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
 
+        obs = pd.concat([obs.get(ix, None) for ix in range(len(blocks))])
         tmp.obs = pd.merge(
             tmp.obs,
-            pd.concat([obs.get(ix, None) for ix in range(len(blocks))]),
+            obs,
             left_index=True,
             right_index=True,
             how="left",
         )
-
         return tmp
 
     @d.get_sections(base="tmk_thresh", sections=["Parameters"])
@@ -530,9 +571,10 @@ class TransportMapKernel(UnidirectionalKernel):
         Possibly reordered transport maps.
         """
         seen_obs = []
-        for coupling in couplings.values():
+        for (_, tgt), coupling in couplings.items():
             seen_obs.extend(coupling.obs_names)
-        seen_obs.extend(coupling.var_names)
+            if tgt == self.reference:
+                seen_obs.extend(coupling.var_names)
 
         # this invariant holds for both policies
         try:
