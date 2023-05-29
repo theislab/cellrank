@@ -30,4 +30,3 @@ External Kernels
     :toctree: _autosummary/kernels
 
     external.kernels.StationaryOTKernel
-    external.kernels.WOTKernel
