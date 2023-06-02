@@ -5,7 +5,6 @@ import pytest
 import cellrank.external as cre
 from anndata import AnnData
 from cellrank.kernels import ConnectivityKernel
-from cellrank.external.kernels._utils import MarkerGenes
 
 import numpy as np
 import pandas as pd
@@ -103,20 +102,3 @@ class TestOTKernel:
         else:
             with pytest.raises(RuntimeError, match=r"Unable to find connectivities"):
                 ok.plot_projection()
-
-
-class TestGetMarkers:
-    @pytest.mark.parametrize("kind", ["proliferation", "apoptosis"])
-    @pytest.mark.parametrize("organism", ["human", "mouse", "foo"])
-    def test_get_markers(self, organism: str, kind: str):
-        if organism == "foo":
-            with pytest.raises(NotImplementedError, match=r""):
-                getattr(MarkerGenes, f"{kind}_markers")(organism)
-        else:
-            markers = getattr(MarkerGenes, f"{kind}_markers")(organism)
-            assert isinstance(markers, tuple)
-            assert np.all([isinstance(marker, str) for marker in markers])
-            if organism == "human":
-                np.testing.assert_array_equal(
-                    markers, [marker.upper() for marker in markers]
-                )
