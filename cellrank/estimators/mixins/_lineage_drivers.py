@@ -94,7 +94,7 @@ class LinDriversMixin(FateProbsMixin):
             Key from :attr:`anndata.AnnData.layers` from which to get the expression.
             If `None` or `'X'`, use :attr:`anndata.AnnData.X`.
         use_raw
-            Whether or not to use :attr:`anndata.AnnData.raw` to correlate gene expression.
+            Whether to use :attr:`anndata.AnnData.raw` to correlate gene expression.
         confidence_level
             Confidence level for the confidence interval calculation. Must be in interval `[0, 1]`.
         n_perms
