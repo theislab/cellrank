@@ -134,8 +134,6 @@ class TransportMapKernel(UnidirectionalKernel):
             )
         return self.couplings[src, tgt]
 
-    @d.get_sections(base="tmk_tmat", sections=["Parameters"])
-    @d.dedent
     @inject_docs(st=SelfTransitions)
     def compute_transition_matrix(
         self,
@@ -162,11 +160,11 @@ class TransportMapKernel(UnidirectionalKernel):
 
             Rows where all values are removed will have a uniform distribution and a warning will be issued.
         self_transitions
-            How to define transitions within the diagonal blocks that correspond to transitions within the same key.
+            How to define transitions within the blocks that correspond to transitions within the same key.
             Valid options are:
 
-                - `{st.UNIFORM!r}` - row-normalized matrix of 1s for transitions.
-                - `{st.DIAGONAL!r}` - diagonal matrix with 1s on the diagonal.
+                - `{st.UNIFORM!r}` - row-normalized matrix of 1s.
+                - `{st.DIAGONAL!r}` - identity matrix.
                 - `{st.CONNECTIVITIES!r}` - transition matrix from the :class:`~cellrank.kernels.ConnectivityKernel`.
                 - :class:`~typing.Sequence` - sequence of source keys defining which blocks should be weighted
                   by the connectivities.
@@ -359,7 +357,15 @@ class TransportMapKernel(UnidirectionalKernel):
         ----------
         couplings
             Optimal transport couplings.
-        %(tmk_tmat.parameters)s
+        self_transitions
+            How to define transitions within the blocks that correspond to transitions within the same key.
+        conn_weight
+            Weight of connectivities' self transitions. Only used when ``self_transitions = {st.ALL!r}`` or
+            a sequence of source keys is passed.
+        kwargs
+            Keyword arguments for :func:`scanpy.pp.neighbors` or
+            :meth:`~cellrank.kernels.ConnectivityKernel.compute_transition_matrix` when using
+            ``self_transitions = 'connectivities'``.
 
         Returns
         -------

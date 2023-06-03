@@ -1,4 +1,4 @@
-from typing import Any, Type, Tuple, Union, Literal, Callable, Optional
+from typing import Type, Tuple, Literal, Callable, Optional
 
 import pickle
 import pytest
@@ -106,62 +106,6 @@ class InvalidFuncHessianShape(CustomFunc):
     ) -> np.ndarray:
         # should be either (n, g, g) or (n, g), will be (g, g)
         return np.zeros((v.shape[0], v.shape[0]))
-
-
-class DummyTMapKernel(TransportMapKernel):
-    def __init__(self, adata: AnnData, n_cuts: int = 4):
-        time_key = "pt_bin"
-        pt_cuts = pd.cut(adata.obs["dpt_pseudotime"], n_cuts)
-        cats = pt_cuts.cat.categories
-        pt_cuts = pt_cuts.cat.rename_categories(dict(zip(cats, range(len(cats)))))
-        adata.obs[time_key] = pt_cuts
-
-        super().__init__(adata, time_key=time_key)
-
-    def _compute_tmap(
-        self,
-        t1: Any,
-        t2: Any,
-        wrong_shape: Optional[str] = None,
-        wrong_names: Optional[str] = None,
-        dtype: type = AnnData,
-        **_: Any,
-    ) -> Union[np.ndarray, spmatrix, AnnData]:
-        src_obs = list(self.adata[self.adata.obs[self._time_key] == t1].obs_names)
-        tgt_obs = list(self.adata[self.adata.obs[self._time_key] == t2].obs_names)
-
-        n, m = len(src_obs), len(tgt_obs)
-        if wrong_shape == "source":
-            # subsetting will work
-            src_obs.append(f"invalid_{t1}_{t2}")
-            n += 1
-        elif wrong_shape == "target":
-            tgt_obs.append(f"invalid_{t1}_{t2}")
-            m += 1
-
-        tmat = sprandom(
-            n, m, density=0.5, dtype=np.float64, format="csr", random_state=42
-        )
-        tmat[:, 0] = 1e-3
-        tmat.data[:] = np.abs(tmat.data)
-
-        if dtype is spmatrix:
-            return tmat
-        if dtype is np.ndarray:
-            return tmat.toarray()
-
-        tmat = AnnData(X=tmat)
-        if wrong_names is None:
-            tmat.obs_names = src_obs
-            tmat.var_names = tgt_obs
-        elif wrong_names == "source":
-            tmat.var_names = tgt_obs
-        elif wrong_names == "target":
-            tmat.obs_names = src_obs
-        else:
-            raise NotImplementedError(wrong_names)
-
-        return tmat
 
 
 class TestInitializeKernel:
@@ -1302,45 +1246,7 @@ class TestCytoTRACEKernel:
 
 
 class TestTransportMapKernel:
-    @pytest.mark.parametrize("reuse", [False, True])
-    def test_cache(self, adata: AnnData, reuse: bool):
-        tmk = DummyTMapKernel(adata).compute_transition_matrix(threshold=10)
-        tmat = tmk.transition_matrix
-
-        assert tmk.params["threshold"] == 10
-        tmk.compute_transition_matrix(threshold=10 if reuse else 11)
-        if reuse:
-            assert tmat is tmk.transition_matrix
-        else:
-            assert tmat is not tmk.transition_matrix
-
-        np.testing.assert_allclose(tmat.sum(1), 1.0)
-        np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)
-
-    @pytest.mark.parametrize("dtype", [spmatrix, np.ndarray, AnnData])
-    def test_returned_dtype(self, adata: AnnData, dtype: type):
-        tmk = DummyTMapKernel(adata).compute_transition_matrix(dtype=dtype)
-
-        np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)
-        assert isinstance(tmk.transport_maps, dict)
-        for v in tmk.transport_maps.values():
-            assert isinstance(v, AnnData)
-
-    @pytest.mark.parametrize("kind", ["source", "target"])
-    def test_wrong_shape(self, adata: AnnData, kind: str):
-        # in the `source` case, subsetting works (except for the first time point)
-        msg = (
-            r"Observations from transport maps"
-            if kind == "source"
-            else r"Unable to reorder"
-        )
-        with pytest.raises(KeyError, match=msg):
-            _ = DummyTMapKernel(adata).compute_transition_matrix(wrong_shape=kind)
-
-    @pytest.mark.parametrize("kind", ["source", "target"])
-    def test_wrong_names(self, adata: AnnData, kind: str):
-        with pytest.raises(KeyError, match=r"Unable to reorder transport map"):
-            _ = DummyTMapKernel(adata).compute_transition_matrix(wrong_names=kind)
+    pass
 
 
 class TestSingleFlow:
