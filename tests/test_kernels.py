@@ -1286,8 +1286,29 @@ class TestTransportMapKernel:
     def test_from_moscot(self):
         pass
 
-    def test_from_wot(self):
-        pass
+    def test_from_wot(self, adata: AnnData, tmpdir):
+        wot = pytest.importorskip("wot")
+
+        gr_iters = 3
+        col = pd.cut(adata.obs["dpt_pseudotime"], 4)
+        cats = col.cat.categories
+        adata.obs["exp_time"] = col.cat.rename_categories(
+            dict(zip(cats, range(len(cats))))
+        )
+
+        ot_model = wot.ot.OTModel(adata, day_field="exp_time", growth_iters=gr_iters)
+        ot_model.compute_all_transport_maps(tmap_out=f"{tmpdir}/")
+
+        tmk = TransportMapKernel.from_wot(adata, path=tmpdir, time_key="exp_time")
+        obs = pd.read_csv(tmpdir / "tmaps_g.txt", index_col=0, sep="\t")
+        tmk = tmk.compute_transition_matrix()
+
+        np.testing.assert_allclose(
+            tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6
+        )
+        # last time point has no growth rates
+        pd.testing.assert_frame_equal(obs, tmk.obs.loc[obs.index])
+        assert tmk.obs.shape == (adata.n_obs, gr_iters + 1)
 
 
 class TestSingleFlow:

@@ -224,7 +224,6 @@ class TransportMapKernel(UnidirectionalKernel):
     def from_moscot(
         cls,
         problem: "Union[TemporalProblem, LineageProblem, SpatioTemporalProblem]",
-        allow_subset: bool = False,
         sparsify: bool = False,
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
@@ -235,9 +234,6 @@ class TransportMapKernel(UnidirectionalKernel):
         ----------
         problem
             A :mod:`moscot` problem.
-        allow_subset
-            Whether to subset the :attr:`~moscot.base.problems.CompoundProblem.adata`
-            if the solutions do not completely partition it.
         sparsify
             Whether to sparsify the transport maps using
             :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
@@ -249,10 +245,6 @@ class TransportMapKernel(UnidirectionalKernel):
         Returns
         -------
         The kernel.
-
-        Notes
-        -----
-        If ``allow_subset = True``, :attr:`adata` will be a view.
         """
         from moscot.utils.subset_policy import SequentialPolicy
 
@@ -266,7 +258,7 @@ class TransportMapKernel(UnidirectionalKernel):
                 f"Handling `{type(problem._policy)}` policy is not yet implemented."
             )
 
-        obs_names, couplings = set(), {}
+        couplings = {}
         for (t1, t2), solution in problem.solutions.items():
             adata_src = problem[t1, t2].adata_src
             adata_tgt = problem[t1, t2].adata_tgt
@@ -277,17 +269,12 @@ class TransportMapKernel(UnidirectionalKernel):
                 # convert from, e.g., `jax`
                 coupling = np.asarray(coupling)
             couplings[t1, t2] = AnnData(coupling, obs=adata_src.obs, var=adata_tgt.obs)
-            for adata in [adata_src, adata_tgt]:
-                obs_names.update(adata.obs_names)
-                obs_names.update(adata.var_names)
-
-        adata, time_key = problem.adata, problem.temporal_key
-        if allow_subset:
-            obs_names = adata.obs_names.intersection(obs_names)
-            adata = adata[obs_names]
 
         return cls(
-            adata, couplings=couplings, time_key=time_key, policy="sequential", **kwargs
+            problem.adata,
+            couplings=couplings,
+            time_key=problem.temporal_key,
+            **kwargs,
         )
 
     @classmethod
@@ -296,7 +283,6 @@ class TransportMapKernel(UnidirectionalKernel):
         adata: AnnData,
         path: Union[str, pathlib.Path],
         time_key: str,
-        allow_subset: bool = False,
         **kwargs: Any,
     ) -> "TransportMapKernel":
         """Construct the kernel from Waddington OT :cite:`schiebinger:19`.
@@ -309,37 +295,23 @@ class TransportMapKernel(UnidirectionalKernel):
             Directory where the couplings are stored.
         time_key
             Key in :attr:`anndata.AnnData.obs` containing the experimental time.
-        allow_subset
-            Whether to subset the :attr:`adata` if the couplings do not completely partition it.
         kwargs
             Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
 
         Returns
         -------
         The kernel.
-
-        Notes
-        -----
-        If ``allow_subset = True``, :attr:`adata` will be a view.
         """
         path = pathlib.Path(path)
         dtype = type(adata.obs[time_key].iloc[0])
 
-        obs_names, couplings = set(), {}
+        couplings = {}
         for fname in path.glob("*h5ad"):
             name, _ = os.path.splitext(fname)
             *_, src, tgt = name.split("_")
             couplings[dtype(src), dtype(tgt)] = sc.read(fname)
-            obs_names.update(couplings.obs_names)
-            obs_names.update(couplings.var_names)
 
-        if allow_subset:
-            obs_names = adata.obs_names.intersection(obs_names)
-            adata = adata[obs_names]
-
-        return cls(
-            adata, couplings=couplings, time_key=time_key, policy="sequential", **kwargs
-        )
+        return cls(adata, couplings=couplings, time_key=time_key, **kwargs)
 
     @d.dedent
     def _restich_couplings(
