@@ -596,7 +596,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
 
-    @pytest.mark.parametrize("density_normalize", [False, TransportMapKernel])
+    @pytest.mark.parametrize("density_normalize", [False, True])
     def test_manual_combination_backward(self, adata: AnnData, density_normalize):
         backward = True
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -1246,7 +1246,48 @@ class TestCytoTRACEKernel:
 
 
 class TestTransportMapKernel:
-    pass
+    @pytest.mark.parametrize("n", [5, 7])
+    def test_default_initialization(self, adata: AnnData, n: int):
+        adata.obs["exp_time"] = pd.cut(adata.obs["dpt_pseudotime"], n)
+        cats = adata.obs["exp_time"].cat.categories
+
+        tmk = TransportMapKernel(adata, time_key="exp_time")
+
+        assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
+
+    @pytest.mark.parametrize("correct_shape", [False, True])
+    def test_explicit_initialization(self, adata: AnnData, correct_shape: bool):
+        adata.obs["exp_time"] = col = pd.cut(adata.obs["dpt_pseudotime"], 3)
+        cats = adata.obs["exp_time"].cat.categories
+
+        couplings = {}
+        for src, tgt in zip(cats[:-1], cats[1:]):
+            n, m = np.sum(col == src), np.sum(col == tgt)
+            val = np.abs(np.random.normal(size=(n, m)))
+            if not correct_shape:
+                n += 1
+                val = AnnData(val)
+                val.obs_names == adata.obs_names[col == src]
+                val.var_names == adata.obs_names[col == tgt]
+            couplings[src, tgt] = val
+
+        tmk = TransportMapKernel(adata, couplings=couplings, time_key="exp_time")
+        assert tmk.couplings == couplings
+
+        if correct_shape:
+            tmk = tmk.compute_transition_matrix()
+            np.testing.assert_allclose(
+                tmk.transition_matrix.sum(1), 1.0, rtol=1e-5, atol=1e-5
+            )
+        else:
+            with pytest.raises(IndexError, match=r"Source observations"):
+                _ = tmk.compute_transition_matrix()
+
+    def test_from_moscot(self):
+        pass
+
+    def test_from_wot(self):
+        pass
 
 
 class TestSingleFlow:

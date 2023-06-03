@@ -556,26 +556,45 @@ class TransportMapKernel(UnidirectionalKernel):
         -------
         Possibly reordered transport maps.
         """
+
+        def assert_same(
+            expected: Sequence[Any], actual: Sequence[Any], msg: Optional[str] = None
+        ) -> None:
+            try:
+                pd.testing.assert_series_equal(
+                    pd.Series(sorted(expected)),
+                    pd.Series(sorted(actual)),
+                    check_names=False,
+                    check_flags=False,
+                    check_index=True,
+                )
+            except AssertionError as e:
+                raise IndexError(msg) from e
+
         seen_obs = []
-        for (_, tgt), coupling in couplings.items():
+        for (src, tgt), coupling in couplings.items():
+            src_obs = self.adata.obs_names[self.time == src]
+            tgt_obs = self.adata.obs_names[self.time == tgt]
+            assert_same(
+                src_obs,
+                coupling.obs_names,
+                msg=f"Source observations for `{src, tgt}` don't match with `adata.obs_names`.",
+            )
+            assert_same(
+                tgt_obs,
+                coupling.var_names,
+                msg=f"Source observations for `{src, tgt}` don't match with `adata.var_names`.",
+            )
+
             seen_obs.extend(coupling.obs_names)
             if tgt == self._reference:
                 seen_obs.extend(coupling.var_names)
 
-        # this invariant holds for both policies
-        try:
-            pd.testing.assert_series_equal(
-                pd.Series(sorted(seen_obs)),
-                pd.Series(sorted(self.adata.obs_names)),
-                check_names=False,
-                check_flags=False,
-                check_index=True,
-            )
-        except AssertionError as e:
-            raise KeyError(
-                "Observations from transport maps don't match "
-                "the observations from the underlying `AnnData` object."
-            ) from e
+        msg = (
+            "Observations from transport maps don't match "
+            "the observations from the underlying `AnnData` object."
+        )
+        assert_same(seen_obs, self.adata.obs_names, msg=msg)
 
     def _coupling_to_adata(self, src: Any, tgt: Any, coupling: Coupling_t) -> AnnData:
         """Convert the coupling to :class:`~anndata.AnnData`."""
