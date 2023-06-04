@@ -1363,6 +1363,33 @@ class TestTransportMapKernel:
         pd.testing.assert_frame_equal(obs, tmk.obs.loc[obs.index])
         assert tmk.obs.shape == (adata.n_obs, gr_iters + 1)
 
+    def test_from_moscot_set_solution(self, adata_large: AnnData):
+        moscot = pytest.importorskip("moscot")
+
+        col = pd.cut(adata_large.obs["dpt_pseudotime"], 4)
+        cats = col.cat.categories
+        adata_large.obs["exp_time"] = col.cat.rename_categories(
+            dict(zip(cats, range(len(cats))))
+        )
+
+        problem = moscot.problems.TemporalProblem(adata_large)
+        problem = problem.prepare(
+            policy="sequential", time_key="exp_time", xy_callback_kwargs={"n_comps": 6}
+        )
+
+        expected = {}
+        for src, tgt in problem.problems:
+            subprob = problem[src, tgt]
+            tmp = np.abs(np.random.normal(size=subprob.shape)) + 1.0
+            expected[src, tgt] = tmp = tmp / np.sum(tmp, axis=-1, keepdims=True)
+            subprob.set_solution(tmp)
+
+        tmk = TransportMapKernel.from_moscot(problem)
+        for (src, tgt), actual in tmk.couplings.items():
+            np.testing.assert_allclose(
+                actual.X, expected[src, tgt], rtol=1e-6, atol=1e-6
+            )
+
 
 class TestSingleFlow:
     def test_no_transition_matrix(self, kernel: Kernel):
