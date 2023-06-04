@@ -2,6 +2,7 @@ from typing import Type, Tuple, Literal, Callable, Optional
 
 import pickle
 import pytest
+import itertools
 from copy import copy
 from pathlib import Path
 from _helpers import (
@@ -1246,14 +1247,22 @@ class TestCytoTRACEKernel:
 
 
 class TestTransportMapKernel:
+    @pytest.mark.parametrize("policy", ["sequential", "triu"])
     @pytest.mark.parametrize("n", [5, 7])
-    def test_default_initialization(self, adata: AnnData, n: int):
+    def test_default_initialization(self, adata: AnnData, n: int, policy: str):
         adata.obs["exp_time"] = pd.cut(adata.obs["dpt_pseudotime"], n)
         cats = adata.obs["exp_time"].cat.categories
 
-        tmk = TransportMapKernel(adata, time_key="exp_time")
+        tmk = TransportMapKernel(adata, time_key="exp_time", policy=policy)
 
-        assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
+        if policy == "sequential":
+            assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
+        else:
+            assert tmk.couplings == {
+                (src, tgt): None
+                for (src, tgt) in itertools.product(cats, cats)
+                if src <= tgt
+            }
 
     @pytest.mark.parametrize("correct_shape", [False, True])
     def test_explicit_initialization(self, adata: AnnData, correct_shape: bool):
@@ -1284,9 +1293,16 @@ class TestTransportMapKernel:
                 _ = tmk.compute_transition_matrix()
 
     @pytest.mark.parametrize(
-        "problem,sparsify", [("temporal", False), ("spatiotemporal", True)]
+        "problem,sparsify,policy",
+        [
+            ("temporal", False, "sequential"),
+            ("temporal", False, "triu"),
+            ("spatiotemporal", True, "sequential"),
+        ],
     )
-    def test_from_moscot(self, adata_large: AnnData, problem: str, sparsify: bool):
+    def test_from_moscot(
+        self, adata_large: AnnData, problem: str, sparsify: bool, policy: str
+    ):
         moscot = pytest.importorskip("moscot")
 
         col = pd.cut(adata_large.obs["dpt_pseudotime"], 3)
@@ -1305,12 +1321,14 @@ class TestTransportMapKernel:
             raise ValueError(problem)
 
         problem = problem.prepare(
-            time_key="exp_time", xy_callback_kwargs={"n_comps": 5}
+            policy=policy, time_key="exp_time", xy_callback_kwargs={"n_comps": 5}
         )
         problem = problem.solve()
 
         tmk = TransportMapKernel.from_moscot(
-            problem, sparsify=sparsify, sparsify_kwargs={"mode": "min_row"}
+            problem,
+            sparsify=sparsify,
+            sparsify_kwargs={"mode": "min_row"},
         )
         if sparsify:
             for k, v in tmk.couplings.items():

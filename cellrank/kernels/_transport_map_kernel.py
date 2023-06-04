@@ -14,6 +14,7 @@ from typing import (
 import os
 import types
 import pathlib
+import itertools
 from tqdm.auto import tqdm
 
 import scanpy as sc
@@ -73,6 +74,7 @@ class TransportMapKernel(UnidirectionalKernel):
         How to construct the keys from the :attr:`time` when ``couplings = None``:
 
             - if ``policy = 'sequential'``, the keys will be set to ``[(t1, t2), (t2, t3), ...]``.
+            - if ``policy = 'triu'``, the keys will be set to ``[(t1, t2), (t1, t3), ..., (t2, t3), ...]``.
     kwargs
         Keyword arguments for the parent class.
     """
@@ -82,7 +84,7 @@ class TransportMapKernel(UnidirectionalKernel):
         adata: AnnData,
         time_key: str,
         couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]] = None,
-        policy: Literal["sequential"] = "sequential",
+        policy: Literal["sequential", "triu"] = "sequential",
         **kwargs: Any,
     ):
         super().__init__(adata, time_key=time_key, **kwargs)
@@ -246,16 +248,21 @@ class TransportMapKernel(UnidirectionalKernel):
         -------
         The kernel.
         """
-        from moscot.utils.subset_policy import SequentialPolicy
+        from moscot.utils.subset_policy import SequentialPolicy, TriangularPolicy
 
         if not problem.solutions:
             raise RuntimeError(
                 "Problem contains no solutions. Please run `problem.solve(...)` first."
             )
 
-        if not isinstance(problem._policy, SequentialPolicy):
+        policy = problem._policy
+        if isinstance(policy, SequentialPolicy):
+            policy = "sequential"
+        elif isinstance(policy, TriangularPolicy):
+            policy = "triu"
+        else:
             raise NotImplementedError(
-                f"Handling `{type(problem._policy)}` policy is not yet implemented."
+                f"Handling `{type(policy)}` policy is not yet implemented."
             )
 
         couplings = {}
@@ -274,6 +281,7 @@ class TransportMapKernel(UnidirectionalKernel):
             problem.adata,
             couplings=couplings,
             time_key=problem.temporal_key,
+            policy=policy,
             **kwargs,
         )
 
@@ -543,7 +551,6 @@ class TransportMapKernel(UnidirectionalKernel):
             except AssertionError as e:
                 raise IndexError(msg) from e
 
-        seen_obs = []
         for (src, tgt), coupling in couplings.items():
             src_obs = self.adata.obs_names[self.time == src]
             tgt_obs = self.adata.obs_names[self.time == tgt]
@@ -557,16 +564,6 @@ class TransportMapKernel(UnidirectionalKernel):
                 coupling.var_names,
                 msg=f"Source observations for `{src, tgt}` don't match with `adata.var_names`.",
             )
-
-            seen_obs.extend(coupling.obs_names)
-            if tgt == self._reference:
-                seen_obs.extend(coupling.var_names)
-
-        msg = (
-            "Observations from transport maps don't match "
-            "the observations from the underlying `AnnData` object."
-        )
-        assert_same(seen_obs, self.adata.obs_names, msg=msg)
 
     def _coupling_to_adata(self, src: Any, tgt: Any, coupling: Coupling_t) -> AnnData:
         """Convert the coupling to :class:`~anndata.AnnData`."""
@@ -583,12 +580,20 @@ class TransportMapKernel(UnidirectionalKernel):
     def _get_default_coupling(
         self,
         couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]],
-        policy: Literal["sequential"],
+        policy: Literal["sequential", "triu"],
     ) -> Tuple[Dict[Key_t, Optional[Coupling_t]], Any]:
         cats = self._time.cat.categories
         if policy == "sequential":
             if couplings is None:
                 couplings = {(src, tgt): None for src, tgt in zip(cats[:-1], cats[1:])}
+            reference = sorted(k for ks in couplings.keys() for k in ks)[-1]
+        elif policy == "triu":
+            if couplings is None:
+                couplings = {
+                    (src, tgt): None
+                    for src, tgt in itertools.product(cats, cats)
+                    if src <= tgt
+                }
             reference = sorted(k for ks in couplings.keys() for k in ks)[-1]
         else:
             raise NotImplementedError(f"Handling `{policy}` is not yet implemented.")
