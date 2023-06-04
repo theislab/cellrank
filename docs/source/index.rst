@@ -3,7 +3,7 @@
 CellRank: dynamics from multi-view single-cell data
 ===================================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/docs/source/_static/img/cellrank_overview.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/main/docs/source/_static/img/cellrank_overview.png
     :width: 600px
     :align: center
 
@@ -19,17 +19,11 @@ want to make a comment/suggestion.
 
 CellRank's key applications
 ---------------------------
-- compute initial, terminal and intermediate :doc:`macrostates <notebooks/tutorials/initial_terminal_states>`
-  :cite:`reuter:19,reuter:22`.
-- infer :doc:`fate probabilities <notebooks/tutorials/fate_probabilities>` towards terminal states.
-- visualize :doc:`gene expression trends <notebooks/tutorials/gene_trends>` along specific trajectories.
-- identify potential :doc:`driver genes <notebooks/tutorials/fate_probabilities>` for each trajectory.
-- ... and much more, check out our :doc:`API <api/index>`.
+- Under reconstruction .. TODO(Marius1311): please re-factor this page
 
 Getting started with CellRank
 -----------------------------
-We have :doc:`tutorials` and :doc:`examples` that help you getting started. Tutorials are longer and explain
-computational pipelines, examples are short and demonstrate individual steps. To see CellRank in action, explore our
+We have :doc:`notebooks/tutorials/index` that will help you getting started. To see CellRank in action, explore our
 manuscript :cite:`lange:22` in Nature Methods.
 
 Contributing
@@ -43,17 +37,10 @@ We actively encourage any contribution! To get started, please check out the :do
 
     installation
     api/index
+    notebooks/tutorials/index
     release_notes
     contributing
     references
-
-.. toctree::
-    :caption: Gallery
-    :maxdepth: 3
-    :hidden:
-
-    tutorials
-    examples
 
 .. toctree::
     :caption: About
@@ -78,11 +65,11 @@ We actively encourage any contribution! To get started, please check out the :do
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
 
-.. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=master
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=main
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
-.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=master&label=notebooks
+.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=main&label=notebooks
     :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
@@ -90,7 +77,7 @@ We actively encourage any contribution! To get started, please check out the :do
     :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
 
-.. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
+.. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
 

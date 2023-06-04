@@ -18,7 +18,7 @@ Features
   `PR 527 <https://github.com/theislab/cellrank/pull/527>`_.
 - Add external API :mod:`cellrank.external` with a stationary optimal transport kernel
   :class:`cellrank.external.kernels.OTKernel` contributed from :cite:`zhang:21`, as well as a
-  `contributing guide <https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst>`_,
+  `contributing guide <https://github.com/theislab/cellrank/blob/main/CONTRIBUTING.rst>`_,
   `PR 522 <https://github.com/theislab/cellrank/pull/522>`_.
 - Rename ``cellrank.tl.kernels.PalantirKernel`` to :class:`cellrank.tl.kernels.PseudotimeKernel` and add
   hard threshold scheme inspired by :cite:`setty:19`, a soft threshold scheme inspired by :cite:`stassen:21` and

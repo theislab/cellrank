@@ -1,9 +1,10 @@
+.. module:: cellrank.pl
+
 Plotting
 ========
 Plotting functions visualize CellRank outputs computed using :doc:`kernels <kernels>`, :doc:`estimators <estimators>`
 or :doc:`models <models>`.
 
-.. module:: cellrank.pl
 .. currentmodule:: cellrank
 
 .. autosummary::
