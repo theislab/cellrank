@@ -1,9 +1,10 @@
+.. module:: cellrank.datasets
+
 Datasets
 ========
 CellRank comes with a number of datasets that make it easy for you to get started. Our dataset API enables you to
 automatically download these datasets; see our tutorials for examples.
 
-.. module:: cellrank.datasets
 .. currentmodule:: cellrank
 
 .. autosummary::

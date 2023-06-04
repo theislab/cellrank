@@ -33,23 +33,22 @@ of the construction of the transition matrix. For example, whether we use RNA ve
 directed transition probabilities does not change how initial and terminal states are inferred or fate probabilities
 estimated. The general structure of the framework, corresponding to steps **(i)** and **(ii)**, is given by:
 
-* :doc:`Kernels <../api/kernels>` that take multi-view single cell input data  and estimate a matrix of cell-cell
+.. TODO(Marius1311): please re-add the links to docs in, if needed
+
+* :mod:`cellrank.kernels` that take multi-view single cell input data  and estimate a matrix of cell-cell
   transition probabilities :math:`T`. Row :math:`i` in matrix :math:`T` contains the transition probabilities from cell
   :math:`i` towards putative descendants. Therefore, all entries in the matrix are between 0 and 1, and rows sum to one.
-* :doc:`Estimators <../api/estimators>` that take a cell-cell transition matrix :math:`T` computed using any kernel and
-  apply concepts from the theory of Markov chains to identify initial, terminal, and intermediate
-  :doc:`macrostates <../notebooks/tutorials/initial_terminal_states>` and compute
-  :doc:`fate probabilities <../notebooks/tutorials/fate_probabilities>`.
+* :mod:`cellrank.estimators` that take a cell-cell transition matrix :math:`T` computed using any kernel and
+  apply concepts from the theory of Markov chains to identify initial, terminal, and intermediate macrostates
+  and compute fate probabilities.
 
 Our main (and recommended!) estimator is based on *Generalized Perron Cluster Cluster Analysis* (GPCCA)
 :cite:`reuter:18,reuter:19`, a method originally developed to study molecular dynamics. CellRank uses a
 robust implementation of GPCCA through the `pyGPCCA`_ package. Please don't forget to cite both CellRank and GPCCA when
 using the :class:`cellrank.estimators.GPCCA` estimator, see :doc:`citing CellRank <cite>`.
 
-We use fate probabilities to visualize trajectory-specific
-:doc:`gene expression trends <../notebooks/tutorials/gene_trends>`, infer putative
-:doc:`driver genes <../notebooks/tutorials/fate_probabilities>`, arrange cells in a
-:func:`circular embedding <cellrank.pl.circular_projection>` :cite:`velten:17`, visualize
+We use fate probabilities to visualize trajectory-specific gene expression trends, infer putative driver genes,
+arrange cells in a :func:`circular embedding <cellrank.pl.circular_projection>` :cite:`velten:17`, visualize
 :func:`cascades of gene activation <cellrank.pl.heatmap>` along a trajectory, and
 :func:`cluster expression trends <cellrank.pl.cluster_trends>`.
 

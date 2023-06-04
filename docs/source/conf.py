@@ -37,8 +37,8 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinxcontrib.bibtex",
     "sphinx_copybutton",
+    "sphinx_autodoc_typehints",
     "myst_nb",
-    "nbsphinx",
     "sphinx_design",  # for cards
     "typed_returns",
 ]
@@ -94,6 +94,7 @@ myst_heading_anchors = 2
 autosummary_generate = True
 autodoc_member_order = "alphabetical"
 autodoc_typehints = "description"
+autodoc_mock_imports = ["moscot"]
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 
@@ -112,7 +113,13 @@ spelling_filters = [
 
 linkcheck_ignore = [r"https://twitter\.com/.*", r"https://mobile\.twitter\.com/.*"]
 
-exclude_patterns = ["_build", "release/changelog/*", "**.ipynb_checkpoints"]
+exclude_patterns = [
+    "_build",
+    "notebooks/README.rst",
+    "notebooks/notebooks/MK_2020-10-19_generate_docs_figure.ipynb",
+    "release/changelog/*",
+    "**.ipynb_checkpoints",
+]
 
 # -- Options for HTML output -------------------------------------------------
 

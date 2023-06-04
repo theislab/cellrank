@@ -67,9 +67,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     :cite:`reuter:18,reuter:19`. This estimator allows you to inject prior knowledge where available
     to guide the identification of initial, intermediate and terminal states.
 
-    To get started with this estimator, we recommend going over the
-    :doc:`initial and terminal states tutorial </docs/source/notebooks/tutorials/initial_terminal_states>`.
-
     Parameters
     ----------
     %(base_estimator.parameters)s

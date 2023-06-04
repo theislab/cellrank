@@ -29,7 +29,7 @@ Development Version
 -------------------
 To stay up-to-date with the newest version, run::
 
-    pip install git+https://github.com/theislab/cellrank@master
+    pip install git+https://github.com/theislab/cellrank@main
 
 Dependencies
 ------------

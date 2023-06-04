@@ -115,7 +115,6 @@ venv.bak/
 docs/source/api/_autosummary
 docs/source/auto_examples
 docs/source/gen_modules
-docs/build
 
 # custom folders
 /local_resources

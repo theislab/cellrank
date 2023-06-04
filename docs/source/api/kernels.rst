@@ -1,3 +1,5 @@
+.. module:: cellrank.kernels
+
 Kernels
 =======
 Kernels compute cell-cell transition probabilities based on various input data modalities, including molecular
@@ -8,7 +10,6 @@ kernel-computed transition matrices, we recommend using :doc:`estimators <estima
 We don't use the term "kernel" in the way it is used in mathematics, but rather colloquially, to refer to a class that
 takes in multi-view single-cell data and outputs a cell-cell transition matrix.
 
-.. module:: cellrank.kernels
 .. currentmodule:: cellrank
 
 .. autosummary::
