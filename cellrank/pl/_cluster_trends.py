@@ -132,10 +132,10 @@ def cluster_trends(
     -------
     %(plots_or_returns_models)s
 
-        Also updates ``adata.uns`` with the following:
+    Also updates ``adata.uns`` with the following:
 
-            - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
-              shape `(n_genes, n_points)` containing the clustered genes.
+        - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
+          shape `(n_genes, n_points)` containing the clustered genes.
     """
 
     def plot_cluster(

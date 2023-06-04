@@ -6,7 +6,7 @@ from textwrap import dedent
 __all__ = ["d", "inject_docs"]
 
 _adata = """\
-adata : :class:`anndata.AnnData`
+adata
     Annotated data object."""
 _adata_ret = """\
 :class:`anndata.AnnData`
@@ -36,11 +36,9 @@ model
 _just_plots = """\
 Nothing, just plots the figure. Optionally saves it based on ``save``."""
 _plots_or_returns_models = """\
-None
-    If ``return_models = False``, just plots the figure and optionally saves it based on ``save``.
-Dict[str, Dict[str, :class:`cellrank.models.BaseModel`]]
-    Otherwise returns the fitted models as ``{'gene_1': {'lineage_1': <model_11>, ...}, ...}``.
-    Models which have failed will be instances of :class:`cellrank.models.FailedModel`."""
+If ``return_models = False``, just plots the figure and optionally saves it based on ``save``.
+Otherwise returns the fitted models as ``{'gene_1': {'lineage_1': <model_11>, ...}, ...}``.
+Models which have failed will be instances of :class:`cellrank.models.FailedModel`."""
 _backward = """\
 backward
     Direction of the process."""

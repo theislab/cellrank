@@ -1,7 +1,8 @@
-from typing import Any, Type, Tuple, Union, Literal, Callable, Optional
+from typing import Type, Tuple, Literal, Callable, Optional
 
 import pickle
 import pytest
+import itertools
 from copy import copy
 from pathlib import Path
 from _helpers import (
@@ -106,62 +107,6 @@ class InvalidFuncHessianShape(CustomFunc):
     ) -> np.ndarray:
         # should be either (n, g, g) or (n, g), will be (g, g)
         return np.zeros((v.shape[0], v.shape[0]))
-
-
-class DummyTMapKernel(TransportMapKernel):
-    def __init__(self, adata: AnnData, n_cuts: int = 4):
-        time_key = "pt_bin"
-        pt_cuts = pd.cut(adata.obs["dpt_pseudotime"], n_cuts)
-        cats = pt_cuts.cat.categories
-        pt_cuts = pt_cuts.cat.rename_categories(dict(zip(cats, range(len(cats)))))
-        adata.obs[time_key] = pt_cuts
-
-        super().__init__(adata, time_key=time_key)
-
-    def _compute_tmap(
-        self,
-        t1: Any,
-        t2: Any,
-        wrong_shape: Optional[str] = None,
-        wrong_names: Optional[str] = None,
-        dtype: type = AnnData,
-        **_: Any,
-    ) -> Union[np.ndarray, spmatrix, AnnData]:
-        src_obs = list(self.adata[self.adata.obs[self._time_key] == t1].obs_names)
-        tgt_obs = list(self.adata[self.adata.obs[self._time_key] == t2].obs_names)
-
-        n, m = len(src_obs), len(tgt_obs)
-        if wrong_shape == "source":
-            # subsetting will work
-            src_obs.append(f"invalid_{t1}_{t2}")
-            n += 1
-        elif wrong_shape == "target":
-            tgt_obs.append(f"invalid_{t1}_{t2}")
-            m += 1
-
-        tmat = sprandom(
-            n, m, density=0.5, dtype=np.float64, format="csr", random_state=42
-        )
-        tmat[:, 0] = 1e-3
-        tmat.data[:] = np.abs(tmat.data)
-
-        if dtype is spmatrix:
-            return tmat
-        if dtype is np.ndarray:
-            return tmat.toarray()
-
-        tmat = AnnData(X=tmat)
-        if wrong_names is None:
-            tmat.obs_names = src_obs
-            tmat.var_names = tgt_obs
-        elif wrong_names == "source":
-            tmat.var_names = tgt_obs
-        elif wrong_names == "target":
-            tmat.obs_names = src_obs
-        else:
-            raise NotImplementedError(wrong_names)
-
-        return tmat
 
 
 class TestInitializeKernel:
@@ -652,7 +597,7 @@ class TestKernel:
 
         np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
 
-    @pytest.mark.parametrize("density_normalize", [False, TransportMapKernel])
+    @pytest.mark.parametrize("density_normalize", [False, True])
     def test_manual_combination_backward(self, adata: AnnData, density_normalize):
         backward = True
         vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
@@ -1302,45 +1247,173 @@ class TestCytoTRACEKernel:
 
 
 class TestTransportMapKernel:
-    @pytest.mark.parametrize("reuse", [False, True])
-    def test_cache(self, adata: AnnData, reuse: bool):
-        tmk = DummyTMapKernel(adata).compute_transition_matrix(threshold=10)
+    @pytest.mark.parametrize("policy", ["sequential", "triu"])
+    @pytest.mark.parametrize("n", [5, 7])
+    def test_default_initialization(self, adata: AnnData, n: int, policy: str):
+        adata.obs["exp_time"] = pd.cut(adata.obs["dpt_pseudotime"], n)
+        cats = adata.obs["exp_time"].cat.categories
+
+        tmk = TransportMapKernel(adata, time_key="exp_time", policy=policy)
+
+        if policy == "sequential":
+            assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
+        else:
+            assert tmk.couplings == {
+                (src, tgt): None
+                for (src, tgt) in itertools.product(cats, cats)
+                if src < tgt
+            }
+
+    @pytest.mark.parametrize("correct_shape", [False, True])
+    def test_explicit_initialization(self, adata: AnnData, correct_shape: bool):
+        adata.obs["exp_time"] = col = pd.cut(adata.obs["dpt_pseudotime"], 3)
+        cats = col.cat.categories
+
+        couplings = {}
+        for src, tgt in zip(cats[:-1], cats[1:]):
+            n, m = np.sum(col == src), np.sum(col == tgt)
+            val = np.abs(np.random.normal(size=(n, m)))
+            if not correct_shape:
+                n += 1
+                val = AnnData(val)
+                val.obs_names == adata.obs_names[col == src]
+                val.var_names == adata.obs_names[col == tgt]
+            couplings[src, tgt] = val
+
+        tmk = TransportMapKernel(adata, couplings=couplings, time_key="exp_time")
+        assert tmk.couplings == couplings
+
+        if correct_shape:
+            tmk = tmk.compute_transition_matrix()
+            np.testing.assert_allclose(
+                tmk.transition_matrix.sum(1), 1.0, rtol=1e-5, atol=1e-5
+            )
+        else:
+            with pytest.raises(IndexError, match=r"Source observations"):
+                _ = tmk.compute_transition_matrix()
+
+    def test_explicit_shuffle(self, adata_large: AnnData):
+        adata_large.obs["time"] = [0] * 50 + [1] * 50 + [2] * 50 + [3] * 50
+        adata_large.obs["time"] = col = adata_large.obs["time"].astype("category")
+        cats = col.cat.categories
+
+        expected = {}
+        for src, tgt in zip(cats[:-1], cats[1:]):
+            n, m = np.sum(col == src), np.sum(col == tgt)
+            expected[src, tgt] = np.eye(n, m)
+
+        rng = np.random.RandomState(13)
+        ixs = np.arange(adata_large.n_obs)
+        rng.shuffle(ixs)
+        adata_large = adata_large[ixs].copy()
+
+        tmk = TransportMapKernel(adata_large, time_key="time", couplings=expected)
+        tmk = tmk.compute_transition_matrix()
         tmat = tmk.transition_matrix
 
-        assert tmk.params["threshold"] == 10
-        tmk.compute_transition_matrix(threshold=10 if reuse else 11)
-        if reuse:
-            assert tmat is tmk.transition_matrix
-        else:
-            assert tmat is not tmk.transition_matrix
+        for src, tgt in zip(cats[:-1], cats[1:]):
+            src_mask, tgt_mask = tmk.time == src, tmk.time == tgt
+            np.testing.assert_allclose(
+                tmat[src_mask, :][:, tgt_mask].A, expected[src, tgt]
+            )
 
-        np.testing.assert_allclose(tmat.sum(1), 1.0)
-        np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)
+    @pytest.mark.parametrize(
+        "problem,sparsify,policy",
+        [
+            ("temporal", False, "sequential"),
+            ("temporal", False, "triu"),
+            ("spatiotemporal", True, "sequential"),
+        ],
+    )
+    def test_from_moscot(
+        self, adata_large: AnnData, problem: str, sparsify: bool, policy: str
+    ):
+        moscot = pytest.importorskip("moscot")
 
-    @pytest.mark.parametrize("dtype", [spmatrix, np.ndarray, AnnData])
-    def test_returned_dtype(self, adata: AnnData, dtype: type):
-        tmk = DummyTMapKernel(adata).compute_transition_matrix(dtype=dtype)
-
-        np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0)
-        assert isinstance(tmk.transport_maps, dict)
-        for v in tmk.transport_maps.values():
-            assert isinstance(v, AnnData)
-
-    @pytest.mark.parametrize("kind", ["source", "target"])
-    def test_wrong_shape(self, adata: AnnData, kind: str):
-        # in the `source` case, subsetting works (except for the first time point)
-        msg = (
-            r"Observations from transport maps"
-            if kind == "source"
-            else r"Unable to reorder"
+        col = pd.cut(adata_large.obs["dpt_pseudotime"], 3)
+        cats = col.cat.categories
+        adata_large.obs["exp_time"] = col.cat.rename_categories(
+            dict(zip(cats, range(len(cats))))
         )
-        with pytest.raises(KeyError, match=msg):
-            _ = DummyTMapKernel(adata).compute_transition_matrix(wrong_shape=kind)
 
-    @pytest.mark.parametrize("kind", ["source", "target"])
-    def test_wrong_names(self, adata: AnnData, kind: str):
-        with pytest.raises(KeyError, match=r"Unable to reorder transport map"):
-            _ = DummyTMapKernel(adata).compute_transition_matrix(wrong_names=kind)
+        if problem == "temporal":
+            problem = moscot.problems.TemporalProblem(adata_large)
+        elif problem == "spatiotemporal":
+            rng = np.random.RandomState(42)
+            adata_large.obsm["spatial"] = rng.normal(size=(adata_large.n_obs, 2))
+            problem = moscot.problems.SpatioTemporalProblem(adata_large)
+        else:
+            raise ValueError(problem)
+
+        problem = problem.prepare(
+            policy=policy, time_key="exp_time", xy_callback_kwargs={"n_comps": 5}
+        ).solve()
+
+        tmk = TransportMapKernel.from_moscot(
+            problem,
+            sparsify=sparsify,
+            sparsify_kwargs={"mode": "min_row"},
+        )
+        if sparsify:
+            for k, v in tmk.couplings.items():
+                assert issparse(v.X), k
+
+        tmk = tmk.compute_transition_matrix()
+
+        np.testing.assert_allclose(
+            tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6
+        )
+
+    def test_from_wot(self, adata: AnnData, tmpdir):
+        wot = pytest.importorskip("wot")
+
+        gr_iters = 3
+        col = pd.cut(adata.obs["dpt_pseudotime"], 4)
+        cats = col.cat.categories
+        adata.obs["exp_time"] = col.cat.rename_categories(
+            dict(zip(cats, range(len(cats))))
+        )
+
+        ot_model = wot.ot.OTModel(adata, day_field="exp_time", growth_iters=gr_iters)
+        ot_model.compute_all_transport_maps(tmap_out=f"{tmpdir}/")
+
+        tmk = TransportMapKernel.from_wot(adata, path=tmpdir, time_key="exp_time")
+        obs = pd.read_csv(tmpdir / "tmaps_g.txt", index_col=0, sep="\t")
+        tmk = tmk.compute_transition_matrix()
+
+        np.testing.assert_allclose(
+            tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6
+        )
+        # last time point has no growth rates
+        pd.testing.assert_frame_equal(obs, tmk.obs.loc[obs.index])
+        assert tmk.obs.shape == (adata.n_obs, gr_iters + 1)
+
+    def test_from_moscot_set_solution(self, adata_large: AnnData):
+        moscot = pytest.importorskip("moscot")
+
+        col = pd.cut(adata_large.obs["dpt_pseudotime"], 4)
+        cats = col.cat.categories
+        adata_large.obs["exp_time"] = col.cat.rename_categories(
+            dict(zip(cats, range(len(cats))))
+        )
+
+        problem = moscot.problems.TemporalProblem(adata_large)
+        problem = problem.prepare(
+            policy="sequential", time_key="exp_time", xy_callback_kwargs={"n_comps": 6}
+        )
+
+        expected = {}
+        for src, tgt in problem.problems:
+            subprob = problem[src, tgt]
+            tmp = np.abs(np.random.normal(size=subprob.shape)) + 1.0
+            expected[src, tgt] = tmp = tmp / np.sum(tmp, axis=-1, keepdims=True)
+            subprob.set_solution(tmp)
+
+        tmk = TransportMapKernel.from_moscot(problem)
+        for (src, tgt), actual in tmk.couplings.items():
+            np.testing.assert_allclose(
+                actual.X, expected[src, tgt], rtol=1e-6, atol=1e-6
+            )
 
 
 class TestSingleFlow:

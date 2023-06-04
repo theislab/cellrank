@@ -18,6 +18,7 @@ takes in multi-view single-cell data and outputs a cell-cell transition matrix.
     kernels.ConnectivityKernel
     kernels.PseudotimeKernel
     kernels.CytoTRACEKernel
+    kernels.TransportMapKernel
     kernels.PrecomputedKernel
 
 External Kernels
@@ -29,4 +30,3 @@ External Kernels
     :toctree: _autosummary/kernels
 
     external.kernels.StationaryOTKernel
-    external.kernels.WOTKernel
