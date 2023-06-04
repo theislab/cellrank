@@ -1261,13 +1261,13 @@ class TestTransportMapKernel:
             assert tmk.couplings == {
                 (src, tgt): None
                 for (src, tgt) in itertools.product(cats, cats)
-                if src <= tgt
+                if src < tgt
             }
 
     @pytest.mark.parametrize("correct_shape", [False, True])
     def test_explicit_initialization(self, adata: AnnData, correct_shape: bool):
         adata.obs["exp_time"] = col = pd.cut(adata.obs["dpt_pseudotime"], 3)
-        cats = adata.obs["exp_time"].cat.categories
+        cats = col.cat.categories
 
         couplings = {}
         for src, tgt in zip(cats[:-1], cats[1:]):
@@ -1291,6 +1291,34 @@ class TestTransportMapKernel:
         else:
             with pytest.raises(IndexError, match=r"Source observations"):
                 _ = tmk.compute_transition_matrix()
+
+    def test_explicit_shuffle(self, adata_large: AnnData):
+        adata_large.obs["time"] = 0
+        adata_large.obs.loc[50:100, "time"] = 1
+        adata_large.obs.loc[100:150, "time"] = 2
+        adata_large.obs.loc[150:, "time"] = 3
+        adata_large.obs["time"] = col = adata_large.obs["time"].astype("category")
+        cats = col.cat.categories
+
+        expected = {}
+        for src, tgt in zip(cats[:-1], cats[1:]):
+            n, m = np.sum(col == src), np.sum(col == tgt)
+            expected[src, tgt] = np.eye(n, m)
+
+        rng = np.random.RandomState(13)
+        ixs = np.arange(adata_large.n_obs)
+        rng.shuffle(ixs)
+        adata_large = adata_large[ixs].copy()
+
+        tmk = TransportMapKernel(adata_large, time_key="time", couplings=expected)
+        tmk = tmk.compute_transition_matrix()
+        tmat = tmk.transition_matrix
+
+        for src, tgt in zip(cats[:-1], cats[1:]):
+            src_mask, tgt_mask = tmk.time == src, tmk.time == tgt
+            np.testing.assert_allclose(
+                tmat[src_mask, :][:, tgt_mask].A, expected[src, tgt]
+            )
 
     @pytest.mark.parametrize(
         "problem,sparsify,policy",

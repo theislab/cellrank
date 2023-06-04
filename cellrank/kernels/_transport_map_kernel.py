@@ -626,7 +626,7 @@ class TransportMapKernel(UnidirectionalKernel):
                 couplings = {
                     (src, tgt): None
                     for src, tgt in itertools.product(cats, cats)
-                    if src <= tgt
+                    if src < tgt
                 }
             reference = sorted(k for ks in couplings.keys() for k in ks)[-1]
         else:
