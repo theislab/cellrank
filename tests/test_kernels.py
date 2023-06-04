@@ -1283,8 +1283,44 @@ class TestTransportMapKernel:
             with pytest.raises(IndexError, match=r"Source observations"):
                 _ = tmk.compute_transition_matrix()
 
-    def test_from_moscot(self):
-        pass
+    @pytest.mark.parametrize(
+        "problem,sparsify", [("temporal", False), ("spatiotemporal", True)]
+    )
+    def test_from_moscot(self, adata_large: AnnData, problem: str, sparsify: bool):
+        moscot = pytest.importorskip("moscot")
+
+        col = pd.cut(adata_large.obs["dpt_pseudotime"], 3)
+        cats = col.cat.categories
+        adata_large.obs["exp_time"] = col.cat.rename_categories(
+            dict(zip(cats, range(len(cats))))
+        )
+
+        if problem == "temporal":
+            problem = moscot.problems.TemporalProblem(adata_large)
+        elif problem == "spatiotemporal":
+            rng = np.random.RandomState(42)
+            adata_large.obsm["spatial"] = rng.normal(size=(adata_large.n_obs, 2))
+            problem = moscot.problems.SpatioTemporalProblem(adata_large)
+        else:
+            raise ValueError(problem)
+
+        problem = problem.prepare(
+            time_key="exp_time", xy_callback_kwargs={"n_comps": 5}
+        )
+        problem = problem.solve()
+
+        tmk = TransportMapKernel.from_moscot(
+            problem, sparsify=sparsify, sparsify_kwargs={"mode": "min_row"}
+        )
+        if sparsify:
+            for k, v in tmk.couplings.items():
+                assert issparse(v.X), k
+
+        tmk = tmk.compute_transition_matrix()
+
+        np.testing.assert_allclose(
+            tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6
+        )
 
     def test_from_wot(self, adata: AnnData, tmpdir):
         wot = pytest.importorskip("wot")
