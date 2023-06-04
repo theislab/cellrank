@@ -3,7 +3,7 @@
 CellRank for directed single-cell fate mapping
 ==============================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/master/resources/images/cellrank_fate_map.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/main/resources/images/cellrank_fate_map.png
     :width: 600px
     :align: center
 
@@ -107,11 +107,11 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://discourse.scverse.org/
     :alt: Discourse
 
-.. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=master
+.. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=main
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
-.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=master&label=notebooks
+.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=main&label=notebooks
     :target: https://github.com/theislab/cellrank_notebooks/actions
     :alt: CI-Notebooks
 
@@ -119,7 +119,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :target: https://cellrank.readthedocs.io/en/stable
     :alt: Documentation
 
-.. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/master/graph/badge.svg
+.. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/theislab/cellrank
     :alt: Coverage
 
@@ -134,7 +134,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
 .. _estimators: https://cellrank.readthedocs.io/en/stable/classes.html#estimators
 .. _plotting API: https://cellrank.readthedocs.io/en/stable/api.html#module-cellrank.pl
 .. _external API: https://cellrank.readthedocs.io/en/stable/external_api.html
-.. _contribution guide: https://github.com/theislab/cellrank/blob/master/CONTRIBUTING.rst
+.. _contribution guide: https://github.com/theislab/cellrank/blob/main/CONTRIBUTING.rst
 
 .. _RNA velocity: https://cellrank.readthedocs.io/en/stable/classes.html#velocity-kernel
 .. _VelocityKernel: https://cellrank.readthedocs.io/en/stable/classes.html#velocity-kernel

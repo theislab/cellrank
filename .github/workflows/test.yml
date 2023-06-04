@@ -4,9 +4,9 @@ on:
     schedule:
     -   cron: 00 00 * * 1  # every Monday at 00:00
     push:
-        branches: [master]
+        branches: [main]
     pull_request:
-        branches: [master]
+        branches: [main]
     workflow_dispatch:
         inputs:
             reason:
@@ -116,7 +116,7 @@ jobs:
                 codecov --no-color --required --flags unittest
 
     regenerate-notebooks:
-        if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/master')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason == 'release') }}
+        if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason == 'release') }}
         needs: [lint, test]
         runs-on: ubuntu-latest
         steps:

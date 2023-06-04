@@ -70,10 +70,10 @@ Branching structure
 We use sightly modified branching structured described
 `here <https://nvie.com/posts/a-successful-git-branching-model/>`_, in short:
 
-- ``feature/X``: for features, enhancements, etc. it is based off the ``master`` branch and squash merged into it again.
-- ``fix/X``: for bug fixes; is based off the ``master`` branch and squash merged into it again.
-- ``release/vX.X.X``: prior to making a release; it is based off ``master`` and then merged (using merge commit) into
-  ``master``, after bumping the version and making release notes. Both are usually done through CI,
+- ``feature/X``: for features, enhancements, etc. it is based off the ``main`` branch and squash merged into it again.
+- ``fix/X``: for bug fixes; is based off the ``main`` branch and squash merged into it again.
+- ``release/vX.X.X``: prior to making a release; it is based off ``main`` and then merged (using merge commit) into
+  ``main``, after bumping the version and making release notes. Both are usually done through CI,
   see `Making a new release`_.
 
 Adding new features
@@ -211,13 +211,13 @@ will take care of the following:
 - bump the version and create a new tag
 - run tests on the ``release/vX.X.X`` branch
 - publish on PyPI after the tests have passed
-- merge ``release/vX.X.X`` into ``master``
+- merge ``release/vX.X.X`` into ``main``
 
 Alternatively, it's possible to create a new release using ``bump2version``, which can be installed as::
 
     pip install bump2version
 
-Depending on what part of the version you want to update, you can run on ``master``::
+Depending on what part of the version you want to update, you can run on ``main``::
 
     bump2version {major,minor,patch}
 
