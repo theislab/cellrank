@@ -1322,8 +1322,7 @@ class TestTransportMapKernel:
 
         problem = problem.prepare(
             policy=policy, time_key="exp_time", xy_callback_kwargs={"n_comps": 5}
-        )
-        problem = problem.solve()
+        ).solve()
 
         tmk = TransportMapKernel.from_moscot(
             problem,

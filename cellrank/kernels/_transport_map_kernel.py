@@ -232,6 +232,22 @@ class TransportMapKernel(UnidirectionalKernel):
     ) -> "TransportMapKernel":
         """Construct the kernel from :mod:`moscot` :cite:`klein:23`.
 
+        Examples
+        --------
+        .. code-block:: python
+
+            import moscot as mt
+            import cellrank as cr
+
+            adata = mt.datasets.hspc()
+            adata.obs["day"] = adata.obs["day"].astype("category")
+
+            problem = mt.problems.TemporalProblem(adata)
+            problem = problem.prepare(time_key="day").solve()
+
+            tmk = cr.kernels.TransportMapKernel.from_moscot(problem)
+            tmk = tmk.compute_transition_matrix()
+
         Parameters
         ----------
         problem
@@ -295,6 +311,22 @@ class TransportMapKernel(UnidirectionalKernel):
     ) -> "TransportMapKernel":
         """Construct the kernel from Waddington OT :cite:`schiebinger:19`.
 
+        Examples
+        --------
+        .. code-block:: python
+
+            import wot
+            import cellrank as cr
+
+            adata = cr.datasets.reprogramming_schiebinger(subset_to_serum=True)
+            adata.obs["day"] = adata.obs["day"].astype(float).astype("category")
+
+            ot_model = wot.ot.OTModel(adata, day_field="day")
+            ot_model.compute_all_transport_maps(tmap_out="tmaps/")
+
+            tmk = cr.kernels.TransportMapKernel.from_wot(adata, path="tmaps/", time_key="day")
+            tmk = tmk.compute_transition_matrix()
+
         Parameters
         ----------
         adata
@@ -319,7 +351,9 @@ class TransportMapKernel(UnidirectionalKernel):
             *_, src, tgt = name.split("_")
             couplings[dtype(src), dtype(tgt)] = sc.read(fname)
 
-        return cls(adata, couplings=couplings, time_key=time_key, **kwargs)
+        return cls(
+            adata, couplings=couplings, time_key=time_key, policy="sequential", **kwargs
+        )
 
     @d.dedent
     def _restich_couplings(
