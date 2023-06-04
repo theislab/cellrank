@@ -1293,10 +1293,7 @@ class TestTransportMapKernel:
                 _ = tmk.compute_transition_matrix()
 
     def test_explicit_shuffle(self, adata_large: AnnData):
-        adata_large.obs["time"] = 0
-        adata_large.obs.loc[50:100, "time"] = 1
-        adata_large.obs.loc[100:150, "time"] = 2
-        adata_large.obs.loc[150:, "time"] = 3
+        adata_large.obs["time"] = [0] * 50 + [1] * 50 + [2] * 50 + [3] * 50
         adata_large.obs["time"] = col = adata_large.obs["time"].astype("category")
         cats = col.cat.categories
 
