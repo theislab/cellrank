@@ -51,7 +51,6 @@ jobs:
                     python: 3.8
                     use_slepc: true
         env:
-            # make sure to pin this in tox.ini as well
             PC_VERSION: 3.18.0  # PETSc version
             SC_VERSION: 3.18.0 # SLEPc version
 

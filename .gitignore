@@ -112,22 +112,13 @@ venv.bak/
 .vscode/
 
 # documentation
-docs/source/api/_autosummary
-docs/source/auto_examples
-docs/source/gen_modules
+docs/api/_autosummary
 
 # custom folders
-/local_resources
 tests/data
 tests/figures
 tests/_ground_truth_figures/*-failed-diff.png
-examples/example.h5ad
-figures
-data
 **/*.ipynb
-
-# vendorized msmtools
-cellrank/_vendor
 
 # Vim .swp
 *.swp
