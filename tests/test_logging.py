@@ -13,7 +13,7 @@ from cellrank import settings
 
 
 @pytest.fixture()
-def logging_state():
+def logging_state():  # noqa: PT004
     verbosity_orig = settings.verbosity
     yield
     settings.logfile = sys.stderr
