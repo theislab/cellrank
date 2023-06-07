@@ -112,11 +112,12 @@ def create_kernels(
     velocity_variances: Optional[str] = None,
     connectivity_variances: Optional[str] = None,
 ) -> Tuple[VelocityKernel, ConnectivityKernel]:
+    rng = np.random.default_rng()
     vk = VelocityKernel(adata)
-    vk._mat_scaler = adata.obsp.get(velocity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs)))
+    vk._mat_scaler = adata.obsp.get(velocity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))
 
     ck = ConnectivityKernel(adata)
-    ck._mat_scaler = adata.obsp.get(connectivity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs)))
+    ck._mat_scaler = adata.obsp.get(connectivity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))
 
     vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
@@ -219,9 +220,9 @@ def assert_models_equal(
             if deepcopy or pickled:
                 try:
                     assert val2 is not val1, attr
-                    # can be array of strings, can't get NaN
+                    # can be an array of strings, can't get NaN
                     assert_array_nan_equal(val2, val1)
-                except:
+                except Exception:  # noqa: BLE001
                     np.testing.assert_array_equal(val2, val1)
             # e.g. for GAMR, we point to the offset and design matrix
             # however, the `x`, and so pointers are not modified
@@ -229,7 +230,7 @@ def assert_models_equal(
                 assert val2 is val1, attr
         # we don't expect any dictionaries as in estimators
         elif attr == "_model":
-            assert val2 is not val1  # model is always deepcopied
+            assert val2 is not val1  # model is always deep-copied
         elif not isinstance(val2, AnnData) and not callable(val2):
             # callable because SKLearnModel has default conf int function
             assert val2 == val1, (val2, val1, attr)
@@ -262,7 +263,7 @@ def assert_estimators_equal(
                 np.testing.assert_array_compare(np.array_equal, x, y, equal_nan=True)
             except AssertionError:
                 raise
-            except Exception:
+            except Exception:  # noqa: BLE001
                 np.testing.assert_array_compare(np.allclose, x, y, equal_nan=True)
         elif isinstance(x, pd.DataFrame):
             assert_frame_equal(x, y, check_dtype=False)
@@ -346,8 +347,8 @@ def random_transition_matrix(n: int) -> np.ndarray:
     -------
     Row-normalized transition matrix.
     """
-
-    x = np.abs(np.random.normal(size=(n, n)))
+    rng = np.random.default_rng()
+    x = np.abs(rng.normal(size=(n, n)))
     rsum = x.sum(axis=1)
     return x / rsum[:, np.newaxis]
 
@@ -367,8 +368,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     -------
     The created adata object.
     """
-
-    np.random.seed(42)
+    np.random.seed(42)  # noqa: NPY002
     adata = scv.datasets.toy_data(n_obs=n_obs)
     adata.obs_names_make_unique()
     adata.var_names_make_unique()
