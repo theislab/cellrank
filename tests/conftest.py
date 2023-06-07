@@ -1,11 +1,9 @@
 import warnings
 from pathlib import Path
-from sys import version_info
 from typing import Optional, Tuple
 
 import pytest
 from _helpers import create_model
-from filelock import FileLock
 from numba.core.errors import NumbaPerformanceWarning
 
 import numpy as np
@@ -28,7 +26,7 @@ _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
 def pytest_sessionstart(session: pytest.Session) -> None:
     matplotlib.use("Agg")
     matplotlib.rcParams["figure.max_open_warning"] = 0
-    np.random.seed(42)
+    np.random.seed(42)  # noqa: NPY002
 
     # https://github.com/theislab/cellrank/issues/683
     warnings.simplefilter("ignore", NumbaPerformanceWarning)
@@ -100,7 +98,7 @@ def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
         m.prepare(_adata.var_names[0], "0", "latent_time").fit()
         m.predict(level=0.95)
         return m
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -116,58 +114,53 @@ def adata_large() -> AnnData:
 
 @pytest.fixture()
 def adata_cflare_fwd(
-    adata_cflare=_create_cflare(backward=False),
+    adata_cflare=_create_cflare(backward=False),  # noqa: B008
 ) -> Tuple[AnnData, CFLARE]:
     adata, cflare = adata_cflare
     return adata.copy(), cflare
 
 
 @pytest.fixture()
-def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
+def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
 @pytest.fixture()
-def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:
+def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
 @pytest.fixture()
-def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
+def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa: B008
     return adata_cflare[0].copy()
 
 
 @pytest.fixture()
-def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
+def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
     return adata_gpcca[1].copy()
 
 
 @pytest.fixture(scope="session")
-def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
+def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa: B008
     return adata_cflare[0].copy()
 
 
 @pytest.fixture(scope="session")
 def gamr_model(adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str) -> Optional[GAMR]:
-    model = None
-
-    if version_info[:2] <= (3, 6):
-        pytest.skip("Pickling of Enums doesn't work in Python3.6.")
-    elif worker_id == "master":
+    if worker_id == "master":
         model = _create_gamr_model(adata_gamr)
     else:
         root_tmp_dir = tmp_path_factory.getbasetemp().parent
         fn = root_tmp_dir / "model.pickle"
 
-        with FileLock(f"{fn}.lock"):
-            if fn.is_file():
-                model = GAMR.read(fn)
-            else:
-                model = _create_gamr_model(adata_gamr)
-                if model is not None:
-                    model.write(fn)
+        if fn.is_file():
+            model = GAMR.read(fn)
+        else:
+            model = _create_gamr_model(adata_gamr)
+            if model is not None:
+                model.write(fn)
 
     if model is None:
         pytest.skip("Unable to create `cellrank.models.GAMR`.")
@@ -242,7 +235,7 @@ def test_matrix_1() -> np.ndarray:
     """
 
     # fmt: off
-    p = np.array([
+    return np.array([
         # 0.   1.   2.   3.   4.   5.   6.   7.   8.   9.   10.  11.
         [0.0, 0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 0
         [0.2, 0.0, 0.6, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 1
@@ -262,8 +255,6 @@ def test_matrix_1() -> np.ndarray:
     ])
     # fmt: on
 
-    return p
-
 
 @pytest.fixture(scope="session")
 def test_matrix_2() -> np.ndarray:
@@ -280,7 +271,7 @@ def test_matrix_2() -> np.ndarray:
         - not reversible
     """
     # fmt: off
-    p = np.array([
+    return np.array([
         # 0.   1.   2.   3.   4.   5.   6.   7.   8.   9.   10.  11.  12.  13.
         [0.0, 0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 0
         [0.2, 0.0, 0.6, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 1
@@ -303,8 +294,6 @@ def test_matrix_2() -> np.ndarray:
     ])
     # fmt: on
 
-    return p
-
 
 @pytest.fixture(scope="session")
 def test_matrix_3() -> np.ndarray:
@@ -322,7 +311,7 @@ def test_matrix_3() -> np.ndarray:
     """
 
     # fmt: off
-    p = np.array([
+    return np.array([
         # 0.   1.   2.   3.   4.   5.   6.   7.   8.   9.   10.  11.  12.  13.
         [0.0, 0.8, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 0
         [0.2, 0.0, 0.6, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],  # 1
@@ -345,8 +334,6 @@ def test_matrix_3() -> np.ndarray:
     ])
     # fmt: on
 
-    return p
-
 
 @pytest.fixture(scope="session")
 def test_matrix_4() -> np.ndarray:
@@ -361,7 +348,7 @@ def test_matrix_4() -> np.ndarray:
     """
 
     # fmt: off
-    p = np.array(
+    return np.array(
         [
             # 0.   1.   2.   3.
             [0.0, 0.8, 0.2, 0.0],  # 0
@@ -371,5 +358,3 @@ def test_matrix_4() -> np.ndarray:
         ]
     )
     # fmt: on
-
-    return p

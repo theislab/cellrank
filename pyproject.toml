@@ -77,7 +77,6 @@ test = [
     "igraph",
     "leidenalg",
     "Pillow",
-    "filelock",
     "jax",
 ]
 docs = [
@@ -117,6 +116,7 @@ exclude = [
     "dist",
 ]
 ignore = [
+    "PT011",  # TODO/
     # Do not implicitly `return None` in function able to return non-`None` value
     "RET502",
     # Missing explicit `return` at the end of function able to return non-`None` value
