@@ -76,23 +76,24 @@ class RandomKeys:
         Number of keys, If `None`, create just 1 keys.
     where
         Attribute of ``adata``. If `'obs'`, also clean up `'{key}_colors'` for each generated key.
+    seed
+        Random seed.
     """
 
-    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs"):
+    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs", seed: int = 0):
         self._adata = adata
         self._where = where
         self._n = n or 1
+        self._seed = seed
         self._keys = []
 
     def _generate_random_keys(self):
-        def generator():
-            return f"RNG_COL_{np.random.randint(2 ** 16)}"
-
+        rng = np.random.RandomState(self._seed)
         where = getattr(self._adata, self._where)
         names, seen = [], set(where.keys())
 
         while len(names) != self._n:
-            name = generator()
+            name = f"RNG_COL_{rng.randint(2 ** 16)}"
             if name not in seen:
                 seen.add(name)
                 names.append(name)

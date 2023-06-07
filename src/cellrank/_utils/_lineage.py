@@ -383,7 +383,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             if isinstance(item, (tuple, list, np.ndarray)):
                 if any(isinstance(i, str) and "," in i for i in item):
                     return self._mix_lineages(slice(None, None, None), item)
-                elif any(isinstance(i, str) for i in item):
+                if any(isinstance(i, str) for i in item):
                     item = (slice(None, None, None), self._maybe_convert_names(item))
                     col = item[1]
 

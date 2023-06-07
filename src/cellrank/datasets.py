@@ -108,9 +108,9 @@ def pancreas_preprocessed(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
     **kwargs: Any,
 ) -> AnnData:
-    """
-    Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`, preprocessed according to the \
-    `basic tutorial <https://cellrank.readthedocs.io/en/stable/cellrank_basics.html>`__.
+    """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
+
+    TODO(michalk8): mention pre-processing
 
     Parameters
     ----------
@@ -128,8 +128,7 @@ def lung(
     path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
     **kwargs: Any,
 ) -> AnnData:
-    """
-    Regeneration of murine lung epithelial cells at 13 time points from :cite:`strunz:20`.
+    """Regeneration of murine lung epithelial cells at 13 time points from :cite:`strunz:20`.
 
     sc-RNA-seq dataset comprising `24 051` cells recorded using Drop-seq :cite:`macosko:15` at 13 time points spanning
     days 2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which
@@ -157,9 +156,7 @@ def reprogramming_morris(
     path: Union[str, Path] = "datasets/reprogramming_morris.h5ad",
     **kwargs: Any,
 ) -> AnnData:
-    """
-    Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors at 8 time points from \
-    :cite:`morris:18`.
+    """Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors from :cite:`morris:18`.
 
     sc-RNA-seq dataset comprising `104 887` cell recorded using 10X Chromium and Drop-seq :cite:`macosko:15`
     at 8 time points spanning days 0-28 past reprogramming initiation.
@@ -209,9 +206,7 @@ def reprogramming_schiebinger(
     subset_to_serum: bool = False,
     **kwargs: Any,
 ) -> AnnData:
-    """
-    Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells at 39 time points from \
-    :cite:`schiebinger:19`.
+    """Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells from :cite:`schiebinger:19`.
 
     sc-RNA-seq dataset comprising `236 285` cell recorded using 10X Chromium
     at 39 time points spanning days 0-18 past reprogramming initiation.
@@ -247,11 +242,10 @@ def zebrafish(
     path: Union[str, Path] = "datasets/zebrafish.h5ad",
     **kwargs: Any,
 ) -> AnnData:
-    """
-    Zebrafish embryogenesis assayed using drop-seq, restricted to the axial mesoderm lineage from :cite:`farrell:18`.
+    """Zebrafish embryogenesis assayed using drop-seq from :cite:`farrell:18`.
 
-    sc-RNA-seq time-series dataset comprising `2434` cells which contains 12 time-points spanning 3.3-12 hours
-    past fertilization.
+    sc-RNA-seq time-series dataset, restricted to the axial mesoderm lineage, comprising of `2434` cells which
+    contains 12 time-points spanning 3.3-12 hours past fertilization.
 
     Parameters
     ----------
@@ -269,8 +263,7 @@ def bone_marrow(
     path: Union[str, Path] = "datasets/bone_marrow.h5ad",
     **kwargs: Any,
 ) -> AnnData:
-    """
-    sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.
+    """sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.
 
     This dataset contains raw spliced and unspliced counts estimated using *velocyto* :cite:`manno:18`.
     Furthermore, the dataset also contains a precomputed *Palantir* pseudotime :cite:`setty:19`.
