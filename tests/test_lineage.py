@@ -559,8 +559,9 @@ class TestLineageAccessor:
 
     def test_mask_and_names(self):
         # see https://github.com/theislab/cellrank/issues/427
+        rng = np.random.default_rng()
         lin = Lineage(
-            np.random.normal(size=(100, 9)),
+            rng.normal(size=(100, 9)),
             names=[
                 "Neuroendocrine",
                 "Ciliated activated_1",
@@ -579,7 +580,7 @@ class TestLineageAccessor:
             "Ciliated activated_1",
             "Ciliated activated_2",
         ]
-        mask = np.random.randint(2, size=(100,), dtype=bool)
+        mask = rng.integers(0, 2, size=(100,), dtype=bool)
 
         res = lin[mask, lineages]
 
@@ -1031,8 +1032,8 @@ class TestPriming:
         assert np.max(deg) == 1.0
 
     def test_early_cells_empty(self, lineage: Lineage):
+        mask = np.zeros(shape=(len(lineage),), dtype=bool)
         with pytest.raises(ValueError, match="No early cells have been specified."):
-            mask = np.zeros(shape=(len(lineage),), dtype=bool)
             lineage.priming_degree("kl_divergence", early_cells=mask)
 
     def test_early_cells(self, lineage: Lineage):
