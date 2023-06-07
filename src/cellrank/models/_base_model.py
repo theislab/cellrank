@@ -65,7 +65,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
                 if isinstance(instance, FailedModel):
                     instance.reraise()
                 return wrapped(*args, **kwargs)
-            except Exception as e:  # noqa: B902
+            except Exception as e:  # noqa: BLE001
                 return exception_handler(instance, e, *args, **kwargs)
 
         return wrapper
@@ -94,7 +94,6 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
     def no_output(instance: "BaseModel", exc: BaseException, *_args, **_kwargs) -> None:
         if not instance._is_bulk:
             raise exc from None
-        return None
 
     @valuedispatch
     def wrapper(mode: FailedReturnType, *_args, **_kwargs):
@@ -957,7 +956,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         """
         if arr.ndim not in (1, 2):
             raise ValueError(f"Expected array to be 1 or 2 dimensional, found `{arr.ndim}` dimension(s).")
-        elif arr.ndim == 2 and arr.shape[1] != 1:
+        if arr.ndim == 2 and arr.shape[1] != 1:
             raise ValueError(f"Expected the 2nd dimension to be 1, found `{arr.shape[1]}.`")
 
         return np.reshape(arr, (-1, 1)).astype(self._dtype)

@@ -60,7 +60,7 @@ class SKLearnModel(BaseModel):
                 f"Unable to determine weights for function `{fit_name!r}`, searched `{self._weight_names}`. "
                 f"Consider specifying it manually as `weight_name=...`."
             )
-        elif (
+        if (
             not ignore_raise
             and self._weight_name != ""
             and self._weight_name not in signature(getattr(self.model, fit_name)).parameters

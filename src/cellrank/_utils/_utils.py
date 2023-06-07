@@ -88,12 +88,12 @@ class RandomKeys:
         self._keys = []
 
     def _generate_random_keys(self):
-        rng = np.random.RandomState(self._seed)
+        rng = np.random.default_rng(self._seed)
         where = getattr(self._adata, self._where)
         names, seen = [], set(where.keys())
 
         while len(names) != self._n:
-            name = f"RNG_COL_{rng.randint(2 ** 16)}"
+            name = f"RNG_COL_{rng.integers(0, 2 ** 32 - 1)}"
             if name not in seen:
                 seen.add(name)
                 names.append(name)

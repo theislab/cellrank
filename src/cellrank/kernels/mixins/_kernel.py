@@ -62,7 +62,6 @@ class UnidirectionalMixin:
     @property
     def backward(self) -> None:
         """None."""
-        return None
 
 
 class BidirectionalMixin(ABC):

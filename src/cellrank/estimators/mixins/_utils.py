@@ -123,7 +123,7 @@ def shadow(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mappin
         try:
             # don't care what the "shadowed" function returns
             _ = wrapped(*args, **kwargs)
-        except Exception as e:  # noqa: B902
+        except Exception as e:  # noqa: BLE001
             logg.error(f"Unable to duplicate function call using shadow `anndata.AnnData` object. Reason: `{e}`")
 
     return res

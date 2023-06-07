@@ -1,4 +1,3 @@
-from abc import ABC
 from typing import Any, Optional, Tuple, TypeVar, Union
 
 import numpy as np
@@ -11,7 +10,7 @@ __all__ = ["KernelMixin"]
 KernelExpression = TypeVar("KernelExpression", bound="KernelMixin")
 
 
-class KernelMixin(ABC):
+class KernelMixin:
     """Mixin that exposes various properties of :class:`cellrank.kernels.KernelExpression`."""
 
     def __init__(self, kernel: "KernelExpression", **kwargs: Any):

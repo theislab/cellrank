@@ -48,7 +48,7 @@ def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = Tr
         if use_raw:
             if not hasattr(data, "raw"):
                 raise AttributeError("No `.raw` attribute found.")
-            elif data.raw is None:
+            if data.raw is None:
                 raise ValueError("Attribute `.raw` is None.")
             x = data.raw.X
         elif layer is not None:
@@ -126,9 +126,10 @@ def _calculate_norm_factors(
     a_cutoff: float = -1e10,
     perc: float = 0.75,
 ) -> np.ndarray:
-    """
-    Calculate normalization factors according to \
-    `edgeR <https://www.rdocumentation.org/packages/edgeR/versions/3.14.0/topics/calcNormFactors>`__.
+    """Calculate normalization factors.
+
+    This uses the `edgeR <https://www.rdocumentation.org/packages/edgeR/versions/3.14.0/topics/calcNormFactors>`_
+    implementation.
 
     Parameters
     ----------
@@ -494,7 +495,7 @@ def _get_offset(
         data = _extract_data(adata, layer=layer, use_raw=use_raw)
         try:
             nf = _calculate_norm_factors(adata, layer=layer, use_raw=use_raw, ref_ix=ref_ix, **kwargs)
-        except Exception as e:  # noqa: B902
+        except Exception as e:  # noqa: BLE001
             logg.debug(f"Unable to calculate the normalization factors, setting them to `1`. Reason: `{e}`")
             nf = np.ones(len(adata), dtype=np.float64)
 

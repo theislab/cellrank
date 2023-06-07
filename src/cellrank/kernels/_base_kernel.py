@@ -458,7 +458,7 @@ class KernelExpression(IOMixin, ABC):
         except AssertionError:
             logg.warning("Transition matrix does not exist for the given parameters. Recomputing")
             return False
-        except Exception as e:  # noqa: B902
+        except Exception as e:  # noqa: BLE001
             # e.g. the dict is not comparable
             logg.warning(f"Expected and actually parameters are not comparable, reason `{e}`. Recomputing")
             expected_params = {}  # clear the params

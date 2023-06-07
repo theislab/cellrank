@@ -56,13 +56,12 @@ class CoarseTOrder(ModeEnum):
 @d.dedent
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     """
-    Generalized Perron Cluster Cluster Analysis (GPCCA) :cite:`reuter:18,reuter:19` as implemented in \
-    `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_.
+    Generalized Perron Cluster Cluster Analysis (GPCCA) :cite:`reuter:18,reuter:19`.
 
-    This is our main and recommended estimator. Use it to compute macrostates, automatically and
-    semi-automatically classify these as initial, intermediate and terminal states, compute fate
-    probabilities towards macrostates, uncover driver genes, and much more. To compute and classify
-    macrostates, we run the GPCCA algorithm under the hood, which returns a soft assignmend of cells
+    This is our main and recommended estimator implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_ .
+    Use it to compute macrostates, automatically and semi-automatically classify these as initial, intermediate and
+    terminal states, compute fate probabilities towards macrostates, uncover driver genes, and much more. To compute and
+    classify macrostates, we run the GPCCA algorithm under the hood, which returns a soft assignment of cells
     to macrostates, as well as a coarse-grained transition matrix among the set of macrostates
     :cite:`reuter:18,reuter:19`. This estimator allows you to inject prior knowledge where available
     to guide the identification of initial, intermediate and terminal states.
@@ -288,7 +287,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         elif method == TermStatesMethod.TOP_N:
             if n_states is None:
                 raise ValueError("Expected `n_states != None` for `method='top_n'`.")
-            elif n_states <= 0:
+            if n_states <= 0:
                 raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
         elif method == TermStatesMethod.STABILITY:
             if stability_threshold is None:

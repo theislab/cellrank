@@ -197,7 +197,7 @@ class GAM(BaseModel):
                         **kwargs,
                     )
                     return self
-                except Exception as e:  # noqa: B902
+                except Exception as e:  # noqa: BLE001
                     # workaround for: https://github.com/dswah/pyGAM/issues/273
                     self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                     logg.error(f"Grid search failed, reason: `{e}`. Fitting with default values")
@@ -205,7 +205,7 @@ class GAM(BaseModel):
             try:
                 self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 return self
-            except Exception as e:  # noqa: B902
+            except Exception as e:  # noqa: BLE001
                 raise RuntimeError(
                     f"Unable to fit `{type(self).__name__}` for gene "
                     f"`{self._gene!r}` in lineage `{self._lineage!r}`. Reason: `{e}`"

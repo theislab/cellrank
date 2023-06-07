@@ -117,6 +117,8 @@ exclude = [
     "dist",
 ]
 ignore = [
+    # Do not implicitly `return None` in function able to return non-`None` value
+    "RET502",
     # Missing explicit `return` at the end of function able to return non-`None` value
     "RET503",
     # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient

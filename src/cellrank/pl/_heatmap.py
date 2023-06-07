@@ -248,7 +248,7 @@ def heatmap(
             colors = colors if cmap is None else cmap(colors)
 
             x = 0
-            for i, (color, x, y1, y2) in enumerate(zip(colors, xs, y1, y2)):
+            for i, (color, x, y1, y2) in enumerate(zip(colors, xs, y1, y2)):  # noqa: B020
                 dx = (xs[i + 1] - xs[i]) if i < len(x) else (xs[-1] - xs[-2])
                 ax.add_patch(plt.Rectangle((x, y1), dx, y2 - y1, color=color, ec=color, **kwargs))
 
@@ -536,7 +536,7 @@ def heatmap(
 
     if return_genes and mode == HeatmapMode.LINEAGES:
         return (all_models, genes) if return_models else genes
-    elif return_models:
+    if return_models:
         return all_models
 
 

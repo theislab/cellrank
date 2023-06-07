@@ -649,7 +649,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         if rest:
             if len(rest) != 1:
                 raise ValueError(f"Expected only 1 additional modifier ('in' or 'out'), found `{list(rest)}`.")
-            elif rest[0] not in ("in", "out"):
+            if rest[0] not in ("in", "out"):
                 raise ValueError(f"Invalid modifier `{rest[0]!r}`. Valid options are: `'in', 'out'`.")
             if rest[0] == "in":  # ignore in, it's default
                 rest = []
@@ -737,7 +737,7 @@ def _create_callbacks(
             for lin_name in lineages:
                 callbacks[obs_name][lin_name] = lin_names
             return
-        elif not isinstance(lin_names, dict):
+        if not isinstance(lin_names, dict):
             raise TypeError(
                 f"Expected the lineage callback to be either `callable` or a dictionary of callables, "
                 f"found `{type(lin_names).__name__!r}`."
@@ -786,7 +786,7 @@ def _create_callbacks(
                     ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
                     if isinstance(model, FailedModel):
                         model.reraise()
-                except Exception as e:  # noqa: B902
+                except Exception as e:  # noqa: BLE001
                     raise RuntimeError(
                         f"Callback validation failed for gene `{gene!r}` and lineage `{lineage!r}`."
                     ) from e
@@ -1043,7 +1043,7 @@ def _get_sorted_colors(
                 raise TypeError(
                     f"Expected `adata.obs[{cluster_key!r}]` to be numeric, "
                     f"found `{infer_dtype(adata.obs[cluster_key])}`."
-                )
+                ) from None
             res.append(np.asarray(adata.obs[ck])[order])
 
     return res

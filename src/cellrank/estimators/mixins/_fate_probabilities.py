@@ -647,5 +647,5 @@ class FateProbsMixin:
                 copy=True,
                 **kwargs,
             )
-        except Exception as e:  # noqa: B902
+        except Exception as e:  # noqa: BLE001
             raise RuntimeError(f"Unable to reconstruct `.fate_probabilities`. Reason: `{e}`.") from None

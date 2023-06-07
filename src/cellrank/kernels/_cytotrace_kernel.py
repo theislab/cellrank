@@ -27,9 +27,7 @@ class CytoTRACEAggregation(ModeEnum):
 
 @d.dedent
 class CytoTRACEKernel(PseudotimeKernel):
-    """
-    Kernel which computes directed transition probabilities based on a KNN graph and the CytoTRACE score \
-    :cite:`gulati:20`.
+    """Kernel which computes directed transition probabilities usign the CytoTRACE score :cite:`gulati:20`.
 
     The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
@@ -83,7 +81,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         backward: bool = False,
         **kwargs: Any,
     ):
-        kwargs.pop("time_key", None)
+        _ = kwargs.pop("time_key", None)
         super().__init__(
             adata,
             backward=backward,
@@ -93,7 +91,7 @@ class CytoTRACEKernel(PseudotimeKernel):
 
     def _read_from_adata(
         self,
-        time_key: str = Key.cytotrace("pseudotime"),
+        time_key: str,
         **kwargs: Any,
     ) -> None:
         try:

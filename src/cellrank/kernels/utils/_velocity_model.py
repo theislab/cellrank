@@ -146,8 +146,9 @@ class ModelABC(ABC):
     @property
     def _ixs(self) -> np.ndarray:
         """Order in which to process rows."""
+        rng = np.random.default_rng()
         ixs = np.arange(self._conn.shape[0])
-        np.random.shuffle(ixs)
+        rng.shuffle(ixs)
         return ixs
 
     def _uniform(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
@@ -302,7 +303,7 @@ class MonteCarlo(ModelABC):
         super().__init__(conn, x, vmean, dtype=dtype, **kwargs)
         self._var = vvar.astype(dtype, copy=False)
         self._n_samples = n_samples
-        np.random.seed(seed)
+        np.random.seed(seed)  # noqa: NPY002
 
     def _compute(
         self,

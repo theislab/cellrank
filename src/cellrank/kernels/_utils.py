@@ -82,7 +82,7 @@ def _random_normal(
     m: np.ndarray,
     v: np.ndarray,
     n_samples: int = 1,
-):
+) -> np.ndarray:
     """
     Sample number from normal distribution.
 
@@ -97,16 +97,16 @@ def _random_normal(
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        `(n_samples x m.shape[0])` array from normal distribution.
+    `(n_samples x m.shape[0])` array from normal distribution.
     """
     assert m.ndim == 1, "Means are not 1 dimensional."
     assert m.shape == v.shape, "Means and variances have different shape."
 
+    rng = np.random.RandomState()
     if n_samples == 1:
-        return np.expand_dims(np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)
+        return np.expand_dims(np.array([rng.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)
 
-    return np.array([[np.random.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]).T
+    return np.array([[rng.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]).T
 
 
 @njit(**jit_kwargs)
@@ -153,10 +153,7 @@ def _reconstruct_one(
     :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
         The probability and correlation matrix.
     """
-    assert data.ndim == 2 and data.shape == (
-        2,
-        mat.nnz,
-    ), f"Dimension or shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
+    assert data.shape == (2, mat.nnz), f"Dimension or shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
 
     aixs = None
     if ixs is not None:

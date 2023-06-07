@@ -175,7 +175,7 @@ def log_odds(
 
         return hue, palette, thresh_mask, sm
 
-    np.random.seed(seed)
+    np.random.seed(seed)  # noqa: NPY002
     _ = kwargs.pop("orient", None)
     if use_raw and adata.raw is None:
         logg.warning("No raw attribute set. Setting `use_raw=False`")
