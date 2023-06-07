@@ -22,6 +22,8 @@ from cellrank.kernels import ConnectivityKernel, PrecomputedKernel, VelocityKern
 
 def _jax_not_installed() -> bool:
     try:
+        import jax  # noqa
+
         return False
     except ImportError:
         return True

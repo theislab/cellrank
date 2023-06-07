@@ -14,6 +14,9 @@ from cellrank._utils._linear_solver import (
 
 def _petsc_not_installed() -> bool:
     try:
+        import petsc4py  # noqa
+        import slepc4py  # noqa
+
         return False
     except ImportError:
         return True
