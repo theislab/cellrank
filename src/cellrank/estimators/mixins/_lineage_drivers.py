@@ -1,27 +1,29 @@
-from typing import Any, Dict, Tuple, Union, Literal, Mapping, Optional, Sequence
-
-from types import MappingProxyType
+import contextlib
 from pathlib import Path
+from types import MappingProxyType
+from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
 
-import scanpy as sc
 import scvelo as scv
-from anndata import Raw, AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._utils import RandomKeys, TestMethod, save_fig, _correlation_test
-from cellrank._utils._colors import _create_categorical_colors
-from cellrank._utils._lineage import Lineage
-from cellrank.estimators.mixins._utils import SafeGetter, BaseProtocol, logger, shadow
-from cellrank.estimators.mixins._fate_probabilities import FateProbsMixin
 
 import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-from matplotlib import rc_context, patheffects
+from matplotlib import patheffects, rc_context
 from matplotlib.axes import Axes
 from matplotlib.patches import ArrowStyle
+
+import scanpy as sc
+from anndata import AnnData, Raw
+
+from cellrank import logging as logg
+from cellrank._utils._colors import _create_categorical_colors
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._key import Key
+from cellrank._utils._lineage import Lineage
+from cellrank._utils._utils import RandomKeys, TestMethod, _correlation_test, save_fig
+from cellrank.estimators.mixins._fate_probabilities import FateProbsMixin
+from cellrank.estimators.mixins._utils import BaseProtocol, SafeGetter, logger, shadow
 
 __all__ = ["LinDriversMixin"]
 
@@ -111,24 +113,17 @@ class LinDriversMixin(FateProbsMixin):
 
             - :attr:`lineage_drivers` - the same :class:`pandas.DataFrame` as described above.
         """
-
         # check that lineage probs have been computed
         method = TestMethod(method)
         fate_probs = self.fate_probabilities
         if fate_probs is None:
-            raise RuntimeError(
-                "Compute `.fate_probabilities` first as `.compute_fate_probabilities()`."
-            )
+            raise RuntimeError("Compute `.fate_probabilities` first as `.compute_fate_probabilities()`.")
 
         if fate_probs.shape[1] == 1:
-            logg.warning(
-                "There is only 1 lineage present. Using stationary distribution instead"
-            )
+            logg.warning("There is only 1 lineage present. Using stationary distribution instead")
             stat_dist = self.eigendecomposition.get("stationary_dist", None)
             if stat_dist is None:
-                raise RuntimeError(
-                    "No stationary distribution found in `.eigendecomposition['stationary_dist']`."
-                )
+                raise RuntimeError("No stationary distribution found in `.eigendecomposition['stationary_dist']`.")
             fate_probs = Lineage(
                 stat_dist,
                 names=fate_probs.names,
@@ -150,9 +145,7 @@ class LinDriversMixin(FateProbsMixin):
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
             if cluster_key not in self.adata.obs.keys():
-                raise KeyError(
-                    f"Unable to find clusters in `adata.obs[{cluster_key!r}]`."
-                )
+                raise KeyError(f"Unable to find clusters in `adata.obs[{cluster_key!r}]`.")
             if isinstance(clusters, str):
                 clusters = [clusters]
 
@@ -204,9 +197,7 @@ class LinDriversMixin(FateProbsMixin):
             **kwargs,
         )
         params = self._create_params()
-        self._write_lineage_drivers(
-            drivers.loc[var_names], use_raw=use_raw, params=params, time=start
-        )
+        self._write_lineage_drivers(drivers.loc[var_names], use_raw=use_raw, params=params, time=start)
 
         return drivers
 
@@ -273,15 +264,11 @@ class LinDriversMixin(FateProbsMixin):
 
         lin_drivers = self.lineage_drivers
         if lin_drivers is None:
-            raise RuntimeError(
-                "Compute `.lineage_drivers` first as `.compute_lineage_drivers()`."
-            )
+            raise RuntimeError("Compute `.lineage_drivers` first as `.compute_lineage_drivers()`.")
 
         key = f"{lineage}_corr"
         if key not in lin_drivers:
-            raise KeyError(
-                f"Lineage `{key!r}` not found in `{list(lin_drivers.columns)}`."
-            )
+            raise KeyError(f"Lineage `{key!r}` not found in `{list(lin_drivers.columns)}`.")
 
         if n_genes <= 0:
             raise ValueError(f"Expected `n_genes` to be positive, found `{n_genes}`.")
@@ -405,8 +392,7 @@ class LinDriversMixin(FateProbsMixin):
         if color is not None:
             if not isinstance(color, str):
                 raise TypeError(
-                    "Expected `color` to be either of type `str` or `None`, "
-                    f"found `{type(color).__name__}`."
+                    "Expected `color` to be either of type `str` or `None`, " f"found `{type(color).__name__}`."
                 )
             if color not in adata.var and color not in adata.varm[dkey]:
                 raise KeyError(
@@ -469,9 +455,7 @@ class LinDriversMixin(FateProbsMixin):
                     gene_sets_colors = self.fate_probabilities[sets].colors
                     # fmt: on
                 except KeyError:
-                    logg.warning(
-                        "Unable to determine gene sets colors from lineages. Using default colors"
-                    )
+                    logg.warning("Unable to determine gene sets colors from lineages. Using default colors")
                     gene_sets_colors = _create_categorical_colors(len(gene_sets))
             if len(gene_sets_colors) != len(gene_sets):
                 raise ValueError(
@@ -487,9 +471,7 @@ class LinDriversMixin(FateProbsMixin):
             for (key, values), color in zip(gene_sets.items(), gene_sets_colors):
                 arrowprops = (
                     {
-                        "arrowstyle": ArrowStyle.CurveFilledB(
-                            head_width=0.1, head_length=0.2
-                        ),
+                        "arrowstyle": ArrowStyle.CurveFilledB(head_width=0.1, head_length=0.2),
                         "fc": color,
                         "ec": color,
                     }
@@ -529,9 +511,7 @@ class LinDriversMixin(FateProbsMixin):
                     )
                     logg.info("    Finish", time=start)
                 except ImportError:
-                    logg.error(
-                        "Please install `adjustText` first as `pip install adjustText`"
-                    )
+                    logg.error("Please install `adjustText` first as `pip install adjustText`")
             if len(annots) and legend_loc not in (None, "none"):
                 _position_legend(ax, legend_loc=legend_loc)
 
@@ -549,10 +529,9 @@ class LinDriversMixin(FateProbsMixin):
         params: Mapping[str, Any] = MappingProxyType({}),
     ) -> str:
         self._write_lineage_drivers(None, use_raw=False, log=False)
-        try:
+        with contextlib.suppress(AttributeError):
             self._write_lineage_drivers(None, use_raw=True, log=False)
-        except AttributeError:
-            pass
+
         return super()._write_fate_probabilities(fate_probs, params=params, log=False)
 
     @logger
@@ -569,11 +548,7 @@ class LinDriversMixin(FateProbsMixin):
         self.params[key] = dict(params)
         # fmt: on
 
-        return (
-            f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n"
-            f"       `.lineage_drivers`\n"
-            "    Finish"
-        )
+        return f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n" f"       `.lineage_drivers`\n" "    Finish"
 
     def _read_fate_probabilities(self: LinDriversProtocol, adata: AnnData) -> bool:
         ok = super()._read_fate_probabilities(adata)
@@ -591,9 +566,7 @@ class LinDriversMixin(FateProbsMixin):
                     dtype=pd.DataFrame,
                 )
             else:
-                self._lineage_drivers = self._get(
-                    obj=self.adata.varm, key=key, shadow_attr="varm", dtype=pd.DataFrame
-                )
+                self._lineage_drivers = self._get(obj=self.adata.varm, key=key, shadow_attr="varm", dtype=pd.DataFrame)
 
         return sg.ok
 

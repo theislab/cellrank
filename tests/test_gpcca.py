@@ -1,21 +1,22 @@
-from typing import List, Tuple, Union, Optional, Sequence
-
 import os
-import pytest
 from copy import deepcopy
 from enum import Enum
-from _helpers import assert_array_nan_equal, assert_estimators_equal
+from typing import List, Optional, Sequence, Tuple, Union
 
-import cellrank as cr
-from anndata import AnnData
-from cellrank._utils import Lineage
-from cellrank.kernels import VelocityKernel, ConnectivityKernel
-from cellrank._utils._key import Key
+import pytest
+from _helpers import assert_array_nan_equal, assert_estimators_equal
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse
 from pandas.testing import assert_frame_equal, assert_series_equal
+from scipy.sparse import issparse
+
+from anndata import AnnData
+
+import cellrank as cr
+from cellrank._utils import Lineage
+from cellrank._utils._key import Key
+from cellrank.kernels import ConnectivityKernel, VelocityKernel
 
 
 # fmt: off
@@ -166,14 +167,10 @@ def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
         assert isinstance(mc.coarse_initial_distribution, pd.Series)
         assert isinstance(mc.coarse_T, pd.DataFrame)
         np.testing.assert_array_equal(mc.coarse_T.index, mc.coarse_T.columns)
-        np.testing.assert_array_equal(
-            mc.coarse_T.index, mc.coarse_stationary_distribution.index
-        )
+        np.testing.assert_array_equal(mc.coarse_T.index, mc.coarse_stationary_distribution.index)
         if mc.coarse_stationary_distribution is not None:
             assert isinstance(mc.coarse_stationary_distribution, pd.Series)
-            np.testing.assert_array_equal(
-                mc.coarse_T.index, mc.coarse_stationary_distribution.index
-            )
+            np.testing.assert_array_equal(mc.coarse_T.index, mc.coarse_stationary_distribution.index)
 
 
 def _check_renaming_no_write_terminal(mc: cr.estimators.GPCCA) -> None:
@@ -219,9 +216,7 @@ def _check_fate_probs(mc: cr.estimators.GPCCA) -> None:
 
 
 def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA:
-    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-        softmax_scale=4
-    )
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata).compute_transition_matrix()
     terminal_kernel = 0.8 * vk + 0.2 * ck
 
@@ -269,9 +264,7 @@ def _assert_params(
         _assert_params(g, state.prev, fwd=False)
 
 
-def _assert_adata(
-    adata: AnnData, state: Optional[State], fwd: bool = False, init: bool = True
-) -> None:
+def _assert_adata(adata: AnnData, state: Optional[State], fwd: bool = False, init: bool = True) -> None:
     if state is None:
         return
 
@@ -366,9 +359,7 @@ class TestGPCCA:
 
         _check_eigdecomposition(mc)
 
-    def test_compute_schur_write_eigvals_similar_to_orig_eigdecomp(
-        self, adata_large: AnnData
-    ):
+    def test_compute_schur_write_eigvals_similar_to_orig_eigdecomp(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -388,9 +379,7 @@ class TestGPCCA:
         assert orig_ed.keys() == schur_ed.keys()
         assert orig_ed["eigengap"] == schur_ed["eigengap"]
         n = min(orig_ed["params"]["k"], schur_ed["params"]["k"])
-        np.testing.assert_array_almost_equal(
-            orig_ed["D"].real[:n], schur_ed["D"].real[:n]
-        )
+        np.testing.assert_array_almost_equal(orig_ed["D"].real[:n], schur_ed["D"].real[:n])
         np.testing.assert_array_almost_equal(
             np.abs(orig_ed["D"].imag[:n]), np.abs(schur_ed["D"].imag[:n])
         )  # complex conj.
@@ -502,9 +491,7 @@ class TestGPCCA:
         np.testing.assert_array_equal(mc.schur_matrix.shape, [11, 11])
 
     def test_set_initial_states_from_forward(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
-            softmax_scale=4
-        )
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
@@ -522,9 +509,7 @@ class TestGPCCA:
         assert Key.uns.colors(key) in mc.adata.uns
 
     def test_compute_initial_states_from_forward_no_macro(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
-            softmax_scale=4
-        )
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
@@ -550,9 +535,7 @@ class TestGPCCA:
         assert mc.initial_states_memberships.shape == (adata_large.n_obs, 3)
 
     def test_compute_initial_states_from_forward_normal_run(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(
-            softmax_scale=4
-        )
+        vk = VelocityKernel(adata_large, backward=False).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
@@ -585,9 +568,7 @@ class TestGPCCA:
 
         _check_fate_probs(mc)
 
-    def test_set_terminal_states_from_macrostates_non_positive_cells(
-        self, adata_large: AnnData
-    ):
+    def test_set_terminal_states_from_macrostates_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -599,9 +580,7 @@ class TestGPCCA:
         with pytest.raises(ValueError):
             mc.set_terminal_states(n_cells=0)
 
-    def test_set_terminal_states_from_macrostates_invalid_name(
-        self, adata_large: AnnData
-    ):
+    def test_set_terminal_states_from_macrostates_invalid_name(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -614,25 +593,20 @@ class TestGPCCA:
             mc.set_terminal_states(states=["foobar"])
 
     @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
-    def test_set_terminal_states_clusters(
-        self, adata_large: AnnData, values: Union[str, List[str]]
-    ):
+    def test_set_terminal_states_clusters(self, adata_large: AnnData, values: Union[str, List[str]]):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         to_remove = list(
-            set(adata_large.obs["clusters"].cat.categories)
-            - ({values} if isinstance(values, str) else set(values))
+            set(adata_large.obs["clusters"].cat.categories) - ({values} if isinstance(values, str) else set(values))
         )
         expected = adata_large.obs["clusters"].cat.remove_categories(to_remove)
 
         mc = cr.estimators.GPCCA(terminal_kernel)
 
         mc.set_terminal_states({"clusters": values})
-        pd.testing.assert_series_equal(
-            expected, mc.terminal_states, check_category_order=False, check_names=False
-        )
+        pd.testing.assert_series_equal(expected, mc.terminal_states, check_category_order=False, check_names=False)
 
     def test_compute_terminal_states_invalid_method(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -718,9 +692,7 @@ class TestGPCCA:
         self_probs = pd.Series(np.diag(coarse_T), index=coarse_T.columns)
         names = self_probs[self_probs.values >= thresh].index
 
-        np.testing.assert_array_equal(
-            set(names), set(mc.terminal_states.cat.categories)
-        )
+        np.testing.assert_array_equal(set(names), set(mc.terminal_states.cat.categories))
         _check_fate_probs(mc)
 
     def test_compute_terminal_states_no_selected(self, adata_large: AnnData):
@@ -788,9 +760,7 @@ class TestGPCCA:
         mc.compute_fate_probabilities()
 
         with pytest.raises(KeyError):
-            mc.compute_lineage_drivers(
-                use_raw=False, cluster_key="clusters", clusters=["foo"]
-            )
+            mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters", clusters=["foo"])
 
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -882,9 +852,7 @@ class TestGPCCA:
         mc.compute_fate_probabilities()
 
         cat = adata_large.obs["clusters"].cat.categories[0]
-        deg1 = mc.compute_lineage_priming(
-            method="kl_divergence", early_cells={"clusters": [cat]}
-        )
+        deg1 = mc.compute_lineage_priming(method="kl_divergence", early_cells={"clusters": [cat]})
         deg2 = mc.compute_lineage_priming(
             method="kl_divergence",
             early_cells=(adata_large.obs["clusters"] == cat).values,
@@ -955,9 +923,7 @@ class TestGPCCA:
         assert np.asarray(drivers.iloc[drivers.index != gene].isnull()).sum() == 0
 
     @pytest.mark.parametrize("keys", ["0", ["0", "1"], ["0", "1, 2"]])
-    def test_compute_time_to_absorption(
-        self, adata_large: AnnData, keys: Union[str, Sequence[str]]
-    ):
+    def test_compute_time_to_absorption(self, adata_large: AnnData, keys: Union[str, Sequence[str]]):
         n_states = 3
         n_expected = 1 if isinstance(keys, str) else len(keys)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -980,9 +946,7 @@ class TestGPCCASerialization:
 
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers",)])
-    def test_to_adata_keep(
-        self, adata_large: AnnData, keep: Union[str, Sequence[str]], copy: bool
-    ):
+    def test_to_adata_keep(self, adata_large: AnnData, keep: Union[str, Sequence[str]], copy: bool):
         g = _fit_gpcca(adata_large, State.MACRO)
         adata = g.to_adata(keep=keep, copy=copy)
         if "X" in keep:
@@ -994,11 +958,11 @@ class TestGPCCASerialization:
             # reorder columns
             assert_frame_equal(adata.obs, g.adata.obs[columns])
         if "obsm" in keep:
-            for key in g.adata.obsm.keys():
+            for key in g.adata.obsm:
                 res = shares_mem(adata.obsm[key], g.adata.obsm[key])
                 assert not res if copy else res, key
         if "layers" in keep:
-            for key in g.adata.layers.keys():
+            for key in g.adata.layers:
                 res = shares_mem(adata.layers[key], g.adata.layers[key])
                 assert not res if copy else res, key
 
@@ -1008,9 +972,9 @@ class TestGPCCASerialization:
         adata = g.to_adata(keep=["obsp", "varm", "var"], copy=["obsp"])
 
         assert_frame_equal(adata.var, g.adata.var)
-        for key in g.adata.obsp.keys():
+        for key in g.adata.obsp:
             assert not shares_mem(adata.obsp[key], g.adata.obsp[key]), key
-        for key in g.adata.varm.keys():
+        for key in g.adata.varm:
             assert shares_mem(adata.varm[key], g.adata.varm[key]), key
 
     @pytest.mark.parametrize("state", list(State))
@@ -1131,23 +1095,19 @@ class TestGPCCASerialization:
 
 class TestGPCCAIO:
     @pytest.mark.parametrize("deep", [False, True])
-    def test_copy(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], deep: bool
-    ):
+    def test_copy(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], deep: bool):
         _, mc1 = adata_gpcca_fwd
         mc2 = mc1.copy(deep=deep)
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_write_ext(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir
-    ):
+    def test_write_ext(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc = adata_gpcca_fwd
 
         fname = "foo"
         mc.write(os.path.join(tmpdir, fname), ext="bar")
 
-        assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
+        assert os.path.isfile(os.path.join(tmpdir, "foo.bar"))
 
     def test_write_no_ext(
         self,
@@ -1158,7 +1118,7 @@ class TestGPCCAIO:
         fname = "foo"
         mc.write(os.path.join(tmpdir, fname), ext=None)
 
-        assert os.path.isfile(os.path.join(tmpdir, f"foo"))
+        assert os.path.isfile(os.path.join(tmpdir, "foo"))
 
     def test_write_ext_with_dot(
         self,
@@ -1170,7 +1130,7 @@ class TestGPCCAIO:
         fname = "foo"
         mc.write(os.path.join(tmpdir, fname), ext=".bar")
 
-        assert os.path.isfile(os.path.join(tmpdir, f"foo.bar"))
+        assert os.path.isfile(os.path.join(tmpdir, "foo.bar"))
 
     def test_read(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
@@ -1190,9 +1150,7 @@ class TestGPCCAIO:
         adata, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
-        mc2 = cr.estimators.GPCCA.read(
-            os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy
-        )
+        mc2 = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy)
 
         if copy:
             assert adata is not mc2.adata
@@ -1200,31 +1158,23 @@ class TestGPCCAIO:
             assert adata is mc2.adata
         assert_estimators_equal(mc1, mc2)
 
-    def test_write_no_adata_read_none_supplied(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir
-    ):
+    def test_write_no_adata_read_none_supplied(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
         with pytest.raises(TypeError, match="This object was saved without"):
             _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=None)
 
-    def test_write_no_adata_read_wrong_length(
-        self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir
-    ):
+    def test_write_no_adata_read_wrong_length(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
         adata = AnnData(np.random.normal(size=(len(mc1) + 1, 1)))
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
         with pytest.raises(ValueError, match="Expected `adata` to be of length"):
-            _ = cr.estimators.GPCCA.read(
-                os.path.join(tmpdir, "foo.pickle"), adata=adata
-            )
+            _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=adata)
 
     @pytest.mark.parametrize("verbose", [None, False])
-    def test_compute_schur_verbosity(
-        self, adata_large: AnnData, verbose: Optional[bool], capsys
-    ):
+    def test_compute_schur_verbosity(self, adata_large: AnnData, verbose: Optional[bool], capsys):
         _ = pytest.importorskip("petsc4py")
         _ = pytest.importorskip("slepc4py")
 

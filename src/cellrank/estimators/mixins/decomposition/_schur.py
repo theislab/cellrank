@@ -1,25 +1,26 @@
-from typing import Any, Dict, Tuple, Union, Literal, Mapping, Optional
-
-import io
 import contextlib
-from types import MappingProxyType
+import io
 from pathlib import Path
+from types import MappingProxyType
+from typing import Any, Dict, Literal, Mapping, Optional, Tuple, Union
+
 from pygpcca import GPCCA
 from pygpcca._sorted_schur import _check_conj_split
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank._utils._utils import save_fig, _eigengap
-from cellrank.estimators.mixins._utils import SafeGetter, BaseProtocol, logger, shadow
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
 
 import matplotlib.pyplot as plt
-from seaborn import heatmap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from seaborn import heatmap
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._key import Key
+from cellrank._utils._utils import _eigengap, save_fig
+from cellrank.estimators.mixins._utils import BaseProtocol, SafeGetter, logger, shadow
 
 __all__ = ["SchurMixin"]
 
@@ -141,24 +142,18 @@ class SchurMixin:
         """
         if n_components < 2:
             logg.warning(
-                f"Number of Schur vectors `>=2`, but only `{n_components}` "
-                f"were requested. Using `n_components=2`"
+                f"Number of Schur vectors `>=2`, but only `{n_components}` " f"were requested. Using `n_components=2`"
             )
             n_components = 2
 
         if method not in ("brandts", "krylov"):
-            raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are:`'brandts'` or `'krylov'`."
-            )
+            raise ValueError(f"Invalid method `{method!r}`. Valid options are:`'brandts'` or `'krylov'`.")
 
         try:
-            import petsc4py
-            import slepc4py
+            pass
         except ImportError:
             method = "brandts"
-            logg.warning(
-                f"Unable to import `petsc4py` or `slepc4py`. Using `method={method!r}`"
-            )
+            logg.warning(f"Unable to import `petsc4py` or `slepc4py`. Using `method={method!r}`")
         if verbose is None:
             verbose = method == "brandts"
 
@@ -170,9 +165,7 @@ class SchurMixin:
         self._gpcca = GPCCA(tmat, eta=initial_distribution, z=which, method=method)
         start = logg.info("Computing Schur decomposition")
 
-        with (contextlib.nullcontext if verbose else contextlib.redirect_stdout)(
-            io.StringIO()
-        ):
+        with (contextlib.nullcontext if verbose else contextlib.redirect_stdout)(io.StringIO()):
             try:
                 self._gpcca._do_schur_helper(n_components)
             except ValueError as e:
@@ -185,16 +178,10 @@ class SchurMixin:
                 self._gpcca._do_schur_helper(n_components + 1)
 
         self._invalid_n_states = np.array(
-            [
-                i
-                for i in range(2, len(self._gpcca._p_eigenvalues))
-                if _check_conj_split(self._gpcca._p_eigenvalues[:i])
-            ]
+            [i for i in range(2, len(self._gpcca._p_eigenvalues)) if _check_conj_split(self._gpcca._p_eigenvalues[:i])]
         )
         if len(self._invalid_n_states):
-            logg.info(
-                f"When computing macrostates, choose a number of states NOT in `{list(self._invalid_n_states)}`"
-            )
+            logg.info(f"When computing macrostates, choose a number of states NOT in `{list(self._invalid_n_states)}`")
 
         self._write_schur_decomposition(
             {
@@ -244,9 +231,7 @@ class SchurMixin:
         if schur_matrix is None:
             raise RuntimeError("Compute Schur matrix first as `.compute_schur()`.")
 
-        fig, ax = plt.subplots(
-            figsize=schur_matrix.shape if figsize is None else figsize, dpi=dpi
-        )
+        fig, ax = plt.subplots(figsize=schur_matrix.shape if figsize is None else figsize, dpi=dpi)
 
         divider = make_axes_locatable(ax)  # square=True make the colorbar a bit bigger
         cbar_ax = divider.append_axes("right", size="2%", pad=0.1)
@@ -306,9 +291,7 @@ class SchurMixin:
             "    Finish"
         )
 
-    def _read_schur_decomposition(
-        self: SchurProtocol, adata: AnnData, allow_missing: bool = True
-    ) -> bool:
+    def _read_schur_decomposition(self: SchurProtocol, adata: AnnData, allow_missing: bool = True) -> bool:
         key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
             self._eigendecomposition = self._get(

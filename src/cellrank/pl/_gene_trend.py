@@ -1,31 +1,6 @@
-from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
-
-from types import MappingProxyType
 from pathlib import Path
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils import Lineage
-from cellrank.pl._utils import (
-    _fit_bulk,
-    _get_backend,
-    _callback_type,
-    _create_models,
-    _trends_helper,
-    _time_range_type,
-    _create_callbacks,
-    _input_model_type,
-    _return_model_type,
-)
-from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank._utils._utils import (
-    save_fig,
-    _genesymbols,
-    _check_collection,
-    _unique_order_preserving,
-)
-from cellrank._utils._parallelize import _get_n_cores
+from types import MappingProxyType
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -33,6 +8,31 @@ import pandas as pd
 import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import cm
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils import Lineage
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._parallelize import _get_n_cores
+from cellrank._utils._utils import (
+    _check_collection,
+    _genesymbols,
+    _unique_order_preserving,
+    save_fig,
+)
+from cellrank.pl._utils import (
+    _callback_type,
+    _create_callbacks,
+    _create_models,
+    _fit_bulk,
+    _get_backend,
+    _input_model_type,
+    _return_model_type,
+    _time_range_type,
+    _trends_helper,
+)
 
 __all__ = ["gene_trends"]
 
@@ -193,9 +193,7 @@ def gene_trends(
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
     elif len(time_range) != len(lineages):
-        raise ValueError(
-            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
-        )
+        raise ValueError(f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`.")
 
     kwargs["time_key"] = time_key
     kwargs["data_key"] = data_key
@@ -251,11 +249,7 @@ def gene_trends(
         gene_as_title = False if gene_as_title is None else gene_as_title
         sharex = "col" if sharex is None else sharex
         if sharey is None:
-            sharey = (
-                "row"
-                if not hide_cells or plot_kwargs.get("lineage_probability", False)
-                else "none"
-            )
+            sharey = "row" if not hide_cells or plot_kwargs.get("lineage_probability", False) else "none"
         nrows = len(genes)
         ncols = len(lineages)
 
@@ -283,19 +277,13 @@ def gene_trends(
             if cnt >= len(genes):
                 break
             gene = genes[cnt]
-            if (
-                same_plot
-                and plot_kwargs.get("lineage_probability", False)
-                and transpose
-            ):
+            if same_plot and plot_kwargs.get("lineage_probability", False) and transpose:
                 lpc = probs[gene].colors[0]
             else:
                 lpc = None
 
             if same_plot:
-                plot_kwargs["obs_legend_loc"] = (
-                    obs_legend_loc if row == 0 and col == len(axes[0]) - 1 else None
-                )
+                plot_kwargs["obs_legend_loc"] = obs_legend_loc if row == 0 and col == len(axes[0]) - 1 else None
 
             _trends_helper(
                 models,
@@ -323,9 +311,7 @@ def gene_trends(
                 axes=axes[row, col] if same_plot else axes[cnt],
                 show_ylabel=col == 0,
                 show_lineage=same_plot or (cnt == start_rows),
-                show_xticks_and_label=((row + 1) * ncols + col >= len(genes))
-                if same_plot
-                else (cnt == end_rows),
+                show_xticks_and_label=((row + 1) * ncols + col >= len(genes)) if same_plot else (cnt == end_rows),
                 **plot_kwargs,
             )
             cnt += 1  # plot legend on the 1st plot

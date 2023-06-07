@@ -1,14 +1,15 @@
-from typing import Any, Union, Optional
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank._utils._utils import _read_graph_data
-from cellrank.kernels._base_kernel import KernelExpression, UnidirectionalKernel
+from typing import Any, Optional, Union
 
 import numpy as np
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import csr_matrix, spmatrix
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._key import Key
+from cellrank._utils._utils import _read_graph_data
+from cellrank.kernels._base_kernel import KernelExpression, UnidirectionalKernel
 
 __all__ = ["PrecomputedKernel"]
 
@@ -122,9 +123,7 @@ class PrecomputedKernel(UnidirectionalKernel):
 
     def _from_kernel(self, kernel: KernelExpression, copy: bool = False) -> None:
         if kernel.transition_matrix is None:
-            raise RuntimeError(
-                "Compute transition matrix first as `.compute_transition_matrix()`."
-            )
+            raise RuntimeError("Compute transition matrix first as `.compute_transition_matrix()`.")
         self._from_matrix(
             kernel.transition_matrix,
             backward=kernel.backward,
@@ -148,7 +147,7 @@ class PrecomputedKernel(UnidirectionalKernel):
         super().__init__(adata)
         self._backward: Optional[bool] = backward
         self.transition_matrix = matrix.copy() if copy else matrix
-        self.params['origin'] = "array"
+        self.params["origin"] = "array"
         # fmt: on
 
     def compute_transition_matrix(self, *_: Any, **__: Any) -> "PrecomputedKernel":

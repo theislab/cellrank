@@ -1,17 +1,17 @@
-from typing import Any, Tuple, Union, Literal, Optional
-
 from copy import copy, deepcopy
 from enum import auto
-
-from anndata import AnnData
-from cellrank.models import BaseModel, FailedModel
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import ModeEnum
-from cellrank.models._utils import _OFFSET_KEY, _get_offset, _get_knotlocs
+from typing import Any, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+
+from anndata import AnnData
+
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank.models import BaseModel, FailedModel
+from cellrank.models._utils import _OFFSET_KEY, _get_knotlocs, _get_offset
 
 __all__ = ["GAMR"]
 
@@ -72,17 +72,13 @@ class GAMR(BaseModel):
         if n_knots <= 0:
             raise ValueError(f"Expected `n_splines` to be positive, found `{n_knots}`.")
         if smoothing_penalty < 0:
-            raise ValueError(
-                f"Expected `smoothing_penalty` to be non-negative, found `{smoothing_penalty}`."
-            )
+            raise ValueError(f"Expected `smoothing_penalty` to be non-negative, found `{smoothing_penalty}`.")
 
         super().__init__(adata, model=None)
         self._n_knots = n_knots
         self._family = distribution
 
-        self._formula = (
-            f"y ~ s(x, bs={basis!r}, k={self._n_knots}, sp={smoothing_penalty})"
-        )
+        self._formula = f"y ~ s(x, bs={basis!r}, k={self._n_knots}, sp={smoothing_penalty})"
         self._design_mat = None
         self._offset = None
         self._knotslocs = KnotLocs(knotlocs)
@@ -99,23 +95,18 @@ class GAMR(BaseModel):
         if distribution == "nb" and offset is not None:
             if not isinstance(offset, (np.ndarray, str)):
                 raise TypeError(
-                    f"Expected `offset` to be either `'default'` or `numpy.ndarray`,"
-                    f"got `{type(offset).__name__}`."
+                    f"Expected `offset` to be either `'default'` or `numpy.ndarray`," f"got `{type(offset).__name__}`."
                 )
 
             if isinstance(offset, str):
                 if offset != "default":
-                    raise ValueError(
-                        "Only value `'default'` is allowed when `offset` is a string."
-                    )
+                    raise ValueError("Only value `'default'` is allowed when `offset` is a string.")
                 offset = _get_offset(adata, use_raw=True, recompute=False)
 
             offset = np.asarray(offset, dtype=self._dtype)
 
             if offset.shape != (adata.n_obs,):
-                raise ValueError(
-                    f"Expected offset to be of shape `{(adata.n_obs,)}`, found `{offset.shape}`."
-                )
+                raise ValueError(f"Expected offset to be of shape `{(adata.n_obs,)}`, found `{offset.shape}`.")
             adata.obs[_OFFSET_KEY] = offset
 
             self._formula += " + offset(offset)"
@@ -218,9 +209,7 @@ class GAMR(BaseModel):
 
         return self
 
-    def _get_x_test(
-        self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test"
-    ) -> pd.DataFrame:
+    def _get_x_test(self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test") -> pd.DataFrame:
         newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x"])
 
         if "offset" in self._design_mat:
@@ -256,18 +245,12 @@ class GAMR(BaseModel):
         from rpy2.robjects.conversion import localconverter
 
         if self.model is None:
-            raise RuntimeError(
-                "Trying to call an uninitialized model. To initialize it, run `.fit()` first."
-            )
+            raise RuntimeError("Trying to call an uninitialized model. To initialize it, run `.fit()` first.")
         if self._lib is None:
-            raise RuntimeError(
-                f"Unable to run prediction, R package `{self._lib_name!r}` is not imported."
-            )
+            raise RuntimeError(f"Unable to run prediction, R package `{self._lib_name!r}` is not imported.")
 
         if level is not None and not (0 <= level <= 1):
-            raise ValueError(
-                f"Expected the confidence level to be in interval `[0, 1]`, found `{level}`."
-            )
+            raise ValueError(f"Expected the confidence level to be in interval `[0, 1]`, found `{level}`.")
 
         newdata = self._get_x_test(x_test)
 
@@ -291,9 +274,7 @@ class GAMR(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, level: float = 0.95, **kwargs
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, level: float = 0.95, **kwargs) -> np.ndarray:
         """
         %(base_model_ci.summary)s
         Internally, this method calls :meth:`cellrank.models.GAMR.predict` to extract
@@ -337,9 +318,7 @@ class GAMR(BaseModel):
             knotlocs=self._knotslocs,
             perform_import_check=False,
         )
-        self._shallowcopy_attributes(
-            res
-        )  # does not copy `prepared`, since we're not copying the arrays
+        self._shallowcopy_attributes(res)  # does not copy `prepared`, since we're not copying the arrays
 
         res._formula = self._formula  # we don't save the basis inside
         res._design_mat = self._design_mat
@@ -360,9 +339,7 @@ class GAMR(BaseModel):
         self._lib, self._lib_name = _maybe_import_r_lib(self._lib_name, raise_exc=True)
 
 
-def _maybe_import_r_lib(
-    name: str, raise_exc: bool = False
-) -> Tuple[Optional[Any], Optional[str]]:
+def _maybe_import_r_lib(name: str, raise_exc: bool = False) -> Tuple[Optional[Any], Optional[str]]:
     global _r_lib, _r_lib_name
 
     if name == _r_lib_name and _r_lib is not None:
@@ -370,17 +347,16 @@ def _maybe_import_r_lib(
 
     try:
         from logging import ERROR
+
+        from rpy2.rinterface_lib.callbacks import logger
         from rpy2.robjects import r
         from rpy2.robjects.packages import PackageNotInstalledError, importr
-        from rpy2.rinterface_lib.callbacks import logger
 
         logger.setLevel(ERROR)
         r["options"](warn=-1)
 
     except ImportError as e:
-        raise ImportError(
-            "Unable to import `rpy2`, install it first as `pip install rpy2` version `>=3.3.0`."
-        ) from e
+        raise ImportError("Unable to import `rpy2`, install it first as `pip install rpy2` version `>=3.3.0`.") from e
 
     try:
         _r_lib = importr(name)
@@ -389,6 +365,4 @@ def _maybe_import_r_lib(
     except PackageNotInstalledError as e:
         if not raise_exc:
             return None, None
-        raise RuntimeError(
-            f"Install R library `{name!r}` first as `install.packages({name!r}).`"
-        ) from e
+        raise RuntimeError(f"Install R library `{name!r}` first as `install.packages({name!r}).`") from e

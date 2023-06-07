@@ -1,19 +1,19 @@
-from typing import Any, List, Tuple, Literal, Optional
-
 from enum import auto
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import _correlation_test
-from cellrank.kernels._pseudotime_kernel import PseudotimeKernel
+from typing import Any, List, Literal, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy.stats import gmean, hmean
 from scipy.sparse import issparse
+from scipy.stats import gmean, hmean
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._key import Key
+from cellrank._utils._utils import _correlation_test
+from cellrank.kernels._pseudotime_kernel import PseudotimeKernel
 
 __all__ = ["CytoTRACEKernel"]
 
@@ -109,9 +109,7 @@ class CytoTRACEKernel(PseudotimeKernel):
     def compute_cytotrace(
         self,
         layer: Optional[str] = "Ms",
-        aggregation: Literal[
-            "mean", "median", "hmean", "gmean"
-        ] = CytoTRACEAggregation.MEAN,
+        aggregation: Literal["mean", "median", "hmean", "gmean"] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
         n_genes: int = 200,
     ) -> "CytoTRACEKernel":
@@ -200,9 +198,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         cytotrace_score /= cytotrace_score.max()
 
         self.adata.obs[Key.cytotrace("score")] = cytotrace_score
-        self.adata.obs[Key.cytotrace("pseudotime")] = self._pseudotime = (
-            1 - cytotrace_score
-        )
+        self.adata.obs[Key.cytotrace("pseudotime")] = self._pseudotime = 1 - cytotrace_score
         self.adata.obs[Key.cytotrace("num_exp_genes")] = num_exp_genes
         self.adata.var[Key.cytotrace("gene_corr")] = gene_corr
         self.adata.var[Key.cytotrace("correlates")] = False
@@ -256,15 +252,11 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         if len(top_genes) != n_genes:
             logg.warning(
-                f"Unable to get requested top {modifier} correlated `{n_genes}`. "
-                f"Using top `{len(top_genes)}` genes"
+                f"Unable to get requested top {modifier} correlated `{n_genes}`. " f"Using top `{len(top_genes)}` genes"
             )
 
         # fmt: off
-        if layer == "X":
-            imputed_exp = self.adata[:, top_genes].X
-        else:
-            imputed_exp = self.adata[:, top_genes].layers[layer]
+        imputed_exp = self.adata[:, top_genes].X if layer == "X" else self.adata[:, top_genes].layers[layer]
         if issparse(imputed_exp) and aggregation not in (CytoTRACEAggregation.MEAN, CytoTRACEAggregation.MEDIAN):
             imputed_exp = imputed_exp.A
 

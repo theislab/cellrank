@@ -1,12 +1,11 @@
+from abc import ABC, abstractmethod
 from typing import Any, Union
 
-from abc import ABC, abstractmethod
+import numpy as np
+from scipy.sparse import csr_matrix, spdiags, spmatrix
 
 from cellrank import logging as logg
-from cellrank._utils._utils import _connected, _symmetric, _get_neighs
-
-import numpy as np
-from scipy.sparse import spdiags, spmatrix, csr_matrix
+from cellrank._utils._utils import _connected, _get_neighs, _symmetric
 
 __all__ = ["ConnectivityMixin", "UnidirectionalMixin", "BidirectionalMixin"]
 
@@ -31,9 +30,7 @@ class ConnectivityMixin:
         if check_symmetric and not _symmetric(self.connectivities):
             logg.warning("kNN graph is not symmetric")
 
-    def _density_normalize(
-        self, matrix: Union[np.ndarray, spmatrix]
-    ) -> Union[np.ndarray, spmatrix]:
+    def _density_normalize(self, matrix: Union[np.ndarray, spmatrix]) -> Union[np.ndarray, spmatrix]:
         """
         Density normalization by the underlying kNN graph.
 
@@ -74,9 +71,7 @@ class BidirectionalMixin(ABC):
     def __init__(self, *args: Any, backward: bool = False, **kwargs: Any):
         super().__init__(*args, **kwargs)
         if not isinstance(backward, (bool, np.bool_)):
-            raise TypeError(
-                f"Expected `backward` to be `bool`, found `{type(backward).__name__}`."
-            )
+            raise TypeError(f"Expected `backward` to be `bool`, found `{type(backward).__name__}`.")
         self._backward = bool(backward)
         self._init_kwargs["backward"] = backward
 

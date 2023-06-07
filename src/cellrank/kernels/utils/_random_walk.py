@@ -1,29 +1,28 @@
-from typing import Any, List, Tuple, Union, Literal, Mapping, Optional, Sequence
-
-from pathlib import Path
 from itertools import chain
+from pathlib import Path
+from typing import Any, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d
-from cellrank._utils._utils import save_fig
-from cellrank.kernels._utils import _get_basis
-from cellrank._utils._parallelize import parallelize
 
 import numpy as np
+from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 from scipy.sparse import issparse, spmatrix
-from pandas.api.types import infer_dtype, is_numeric_dtype, is_categorical_dtype
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, to_hex
 from matplotlib.collections import LineCollection
+from matplotlib.colors import LinearSegmentedColormap, to_hex
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._parallelize import parallelize
+from cellrank._utils._utils import save_fig
+from cellrank.kernels._utils import _get_basis
 
 __all__ = ["RandomWalk"]
 
-Indices_t = Optional[
-    Union[Sequence[str], Mapping[str, Union[str, Sequence[str], Tuple[float, float]]]]
-]
+Indices_t = Optional[Union[Sequence[str], Mapping[str, Union[str, Sequence[str], Tuple[float, float]]]]]
 
 
 @d.dedent
@@ -49,12 +48,8 @@ class RandomWalk:
         start_ixs: Optional[Sequence[int]] = None,
         stop_ixs: Optional[Sequence[int]] = None,
     ):
-        if transition_matrix.ndim != 2 or (
-            transition_matrix.shape[0] != transition_matrix.shape[1]
-        ):
-            raise ValueError(
-                f"Expected transition matrix to be a square matrix, found `{transition_matrix.ndim}`."
-            )
+        if transition_matrix.ndim != 2 or (transition_matrix.shape[0] != transition_matrix.shape[1]):
+            raise ValueError(f"Expected transition matrix to be a square matrix, found `{transition_matrix.ndim}`.")
         if transition_matrix.shape[0] != adata.n_obs:
             raise ValueError(
                 f"Expected transition matrix to be of shape `{adata.n_obs, adata.n_obs}`,"
@@ -71,11 +66,7 @@ class RandomWalk:
         start_ixs = self._normalize_ixs(start_ixs, kind="start")
         stop_ixs = self._normalize_ixs(stop_ixs, kind="stop")
         self._stop_ixs = set([] if stop_ixs is None or not len(stop_ixs) else stop_ixs)
-        self._starting_dist = (
-            np.ones_like(self._ixs)
-            if start_ixs is None
-            else np.isin(self._ixs, start_ixs)
-        )
+        self._starting_dist = np.ones_like(self._ixs) if start_ixs is None else np.isin(self._ixs, start_ixs)
         _sum = np.sum(self._starting_dist)
         if _sum == 0:
             raise ValueError("No starting indices have been selected.")
@@ -109,9 +100,7 @@ class RandomWalk:
         """
         max_iter = self._max_iter(max_iter)
         if successive_hits < 0:
-            raise ValueError(
-                f"Expected number of successive hits to be positive, found `{successive_hits}`."
-            )
+            raise ValueError(f"Expected number of successive hits to be positive, found `{successive_hits}`.")
 
         rs = np.random.RandomState(seed)
         ix = rs.choice(self._ixs, p=self._starting_dist)
@@ -177,13 +166,9 @@ class RandomWalk:
         If ``stop_ixs`` was specified, the arrays may have smaller shape.
         """
         if n_sims <= 0:
-            raise ValueError(
-                f"Expected number of simulations to be positive, found `{n_sims}`."
-            )
+            raise ValueError(f"Expected number of simulations to be positive, found `{n_sims}`.")
         max_iter = self._max_iter(max_iter)
-        start = logg.info(
-            f"Simulating `{n_sims}` random walks of maximum length `{max_iter}`"
-        )
+        start = logg.info(f"Simulating `{n_sims}` random walks of maximum length `{max_iter}`")
 
         simss = parallelize(
             self._simulate_many,
@@ -244,9 +229,7 @@ class RandomWalk:
             cmap = plt.get_cmap(cmap)
         if not isinstance(cmap, LinearSegmentedColormap):
             if not hasattr(cmap, "colors"):
-                raise AttributeError(
-                    "Unable to create a colormap, `cmap` does not have attribute `colors`."
-                )
+                raise AttributeError("Unable to create a colormap, `cmap` does not have attribute `colors`.")
             cmap = LinearSegmentedColormap.from_list(
                 "random_walk",
                 colors=cmap.colors,
@@ -302,9 +285,7 @@ class RandomWalk:
         if save is not None:
             save_fig(fig, save)
 
-    def _normalize_ixs(
-        self, ixs: Indices_t, *, kind: Literal["start", "stop"]
-    ) -> Optional[np.ndarray]:
+    def _normalize_ixs(self, ixs: Indices_t, *, kind: Literal["start", "stop"]) -> Optional[np.ndarray]:
         if ixs is None:
             return None
 
@@ -335,8 +316,7 @@ class RandomWalk:
         elif isinstance(ixs[0], bool):
             if len(ixs) != self._adata.n_obs:
                 raise ValueError(
-                    f"Expected `bool` {kind} indices of length"
-                    f"`{self._adata.n_obs}`, found `{len(ixs)}`."
+                    f"Expected `bool` {kind} indices of length" f"`{self._adata.n_obs}`, found `{len(ixs)}`."
                 )
             ixs = np.where(ixs)[0]
         elif isinstance(ixs[0], int):
@@ -369,7 +349,5 @@ class RandomWalk:
         if isinstance(max_iter, float):
             max_iter = int(np.ceil(max_iter * len(self._ixs)))
         if max_iter <= 1:
-            raise ValueError(
-                f"Expected number of iterations to be > 1, found `{max_iter}`."
-            )
+            raise ValueError(f"Expected number of iterations to be > 1, found `{max_iter}`.")
         return max_iter

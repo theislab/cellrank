@@ -1,24 +1,16 @@
-"""Module containing anything related to linear solvers."""
-from typing import List, Tuple, Union, TypeVar, Optional
-
 from functools import singledispatch
-
-from cellrank import logging as logg
-from cellrank._utils._enum import _DEFAULT_BACKEND
-from cellrank._utils._parallelize import parallelize, _get_n_cores
+from typing import List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 from scipy.linalg import solve
+from scipy.sparse import csc_matrix, csr_matrix
 from scipy.sparse import eye as speye
-from scipy.sparse import (
-    issparse,
-    spmatrix,
-    csc_matrix,
-    csr_matrix,
-    isspmatrix_csc,
-    isspmatrix_csr,
-)
-from scipy.sparse.linalg import gmres, lgmres, gcrotmk, bicgstab
+from scipy.sparse import issparse, isspmatrix_csc, isspmatrix_csr, spmatrix
+from scipy.sparse.linalg import bicgstab, gcrotmk, gmres, lgmres
+
+from cellrank import logging as logg
+from cellrank._utils._enum import _DEFAULT_BACKEND
+from cellrank._utils._parallelize import _get_n_cores, parallelize
 
 _DEFAULT_SOLVER = "gmres"
 _PETSC_ERROR_MSG_SHOWN = False
@@ -39,9 +31,7 @@ PETScMat = TypeVar("PETScMat")
 Queue = TypeVar("Queue")
 
 
-def _create_petsc_matrix(
-    mat: Union[np.ndarray, spmatrix], as_dense: bool = False
-) -> PETScMat:
+def _create_petsc_matrix(mat: Union[np.ndarray, spmatrix], as_dense: bool = False) -> PETScMat:
     """
     Create a PETSc matrix from :mod:`numpy` or :mod:`scipy.sparse` matrix.
 
@@ -57,7 +47,6 @@ def _create_petsc_matrix(
     -------
     The converted matrix.
     """
-
     # TODO(michalk8): for some solvers, we need to set the diagonal entries explicitly, even if they are zeros
     # see: https://lists.mcs.anl.gov/mailman/htdig/petsc-users/2014-October/023212.html
 
@@ -104,7 +93,6 @@ def _create_solver(
     -------
     Triple containing the solver, vector ``x`` and vector ``b`` in ``A * x = b``.
     """
-
     from petsc4py import PETSc
 
     A = _create_petsc_matrix(mat_a)
@@ -154,9 +142,7 @@ def _(
     _queue: Optional[Queue] = None,
 ) -> Tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
-        raise ValueError(
-            f"Expected either a vector or a matrix with `1` column, got `{mat_b.shape}`."
-        )
+        raise ValueError(f"Expected either a vector or a matrix with `1` column, got `{mat_b.shape}`.")
 
     if solver == "direct":  # this can sometimes happen
         solver = None
@@ -235,7 +221,6 @@ def _solve_many_sparse_problems(
 
     Number of converged solutions.
     """
-
     # initialise solution list and info list
     x_list, n_converged = [], 0
     kwargs = {} if solver is not gmres else {"atol": "legacy"}  # get rid of the warning
@@ -284,9 +269,7 @@ def _petsc_direct_solve(
             if issparse(mat_b):
                 mat_b = mat_b.toarray()
 
-            res, converged = _solve_many_sparse_problems_petsc(
-                mat_b, mat_a=mat_a, tol=tol, **kwargs
-            )
+            res, converged = _solve_many_sparse_problems_petsc(mat_b, mat_a=mat_a, tol=tol, **kwargs)
             if not converged:
                 logg.warning(
                     f"The solution for system "
@@ -393,14 +376,12 @@ def _solve_lin_system(
         Whether to show progress bar when the solver isn't a direct one.
 
     Returns
-    --------
+    -------
     Matrix of shape `n x m`. Each column corresponds to the solution of one of the sub-problems
     defined via columns in ``mat_b``.
     """
 
-    def extractor(
-        res_converged: List[Tuple[np.ndarray, int]]
-    ) -> Tuple[np.ndarray, int]:
+    def extractor(res_converged: List[Tuple[np.ndarray, int]]) -> Tuple[np.ndarray, int]:
         res, converged = zip(*res_converged)
         return np.hstack(res), sum(converged)
 
@@ -408,7 +389,7 @@ def _solve_lin_system(
 
     if use_petsc:
         try:
-            from petsc4py import PETSc
+            pass
         except ImportError:
             global _PETSC_ERROR_MSG_SHOWN
             if not _PETSC_ERROR_MSG_SHOWN:
@@ -418,16 +399,12 @@ def _solve_lin_system(
             use_petsc = False
 
     if use_eye:
-        mat_a = (
-            speye(mat_a.shape[0]) if issparse(mat_a) else np.eye(mat_a.shape[0])
-        ) - mat_a
+        mat_a = (speye(mat_a.shape[0]) if issparse(mat_a) else np.eye(mat_a.shape[0])) - mat_a
 
     if solver == "direct":
         if use_petsc:
             logg.debug("Solving the linear system directly using `PETSc`")
-            return _petsc_direct_solve(
-                mat_a, mat_b, solver=solver, preconditioner=preconditioner, tol=tol
-            )
+            return _petsc_direct_solve(mat_a, mat_b, solver=solver, preconditioner=preconditioner, tol=tol)
 
         if issparse(mat_a):
             logg.debug("Densifying `A` for `scipy` direct solver")

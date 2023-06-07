@@ -1,23 +1,24 @@
-from typing import Any, Dict, List, Union, Literal, Optional, Sequence
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d
-from cellrank._utils._utils import (
-    _cluster_X,
-    _filter_cells,
-    _complex_warning,
-    _get_connectivities,
-)
-from cellrank.kernels._utils import _get_basis
-from cellrank.estimators.mixins import EigenMixin, LinDriversMixin
-from cellrank.estimators.terminal_states._term_states_estimator import (
-    TermStatesEstimator,
-)
+from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
 from scipy.stats import zscore
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._utils import (
+    _cluster_X,
+    _complex_warning,
+    _filter_cells,
+    _get_connectivities,
+)
+from cellrank.estimators.mixins import EigenMixin, LinDriversMixin
+from cellrank.estimators.terminal_states._term_states_estimator import (
+    TermStatesEstimator,
+)
+from cellrank.kernels._utils import _get_basis
 
 __all__ = ["CFLARE"]
 
@@ -124,22 +125,16 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
 
-        def convert_use(
-            use: Optional[Union[int, Sequence[int], np.ndarray]]
-        ) -> List[int]:
+        def convert_use(use: Optional[Union[int, Sequence[int], np.ndarray]]) -> List[int]:
             if method not in ["kmeans", "leiden"]:
-                raise ValueError(
-                    f"Invalid method `{method!r}`. Valid options are `leiden` or `kmeans`."
-                )
+                raise ValueError(f"Invalid method `{method!r}`. Valid options are `leiden` or `kmeans`.")
 
             if use is None:
                 use = eig["eigengap"] + 1  # add one b/c indexing starts at 0
             if isinstance(use, int):
                 use = list(range(use))
             elif not isinstance(use, (np.ndarray, Sequence)):
-                raise TypeError(
-                    f"Expected `use` to be `int` or a `Sequence`, found `{type(use).__name__}`."
-                )
+                raise TypeError(f"Expected `use` to be `int` or a `Sequence`, found `{type(use).__name__}`.")
             use = list(use)
 
             if not use:
@@ -156,9 +151,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         eig = self.eigendecomposition
         if eig is None:
-            raise RuntimeError(
-                "Compute eigendecomposition first as `.compute_eigendecomposition()`."
-            )
+            raise RuntimeError("Compute eigendecomposition first as `.compute_eigendecomposition()`.")
         use = convert_use(use)
 
         start = logg.info("Computing terminal states")
@@ -178,9 +171,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         if percentile is not None:
             logg.debug("Filtering out cells according to percentile")
             if not (0 <= percentile <= 100):
-                raise ValueError(
-                    f"Expected `percentile` to be in interval `[0, 100]`, found `{percentile}`."
-                )
+                raise ValueError(f"Expected `percentile` to be in interval `[0, 100]`, found `{percentile}`.")
             cutoffs = np.percentile(np.abs(V_l), percentile, axis=0)
             ixs = np.any(cutoffs <= np.abs(V_l), axis=1)
             X = X[ixs, :]
@@ -233,9 +224,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             time=start,
         )
 
-    def _compute_term_states_probs(
-        self, eig: Dict[str, Any], use: List[int]
-    ) -> pd.Series:
+    def _compute_term_states_probs(self, eig: Dict[str, Any], use: List[int]) -> pd.Series:
         # get the truncated eigendecomposition
         V, evals = eig["V_l"].real[:, use], eig["D"].real[use]
 
@@ -260,8 +249,4 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
         ok = super()._read_from_adata(adata, **kwargs)
         ok = ok and self._read_eigendecomposition(adata, allow_missing=False)
-        return (
-            ok
-            and self._read_fate_probabilities(adata)
-            and self._read_absorption_times(adata)
-        )
+        return ok and self._read_fate_probabilities(adata) and self._read_absorption_times(adata)

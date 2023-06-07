@@ -1,40 +1,38 @@
-from typing import (
-    Any,
-    Dict,
-    List,
-    Tuple,
-    Union,
-    Literal,
-    Mapping,
-    Callable,
-    Optional,
-    Sequence,
-)
-
 from abc import ABC, abstractmethod
+from contextlib import contextmanager, suppress
 from copy import copy as copy_
 from copy import deepcopy
-from inspect import Parameter, signature, getmembers, currentframe
-from contextlib import contextmanager
-
-from anndata import AnnData
-from cellrank.kernels import PrecomputedKernel
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank.kernels.mixins import IOMixin, AnnDataMixin
-from cellrank._utils._lineage import Lineage
-from cellrank.estimators.mixins import KernelMixin
-from cellrank.kernels._base_kernel import KernelExpression
+from inspect import Parameter, currentframe, getmembers, signature
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import csr_matrix, spmatrix
+
+from anndata import AnnData
+
+from cellrank._utils._docs import d
+from cellrank._utils._key import Key
+from cellrank._utils._lineage import Lineage
+from cellrank.estimators.mixins import KernelMixin
+from cellrank.kernels import PrecomputedKernel
+from cellrank.kernels._base_kernel import KernelExpression
+from cellrank.kernels.mixins import AnnDataMixin, IOMixin
 
 __all__ = ["BaseEstimator"]
 
-Attr_t = (
-    Literal["X", "raw", "layers", "obs", "var", "obsm", "varm", "obsp", "varp", "uns"],
-)
+Attr_t = (Literal["X", "raw", "layers", "obs", "var", "obsm", "varm", "obsp", "varp", "uns"],)
 
 
 @d.get_sections(base="base_estimator", sections=["Parameters"])
@@ -65,9 +63,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
     ):
         if isinstance(object, KernelExpression):
             if object.transition_matrix is None:
-                raise RuntimeError(
-                    "Compute transition matrix first as `.compute_transition_matrix()`."
-                )
+                raise RuntimeError("Compute transition matrix first as `.compute_transition_matrix()`.")
         else:
             object = PrecomputedKernel(object, copy=False, **kwargs)
         super().__init__(kernel=object)
@@ -122,9 +118,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         attr: Optional[str] = None,
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
-        value: Optional[
-            Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]
-        ] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]] = None,
         copy: bool = True,
         shadow_only: bool = False,
     ) -> None:
@@ -170,10 +164,9 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
         if key is not None:
             if value is None:
-                try:
+                with suppress(KeyError):
                     del obj[key]
-                except KeyError:
-                    pass
+
             else:
                 obj[key] = copy_(value) if copy else value
 
@@ -224,9 +217,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
         try:
             data = obj[key]
             if dtype is not None and not isinstance(data, dtype):
-                raise TypeError(
-                    f"Expected object to be of type `{dtype}`, found `{type(data).__name__}`."
-                )
+                raise TypeError(f"Expected object to be of type `{dtype}`, found `{type(data).__name__}`.")
             if copy:
                 data = copy_(data)
             if shadow_attr is not None:
@@ -294,9 +285,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                 name = frame.f_back.f_code.co_name
                 func = dict(getmembers(self)).get(name, None)
             if not callable(func):
-                raise TypeError(
-                    f"Expected `func` to be `callable`, found `{type(func).__name__}`."
-                )
+                raise TypeError(f"Expected `func` to be `callable`, found `{type(func).__name__}`.")
 
             params = {}
             for name, param in signature(func).parameters.items():
@@ -359,11 +348,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                     adata.X = deepcopy(self.adata.X) if copy else self.adata.X
                     return
                 if attr == "raw":
-                    adata.raw = (
-                        self.adata.raw.to_adata()
-                        if self.adata.raw is not None
-                        else None
-                    )
+                    adata.raw = self.adata.raw.to_adata() if self.adata.raw is not None else None
                     return
 
                 old = getattr(self.adata, attr)
@@ -387,9 +372,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
                 # fmt: on
             except KeyError:
                 missing = sorted(k for k in keys if k not in old)
-                raise KeyError(
-                    f"Unable to find key(s) `{missing}` in `adata.{attr}`."
-                ) from None
+                raise KeyError(f"Unable to find key(s) `{missing}` in `adata.{attr}`.") from None
 
         adata = self._shadow_adata.copy()
         _adata = self.adata
@@ -404,7 +387,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, ABC):
 
         # fmt: off
         if isinstance(keep, str):
-            if keep == 'all':
+            if keep == "all":
                 keep = ["X", "raw", "layers", "obs", "var", "obsm", "varm", "obsp", "varp", "uns"]
             else:
                 keep = [keep]

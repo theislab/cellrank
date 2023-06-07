@@ -1,23 +1,23 @@
-from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
-
 from copy import copy
 from pathlib import Path
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils import Lineage
-from cellrank.pl._utils import _position_legend, _get_categorical_colors
-from cellrank._utils._docs import d
-from cellrank._utils._utils import save_fig, _unique_order_preserving
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
-from seaborn import stripplot
-from matplotlib.cm import ScalarMappable
 from matplotlib.axes import Axes
+from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, to_hex
+from seaborn import stripplot
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils import Lineage
+from cellrank._utils._docs import d
+from cellrank._utils._utils import _unique_order_preserving, save_fig
+from cellrank.pl._utils import _get_categorical_colors, _position_legend
 
 __all__ = ["log_odds"]
 
@@ -109,9 +109,7 @@ def log_odds(
     """
     from cellrank.kernels._utils import _ensure_numeric_ordered
 
-    def decorate(
-        ax: Axes, *, title: Optional[str] = None, show_ylabel: bool = True
-    ) -> None:
+    def decorate(ax: Axes, *, title: Optional[str] = None, show_ylabel: bool = True) -> None:
         ax.set_xlabel(time_key, fontsize=fontsize)
         ax.set_title(title, fontdict={"fontsize": fontsize})
         ax.set_ylabel(ylabel if show_ylabel else "", fontsize=fontsize)
@@ -126,17 +124,13 @@ def log_odds(
     def cont_palette(values: np.ndarray) -> Tuple[List[str], ScalarMappable]:
         cm = copy(plt.get_cmap(cmap))
         cm.set_bad("grey")
-        sm = ScalarMappable(
-            cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values))
-        )
+        sm = ScalarMappable(cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values)))
         return [to_hex(v) for v in (sm.to_rgba(values))], sm
 
     def get_data(
         key: str,
         thresh: Optional[float] = None,
-    ) -> Tuple[
-        Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable
-    ]:
+    ) -> Tuple[Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable]:
         try:
             _, palette = _get_categorical_colors(adata, key)
             df[key] = adata.obs[key].values[mask]
@@ -241,9 +235,7 @@ def log_odds(
     if not isinstance(threshold, Iterable):
         threshold = (threshold,) * len(keys)
     if len(threshold) != len(keys):
-        raise ValueError(
-            f"Expected `threshold` to be of length `{len(keys)}`, found `{len(threshold)}`."
-        )
+        raise ValueError(f"Expected `threshold` to be of length `{len(keys)}`, found `{len(threshold)}`.")
 
     ncols = max(len(keys) if ncols is None else ncols, 1)
     nrows = int(np.ceil(len(keys) / ncols))
@@ -306,9 +298,7 @@ def log_odds(
             else:
                 handles, labels = ax.get_legend_handles_labels()
                 if len(handles):
-                    _position_legend(
-                        ax, legend_loc=legend_loc, handles=handles, labels=labels
-                    )
+                    _position_legend(ax, legend_loc=legend_loc, handles=handles, labels=labels)
 
         decorate(ax, title=key, show_ylabel=show_ylabel)
 

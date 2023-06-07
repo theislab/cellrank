@@ -1,10 +1,8 @@
-"""Module used to parallelize model fitting."""
-
-from typing import Any, Union, Callable, Optional, Sequence
+from multiprocessing import Manager, cpu_count
+from threading import Thread
+from typing import Any, Callable, Optional, Sequence, Union
 
 import joblib as jl
-from threading import Thread
-from multiprocessing import Manager, cpu_count
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
@@ -52,10 +50,8 @@ def parallelize(
     -------
     The result depending on ``callable``, ``extractor`` and ``as_array``.
     """
-
     if show_progress_bar:
         try:
-            import ipywidgets
             from tqdm.auto import tqdm
         except ImportError:
             try:
@@ -72,9 +68,7 @@ def parallelize(
                 res = queue.get()
             except EOFError as e:
                 if not n_finished != n_total:
-                    raise RuntimeError(
-                        f"Finished only `{n_finished}` out of `{n_total}` tasks.`"
-                    ) from e
+                    raise RuntimeError(f"Finished only `{n_finished}` out of `{n_total}` tasks.`") from e
                 break
             assert res in (None, (1, None), 1)  # (None, 1) means only 1 job
             if res == (1, None):
@@ -91,11 +85,7 @@ def parallelize(
 
     def wrapper(*args, **kwargs):
         if pass_queue and show_progress_bar:
-            pbar = (
-                None
-                if tqdm is None
-                else tqdm(total=col_len, unit=unit, mininterval=0.125)
-            )
+            pbar = None if tqdm is None else tqdm(total=col_len, unit=unit, mininterval=0.125)
             queue = Manager().Queue()
             thread = Thread(target=update, args=(pbar, queue, len(collections)))
             thread.start()
@@ -129,13 +119,8 @@ def parallelize(
             collections = [collection[[ix], :] for ix in range(collection.shape[0])]
         else:
             step = collection.shape[0] // n_split
-            ixs = [
-                np.arange(i * step, min((i + 1) * step, collection.shape[0]))
-                for i in range(n_split)
-            ]
-            ixs[-1] = np.append(
-                ixs[-1], np.arange(ixs[-1][-1] + 1, collection.shape[0])
-            )
+            ixs = [np.arange(i * step, min((i + 1) * step, collection.shape[0])) for i in range(n_split)]
+            ixs[-1] = np.append(ixs[-1], np.arange(ixs[-1][-1] + 1, collection.shape[0]))
 
             collections = [collection[ix, :] for ix in filter(len, ixs)]
     else:

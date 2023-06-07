@@ -1,16 +1,16 @@
+import warnings
 from typing import Any, Optional
 
-import warnings
-
 import scvelo as scv
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank.kernels._utils import _get_basis
 from scvelo.tools.velocity_embedding import quiver_autoscale
 
 import numpy as np
-from scipy.sparse import issparse, spmatrix, isspmatrix_csr
+from scipy.sparse import issparse, isspmatrix_csr, spmatrix
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._key import Key
+from cellrank.kernels._utils import _get_basis
 
 __all__ = ["TmatProjection"]
 
@@ -80,11 +80,7 @@ class TmatProjection:
         start = logg.info(f"Projecting transition matrix onto `{self._basis}`")
         if connectivities is None:
             try:
-                connectivities, *_ = (
-                    c.connectivities
-                    for c in self._kexpr.kernels
-                    if isinstance(c, ConnectivityMixin)
-                )
+                connectivities, *_ = (c.connectivities for c in self._kexpr.kernels if isinstance(c, ConnectivityMixin))
             except ValueError:
                 raise RuntimeError(
                     "Unable to find connectivities in the kernel. "
@@ -104,11 +100,7 @@ class TmatProjection:
                 if np.any(np.isnan(dX)):
                     T_emb[row_id, :] = np.nan
                 else:
-                    probs = (
-                        row[:, conn_idxs].A.squeeze()
-                        if issparse(row)
-                        else row[conn_idxs]
-                    )
+                    probs = row[:, conn_idxs].A.squeeze() if issparse(row) else row[conn_idxs]
                     dX /= np.linalg.norm(dX, axis=1)[:, None]
                     dX = np.nan_to_num(dX)
                     T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]
@@ -150,6 +142,4 @@ class TmatProjection:
             return scv.pl.velocity_embedding_stream(
                 self._kexpr.adata, *args, basis=self._basis, vkey=self._key, **kwargs
             )
-        return scv.pl.velocity_embedding_grid(
-            self._kexpr.adata, *args, basis=self._basis, vkey=self._key, **kwargs
-        )
+        return scv.pl.velocity_embedding_grid(self._kexpr.adata, *args, basis=self._basis, vkey=self._key, **kwargs)

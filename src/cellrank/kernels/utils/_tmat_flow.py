@@ -1,26 +1,26 @@
-from typing import Any, List, Tuple, Union, Mapping, Optional, Sequence
-
 from dataclasses import dataclass
-from statsmodels.nonparametric.smoothers_lowess import lowess
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d
-from cellrank._utils._utils import _unique_order_preserving
-from cellrank._utils._colors import _create_categorical_colors
-from cellrank.kernels._utils import _ensure_numeric_ordered
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from scipy.stats import logistic
-from scipy.sparse import issparse, spmatrix
 from pandas.api.types import infer_dtype
-from scipy.interpolate import interp1d
 from pandas.core.dtypes.common import is_categorical_dtype
+from scipy.interpolate import interp1d
+from scipy.sparse import issparse, spmatrix
+from scipy.stats import logistic
+from statsmodels.nonparametric.smoothers_lowess import lowess
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import to_rgb
 from matplotlib.collections import PolyCollection
+from matplotlib.colors import to_rgb
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._colors import _create_categorical_colors
+from cellrank._utils._docs import d
+from cellrank._utils._utils import _unique_order_preserving
+from cellrank.kernels._utils import _ensure_numeric_ordered
 
 __all__ = ["FlowPlotter"]
 
@@ -118,16 +118,12 @@ class FlowPlotter:
             raise ValueError(f"Invalid source cluster `{cluster!r}`.")
 
         if len(self._clusters) < 2:
-            raise ValueError(
-                f"Expected at least `2` clusters, found `{len(clusters)}`."
-            )
+            raise ValueError(f"Expected at least `2` clusters, found `{len(clusters)}`.")
 
         if time_points is not None:
             time_points = _unique_order_preserving(time_points)
             if len(time_points) < 2:
-                raise ValueError(
-                    f"Expected at least `2` time points, found `{len(time_points)}`."
-                )
+                raise ValueError(f"Expected at least `2` time points, found `{len(time_points)}`.")
 
             mask = self.time.isin(time_points)
 
@@ -136,9 +132,7 @@ class FlowPlotter:
                 raise ValueError("No valid time points have been selected.")
             self._tmat = self._tmat[mask, :][:, mask]
 
-        time_points = list(
-            zip(self.time.cat.categories[:-1], self.time.cat.categories[1:])
-        )
+        time_points = list(zip(self.time.cat.categories[:-1], self.time.cat.categories[1:]))
 
         logg.info(
             f"Computing flow from `{cluster}` into `{len(self._clusters) - 1}` cluster(s) "
@@ -255,9 +249,7 @@ class FlowPlotter:
         The axes object.
         """
         if self._flow is None or self._cmat is None:
-            raise RuntimeError(
-                "Compute flow and contingency matrix first as `.prepare()`."
-            )
+            raise RuntimeError("Compute flow and contingency matrix first as `.prepare()`.")
 
         flow, cmat = self._flow, self._cmat
         try:
@@ -300,9 +292,7 @@ class FlowPlotter:
         columns = (self._flow.loc[(slice(None), self._cluster), :] > min_flow).any()
         columns = columns[columns].index
         if not len(columns):
-            raise ValueError(
-                "After removing clusters with no incoming flow edges, none remain."
-            )
+            raise ValueError("After removing clusters with no incoming flow edges, none remain.")
         self._flow = self._flow[columns]
 
     def _rename_times(self) -> Sequence[Numeric_t]:
@@ -312,22 +302,14 @@ class FlowPlotter:
         tmp = (tmp - tmp.min()) / (tmp.max() - tmp.min())
         tmp /= np.min(tmp[1:] - tmp[:-1])
         time_mapper = dict(zip(old_times, tmp))
-        self._flow.index = pd.MultiIndex.from_tuples(
-            [(time_mapper[t], c) for t, c in self._flow.index]
-        )
+        self._flow.index = pd.MultiIndex.from_tuples([(time_mapper[t], c) for t, c in self._flow.index])
         self._cmat.columns = tmp
         return old_times
 
-    def _order_clusters(
-        self, cluster: str, ascending: Optional[bool] = False
-    ) -> Tuple[List[Any], List[Any]]:
+    def _order_clusters(self, cluster: str, ascending: Optional[bool] = False) -> Tuple[List[Any], List[Any]]:
         if ascending is not None:
             tmp = [[], []]
-            total_flow = (
-                self._flow.loc[(slice(None), cluster), :]
-                .sum()
-                .sort_values(ascending=ascending)
-            )
+            total_flow = self._flow.loc[(slice(None), cluster), :].sum().sort_values(ascending=ascending)
             for i, c in enumerate(c for c in total_flow.index if c != cluster):
                 tmp[i % 2].append(c)
             return tmp[0][::-1], tmp[1]
@@ -335,16 +317,10 @@ class FlowPlotter:
         clusters = [c for c in self._clusters if c != cluster]
         return clusters[: len(clusters) // 2], clusters[len(clusters) // 2 :]
 
-    def _calculate_y_offsets(
-        self, clusters: Sequence[Any], delta: float = 0.2
-    ) -> Mapping[Any, float]:
+    def _calculate_y_offsets(self, clusters: Sequence[Any], delta: float = 0.2) -> Mapping[Any, float]:
         offset = [0]
         for i in range(1, len(clusters)):
-            offset.append(
-                offset[-1]
-                + delta
-                + np.max(self._cmat.loc[clusters[i]] + self._cmat.loc[clusters[i - 1]])
-            )
+            offset.append(offset[-1] + delta + np.max(self._cmat.loc[clusters[i]] + self._cmat.loc[clusters[i - 1]]))
         return dict(zip(clusters, offset))
 
     def _plot_smoothed_proportion(
@@ -461,9 +437,7 @@ class FlowPlotter:
                 fl = flow.loc[self._cluster, clust]
                 if fl > min_flow:
                     fl = np.clip(fl, 0, 0.95)
-                    smooth_cluster_fl = smoothed_proportions[self._cluster][
-                        r(curr_t + fl)
-                    ]
+                    smooth_cluster_fl = smoothed_proportions[self._cluster][r(curr_t + fl)]
 
                     if bottom:
                         self._draw_flow_edge(
@@ -475,10 +449,8 @@ class FlowPlotter:
                                 cluster_offset - smooth_cluster_fl,
                             ),
                             y2=Point(
-                                y_offset[clust]
-                                + smoothed_proportions[clust][r(next_t)],
-                                y_offset[clust]
-                                + smoothed_proportions[clust][r(next_t - fl - 0.05)],
+                                y_offset[clust] + smoothed_proportions[clust][r(next_t)],
+                                y_offset[clust] + smoothed_proportions[clust][r(next_t - fl - 0.05)],
                             ),
                             flow=fl,
                             start_color=self.cmap[self._cluster],
@@ -495,10 +467,8 @@ class FlowPlotter:
                                 cluster_offset + smooth_cluster,
                             ),
                             y2=Point(
-                                y_offset[clust]
-                                - smoothed_proportions[clust][r(next_t - fl - 0.05)],
-                                y_offset[clust]
-                                - smoothed_proportions[clust][r(next_t)],
+                                y_offset[clust] - smoothed_proportions[clust][r(next_t - fl - 0.05)],
+                                y_offset[clust] - smoothed_proportions[clust][r(next_t)],
                             ),
                             flow=-fl,
                             start_color=self.cmap[self._cluster],
@@ -517,9 +487,7 @@ class FlowPlotter:
         y_offset = self._calculate_y_offsets(all_clusters)
         cluster_offset = y_offset[self._cluster]
 
-        smoothed_proportions, handles = self._plot_smoothed_proportion(
-            ax, all_clusters, y_offset, alpha=alpha
-        )
+        smoothed_proportions, handles = self._plot_smoothed_proportion(ax, all_clusters, y_offset, alpha=alpha)
 
         for curr_t, next_t in zip(times[:-1], times[1:]):
             draw_edges(curr_t, next_t, clusters_bottom, bottom=True)
@@ -569,7 +537,5 @@ class FlowPlotter:
         )
 
 
-def _lcdf(
-    x: Union[int, float, np.ndarray], loc: float = 0.5, scale: float = 0.2
-) -> float:
+def _lcdf(x: Union[int, float, np.ndarray], loc: float = 0.5, scale: float = 0.2) -> float:
     return logistic.cdf(x, loc=loc, scale=scale)

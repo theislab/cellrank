@@ -1,18 +1,20 @@
-from typing import Any, Tuple, Union, Literal, Callable, Optional, Sequence
+from typing import Any, Callable, Literal, Optional, Sequence, Tuple, Union
 
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank.kernels.utils import MonteCarlo, Stochastic, Deterministic
-from cellrank.kernels.mixins import ConnectivityMixin
 from scvelo.preprocessing.moments import get_moments
-from cellrank.kernels._base_kernel import BidirectionalKernel
-from cellrank.kernels.utils._similarity import Similarity, SimilarityABC
-from cellrank.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 import numpy as np
 from scipy.sparse import issparse
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank.kernels._base_kernel import BidirectionalKernel
+from cellrank.kernels.mixins import ConnectivityMixin
+from cellrank.kernels.utils import Deterministic, MonteCarlo, Stochastic
+from cellrank.kernels.utils._similarity import Similarity, SimilarityABC
+from cellrank.kernels.utils._velocity_model import BackwardMode, VelocityModel
 
 __all__ = ["VelocityKernel"]
 
@@ -75,11 +77,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     ) -> None:
         super()._read_from_adata(**kwargs)
 
-        if (
-            attr == "layers"
-            and gene_subset is None
-            and f"{vkey}_genes" in self.adata.var
-        ):
+        if attr == "layers" and gene_subset is None and f"{vkey}_genes" in self.adata.var:
             gene_subset = self.adata.var[f"{vkey}_genes"]
         elif attr == "obsm" and gene_subset is not None:
             logg.warning(
@@ -109,9 +107,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        model: Literal[
-            "deterministic", "stochastic", "monte_carlo"
-        ] = VelocityModel.DETERMINISTIC,
+        model: Literal["deterministic", "stochastic", "monte_carlo"] = VelocityModel.DETERMINISTIC,
         backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
         similarity: Union[
             Literal["correlation", "cosine", "dot_product"],
@@ -195,9 +191,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         if isinstance(similarity, str):
             similarity = SimilarityABC.create(Similarity(similarity))
         elif not callable(similarity):
-            raise TypeError(
-                f"Expected `scheme` to be a function, found `{type(similarity).__name__}`."
-            )
+            raise TypeError(f"Expected `scheme` to be a function, found `{type(similarity).__name__}`.")
 
         if self.backward and model != VelocityModel.DETERMINISTIC:
             logg.warning(
@@ -254,9 +248,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         backend: Backend_t = _DEFAULT_BACKEND,
         **kwargs,
     ) -> float:
-        model = self._create_model(
-            VelocityModel.DETERMINISTIC, softmax_scale=1.0, **kwargs
-        )
+        model = self._create_model(VelocityModel.DETERMINISTIC, softmax_scale=1.0, **kwargs)
         _, logits = model(n_jobs, backend)
         return 1.0 / np.median(np.abs(logits.data))
 

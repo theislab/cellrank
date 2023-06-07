@@ -1,9 +1,9 @@
 from typing import Any, Optional
 
-from cellrank.models import BaseModel
-from cellrank.external._error_mixin import ImportErrorMixin
-
 import numpy as np
+
+from cellrank.external._error_mixin import ImportErrorMixin
+from cellrank.models import BaseModel
 
 __all__ = ["ErroredModel"]
 
@@ -36,9 +36,7 @@ class ErroredModel(ImportErrorMixin, BaseModel):
         """Not implemented."""
         raise NotImplementedError
 
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs: Any
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray:
         """Not implemented."""
         raise NotImplementedError
 

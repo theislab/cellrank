@@ -1,23 +1,23 @@
-from typing import Any, Dict, List, Tuple, Union, Callable, Optional, Sequence
-
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from pathlib import Path
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._utils import save_fig, _normalize, _read_graph_data
-from cellrank.kernels.utils import RandomWalk, FlowPlotter, TmatProjection
-from cellrank.kernels._utils import require_tmat
-from cellrank.kernels.mixins import IOMixin, BidirectionalMixin, UnidirectionalMixin
-from cellrank.kernels.utils._random_walk import Indices_t
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from scipy.sparse import issparse, spmatrix, csr_matrix, isspmatrix_csr
+from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._utils import _normalize, _read_graph_data, save_fig
+from cellrank.kernels._utils import require_tmat
+from cellrank.kernels.mixins import BidirectionalMixin, IOMixin, UnidirectionalMixin
+from cellrank.kernels.utils import FlowPlotter, RandomWalk, TmatProjection
+from cellrank.kernels.utils._random_walk import Indices_t
 
 __all__ = ["Kernel", "UnidirectionalKernel", "BidirectionalKernel"]
 
@@ -41,9 +41,7 @@ class KernelExpression(IOMixin, ABC):
         super().__init_subclass__()
 
     @abstractmethod
-    def compute_transition_matrix(
-        self, *args: Any, **kwargs: Any
-    ) -> "KernelExpression":
+    def compute_transition_matrix(self, *args: Any, **kwargs: Any) -> "KernelExpression":
         """
         Compute transition matrix.
 
@@ -237,9 +235,7 @@ class KernelExpression(IOMixin, ABC):
         %(just_plots)s
         For each random walk, the first/last cell is marked by the start/end colors of ``cmap``.
         """
-        rw = RandomWalk(
-            self.adata, self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs
-        )
+        rw = RandomWalk(self.adata, self.transition_matrix, start_ixs=start_ixs, stop_ixs=stop_ixs)
         sims = rw.simulate_many(
             n_sims=n_sims,
             max_iter=max_iter,
@@ -298,9 +294,7 @@ class KernelExpression(IOMixin, ABC):
         Nothing, just plots and modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
         """
         proj = TmatProjection(self, basis=basis)
-        proj.project(
-            key_added=key_added, recompute=recompute, connectivities=connectivities
-        )
+        proj.project(key_added=key_added, recompute=recompute, connectivities=connectivities)
         proj.plot(stream=stream, **kwargs)
 
     def __add__(self, other: "KernelExpression") -> "KernelExpression":
@@ -338,20 +332,12 @@ class KernelExpression(IOMixin, ABC):
 
         return KernelAdd(s, o)
 
-    def __mul__(
-        self, other: Union[float, int, "KernelExpression"]
-    ) -> "KernelExpression":
+    def __mul__(self, other: Union[float, int, "KernelExpression"]) -> "KernelExpression":
         return self.__rmul__(other)
 
-    def __rmul__(
-        self, other: Union[int, float, "KernelExpression"]
-    ) -> "KernelExpression":
+    def __rmul__(self, other: Union[int, float, "KernelExpression"]) -> "KernelExpression":
         def same_level_mul(k1: "KernelExpression", k2: "KernelExpression") -> bool:
-            return (
-                isinstance(k1, KernelMul)
-                and isinstance(k2, Constant)
-                and k1._bin_consts
-            )
+            return isinstance(k1, KernelMul) and isinstance(k2, Constant) and k1._bin_consts
 
         if isinstance(other, (int, float, np.integer, np.floating)):
             other = Constant(self.adata, other)
@@ -405,9 +391,7 @@ class KernelExpression(IOMixin, ABC):
             **{"params": self.params},
             **{"init": self._init_kwargs},
         }
-        self.adata.obsp[key] = (
-            self.transition_matrix.copy() if copy else self.transition_matrix
-        )
+        self.adata.obsp[key] = self.transition_matrix.copy() if copy else self.transition_matrix
 
     @property
     def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
@@ -462,9 +446,7 @@ class KernelExpression(IOMixin, ABC):
             return self._params
         return {f"{k!r}:{i}": k.params for i, k in enumerate(self.kernels)}
 
-    def _reuse_cache(
-        self, expected_params: Dict[str, Any], *, time: Optional[Any] = None
-    ) -> bool:
+    def _reuse_cache(self, expected_params: Dict[str, Any], *, time: Optional[Any] = None) -> bool:
         # fmt: off
         try:
             if expected_params == self._params:
@@ -489,9 +471,7 @@ class KernelExpression(IOMixin, ABC):
 class Kernel(KernelExpression, ABC):
     """Base kernel class."""
 
-    def __init__(
-        self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any
-    ):
+    def __init__(self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any):
         super().__init__(parent=parent, **kwargs)
         self._adata = adata
         self._n_obs = adata.n_obs
@@ -511,9 +491,7 @@ class Kernel(KernelExpression, ABC):
             self._adata = None
             return
         if not isinstance(adata, AnnData):
-            raise TypeError(
-                f"Expected `adata` to be of type `AnnData`, found `{type(adata).__name__}`."
-            )
+            raise TypeError(f"Expected `adata` to be of type `AnnData`, found `{type(adata).__name__}`.")
         shape = (adata.n_obs, adata.n_obs)
         if self.shape != shape:
             raise ValueError(
@@ -533,7 +511,7 @@ class Kernel(KernelExpression, ABC):
         Read kernel object saved using :meth:`write_to_adata`.
 
         Parameters
-        ---------
+        ----------
         %(adata)s
         key
             Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
@@ -589,10 +567,7 @@ class Kernel(KernelExpression, ABC):
 
     def _format_params(self) -> str:
         n, _ = self.shape
-        params = ", ".join(
-            f"{k}={round(v, 3) if isinstance(v, float) else v!r}"
-            for k, v in self.params.items()
-        )
+        params = ", ".join(f"{k}={round(v, 3) if isinstance(v, float) else v!r}" for k, v in self.params.items())
         return f"n={n}, {params}" if params else f"n={n}"
 
     @property
@@ -656,9 +631,7 @@ class Constant(UnidirectionalKernel):
     @transition_matrix.setter
     def transition_matrix(self, value: Union[int, float]) -> None:
         if not isinstance(value, (int, float, np.integer, np.floating)):
-            raise TypeError(
-                f"Value must be a `float` or `int`, found `{type(value).__name__}`."
-            )
+            raise TypeError(f"Value must be a `float` or `int`, found `{type(value).__name__}`.")
         if value <= 0:
             raise ValueError(f"Expected the scalar to be positive, found `{value}`.")
 
@@ -698,9 +671,7 @@ class Constant(UnidirectionalKernel):
 
 
 class NaryKernelExpression(BidirectionalMixin, KernelExpression):
-    def __init__(
-        self, *kexprs: KernelExpression, parent: Optional[KernelExpression] = None
-    ):
+    def __init__(self, *kexprs: KernelExpression, parent: Optional[KernelExpression] = None):
         super().__init__(parent=parent)
         self._validate(kexprs)
 
@@ -741,17 +712,13 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
         shapes = {kexpr.shape for kexpr in kexprs}
         if len(shapes) > 1:
-            raise ValueError(
-                f"Expected all kernels to have the same shapes, found `{sorted(shapes)}`."
-            )
+            raise ValueError(f"Expected all kernels to have the same shapes, found `{sorted(shapes)}`.")
 
         directions = {kexpr.backward for kexpr in kexprs}
         if True in directions and False in directions:
             raise ValueError("Unable to combine both forward and backward kernels.")
 
-        self._backward = (
-            True if True in directions else False if False in directions else None
-        )
+        self._backward = True if True in directions else False if False in directions else None
         self._kexprs = kexprs
         for kexpr in self:
             kexpr._parent = self
@@ -806,9 +773,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
     def __invert__(self) -> "KernelExpression":
         if self.backward is None:
             return self.copy()
-        kexprs = tuple(
-            ~k if isinstance(k, BidirectionalMixin) else k.copy() for k in self
-        )
+        kexprs = tuple(~k if isinstance(k, BidirectionalMixin) else k.copy() for k in self)
         kexpr = type(self)(*kexprs, parent=self._parent)
         kexpr._transition_matrix = None
         return kexpr

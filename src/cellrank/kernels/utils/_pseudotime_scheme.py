@@ -1,12 +1,11 @@
-from typing import Any, Tuple, Callable, Optional
-
 from abc import ABC, abstractmethod
-
-from cellrank._utils._docs import d
-from cellrank._utils._parallelize import parallelize
+from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
 from scipy.sparse import csr_matrix
+
+from cellrank._utils._docs import d
+from cellrank._utils._parallelize import parallelize
 
 __all__ = ["HardThresholdScheme", "SoftThresholdScheme", "CustomThresholdScheme"]
 
@@ -53,13 +52,9 @@ class ThresholdSchemeABC(ABC):
 
         for i in ixs:
             row = conn[i]
-            biased_row = self(
-                pseudotime[i], pseudotime[row.indices], row.data, **kwargs
-            )
+            biased_row = self(pseudotime[i], pseudotime[row.indices], row.data, **kwargs)
             if np.shape(biased_row) != row.data.shape:
-                raise ValueError(
-                    f"Expected row of shape `{row.data.shape}`, found `{np.shape(biased_row)}`."
-                )
+                raise ValueError(f"Expected row of shape `{row.data.shape}`, found `{np.shape(biased_row)}`.")
 
             data.extend(biased_row)
             indices.extend(row.indices)
@@ -111,9 +106,7 @@ class ThresholdSchemeABC(ABC):
         )(conn, pseudotime, **kwargs)
         data, indices, indptr = zip(*res)
 
-        conn = csr_matrix(
-            (np.concatenate(data), np.concatenate(indices), np.concatenate(indptr))
-        )
+        conn = csr_matrix((np.concatenate(data), np.concatenate(indices), np.concatenate(indptr)))
         conn.eliminate_zeros()
 
         return conn
@@ -165,9 +158,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
         %(pt_scheme.returns)s
         """
         if not (0 <= frac_to_keep <= 1):
-            raise ValueError(
-                f"Expected `frac_to_keep` to be in `[0, 1]`, found `{frac_to_keep}`."
-            )
+            raise ValueError(f"Expected `frac_to_keep` to be in `[0, 1]`, found `{frac_to_keep}`.")
 
         k_thresh = max(0, min(30, int(np.floor(len(neigh_conn) * frac_to_keep))))
         ixs = np.flip(np.argsort(neigh_conn))
@@ -240,9 +231,7 @@ class CustomThresholdScheme(ThresholdSchemeABC):
 
     def __init__(
         self,
-        callback: Callable[
-            [float, np.ndarray, np.ndarray, np.ndarray, Any], np.ndarray
-        ],
+        callback: Callable[[float, np.ndarray, np.ndarray, np.ndarray, Any], np.ndarray],
     ):
         super().__init__()
         self._callback = callback

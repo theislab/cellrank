@@ -1,8 +1,7 @@
-from typing import Any, Dict, Type, Tuple, Literal, Callable
-
 from abc import ABC, ABCMeta
 from enum import Enum, EnumMeta
 from functools import wraps
+from typing import Any, Callable, Dict, Literal, Tuple, Type
 
 _DEFAULT_BACKEND = "loky"
 Backend_t = Literal["loky", "multiprocessing", "threading"]
@@ -45,15 +44,10 @@ def _pretty_raise_enum(cls: Type["ErrorFormatterABC"], func: Callable) -> Callab
 class ABCEnumMeta(EnumMeta, ABCMeta):  # noqa: D101
     def __call__(cls, *args, **kwargs):  # noqa
         if getattr(cls, "__error_format__", None) is None:
-            raise TypeError(
-                f"Can't instantiate class `{cls.__name__}` "
-                f"without `__error_format__` class attribute."
-            )
+            raise TypeError(f"Can't instantiate class `{cls.__name__}` " f"without `__error_format__` class attribute.")
         return super().__call__(*args, **kwargs)
 
-    def __new__(  # noqa: D102
-        cls, clsname: str, superclasses: Tuple[type], attributedict: Dict[str, Any]
-    ):
+    def __new__(cls, clsname: str, superclasses: Tuple[type], attributedict: Dict[str, Any]):  # noqa: D102
         res = super().__new__(cls, clsname, superclasses, attributedict)
         res.__new__ = _pretty_raise_enum(res, res.__new__)
         return res
@@ -64,9 +58,7 @@ class ErrorFormatterABC(ABC):  # noqa: D101
 
     @classmethod
     def _format(cls, value) -> str:
-        return cls.__error_format__.format(
-            value, cls.__name__, [m.value for m in cls.__members__.values()]
-        )
+        return cls.__error_format__.format(value, cls.__name__, [m.value for m in cls.__members__.values()])
 
 
 class ModeEnum(str, ErrorFormatterABC, PrettyEnum, metaclass=ABCEnumMeta):  # noqa: D101

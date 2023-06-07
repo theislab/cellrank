@@ -3,7 +3,7 @@ codecov:
   strict_yaml_branch: main
 
 coverage:
-  range: "80...100"
+  range: 80...100
   status:
     project:
       default:
@@ -12,7 +12,7 @@ coverage:
     patch: off
 
 comment:
-  layout: "reach, diff, files"
+  layout: reach, diff, files
   behavior: default
   require_changes: true
   branches: [main]

@@ -1,17 +1,15 @@
-"""Color handling module."""
-
-from typing import Any, List, Tuple, Union, Iterable, Optional, Sequence
-
-from cellrank import logging as logg
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from pandas import Series, DataFrame, to_numeric
-from scipy.stats import entropy
+from pandas import DataFrame, Series, to_numeric
 from pandas._libs.lib import infer_dtype
 from pandas.core.dtypes.common import is_categorical_dtype
+from scipy.stats import entropy
 
 from matplotlib import cm
 from matplotlib import colors as mcolors
+
+from cellrank import logging as logg
 
 
 def _create_colors(
@@ -50,7 +48,6 @@ def _create_colors(
     -------
     List of colors, either as a hex string or an RGB array.
     """
-
     if not mcolors.is_color_like(base_color):
         raise ValueError("Base color is not color-like.")
     if n <= 0:
@@ -103,9 +100,7 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
     if n_categories is None:
         n_categories = max_cats
     if n_categories > max_cats:
-        raise ValueError(
-            f"Number of categories `{n_categories}` exceeded the maximum number of colors `{max_cats}`."
-        )
+        raise ValueError(f"Number of categories `{n_categories}` exceeded the maximum number of colors `{max_cats}`.")
 
     colors = []
     for cmap in cmaps:
@@ -118,9 +113,7 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
 
 def _insert_categorical_colors(seen_colors: Union[np.ndarray, List], n_categories: int):
     seen_colors = set(_convert_to_hex_colors(seen_colors))
-    candidates = list(
-        filter(lambda c: c not in seen_colors, _create_categorical_colors())
-    )[:n_categories]
+    candidates = list(filter(lambda c: c not in seen_colors, _create_categorical_colors()))[:n_categories]
 
     if len(candidates) != n_categories:
         raise RuntimeError(f"Unable to create `{n_categories}` categorical colors.")
@@ -185,16 +178,11 @@ def _map_names_and_colors(
     -------
     Series with updated category names and a corresponding array of colors.
     """
-
     # checks: dtypes, matching indices, make sure colors match the categories
     if not is_categorical_dtype(series_reference):
-        raise TypeError(
-            f"Reference series must be `categorical`, found `{infer_dtype(series_reference)}`."
-        )
+        raise TypeError(f"Reference series must be `categorical`, found `{infer_dtype(series_reference)}`.")
     if not is_categorical_dtype(series_query):
-        raise TypeError(
-            f"Query series must be `categorical`, found `{infer_dtype(series_query)}`."
-        )
+        raise TypeError(f"Query series must be `categorical`, found `{infer_dtype(series_query)}`.")
     if len(series_reference) != len(series_query):
         raise ValueError(
             f"Expected the reference and query to have same length,"
@@ -202,9 +190,7 @@ def _map_names_and_colors(
         )
 
     if en_cutoff is not None and en_cutoff < 0:
-        raise ValueError(
-            f"Expected entropy cutoff to be non-negative, found `{en_cutoff}`."
-        )
+        raise ValueError(f"Expected entropy cutoff to be non-negative, found `{en_cutoff}`.")
 
     if not np.all(series_reference.index == series_query.index):
         raise ValueError("Series indices do not match, cannot map names and colors.")
@@ -234,10 +220,7 @@ def _map_names_and_colors(
 
     # populate the dataframe - compute the overlap
     for cl in cats_query:
-        row = [
-            np.sum(series_reference.loc[np.array(series_query == cl)] == key)
-            for key in cats_reference
-        ]
+        row = [np.sum(series_reference.loc[np.array(series_query == cl)] == key) for key in cats_reference]
         association_df.loc[cl] = row
     association_df = association_df.apply(to_numeric)
 
@@ -250,16 +233,13 @@ def _map_names_and_colors(
     # assign query colors
     if process_colors:
         association_df["color"] = colors_query = [
-            colors_reference[np.where(cats_reference == name)[0][0]]
-            for name in names_query
+            colors_reference[np.where(cats_reference == name)[0][0]] for name in names_query
         ]
 
     # next, we need to make sure that we have unique names and colors. In a first step, compute how many repetitions
     # we have
     names_query_series = Series(names_query, dtype="category")
-    frequ = {
-        key: np.sum(names_query == key) for key in names_query_series.cat.categories
-    }
+    frequ = {key: np.sum(names_query == key) for key in names_query_series.cat.categories}
 
     # warning: do NOT use np.array - if I pass for e.g. colors ['red'], the dtype will be '<U3'
     # but _create_colors convert them to hex, which will leave them trimmed to #ff or similar
@@ -287,26 +267,15 @@ def _map_names_and_colors(
 
     # issue a warning for mapping with high entropy
     if en_cutoff is not None:
-        critical_cats = sorted(
-            set(
-                association_df.loc[association_df["entropy"] > en_cutoff, "name"].values
-            )
-        )
+        critical_cats = sorted(set(association_df.loc[association_df["entropy"] > en_cutoff, "name"].values))
         if len(critical_cats) > 0:
-            logg.warning(
-                f"The following states could not be mapped uniquely: `{critical_cats}`"
-            )
+            logg.warning(f"The following states could not be mapped uniquely: `{critical_cats}`")
 
-    return (
-        (names_query_new, list(_convert_to_hex_colors(colors_query_new)))
-        if process_colors
-        else names_query_new
-    )
+    return (names_query_new, list(_convert_to_hex_colors(colors_query_new))) if process_colors else names_query_new
 
 
 def _compute_mean_color(color_list: List[str]) -> str:
     """Compute mean color."""
-
     if not all(mcolors.is_color_like(c) for c in color_list):
         raise ValueError(f"Not all values are valid colors `{color_list}`.")
 
@@ -337,19 +306,12 @@ def _colors_in_order(
     -------
     List of colors in order defined by `clusters`.
     """
-
-    assert (
-        cluster_key in adata.obs.keys()
-    ), f"Could not find {cluster_key} in `adata.obs`."
+    assert cluster_key in adata.obs, f"Could not find {cluster_key} in `adata.obs`."
 
     if clusters is not None:
-        assert np.all(
-            np.in1d(clusters, adata.obs[cluster_key].cat.categories)
-        ), "Not all `clusters` found."
+        assert np.all(np.in1d(clusters, adata.obs[cluster_key].cat.categories)), "Not all `clusters` found."
 
-    assert (
-        f"{cluster_key}_colors" in adata.uns.keys()
-    ), f"No colors associated to {cluster_key} in `adata.uns`."
+    assert f"{cluster_key}_colors" in adata.uns, f"No colors associated to {cluster_key} in `adata.uns`."
 
     if clusters is None:
         clusters = adata.obs[cluster_key].cat.categories

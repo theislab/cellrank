@@ -1,44 +1,44 @@
-from typing import (
-    Any,
-    List,
-    Tuple,
-    Union,
-    Literal,
-    Mapping,
-    TypeVar,
-    Callable,
-    Iterable,
-    Optional,
-)
-
 from copy import copy as copy_
 from enum import auto
-from types import FunctionType, MappingProxyType
-from inspect import signature
-from pathlib import Path
 from functools import wraps
+from inspect import signature
 from itertools import combinations
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._colors import (
-    _get_bg_fg_colors,
-    _compute_mean_color,
-    _create_categorical_colors,
+from pathlib import Path
+from types import FunctionType, MappingProxyType
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
 )
-from anndata._io.specs.methods import H5Group, ZarrGroup, write_basic
-from anndata._io.specs.registry import _REGISTRY, IOSpec
 
 import numpy as np
 import pandas as pd
-from scipy.stats import entropy
 from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.stats import entropy
 
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
+
+from anndata import AnnData
+from anndata._io.specs.methods import H5Group, ZarrGroup, write_basic
+from anndata._io.specs.registry import _REGISTRY, IOSpec
+
+from cellrank import logging as logg
+from cellrank._utils._colors import (
+    _compute_mean_color,
+    _create_categorical_colors,
+    _get_bg_fg_colors,
+)
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._key import Key
 
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
@@ -103,9 +103,7 @@ def wrap(numpy_func: Callable) -> Callable:
     @wraps(numpy_func)
     def decorator(array, *args, **kwargs):
         if not isinstance(array, Lineage):
-            raise TypeError(
-                f"Expected array to be of type `Lineage`, found `{type(array).__name__}`."
-            )
+            raise TypeError(f"Expected array to be of type `Lineage`, found `{type(array).__name__}`.")
         if fname == "squeeze":
             return array
         if fname == "array_repr":
@@ -145,16 +143,13 @@ def wrap(numpy_func: Callable) -> Callable:
             )
 
         if res.shape[1] == array.shape[1 - is_t]:
-            lin = Lineage(
-                res, names=[f"{fname} of {n}" for n in array.names], colors=array.colors
-            )
+            lin = Lineage(res, names=[f"{fname} of {n}" for n in array.names], colors=array.colors)
 
         if lin is not None:
             return lin.T if is_t else lin
 
         raise RuntimeError(
-            f"Unable to interpret result of function `{fname}` called "
-            f"with args `{args}`, kwargs: `{kwargs}`."
+            f"Unable to interpret result of function `{fname}` called " f"with args `{args}`, kwargs: `{kwargs}`."
         )
 
     params = signature(numpy_func).parameters
@@ -164,9 +159,7 @@ def wrap(numpy_func: Callable) -> Callable:
     else:
         axis_ix = 256
         default_axis = None
-    assert (
-        axis_ix >= 0
-    ), f"Expected argument `'axis'` not to be first for function `{numpy_func.__name__}`."
+    assert axis_ix >= 0, f"Expected argument `'axis'` not to be first for function `{numpy_func.__name__}`."
 
     fname = numpy_func.__name__
     if fname == "amin":
@@ -184,7 +177,7 @@ def _register_handled_functions():
         if isinstance(fn, FunctionType):
             try:
                 sig = signature(fn)
-                if "axis" in sig.parameters.keys():
+                if "axis" in sig.parameters:
                     handled_fns[fn] = wrap(fn)
             except ValueError:
                 pass
@@ -254,18 +247,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         colors: Optional[Iterable[ColorLike]] = None,
     ) -> "Lineage":
         """Create and return a new object."""
-
         if not isinstance(input_array, np.ndarray):
-            raise TypeError(
-                f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`."
-            )
+            raise TypeError(f"Input array must be of type `numpy.ndarray`, found `{type(input_array).__name__!r}`.")
 
         if input_array.ndim == 1:
             input_array = np.expand_dims(input_array, -1)
         elif input_array.ndim > 2:
-            raise ValueError(
-                f"Input array must be 2-dimensional, found `{input_array.ndim}`."
-            )
+            raise ValueError(f"Input array must be 2-dimensional, found `{input_array.ndim}`.")
 
         if input_array.shape[0] == 0:
             raise ValueError("Expected number cells to be at least 1, found 0.")
@@ -292,9 +280,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         else:
             self._names = None
             self._names_to_ixs = None
-            self._n_lineages = getattr(
-                obj, "_n_lineages", obj.shape[1] if obj.ndim == 2 else 0
-            )
+            self._n_lineages = getattr(obj, "_n_lineages", obj.shape[1] if obj.ndim == 2 else 0)
 
         self._colors = getattr(obj, "colors", None)
         self._is_transposed = getattr(obj, "_is_transposed", False)
@@ -325,9 +311,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         from cellrank._utils._utils import _unique_order_preserving
 
         def unsplit(names: str) -> Tuple[str, ...]:
-            return tuple(
-                sorted({name.strip(" ") for name in names.strip(" ,").split(",")})
-            )
+            return tuple(sorted({name.strip(" ") for name in names.strip(" ,").split(",")}))
 
         keys = [
             tuple(self._maybe_convert_names(unsplit(mixture), default=mixture))
@@ -342,9 +326,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         for c1, c2 in combinations(overlap, 2):
             overlap = c1 & c2
             if overlap:
-                raise ValueError(
-                    f"Found overlapping keys: `{self.names[list(overlap)]}`."
-                )
+                raise ValueError(f"Found overlapping keys: `{self.names[list(overlap)]}`.")
 
         names, colors, res = [], [], []
         for key in map(list, keys):
@@ -358,9 +340,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __getitem(self, item):
         if isinstance(item, tuple):
             if len(item) > 2:
-                raise ValueError(
-                    f"Expected key to be of length `2`, found `{len(item)}`."
-                )
+                raise ValueError(f"Expected key to be of length `2`, found `{len(item)}`.")
 
             item = list(item)
             if item[0] is Ellipsis or item[0] is None:
@@ -372,9 +352,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         is_tuple_len_2 = (
             isinstance(item, tuple)
             and len(item) == 2
-            and isinstance(
-                item[0], (int, np.integer, range, slice, tuple, list, np.ndarray)
-            )
+            and isinstance(item[0], (int, np.integer, range, slice, tuple, list, np.ndarray))
         )
         if is_tuple_len_2:
             rows, col = item
@@ -410,17 +388,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     col = item[1]
 
         shape, row_order, col_order = None, None, None
-        if (
-            is_tuple_len_2
-            and not isinstance(item[0], slice)
-            and not isinstance(item[1], slice)
-        ):
-            item_0 = (
-                np.array(item[0]) if not isinstance(item[0], np.ndarray) else item[0]
-            )
-            item_1 = (
-                np.array(item[1]) if not isinstance(item[1], np.ndarray) else item[1]
-            )
+        if is_tuple_len_2 and not isinstance(item[0], slice) and not isinstance(item[1], slice):
+            item_0 = np.array(item[0]) if not isinstance(item[0], np.ndarray) else item[0]
+            item_1 = np.array(item[1]) if not isinstance(item[1], np.ndarray) else item[1]
             item_0 = _at_least_2d(item_0, -1)
             item_1 = _at_least_2d(item_1, 0)
 
@@ -430,9 +400,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     if not issubclass(item_0.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_0.dtype.type}`.")
                     row_order = (
-                        item_0[:, 0]
-                        if item_0.shape[0] == self.shape[0]
-                        else np.argsort(np.argsort(item_0[:, 0]))
+                        item_0[:, 0] if item_0.shape[0] == self.shape[0] else np.argsort(np.argsort(item_0[:, 0]))
                     )
                     item_0 = _at_least_2d(np.isin(np.arange(self.shape[0]), item_0), -1)
                 item = item_0 * item_1
@@ -443,9 +411,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     if not issubclass(item_1.dtype.type, np.integer):
                         raise TypeError(f"Invalid type `{item_1.dtype.type}`.")
                     col_order = (
-                        item_1[0, :]
-                        if item_1.shape[1] == self.shape[1]
-                        else np.argsort(np.argsort(item_1[0, :]))
+                        item_1[0, :] if item_1.shape[1] == self.shape[1] else np.argsort(np.argsort(item_1[0, :]))
                     )
                     item_1 = _at_least_2d(np.isin(np.arange(self.shape[1]), item_1), 0)
 
@@ -563,11 +529,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         -------
         The priming degree.
         """
-        early_cells = (
-            np.ones((len(self),), dtype=np.bool_)
-            if early_cells is None
-            else np.asarray(early_cells)
-        )
+        early_cells = np.ones((len(self),), dtype=np.bool_) if early_cells is None else np.asarray(early_cells)
         if not np.issubdtype(early_cells.dtype, np.bool_):
             early_cells = np.unique(early_cells)
 
@@ -580,9 +542,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         with np.errstate(divide="ignore", invalid="ignore"):
             if method == PrimingDegree.KL_DIVERGENCE:
                 probs = np.nan_to_num(
-                    np.sum(
-                        probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1
-                    ),
+                    np.sum(probs * np.log2(probs / np.mean(early_subset, axis=0)), axis=1),
                     nan=1.0,
                     copy=False,
                 )
@@ -635,9 +595,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if "autopct" not in kwargs:
             autopct_found = False
-            autopct = (
-                "{:.1f}%".format
-            )  # we don't really care, we don't shot the pct, but the value
+            autopct = "{:.1f}%".format  # we don't really care, we don't shot the pct, but the value
         else:
             autopct_found = True
             autopct = kwargs.pop("autopct")
@@ -736,7 +694,6 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         The lineage object, reduced to the %(initial_or_terminal)s states.
         The weights used for the projection of shape ``(n_query, n_reference)``, if ``return_weights = True``.
         """
-
         mode = Reduction(mode)
         dist_measure = DistanceMeasure(dist_measure)
         normalize_weights = NormWeights(normalize_weights)
@@ -761,9 +718,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         # check input parameters
         if return_weights and mode == Reduction.SCALE:
-            logg.warning(
-                f"If `mode={mode!r}`, no weights are computed. Returning `None`"
-            )
+            logg.warning(f"If `mode={mode!r}`, no weights are computed. Returning `None`")
 
         reference = self[:, keys]
         rest = [k for k in self.names if all(k not in rk for rk in reference.names)]
@@ -792,9 +747,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             elif dist_measure == DistanceMeasure.EQUAL:
                 weights = _row_normalize(np.ones((query.shape[1], reference.shape[1])))
             else:
-                raise NotImplementedError(
-                    f"Distance measure `{dist_measure}` is not yet implemented."
-                )
+                raise NotImplementedError(f"Distance measure `{dist_measure}` is not yet implemented.")
 
             # make some checks on the weights
             if weights.shape != (query.shape[1], reference.shape[1]):
@@ -803,9 +756,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     f"found `{weights.shape}`."
                 )
             if not np.isfinite(weights).all():
-                raise ValueError(
-                    "Weights matrix contains elements that are not finite."
-                )
+                raise ValueError("Weights matrix contains elements that are not finite.")
             if (weights < 0).any():
                 raise ValueError("Weights matrix contains negative elements.")
 
@@ -818,9 +769,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             elif normalize_weights == NormWeights.SOFTMAX:
                 weights_n = _softmax(_row_normalize(weights), softmax_scale)
             else:
-                raise NotImplementedError(
-                    f"Normalization method `{normalize_weights}` is yet implemented."
-                )
+                raise NotImplementedError(f"Normalization method `{normalize_weights}` is yet implemented.")
 
             # check that the weights row-sum to one now
             if not np.allclose(weights_n.sum(1), 1.0):
@@ -830,9 +779,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             for i, w in enumerate(weights_n):
                 reference += np.dot(query[:, i].X, w[None, :])
         else:
-            raise NotImplementedError(
-                f"Reduction mode `{mode}` is not yet implemented."
-            )
+            raise NotImplementedError(f"Reduction mode `{mode}` is not yet implemented.")
 
         # check that the lineages row-sum to one now
         if not np.allclose(reference.sum(1), 1.0):
@@ -843,9 +790,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             if mode == Reduction.DIST:
                 return (
                     reference,
-                    pd.DataFrame(
-                        data=weights_n, columns=reference.names, index=query.names
-                    ),
+                    pd.DataFrame(data=weights_n, columns=reference.names, index=query.names),
                 )
             return reference, None
 
@@ -909,9 +854,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         states = adata.obs.get(nkey, None)
         if states is None:
-            logg.warning(
-                f"Unable to find states in `adata.obs[{nkey!r}]`. Using default names"
-            )
+            logg.warning(f"Unable to find states in `adata.obs[{nkey!r}]`. Using default names")
         elif not is_categorical_dtype(states):
             logg.warning(
                 f"Expected `adata.obs[{key!r}]` to be `categorical`, "
@@ -921,23 +864,16 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             states = list(states.cat.categories)
             if len(states) != data.shape[1]:
                 logg.warning(
-                    f"Expected to find `{data.shape[1]}` names, found `{len(states)}`. "
-                    f"Using default names"
+                    f"Expected to find `{data.shape[1]}` names, found `{len(states)}`. " f"Using default names"
                 )
         if states is None or len(states) != data.shape[1]:
             states = [str(i) for i in range(data.shape[1])]
 
         colors = adata.uns.get(ckey, None)
         if colors is None:
-            logg.warning(
-                f"Unable to find colors in `adata.uns[{ckey!r}]`. "
-                f"Using default colors"
-            )
+            logg.warning(f"Unable to find colors in `adata.uns[{ckey!r}]`. " f"Using default colors")
         elif len(colors) != data.shape[1]:
-            logg.warning(
-                f"Expected to find `{data.shape[1]}` colors, found `{len(colors)}`. "
-                f"Using default colors"
-            )
+            logg.warning(f"Expected to find `{data.shape[1]}` colors, found `{len(colors)}`. " f"Using default colors")
             colors = None
 
         return Lineage(data, names=states, colors=colors)
@@ -960,11 +896,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         def format_row(r):
             rng = (
                 range(self.shape[1])
-                if not self._is_transposed
-                or (self._is_transposed and self.shape[1] <= _HTML_REPR_THRESH)
-                else list(range(_HT_CELLS))
-                + [...]
-                + list(range(self.shape[1] - _HT_CELLS - 1, self.shape[1] - 1))
+                if not self._is_transposed or (self._is_transposed and self.shape[1] <= _HTML_REPR_THRESH)
+                else list(range(_HT_CELLS)) + [...] + list(range(self.shape[1] - _HT_CELLS - 1, self.shape[1] - 1))
             )
 
             cells = "".join(
@@ -997,10 +930,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if self.shape[0] > _HTML_REPR_THRESH:
             body = "".join(format_row(i) for i in range(_HT_CELLS))
             body += dummy_row()
-            body += "".join(
-                format_row(i)
-                for i in range(self.shape[0] - _HT_CELLS - 1, self.shape[0] - 1)
-            )
+            body += "".join(format_row(i) for i in range(self.shape[0] - _HT_CELLS - 1, self.shape[0] - 1))
         else:
             body = "".join(format_row(i) for i in range(self.shape[0]))
 
@@ -1062,9 +992,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
-    def _check_axis1_shape(
-        self, array: Iterable[Union[str, ColorLike]], msg: str
-    ) -> List[Union[str, ColorLike]]:
+    def _check_axis1_shape(self, array: Iterable[Union[str, ColorLike]], msg: str) -> List[Union[str, ColorLike]]:
         """Check whether the size of the 1D array has the correct length."""
         array = list(array)
         if len(array) != self._n_lineages:
@@ -1093,16 +1021,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     if isinstance(default, str):
                         if default not in self._names_to_ixs:
                             raise KeyError(
-                                f"Invalid lineage name: `{name}`. "
-                                f"Valid names are: `{list(self.names)}`."
+                                f"Invalid lineage name: `{name}`. " f"Valid names are: `{list(self.names)}`."
                             )
                         name = self._names_to_ixs[default]
                     else:
                         name = default
                 else:
-                    raise KeyError(
-                        f"Invalid lineage name `{name!r}`. Valid names are: `{list(self.names)}`."
-                    )
+                    raise KeyError(f"Invalid lineage name `{name!r}`. Valid names are: `{list(self.names)}`.")
             res.append(name)
 
         if make_unique:
@@ -1134,9 +1059,7 @@ class LineageView(Lineage):
     def __new__(cls, lineage: Lineage) -> "LineageView":
         """Create a LineageView."""
         if not isinstance(lineage, Lineage):
-            raise TypeError(
-                f"Cannot create a `{cls.__name__}` of `{type(lineage).__name__}`."
-            )
+            raise TypeError(f"Cannot create a `{cls.__name__}` of `{type(lineage).__name__}`.")
 
         view = np.array(lineage, copy=False).view(cls)
         view._owner = lineage
@@ -1198,9 +1121,7 @@ def _remove_zero_rows(a: np.ndarray, b: np.ndarray) -> Tuple[np.ndarray, np.ndar
     bool_b = (b == 0).any(axis=1)
     mask = ~np.logical_or(bool_a, bool_b)
 
-    logg.warning(
-        f"Removed {a.shape[0] - np.sum(mask)} rows because they contained zeros"
-    )
+    logg.warning(f"Removed {a.shape[0] - np.sum(mask)} rows because they contained zeros")
 
     return a[mask, :], b[mask, :]
 

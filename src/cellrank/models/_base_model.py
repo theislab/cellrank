@@ -1,35 +1,36 @@
-from typing import Any, Dict, List, Tuple, Union, Mapping, Callable, Optional, Sequence
-
 import re
-import wrapt
 import warnings
 from abc import ABC, ABCMeta, abstractmethod
+from collections import defaultdict
 from copy import copy as _copy
 from copy import deepcopy
 from enum import auto
-from collections import defaultdict
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import _minmax, save_fig, valuedispatch, _densify_squeeze
-from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
-from cellrank.kernels.mixins import IOMixin
-from cellrank._utils._lineage import Lineage
+import wrapt
 
 import numpy as np
-from scipy.sparse import spmatrix
-from scipy.ndimage import convolve
 from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import is_numeric_dtype, is_categorical_dtype
+from pandas.core.dtypes.common import is_categorical_dtype, is_numeric_dtype
+from scipy.ndimage import convolve
+from scipy.sparse import spmatrix
 
 import matplotlib as mpl
 from matplotlib import cm
 from matplotlib import colors as mcolors
 from matplotlib import pyplot as plt
-from matplotlib.colors import to_rgb, is_color_like
+from matplotlib.colors import is_color_like, to_rgb
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from anndata import AnnData
+from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._lineage import Lineage
+from cellrank._utils._utils import _densify_squeeze, _minmax, save_fig, valuedispatch
+from cellrank.kernels.mixins import IOMixin
 
 __all__ = ["BaseModel"]
 
@@ -69,9 +70,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
 
         return wrapper
 
-    def array_output(
-        instance: "BaseModel", exc: BaseException, *_args, **kwargs
-    ) -> np.ndarray:
+    def array_output(instance: "BaseModel", exc: BaseException, *_args, **kwargs) -> np.ndarray:
         if not instance._is_bulk:
             raise exc from None
 
@@ -84,9 +83,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
 
         return np.full((n_obs, array_shape), np.nan, dtype=instance._dtype)
 
-    def model_output(
-        instance: "BaseModel", exc: BaseException, *_args, **_kwargs
-    ) -> "FailedModel":
+    def model_output(instance: "BaseModel", exc: BaseException, *_args, **_kwargs) -> "FailedModel":
         if not isinstance(instance, FailedModel):
             instance = FailedModel(instance, exc=exc)
         if not instance._is_bulk:
@@ -133,9 +130,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
 class BaseModelMeta(ABCMeta):
     """Metaclass for all base models."""
 
-    def __new__(
-        cls, clsname: str, superclasses: Tuple[type, ...], attributedict: Dict[str, Any]
-    ):
+    def __new__(cls, clsname: str, superclasses: Tuple[type, ...], attributedict: Dict[str, Any]):
         """
         Create a new instance.
 
@@ -148,7 +143,6 @@ class BaseModelMeta(ABCMeta):
         attributedict
             Dictionary of attributes.
         """
-
         obj = super().__new__(cls, clsname, superclasses, attributedict)
         for fun_name in list(FailedReturnType):
             setattr(
@@ -182,9 +176,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     ):
         if not isinstance(adata, AnnData) and not isinstance(self, FittedModel):
             # FittedModel doesn't need it
-            raise TypeError(
-                f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__}`."
-            )
+            raise TypeError(f"Expected `adata` to be of type `anndata.AnnData`, found `{type(adata).__name__}`.")
         super().__init__()
 
         self._adata = adata
@@ -374,7 +366,6 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
             - :attr:`prepared` - %(base_model_prepared.summary)s
         """
-
         if use_raw:
             if self.adata.raw is None:
                 raise AttributeError("AnnData object has no attribute `.raw`.")
@@ -411,12 +402,10 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             )
         if isinstance(time_range, tuple):
             if len(time_range) != 2:
-                raise ValueError(
-                    f"Expected time range to be a `tuple` of length `2`, found `{len(time_range)}`."
-                )
-            if not isinstance(
-                time_range[0], (float, int, type(None))
-            ) or not isinstance(time_range[1], (float, int, type(None))):
+                raise ValueError(f"Expected time range to be a `tuple` of length `2`, found `{len(time_range)}`.")
+            if not isinstance(time_range[0], (float, int, type(None))) or not isinstance(
+                time_range[1], (float, int, type(None))
+            ):
                 raise TypeError(
                     f"Expected values in time ranges be of types `float` or `int` or `None`, "
                     f"got `{type(time_range[0]).__name__!r}` and `{type(time_range[1]).__name__!r}`."
@@ -430,9 +419,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         if isinstance(weight_threshold, (int, float)):
             weight_threshold = (weight_threshold, weight_threshold)
         if len(weight_threshold) != 2:
-            raise ValueError(
-                f"Expected `weight_threshold` to be of size `2`, found `{len(weight_threshold)}`."
-            )
+            raise ValueError(f"Expected `weight_threshold` to be of size `2`, found `{len(weight_threshold)}`.")
 
         self._obs_names = self.adata.obs_names.values[:]
 
@@ -517,11 +504,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         val_start, val_end = (max(val_start, np.min(x)), min(val_end, np.max(x)))
 
         fil = (x >= val_start) & (x <= val_end)
-        x_test = (
-            np.linspace(val_start, val_end, n_test_points)
-            if n_test_points is not None
-            else x[fil]
-        )
+        x_test = np.linspace(val_start, val_end, n_test_points) if n_test_points is not None else x[fil]
         x, y, w = x[fil], y[fil], w[fil]
         self._obs_names = self._obs_names[fil]
 
@@ -585,22 +568,16 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         Fits the :attr:`model` and returns self.
         """
         if not self.prepared:
-            raise RuntimeError(
-                "The model has not been prepared yet, call `.prepare()` first."
-            )
+            raise RuntimeError("The model has not been prepared yet, call `.prepare()` first.")
 
         self._check("_x", x)
         self._check("_y", y)
         self._check("_w", w, ndim=1)
 
         if self._x.shape != self._y.shape:
-            raise ValueError(
-                f"Inputs and targets differ in shape: `{self._x.shape}` vs. `{self._y.shape}`."
-            )
+            raise ValueError(f"Inputs and targets differ in shape: `{self._x.shape}` vs. `{self._y.shape}`.")
         if self._y.shape[0] != self._w.shape[0]:
-            raise ValueError(
-                f"Inputs and weights differ in shape: `{self._y.shape[0]}` vs. `{self._w.shape[0]}`."
-            )
+            raise ValueError(f"Inputs and weights differ in shape: `{self._y.shape[0]}` vs. `{self._w.shape[0]}`.")
 
         return self
 
@@ -638,9 +615,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @d.get_summary(base="base_model_ci")
     @d.get_full_description(base="base_model_ci")
     @d.dedent
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """
         Calculate the confidence interval.
 
@@ -686,7 +661,6 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                 - :attr:`x_hat` - %(base_model_x_hat.summary)s
                 - :attr:`y_hat` - %(base_model_y_hat.summary)s
         """
-
         use_ixs = self.w > 0
         x_hat = self.x[use_ixs]
         if x_test is None:
@@ -696,9 +670,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         self._y_test = self.predict(x_test, key_added="_x_test", **kwargs)
 
         n = np.sum(use_ixs)
-        sigma_hat = np.sqrt(
-            ((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2)
-        )
+        sigma_hat = np.sqrt(((self.y_hat - self.y[use_ixs].squeeze()) ** 2).sum() / (n - 2))
         mean = np.mean(self.x)
 
         # fmt: off
@@ -812,7 +784,6 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         -------
         %(just_plots)s
         """
-
         if self.y_test is None:
             raise RuntimeError("Run `.predict()` first.")
 
@@ -823,15 +794,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             fig.set_dpi(dpi)
 
         conf_int = conf_int and self.conf_int is not None
-        hide_cells = (
-            hide_cells or self.x_all is None or self.w_all is None or self.y_all is None
-        )
+        hide_cells = hide_cells or self.x_all is None or self.w_all is None or self.y_all is None
 
-        lineage_probability_color = (
-            lineage_color
-            if lineage_probability_color is None
-            else lineage_probability_color
-        )
+        lineage_probability_color = lineage_color if lineage_probability_color is None else lineage_probability_color
 
         scaler = kwargs.pop(
             "scaler",
@@ -841,9 +806,8 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             ),
         )
 
-        if lineage_probability:
-            if ylabel in ("expression", self._gene):
-                ylabel = f"scaled {ylabel}"
+        if lineage_probability and ylabel in ("expression", self._gene):
+            ylabel = f"scaled {ylabel}"
 
         vmin, vmax = None, None
         key, color, typp, mapper = self._get_colors(cell_color, same_plot=same_plot)
@@ -865,15 +829,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             )
 
         if title is None:
-            title = (
-                f"{self._gene} @ {self._lineage}"
-                if self._lineage is not None
-                else f"{self._gene}"
-            )
+            title = f"{self._gene} @ {self._lineage}" if self._lineage is not None else f"{self._gene}"
 
-        ax.plot(
-            self.x_test, scaler(self.y_test), color=lineage_color, lw=lw, label=title
-        )
+        ax.plot(self.x_test, scaler(self.y_test), color=lineage_color, lw=lw, label=title)
 
         if title is not None:
             ax.set_title(title)
@@ -894,11 +852,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                 linestyle="--",
             )
 
-        if (
-            lineage_probability
-            and not isinstance(self, FittedModel)
-            and not np.allclose(self.w, 1.0)
-        ):
+        if lineage_probability and not isinstance(self, FittedModel) and not np.allclose(self.w, 1.0):
             from cellrank.pl._utils import _is_any_gam_mgcv
 
             model = deepcopy(self)
@@ -909,9 +863,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                 y = model.predict()
             elif _is_any_gam_mgcv(model):
                 y = model.predict(
-                    level=lineage_probability_conf_int
-                    if isinstance(lineage_probability_conf_int, float)
-                    else 0.95
+                    level=lineage_probability_conf_int if isinstance(lineage_probability_conf_int, float) else 0.95
                 )
             else:
                 y = model.predict()
@@ -938,12 +890,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
             self._maybe_add_legend(fig, ax, mapper=handle, title=None, **kwargs)
 
-        if (
-            cbar
-            and not hide_cells
-            and not same_plot
-            and not np.allclose(self.w_all, 1.0)
-        ):
+        if cbar and not hide_cells and not same_plot and not np.allclose(self.w_all, 1.0):
             norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="2%", pad=0.1)
@@ -955,9 +902,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             )
             cax.set_ylabel(key)
         elif typp == ColorType.CAT:
-            self._maybe_add_legend(
-                fig, ax, mapper, title=key, loc=obs_legend_loc, is_line=False
-            )
+            self._maybe_add_legend(fig, ax, mapper, title=key, loc=obs_legend_loc, is_line=False)
 
         if save is not None:
             save_fig(fig, save)
@@ -982,9 +927,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         if isinstance(mapper, dict):
             handles = [
-                ax.plot([], [], label=name, color=color)[0]
-                if is_line
-                else ax.scatter([], [], label=name, color=color)
+                ax.plot([], [], label=name, color=color)[0] if is_line else ax.scatter([], [], label=name, color=color)
                 for name, color in mapper.items()
             ]
         else:
@@ -1012,21 +955,14 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         -------
         Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
         """
-
         if arr.ndim not in (1, 2):
-            raise ValueError(
-                f"Expected array to be 1 or 2 dimensional, found `{arr.ndim}` dimension(s)."
-            )
+            raise ValueError(f"Expected array to be 1 or 2 dimensional, found `{arr.ndim}` dimension(s).")
         elif arr.ndim == 2 and arr.shape[1] != 1:
-            raise ValueError(
-                f"Expected the 2nd dimension to be 1, found `{arr.shape[1]}.`"
-            )
+            raise ValueError(f"Expected the 2nd dimension to be 1, found `{arr.shape[1]}.`")
 
         return np.reshape(arr, (-1, 1)).astype(self._dtype)
 
-    def _check(
-        self, attr_name: Optional[str], arr: Optional[np.ndarray], ndim: int = 2
-    ) -> Optional[np.ndarray]:
+    def _check(self, attr_name: Optional[str], arr: Optional[np.ndarray], ndim: int = 2) -> Optional[np.ndarray]:
         """
         Check if the attribute exists with the correct dimension and optionally set it.
 
@@ -1043,7 +979,6 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         -------
         The attribute under ``attr_name``.
         """
-
         if attr_name is None:
             return
         if arr is None:  # already called prepare
@@ -1135,9 +1070,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             self.__class__.__name__,
             self._gene,
             self._lineage,
-            None
-            if self.model is None
-            else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
+            None if self.model is None else _dup_spaces.sub(" ", str(self.model).replace("\n", " ")).strip(),
         )
 
     def _get_colors(
@@ -1145,12 +1078,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[
-        Optional[str],
-        Optional[Union[str, np.ndarray]],
-        ColorType,
-        Optional[Dict[str, Any]],
-    ]:
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
         """
         Get color array.
 
@@ -1198,9 +1126,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             if is_numeric_dtype(self.adata.obs[key]):
                 return key, self.adata.obs[key].values, ColorType.CONT, None
 
-            logg.debug(
-                f"Unable to interpret cell color from type `{infer_dtype(self.adata.obs[key])}`"
-            )
+            logg.debug(f"Unable to interpret cell color from type `{infer_dtype(self.adata.obs[key])}`")
             return None, "black", ColorType.STR, None
 
         if self._use_raw and key in self.adata.raw.var_names:
@@ -1269,13 +1195,9 @@ class FailedModel(BaseModel):
     """
 
     # in a functional programming language like Haskell essentially BaseModel would be a Maybe monad and this Nothing
-    def __init__(
-        self, model: BaseModel, exc: Optional[Union[BaseException, str]] = None
-    ):
+    def __init__(self, model: BaseModel, exc: Optional[Union[BaseException, str]] = None):
         if not isinstance(model, BaseModel):
-            raise TypeError(
-                f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`."
-            )
+            raise TypeError(f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`.")
         if exc is not None:
             if isinstance(exc, str):
                 exc = RuntimeError(exc)
@@ -1321,9 +1243,7 @@ class FailedModel(BaseModel):
     ) -> np.ndarray:
         """Do nothing."""
 
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """Do nothing."""
 
     def default_confidence_interval(
@@ -1343,12 +1263,7 @@ class FailedModel(BaseModel):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[
-        Optional[str],
-        Optional[Union[str, np.ndarray]],
-        ColorType,
-        Optional[Dict[str, Any]],
-    ]:
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
         return None, "black", ColorType.STR, None
 
     def _return_min_max(self, show_conf_int: bool):
@@ -1409,33 +1324,24 @@ class FittedModel(BaseModel):
         self._y_test = _densify_squeeze(y_test, self._dtype)
 
         if self.x_test.ndim != 2 or self.x_test.shape[1] != 1:
-            raise ValueError(
-                f"Expected `x_test` to be of shape `(..., 1)`, found `{self.x_test.shape}`."
-            )
+            raise ValueError(f"Expected `x_test` to be of shape `(..., 1)`, found `{self.x_test.shape}`.")
 
         if self.y_test.shape != (self.x_test.shape[0],):
             raise ValueError(
-                f"Expected `y_test` to be of shape `({self.x_test.shape[0]},)`, "
-                f"found `{self.y_test.shape}`."
+                f"Expected `y_test` to be of shape `({self.x_test.shape[0]},)`, " f"found `{self.y_test.shape}`."
             )
 
         if conf_int is not None:
             self._conf_int = _densify_squeeze(conf_int, self._dtype)
             if self.conf_int.shape != (self.x_test.shape[0], 2):
-                raise ValueError(
-                    f"Expected `conf_int` to be of shape `({self.x_test.shape[0]}, 2)`."
-                )
+                raise ValueError(f"Expected `conf_int` to be of shape `({self.x_test.shape[0]}, 2)`.")
         else:
-            logg.debug(
-                "No `conf_int` have been supplied, will be ignored during plotting"
-            )
+            logg.debug("No `conf_int` have been supplied, will be ignored during plotting")
 
         if x_all is not None and y_all is not None:
             self._x_all = _densify_squeeze(x_all, self._dtype)[:, np.newaxis]
             if self.x_all.ndim != 2 or self.x_all.shape[1] != 1:
-                raise ValueError(
-                    f"Expected `x_all` to be of shape `(..., 1)`, found `{self.x_all.shape}`."
-                )
+                raise ValueError(f"Expected `x_all` to be of shape `(..., 1)`, found `{self.x_all.shape}`.")
 
             self._y_all = _densify_squeeze(y_all, self._dtype)[:, np.newaxis]
             if self.y_all.shape != self.x_all.shape:
@@ -1447,8 +1353,7 @@ class FittedModel(BaseModel):
                 self._w_all = _densify_squeeze(w_all, self._dtype)
                 if self.w_all.ndim != 1 or self.w_all.shape[0] != self.x_all.shape[0]:
                     raise ValueError(
-                        f"Expected `w_all` to be of shape `({self.x_all.shape[0]},)`, "
-                        f"found `{self.w_all.shape}`."
+                        f"Expected `w_all` to be of shape `({self.x_all.shape[0]},)`, " f"found `{self.w_all.shape}`."
                     )
             else:
                 logg.debug("Setting `w_all` to an array of `1`")
@@ -1466,12 +1371,7 @@ class FittedModel(BaseModel):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[
-        Optional[str],
-        Optional[Union[str, np.ndarray]],
-        ColorType,
-        Optional[Dict[str, Any]],
-    ]:
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
         # w_all does not need to be defined
         if same_plot or self.w_all is None or np.allclose(self.w_all, 1.0):
             return None, "black", ColorType.STR, None
@@ -1502,14 +1402,11 @@ class FittedModel(BaseModel):
         return self._y_test
 
     @d.dedent
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""
         if self.conf_int is None:
             raise RuntimeError(
-                "No confidence interval has been supplied. "
-                "Use `conf_int=...` when instantiating this class."
+                "No confidence interval has been supplied. " "Use `conf_int=...` when instantiating this class."
             )
         return self.conf_int
 
@@ -1532,9 +1429,7 @@ class FittedModel(BaseModel):
     def from_model(model: BaseModel) -> "FittedModel":
         """Create a :class:`cellrank.models.FittedModel` instance from :class:`cellrank.models.BaseModel`."""
         if not isinstance(model, BaseModel):
-            raise TypeError(
-                f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`."
-            )
+            raise TypeError(f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`.")
 
         fm = FittedModel(
             model.x_test,

@@ -1,51 +1,53 @@
 from typing import Any, Optional
 
 import pytest
-from _helpers import create_model, assert_array_nan_equal, jax_not_installed_skip
+from _helpers import assert_array_nan_equal, create_model, jax_not_installed_skip
+from numba import njit
+
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_categorical_dtype
+from scipy.sparse import csr_matrix, diags
+from scipy.sparse import rand as srand
+from scipy.sparse import random
 
 import scanpy as sc
 from anndata import AnnData
 from anndata.utils import make_index_unique
+
 from cellrank._utils import Lineage
-from cellrank.models import GAM, BaseModel
-from cellrank.pl._utils import (
-    _create_models,
-    _create_callbacks,
-    _default_model_callback,
-)
+from cellrank._utils._colors import _compute_mean_color
+from cellrank._utils._parallelize import parallelize
 from cellrank._utils._utils import (
-    _one_hot,
     _cluster_X,
     _connected,
-    _partition,
-    _symmetric,
-    _irreducible,
-    _process_series,
-    _gene_symbols_ctx,
     _fuzzy_to_discrete,
+    _gene_symbols_ctx,
+    _irreducible,
     _merge_categorical_series,
+    _one_hot,
+    _partition,
+    _process_series,
     _series_from_one_hot_matrix,
+    _symmetric,
 )
-from cellrank._utils._colors import _compute_mean_color
 from cellrank.kernels._utils import (
+    _calculate_starts,
+    _get_probs_for_zero_vec,
+    _np_apply_along_axis,
     _random_normal,
     _reconstruct_one,
-    _calculate_starts,
-    _np_apply_along_axis,
-    _get_probs_for_zero_vec,
 )
-from cellrank._utils._parallelize import parallelize
 from cellrank.kernels.utils._similarity import (
     _predict_transition_probabilities_jax,
     _predict_transition_probabilities_numpy,
 )
-
-import numpy as np
-import pandas as pd
-from numba import njit
-from scipy.sparse import rand as srand
-from scipy.sparse import diags, random, csr_matrix
-from pandas.api.types import is_categorical_dtype
+from cellrank.models import GAM, BaseModel
+from cellrank.pl._utils import (
+    _create_callbacks,
+    _create_models,
+    _default_model_callback,
+)
 
 
 class TestToolsUtils:
@@ -57,9 +59,7 @@ class TestToolsUtils:
 
     def test_merge_different_index(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-        y = pd.Series(["b", np.nan, np.nan, "d", "a"], index=[5, 4, 3, 2, 1]).astype(
-            "category"
-        )
+        y = pd.Series(["b", np.nan, np.nan, "d", "a"], index=[5, 4, 3, 2, 1]).astype("category")
         with pytest.raises(ValueError):
             _ = _merge_categorical_series(x, y)
 
@@ -132,9 +132,7 @@ class TestToolsUtils:
         colors_x = ["red", "blue"]
         colors_y = ["green", "yellow", "black"]
 
-        _, colors_merged = _merge_categorical_series(
-            x, y, colors_old=colors_x, colors_new=colors_y
-        )
+        _, colors_merged = _merge_categorical_series(x, y, colors_old=colors_x, colors_new=colors_y)
 
         np.testing.assert_array_equal(colors_merged, ["red", "blue", "black"])
 
@@ -154,21 +152,15 @@ class TestToolsUtils:
 
         np.testing.assert_array_equal(colors_merged, ["green", "yellow", "black"])
 
-    def test_matrix_irreducibility(
-        self, test_matrix_1: np.ndarray, test_matrix_2: np.ndarray
-    ):
+    def test_matrix_irreducibility(self, test_matrix_1: np.ndarray, test_matrix_2: np.ndarray):
         assert _irreducible(test_matrix_1)
         assert not _irreducible(test_matrix_2)
 
-    def test_matrix_connectivity(
-        self, test_matrix_1: np.ndarray, test_matrix_3: np.ndarray
-    ):
+    def test_matrix_connectivity(self, test_matrix_1: np.ndarray, test_matrix_3: np.ndarray):
         assert _connected(test_matrix_1)
         assert not _connected(test_matrix_3)
 
-    def test_matrix_symmetry(
-        self, test_matrix_1: np.ndarray, test_matrix_4: np.ndarray
-    ):
+    def test_matrix_symmetry(self, test_matrix_1: np.ndarray, test_matrix_4: np.ndarray):
         assert not _symmetric(test_matrix_1)
         assert _symmetric(test_matrix_4)
 
@@ -178,19 +170,13 @@ class TestToolsUtils:
         test_matrix_2: np.ndarray,
         test_matrix_3: np.ndarray,
     ):
-        np.testing.assert_array_equal(
-            _partition(test_matrix_1)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        )
+        np.testing.assert_array_equal(_partition(test_matrix_1)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
         np.testing.assert_array_equal(_partition(test_matrix_1)[1], [])
 
         np.testing.assert_array_equal(_partition(test_matrix_2)[0][0], [12, 13])
-        np.testing.assert_array_equal(
-            _partition(test_matrix_2)[1][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        )
+        np.testing.assert_array_equal(_partition(test_matrix_2)[1][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 
-        np.testing.assert_array_equal(
-            _partition(test_matrix_3)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
-        )
+        np.testing.assert_array_equal(_partition(test_matrix_3)[0][0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
         np.testing.assert_array_equal(_partition(test_matrix_3)[0][1], [12, 13])
         np.testing.assert_array_equal(_partition(test_matrix_3)[1], [])
 
@@ -276,13 +262,9 @@ class TestProcessSeries:
 
     def test_return_colors(self):
         x = pd.Series(["b", "c", "a", "d", "a"]).astype("category")
-        expected = pd.Series(["a, b", "c, d", "a, b", "c, d", "a, b"]).astype(
-            "category"
-        )
+        expected = pd.Series(["a, b", "c, d", "a, b", "c, d", "a, b"]).astype("category")
 
-        res, colors = _process_series(
-            x, keys=["b, a", "d, c"], colors=["red", "green", "blue", "white"]
-        )
+        res, colors = _process_series(x, keys=["b, a", "d, c"], colors=["red", "green", "blue", "white"])
 
         assert isinstance(res, pd.Series)
         assert is_categorical_dtype(res)
@@ -370,12 +352,8 @@ class TestFuzzyToDiscrete:
 
         # note: removing the overlap should have no effect in this case since there is none.
         # there should also be no critical clusters in this case
-        a_actual_1, c_1 = _fuzzy_to_discrete(
-            a_fuzzy, n_most_likely=2, remove_overlap=True
-        )
-        a_actual_2, c_2 = _fuzzy_to_discrete(
-            a_fuzzy, n_most_likely=2, remove_overlap=False
-        )
+        a_actual_1, c_1 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=2, remove_overlap=True)
+        a_actual_2, c_2 = _fuzzy_to_discrete(a_fuzzy, n_most_likely=2, remove_overlap=False)
         a_expected = np.array(
             [
                 [False, True, False],
@@ -496,9 +474,7 @@ class TestSeriesFromOneHotMatrix:
         expected_series[5] = "1"
 
         assert actual_series.equals(expected_series)
-        np.testing.assert_array_equal(
-            actual_series.cat.categories, expected_series.cat.categories
-        )
+        np.testing.assert_array_equal(actual_series.cat.categories, expected_series.cat.categories)
 
 
 class TestCreateModels:
@@ -575,9 +551,7 @@ class TestCreateModels:
         m1 = create_model(adata)
         m2 = GAM(adata)
 
-        models = _create_models(
-            {"foo": m1, "*": m2}, ["foo", "bar", "baz", "quux"], ["quas", "wex"]
-        )
+        models = _create_models({"foo": m1, "*": m2}, ["foo", "bar", "baz", "quux"], ["quas", "wex"])
         assert set(models.keys()) == {"foo", "bar", "baz", "quux"}
         for k, vs in models.items():
             assert set(vs.keys()) == {"quas", "wex"}
@@ -596,9 +570,7 @@ class TestCreateModels:
         m1 = create_model(adata)
         m2 = GAM(adata)
 
-        models = _create_models(
-            {"foo": {"bar": m1, "baz": m2}}, ["foo"], ["bar", "baz"]
-        )
+        models = _create_models({"foo": {"bar": m1, "baz": m2}}, ["foo"], ["bar", "baz"])
         assert set(models["foo"].keys()) == {"bar", "baz"}
         assert isinstance(models["foo"]["bar"], type(m1))
         assert models["foo"]["bar"] is not m1
@@ -673,9 +645,7 @@ class TestCreateCallbacks:
     def test_create_models_no_models_lineage(self, adata_cflare: AnnData):
         # in contrast to _create_models, incomplete specification leads to default callback
         # i.e. only calling .prepare, which satisfies the minimum requirements
-        cbs = _create_callbacks(
-            adata_cflare, {"foo": {}}, ["foo"], ["bar"], perform_sanity_check=False
-        )
+        cbs = _create_callbacks(adata_cflare, {"foo": {}}, ["foo"], ["bar"], perform_sanity_check=False)
 
         assert cbs.keys() == {"foo"}
         assert cbs["foo"].keys() == {"bar"}
@@ -721,9 +691,7 @@ class TestCreateCallbacks:
         assert cbs["foo"]["bar"] is _default_model_callback
 
     def test_default_callback_dict_no_perf_check(self, adata_cflare: AnnData):
-        cbs = _create_callbacks(
-            adata_cflare, {"foo": {"bar": _default_model_callback}}, ["foo"], ["bar"]
-        )
+        cbs = _create_callbacks(adata_cflare, {"foo": {"bar": _default_model_callback}}, ["foo"], ["bar"])
 
         assert cbs.keys() == {"foo"}
         assert cbs["foo"].keys() == {"bar"}
@@ -911,9 +879,7 @@ class TestKernelUtils:
 
         for axis in [0, 1]:
             for fn in (np.var, np.std):
-                np.testing.assert_allclose(
-                    fn(x, axis=axis), _create_numba_fn(fn)(axis, x)
-                )
+                np.testing.assert_allclose(fn(x, axis=axis), _create_numba_fn(fn)(axis, x))
 
     def test_zero_unif_sum_to_1_vector(self):
         sum_to_1, zero = _get_probs_for_zero_vec(10)
@@ -929,7 +895,7 @@ class TestKernelUtils:
 
         np.testing.assert_array_equal(starts, np.arange(11))
 
-    @pytest.mark.parametrize("seed, shuffle", zip(range(4), [False] * 2 + [True] * 2))
+    @pytest.mark.parametrize(("seed", "shuffle"), zip(range(4), [False] * 2 + [True] * 2))
     def test_reconstruct_one(self, seed: int, shuffle: bool):
         m1 = random(100, 10, random_state=seed, density=0.5, format="lil")
         m1[:, 0] = 0.1
@@ -954,7 +920,7 @@ class TestKernelUtils:
 
     @jax_not_installed_skip
     @pytest.mark.parametrize(
-        "seed, c, s",
+        ("seed", "c", "s"),
         zip(range(4), [True, True, False, False], [True, False, True, False]),
     )
     def test_numpy_and_jax(self, seed: int, c: bool, s: bool):
@@ -962,9 +928,7 @@ class TestKernelUtils:
         x = np.random.normal(size=(100,))
         w = np.random.normal(size=(1, 100))
 
-        np_res, _ = _predict_transition_probabilities_numpy(
-            x[None, :], w, 1, center_mean=c, scale_by_norm=s
-        )
+        np_res, _ = _predict_transition_probabilities_numpy(x[None, :], w, 1, center_mean=c, scale_by_norm=s)
         jax_res = _predict_transition_probabilities_jax(x, w, 1, c, s)
 
         np.testing.assert_allclose(np_res, jax_res)
@@ -1011,13 +975,10 @@ class TestParallelize:
 class TestGeneSymbolsCtxManager:
     @pytest.mark.parametrize("use_raw", [False, True])
     @pytest.mark.parametrize("key", ["symbol", "foo", None])
-    def test_gene_symbols_manager(
-        self, adata: AnnData, key: Optional[str], use_raw: bool
-    ):
+    def test_gene_symbols_manager(self, adata: AnnData, key: Optional[str], use_raw: bool):
         if key == "foo":
-            with pytest.raises(KeyError):
-                with _gene_symbols_ctx(adata, key=key):
-                    pass
+            with pytest.raises(KeyError), _gene_symbols_ctx(adata, key=key):
+                pass
         else:
             raw = adata.raw
             adata_orig = adata.copy().raw.to_adata() if use_raw else adata.copy()
@@ -1042,8 +1003,6 @@ class TestGeneSymbolsCtxManager:
         adata.var["foo"] = "bar"
 
         with _gene_symbols_ctx(adata, key="foo", make_unique=True):
-            np.testing.assert_array_equal(
-                adata.var_names, make_index_unique(adata.var["foo"])
-            )
+            np.testing.assert_array_equal(adata.var_names, make_index_unique(adata.var["foo"]))
 
         np.testing.assert_array_equal(adata.var_names, adata_orig.var_names)

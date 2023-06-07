@@ -1,12 +1,12 @@
 import pytest
 
-from cellrank._utils._colors import _map_names_and_colors, _create_categorical_colors
-
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
 
 from matplotlib.colors import is_color_like
+
+from cellrank._utils._colors import _create_categorical_colors, _map_names_and_colors
 
 
 class TestColors:
@@ -58,9 +58,7 @@ class TestMappingColors:
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
         with pytest.raises(ValueError):
-            _map_names_and_colors(
-                reference, query, colors_reference=["red", "green", "foo"]
-            )
+            _map_names_and_colors(reference, query, colors_reference=["red", "green", "foo"])
 
     def test_mapping_colors_too_few_colors(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
@@ -95,9 +93,7 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        res, c = _map_names_and_colors(
-            reference, query, colors_reference=["red", "green", "blue"]
-        )
+        res, c = _map_names_and_colors(reference, query, colors_reference=["red", "green", "blue"])
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
@@ -110,9 +106,7 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        res, c = _map_names_and_colors(
-            reference, query, colors_reference=["red", "green", "blue", "black"]
-        )
+        res, c = _map_names_and_colors(reference, query, colors_reference=["red", "green", "blue", "black"])
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
@@ -125,9 +119,7 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        res, c = _map_names_and_colors(
-            reference, query, colors_reference=[(1, 0, 0), "green", (0, 0, 1, 0)]
-        )
+        res, c = _map_names_and_colors(reference, query, colors_reference=[(1, 0, 0), "green", (0, 0, 1, 0)])
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
@@ -140,9 +132,7 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        res, c = _map_names_and_colors(
-            reference, query, colors_reference=["red", "red", "red"]
-        )
+        res, c = _map_names_and_colors(reference, query, colors_reference=["red", "red", "red"])
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
@@ -155,9 +145,7 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "foo", "foo"], dtype="category")
 
-        r, c = _map_names_and_colors(
-            reference, query, colors_reference=["red", "red", "red"]
-        )
+        r, c = _map_names_and_colors(reference, query, colors_reference=["red", "red", "red"])
 
         assert list(r.index) == ["bar", "baz", "foo"]
         assert list(r.values) == ["foo_1", "foo_2", "foo_3"]
@@ -167,9 +155,7 @@ class TestMappingColors:
         query = pd.Series(["bar", "bar", "bar"], dtype="category")
         reference = pd.Series(["foo", "foo", "foo"], dtype="category")
 
-        r, c = _map_names_and_colors(
-            reference, query, colors_reference=["red", "red", "red"]
-        )
+        r, c = _map_names_and_colors(reference, query, colors_reference=["red", "red", "red"])
 
         assert list(r.index) == ["bar"]
         assert list(r.values) == ["foo"]
@@ -228,9 +214,7 @@ class TestMappingColors:
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
         y = pd.Series(["b", np.nan, np.nan, "d", "a"]).astype("category")
 
-        res, colors = _map_names_and_colors(
-            x, y, colors_reference=["red", "green", "blue", "yellow"]
-        )
+        res, colors = _map_names_and_colors(x, y, colors_reference=["red", "green", "blue", "yellow"])
 
         assert isinstance(res, pd.Series)
         assert isinstance(colors, list)

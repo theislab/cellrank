@@ -1,43 +1,43 @@
+from types import MappingProxyType
 from typing import (
     Any,
     Dict,
-    Tuple,
-    Union,
     Literal,
     Mapping,
+    NamedTuple,
     Optional,
     Sequence,
-    NamedTuple,
-)
-
-from types import MappingProxyType
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank._utils._utils import (
-    _pairwise,
-    _process_series,
-    _get_cat_and_null_indices,
-    _calculate_lineage_absorption_time_means,
-)
-from cellrank._utils._lineage import Lineage
-from cellrank._utils._linear_solver import _solve_lin_system
-from cellrank.estimators.mixins._utils import (
-    PlotMode,
-    SafeGetter,
-    BaseProtocol,
-    StatesHolder,
-    logger,
-    shadow,
+    Tuple,
+    Union,
 )
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse, spmatrix
 from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse import issparse, spmatrix
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._key import Key
+from cellrank._utils._lineage import Lineage
+from cellrank._utils._linear_solver import _solve_lin_system
+from cellrank._utils._utils import (
+    _calculate_lineage_absorption_time_means,
+    _get_cat_and_null_indices,
+    _pairwise,
+    _process_series,
+)
+from cellrank.estimators.mixins._utils import (
+    BaseProtocol,
+    PlotMode,
+    SafeGetter,
+    StatesHolder,
+    logger,
+    shadow,
+)
 
 __all__ = ["FateProbsMixin"]
 
@@ -162,9 +162,7 @@ def _normalize_abs_times(
     res = {}
     for ln, moment in time_to_absorption.items():
         if moment not in ("mean", "var"):
-            raise ValueError(
-                f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` in `{ln}`."
-            )
+            raise ValueError(f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` in `{ln}`.")
 
         seen = set()
         if isinstance(ln, str):
@@ -176,8 +174,7 @@ def _normalize_abs_times(
             for lin in ln:
                 if lin not in keys:
                     raise ValueError(
-                        f"Invalid absorbing state `{lin!r}` in `{ln}`. "
-                        f"Valid options are `{list(keys)}`."
+                        f"Invalid absorbing state `{lin!r}` in `{ln}`. " f"Valid options are `{list(keys)}`."
                     )
             res[tuple(ln)] = moment
 
@@ -234,9 +231,7 @@ class FateProbsMixin:
     def compute_fate_probabilities(
         self: FateProbsProtocol,
         keys: Optional[Sequence[str]] = None,
-        solver: Union[
-            str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]
-        ] = "gmres",
+        solver: Union[str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]] = "gmres",
         use_petsc: bool = True,
         n_jobs: Optional[int] = None,
         backend: Backend_t = _DEFAULT_BACKEND,
@@ -284,9 +279,7 @@ class FateProbsMixin:
             colors=data.term_states_colors,
         )
 
-        params = self._create_params(
-            remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
-        )
+        params = self._create_params(remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"])
         self._write_fate_probabilities(
             fate_probs,
             params=params,
@@ -330,9 +323,7 @@ class FateProbsMixin:
         %(just_plots)s
         """
         if self.fate_probabilities is None:
-            raise RuntimeError(
-                "Compute fate probabilities first as `.compute_fate_probabilities()`."
-            )
+            raise RuntimeError("Compute fate probabilities first as `.compute_fate_probabilities()`.")
 
         return self._plot_continuous(
             _data=self.fate_probabilities,
@@ -353,9 +344,7 @@ class FateProbsMixin:
         self: FateProbsProtocol,
         keys: Optional[Sequence[str]] = None,
         calculate_variance: bool = False,
-        solver: Union[
-            str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]
-        ] = "gmres",
+        solver: Union[str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]] = "gmres",
         use_petsc: bool = True,
         n_jobs: Optional[int] = None,
         backend: Backend_t = _DEFAULT_BACKEND,
@@ -402,9 +391,7 @@ class FateProbsMixin:
             index=self.adata.obs_names,
         )
 
-        params = self._create_params(
-            remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"]
-        )
+        params = self._create_params(remove=["use_petsc", "n_jobs", "backend", "show_progress_bar"])
         self._write_absorption_times(
             abs_times,
             params=params,
@@ -436,21 +423,16 @@ class FateProbsMixin:
         """  # noqa: D400
         fate_probs = self.fate_probabilities
         if fate_probs is None:
-            raise RuntimeError(
-                "Compute fate probabilities first as `.compute_fate_probabilities()`."
-            )
+            raise RuntimeError("Compute fate probabilities first as `.compute_fate_probabilities()`.")
         if isinstance(early_cells, dict):
             if len(early_cells) != 1:
-                raise ValueError(
-                    f"Expected a dictionary with only 1 key, found `{len(early_cells)}`."
-                )
+                raise ValueError(f"Expected a dictionary with only 1 key, found `{len(early_cells)}`.")
             key = next(iter(early_cells.keys()))
             if key not in self.adata.obs:
                 raise KeyError(f"Unable to find clusters in `adata.obs[{key!r}]`.")
             if not is_categorical_dtype(self.adata.obs[key]):
                 raise TypeError(
-                    f"Expected `adata.obs[{key!r}]` to be categorical, "
-                    f"found `{infer_dtype(self.adata.obs[key])}`."
+                    f"Expected `adata.obs[{key!r}]` to be categorical, " f"found `{infer_dtype(self.adata.obs[key])}`."
                 )
             early_cells = self.adata.obs[key].isin(early_cells[key])
         elif early_cells is not None:
@@ -458,9 +440,7 @@ class FateProbsMixin:
             if not np.issubdtype(early_cells.dtype, np.bool_):
                 early_cells = np.isin(self.adata.obs_names, early_cells)
 
-        values = pd.Series(
-            fate_probs.priming_degree(method, early_cells), index=self.adata.obs_names
-        )
+        values = pd.Series(fate_probs.priming_degree(method, early_cells), index=self.adata.obs_names)
         self._write_lineage_priming(values)
 
         return values
@@ -472,28 +452,20 @@ class FateProbsMixin:
         ctx: Literal["fate_probs", "time_to_absorption"],
     ) -> RecTransStates:
         if self.terminal_states is None:
-            raise RuntimeError(
-                "Compute terminal states first as `.predict_terminal_states()`."
-            )
+            raise RuntimeError("Compute terminal states first as `.predict_terminal_states()`.")
         if keys is not None:
             keys = sorted(set(keys))
 
         # get the transition matrix
         if not issparse(self.transition_matrix):
-            logg.warning(
-                "Attempting to solve a potentially large linear system with dense transition matrix"
-            )
+            logg.warning("Attempting to solve a potentially large linear system with dense transition matrix")
 
         # process the current annotations according to `keys`
-        term_states, colors = _process_series(
-            series=self.terminal_states, keys=keys, colors=self._term_states.colors
-        )
+        term_states, colors = _process_series(series=self.terminal_states, keys=keys, colors=self._term_states.colors)
         # warn in case only one state is left
         keys = list(term_states.cat.categories)
         if ctx == "fate_probs" and len(keys) == 1:
-            logg.warning(
-                "There is only `1` terminal state, all cells will have probability `1` of going there"
-            )
+            logg.warning("There is only `1` terminal state, all cells will have probability `1` of going there")
 
         # get indices corresponding to recurrent and transient states
         rec_indices, trans_indices, name_to_ixs = _get_cat_and_null_indices(term_states)
@@ -505,15 +477,10 @@ class FateProbsMixin:
         s = self.transition_matrix[trans_indices, :][:, rec_indices]
 
         # take individual solutions and piece them together to get absorption probabilities towards the classes
-        macro_ix_helper = np.cumsum(
-            [0] + [len(indices) for indices in name_to_ixs.values()]
-        )
+        macro_ix_helper = np.cumsum([0] + [len(indices) for indices in name_to_ixs.values()])
         # `s` can be sparse or dense, ensure the correct shape
         s = np.concatenate(
-            [
-                s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1)
-                for a, b in _pairwise(macro_ix_helper)
-            ],
+            [s[:, np.arange(a, b)].sum(axis=1).reshape(-1, 1) for a, b in _pairwise(macro_ix_helper)],
             axis=1,
         )
 
@@ -553,9 +520,7 @@ class FateProbsMixin:
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
         )
-        abs_classes = np.zeros(
-            shape=(len(self), len(term_states.cat.categories)), dtype=np.float64
-        )
+        abs_classes = np.zeros(shape=(len(self), len(term_states.cat.categories)), dtype=np.float64)
         for col, rec_class in enumerate(term_states.cat.categories):
             rec_indices = np.where(term_states == rec_class)[0]
             abs_classes[trans_indices, col] = _abs_classes[:, col]
@@ -592,11 +557,7 @@ class FateProbsMixin:
         self.params[key] = dict(params)
         # fmt: on
 
-        return (
-            f"Adding `adata.obsm[{key!r}]`\n"
-            f"       `.fate_probabilities`\n"
-            f"    Finish"
-        )
+        return f"Adding `adata.obsm[{key!r}]`\n" f"       `.fate_probabilities`\n" f"    Finish"
 
     @logger
     @shadow
@@ -609,17 +570,11 @@ class FateProbsMixin:
         self._set("_absorption_times", self.adata.obsm, key=key, value=abs_times)
         self.params[key] = dict(params)
 
-        return (
-            f"Adding `adata.obsm[{key!r}]`\n"
-            f"       `.absorption_times`\n"
-            f"    Finish"
-        )
+        return f"Adding `adata.obsm[{key!r}]`\n" f"       `.absorption_times`\n" f"    Finish"
 
     @logger
     @shadow
-    def _write_lineage_priming(
-        self: FateProbsProtocol, priming_degree: Optional[pd.Series]
-    ) -> str:
+    def _write_lineage_priming(self: FateProbsProtocol, priming_degree: Optional[pd.Series]) -> str:
         self._priming_degree = priming_degree
         key = Key.obs.priming_degree(self.backward)
         self._set("_priming_degree", self.adata.obs, key=key, value=priming_degree)
@@ -693,6 +648,4 @@ class FateProbsMixin:
                 **kwargs,
             )
         except Exception as e:  # noqa: B902
-            raise RuntimeError(
-                f"Unable to reconstruct `.fate_probabilities`. Reason: `{e}`."
-            ) from None
+            raise RuntimeError(f"Unable to reconstruct `.fate_probabilities`. Reason: `{e}`.") from None

@@ -1,17 +1,17 @@
-from typing import Any, Optional
-
 from abc import ABC
-
-from anndata import AnnData
-from cellrank._utils._docs import d
-from cellrank.kernels._utils import require_tmat, _ensure_numeric_ordered
-from cellrank.kernels._base_kernel import BidirectionalKernel
+from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
 
 from matplotlib.colors import Normalize, to_hex
 from matplotlib.pyplot import get_cmap
+
+from anndata import AnnData
+
+from cellrank._utils._docs import d
+from cellrank.kernels._base_kernel import BidirectionalKernel
+from cellrank.kernels._utils import _ensure_numeric_ordered, require_tmat
 
 __all__ = ["ExperimentalTimeKernel"]
 
@@ -48,9 +48,7 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
             **kwargs,
         )
 
-    def _read_from_adata(
-        self, time_key: str, cmap: str = "gnuplot", **kwargs: Any
-    ) -> None:
+    def _read_from_adata(self, time_key: str, cmap: str = "gnuplot", **kwargs: Any) -> None:
         super()._read_from_adata(**kwargs)
 
         self._time_key = time_key

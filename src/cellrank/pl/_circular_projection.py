@@ -1,28 +1,29 @@
-from typing import Any, Tuple, Union, Literal, Mapping, Callable, Optional, Sequence
-
 from enum import auto
-from types import MappingProxyType
 from pathlib import Path
+from types import MappingProxyType
+from typing import Any, Callable, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
-from anndata import AnnData
-from cellrank import logging as logg
-from scanpy._utils import deprecated_arg_names
-from cellrank._utils import Lineage
-from cellrank.pl._utils import _held_karp
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import save_fig, _check_collection, _unique_order_preserving
-from cellrank._utils._lineage import PrimingDegree
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import pairwise_distances
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LogNorm, LinearSegmentedColormap
 from matplotlib.collections import LineCollection
+from matplotlib.colors import LinearSegmentedColormap, LogNorm
+
+from anndata import AnnData
+from scanpy._utils import deprecated_arg_names
+
+from cellrank import logging as logg
+from cellrank._utils import Lineage
+from cellrank._utils._docs import d
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._key import Key
+from cellrank._utils._lineage import PrimingDegree
+from cellrank._utils._utils import _check_collection, _unique_order_preserving, save_fig
+from cellrank.pl._utils import _held_karp
 
 __all__ = ["circular_projection"]
 
@@ -168,9 +169,7 @@ def circular_projection(
           if a method is present in ``keys``.
     """
     if label_distance is not None and label_distance < 0:
-        raise ValueError(
-            f"Expected `label_distance` to be positive, found `{label_distance}`."
-        )
+        raise ValueError(f"Expected `label_distance` to be positive, found `{label_distance}`.")
 
     if label_rot is None:
         label_rot = LabelRot.DEFAULT
@@ -184,9 +183,7 @@ def circular_projection(
         keys = (keys,)
 
     keys = _unique_order_preserving(keys)
-    keys_ = _check_collection(
-        adata, keys, "obs", key_name="Observation", raise_exc=False
-    ) + _check_collection(
+    keys_ = _check_collection(adata, keys, "obs", key_name="Observation", raise_exc=False) + _check_collection(
         adata, keys, "var_names", key_name="Gene", raise_exc=False, use_raw=use_raw
     )
     haystack = set(PrimingDegree)
@@ -214,9 +211,7 @@ def circular_projection(
         X = np.nan_to_num(X, nan=1.0 / probs.nlin, copy=False)
 
     if lineage_order is None:
-        lineage_order = (
-            LineageOrder.OPTIMAL if 3 < probs.nlin <= 20 else LineageOrder.DEFAULT
-        )
+        lineage_order = LineageOrder.OPTIMAL if 3 < probs.nlin <= 20 else LineageOrder.DEFAULT
         logg.debug(f"Set ordering to `{lineage_order}`")
     lineage_order = LineageOrder(lineage_order)
 
@@ -306,9 +301,7 @@ def circular_projection(
                 rot = text.get_rotation()
                 text.set_rotation(rot + 90 + (1 - rot // 180) * 180)
             elif label_rot != LabelRot.DEFAULT:
-                raise NotImplementedError(
-                    f"Label rotation `{label_rot}` is not yet implemented."
-                )
+                raise NotImplementedError(f"Label rotation `{label_rot}` is not yet implemented.")
             text.set_color(color)
 
         if not show_edges:
@@ -321,9 +314,7 @@ def circular_projection(
             points = np.array([x, y]).T.reshape(-1, 1, 2)
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-            cmap = LinearSegmentedColormap.from_list(
-                "fate_prob_cmap", [color, probs.colors[next]], N=_N
-            )
+            cmap = LinearSegmentedColormap.from_list("fate_prob_cmap", [color, probs.colors[next]], N=_N)
             lc = LineCollection(segments, cmap=cmap, zorder=-1)
             lc.set_array(np.linspace(0, 1, _N))
             lc.set_linewidth(2)

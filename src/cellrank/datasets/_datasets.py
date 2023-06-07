@@ -1,11 +1,11 @@
-from typing import Any, Tuple, Union, Literal
-
 import os
 from enum import auto
 from pathlib import Path
+from typing import Any, Literal, Tuple, Union
 
-from scanpy import read
 from anndata import AnnData
+from scanpy import read
+
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
@@ -67,9 +67,7 @@ def _load_dataset_from_url(
     adata = read(fpath, backup_url=url, **kwargs)
 
     if adata.shape != expected_shape:
-        raise ValueError(
-            f"Expected `anndata.AnnData` object to have shape `{expected_shape}`, found `{adata.shape}`."
-        )
+        raise ValueError(f"Expected `anndata.AnnData` object to have shape `{expected_shape}`, found `{adata.shape}`.")
 
     adata.var_names_make_unique()
 
@@ -174,7 +172,7 @@ def reprogramming_morris(
         - `'CellTagDN_XXk'` - CellTag from day `N` from the `XXk` cells ``subset``.
 
     Parameters
-    ---------
+    ----------
     subset
         Whether to return the full object or just a subset. Can be one of:
 
@@ -240,11 +238,7 @@ def reprogramming_schiebinger(
     -----
     The full dataset has approximately 1.4GiB.
     """
-    key = (
-        "reprogramming_schiebinger_serum_subset"
-        if subset_to_serum
-        else "reprogramming_schiebinger"
-    )
+    key = "reprogramming_schiebinger_serum_subset" if subset_to_serum else "reprogramming_schiebinger"
     return _load_dataset_from_url(path, *_datasets[key], **kwargs)
 
 

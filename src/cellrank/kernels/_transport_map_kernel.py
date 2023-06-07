@@ -1,41 +1,42 @@
+import itertools
+import os
+import pathlib
+import types
 from typing import (
     TYPE_CHECKING,
     Any,
     Dict,
-    Tuple,
-    Union,
+    Iterable,
     Literal,
     Mapping,
-    Iterable,
     Optional,
     Sequence,
+    Tuple,
+    Union,
 )
 
-import os
-import types
-import pathlib
-import itertools
 from tqdm.auto import tqdm
-
-import scanpy as sc
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank.settings import settings
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import _normalize
-from cellrank.kernels._base_kernel import UnidirectionalKernel
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 from pandas.api.types import infer_dtype, is_categorical_dtype
 
+import scanpy as sc
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._utils import _normalize
+from cellrank.kernels._base_kernel import UnidirectionalKernel
+from cellrank.settings import settings
+
 __all__ = ["TransportMapKernel"]
 
 if TYPE_CHECKING:
-    from moscot.problems.time import LineageProblem, TemporalProblem
     from moscot.problems.spatiotemporal import SpatioTemporalProblem
+    from moscot.problems.time import LineageProblem, TemporalProblem
 
 
 class SelfTransitions(ModeEnum):
@@ -99,9 +100,7 @@ class TransportMapKernel(UnidirectionalKernel):
         super()._read_from_adata(**kwargs)
         self._time = self.adata.obs[time_key].copy()
         if not is_categorical_dtype(self._time):
-            raise TypeError(
-                f"Expected `adata.obs[{time_key!r}]` to be categorical, found `{infer_dtype(self._time)}`."
-            )
+            raise TypeError(f"Expected `adata.obs[{time_key!r}]` to be categorical, found `{infer_dtype(self._time)}`.")
         self._time = self._time.cat.remove_unused_categories()
         cats = self._time.cat.categories
         self._time_to_ix = dict(zip(cats, range(len(cats))))
@@ -131,8 +130,7 @@ class TransportMapKernel(UnidirectionalKernel):
             raise KeyError(f"Key `{src, tgt}` not found in the `couplings`.")
         if self.couplings[src, tgt] is None:
             raise ValueError(
-                f"Coupling for `{src, tgt}` is not computed. "
-                f"Consider overriding the `compute_coupling` method."
+                f"Coupling for `{src, tgt}` is not computed. " f"Consider overriding the `compute_coupling` method."
             )
         return self.couplings[src, tgt]
 
@@ -196,12 +194,10 @@ class TransportMapKernel(UnidirectionalKernel):
         if self._reuse_cache(cache_params):
             return self
 
-        if (
-            self_transitions == "all" or isinstance(self_transitions, (tuple, list))
-        ) and (conn_weight is None or not (0 < conn_weight < 1)):
-            raise ValueError(
-                f"Expected `conn_weight` to be in interval `(0, 1)`, found `{conn_weight}`."
-            )
+        if (self_transitions == "all" or isinstance(self_transitions, (tuple, list))) and (
+            conn_weight is None or not (0 < conn_weight < 1)
+        ):
+            raise ValueError(f"Expected `conn_weight` to be in interval `(0, 1)`, found `{conn_weight}`.")
 
         for src, tgt in tqdm(self._couplings, unit="time pair"):
             coupling = self.compute_coupling(src, tgt, **kwargs)
@@ -267,9 +263,7 @@ class TransportMapKernel(UnidirectionalKernel):
         from moscot.utils.subset_policy import SequentialPolicy, TriangularPolicy
 
         if not problem.solutions:
-            raise RuntimeError(
-                "Problem contains no solutions. Please run `problem.solve(...)` first."
-            )
+            raise RuntimeError("Problem contains no solutions. Please run `problem.solve(...)` first.")
 
         policy = problem._policy
         if isinstance(policy, SequentialPolicy):
@@ -277,9 +271,7 @@ class TransportMapKernel(UnidirectionalKernel):
         elif isinstance(policy, TriangularPolicy):
             policy = "triu"
         else:
-            raise NotImplementedError(
-                f"Handling `{type(policy)}` policy is not yet implemented."
-            )
+            raise NotImplementedError(f"Handling `{type(policy)}` policy is not yet implemented.")
 
         couplings = {}
         for (t1, t2), solution in problem.solutions.items():
@@ -351,17 +343,13 @@ class TransportMapKernel(UnidirectionalKernel):
             *_, src, tgt = name.split("_")
             couplings[dtype(src), dtype(tgt)] = sc.read(fname)
 
-        return cls(
-            adata, couplings=couplings, time_key=time_key, policy="sequential", **kwargs
-        )
+        return cls(adata, couplings=couplings, time_key=time_key, policy="sequential", **kwargs)
 
     @d.dedent
     def _restich_couplings(
         self,
         couplings: Mapping[Key_t, AnnData],
-        self_transitions: Union[
-            str, SelfTransitions, Sequence[Any]
-        ] = SelfTransitions.DIAGONAL,
+        self_transitions: Union[str, SelfTransitions, Sequence[Any]] = SelfTransitions.DIAGONAL,
         conn_weight: Optional[float] = None,
         **kwargs: Any,
     ) -> AnnData:
@@ -388,13 +376,12 @@ class TransportMapKernel(UnidirectionalKernel):
         if isinstance(self_transitions, (str, SelfTransitions)):
             self_transitions = SelfTransitions(self_transitions)
             if self_transitions == SelfTransitions.ALL:
-                self_transitions = tuple(src for (src, _) in couplings.keys())
+                self_transitions = tuple(src for (src, _) in couplings)
         elif isinstance(self_transitions, Iterable):
             self_transitions = tuple(self_transitions)
         else:
             raise TypeError(
-                f"Expected `self_transitions` to be a `str` or a `Sequence`, "
-                f"found `{type(self_transitions)}`."
+                f"Expected `self_transitions` to be a `str` or a `Sequence`, " f"found `{type(self_transitions)}`."
             )
         self._validate_couplings(couplings)
 
@@ -403,9 +390,7 @@ class TransportMapKernel(UnidirectionalKernel):
         _ = conn_kwargs.pop("key_added", None)
 
         obs_names, obs = {}, {}
-        blocks = [
-            [None] * (len(self._time_to_ix)) for _ in range(len(self._time_to_ix))
-        ]
+        blocks = [[None] * (len(self._time_to_ix)) for _ in range(len(self._time_to_ix))]
         for (src, tgt), coupling in couplings.items():
             src_ix = self._time_to_ix[src]
             tgt_ix = self._time_to_ix[tgt]
@@ -428,9 +413,7 @@ class TransportMapKernel(UnidirectionalKernel):
         elif self_transitions == SelfTransitions.UNIFORM:
             blocks[ref_ix][ref_ix] = np.ones((n, n)) / float(n)
         elif self_transitions == SelfTransitions.CONNECTIVITIES:
-            blocks[ref_ix][ref_ix] = _compute_connectivity_tmat(
-                self.adata[ref_mask], **conn_kwargs
-            )
+            blocks[ref_ix][ref_ix] = _compute_connectivity_tmat(self.adata[ref_mask], **conn_kwargs)
         elif isinstance(self_transitions, tuple):
             verbosity = settings.verbosity
             try:  # ignore overly verbose logging
@@ -445,15 +428,11 @@ class TransportMapKernel(UnidirectionalKernel):
                     )
                     blocks[src_ix][tgt_ix] = (1 - conn_weight) * _normalize(blocks[src_ix][tgt_ix])
                     # fmt: on
-                blocks[ref_ix][ref_ix] = _compute_connectivity_tmat(
-                    self.adata[ref_mask], **conn_kwargs
-                )
+                blocks[ref_ix][ref_ix] = _compute_connectivity_tmat(self.adata[ref_mask], **conn_kwargs)
             finally:
                 settings.verbosity = verbosity
         else:
-            raise NotImplementedError(
-                f"Self transitions' mode `{self_transitions}` is not yet implemented."
-            )
+            raise NotImplementedError(f"Self transitions' mode `{self_transitions}` is not yet implemented.")
 
         index = []
         for ix in range(len(blocks)):
@@ -507,18 +486,12 @@ class TransportMapKernel(UnidirectionalKernel):
         If ``copy = True``, returns sparsified couplings. Otherwise, modifies ``couplings`` in-place.
         """
         if threshold == "auto":
-            thresh = min(
-                adata.X[i].max()
-                for adata in couplings.values()
-                for i in range(adata.n_obs)
-            )
+            thresh = min(adata.X[i].max() for adata in couplings.values() for i in range(adata.n_obs))
             logg.info(f"Using automatic `threshold={thresh}`")
         elif threshold == "auto_local":
             logg.info("Using automatic `threshold` for each src/tgt key separately")
         elif not (0 <= threshold <= 100):
-            raise ValueError(
-                f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`"
-            )
+            raise ValueError(f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`")
 
         for key, adata in couplings.items():
             if sp.issparse(adata.X):
@@ -548,9 +521,7 @@ class TransportMapKernel(UnidirectionalKernel):
 
             # after `zeros_mask` has been handled, to have access to removed row indices
             tmat.eliminate_zeros()
-            couplings[key] = AnnData(
-                tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype
-            )
+            couplings[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
 
         return couplings if copy else None
 
@@ -571,9 +542,7 @@ class TransportMapKernel(UnidirectionalKernel):
         Possibly reordered transport maps.
         """
 
-        def assert_same(
-            expected: Sequence[Any], actual: Sequence[Any], msg: Optional[str] = None
-        ) -> None:
+        def assert_same(expected: Sequence[Any], actual: Sequence[Any], msg: Optional[str] = None) -> None:
             try:
                 pd.testing.assert_series_equal(
                     pd.Series(sorted(expected)),
@@ -620,15 +589,11 @@ class TransportMapKernel(UnidirectionalKernel):
         if policy == "sequential":
             if couplings is None:
                 couplings = {(src, tgt): None for src, tgt in zip(cats[:-1], cats[1:])}
-            reference = sorted(k for ks in couplings.keys() for k in ks)[-1]
+            reference = sorted(k for ks in couplings for k in ks)[-1]
         elif policy == "triu":
             if couplings is None:
-                couplings = {
-                    (src, tgt): None
-                    for src, tgt in itertools.product(cats, cats)
-                    if src < tgt
-                }
-            reference = sorted(k for ks in couplings.keys() for k in ks)[-1]
+                couplings = {(src, tgt): None for src, tgt in itertools.product(cats, cats) if src < tgt}
+            reference = sorted(k for ks in couplings for k in ks)[-1]
         else:
             raise NotImplementedError(f"Handling `{policy}` is not yet implemented.")
 
@@ -661,8 +626,4 @@ def _compute_connectivity_tmat(
     from cellrank.kernels import ConnectivityKernel
 
     sc.pp.neighbors(adata, **kwargs)
-    return (
-        ConnectivityKernel(adata)
-        .compute_transition_matrix(density_normalize=density_normalize)
-        .transition_matrix
-    )
+    return ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize).transition_matrix

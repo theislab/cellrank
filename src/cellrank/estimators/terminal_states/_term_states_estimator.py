@@ -1,26 +1,34 @@
-from typing import Any, Dict, Tuple, Union, Literal, Optional, Sequence
-
 from abc import ABC
 from types import MappingProxyType
+from typing import Any, Dict, Literal, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
+
+import numpy as np
+import pandas as pd
+from pandas.api.types import infer_dtype, is_categorical_dtype
+from scipy.sparse import spmatrix
+
+from matplotlib.colors import to_hex
+
 from anndata import AnnData
+
 from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._utils import (
-    RandomKeys,
-    _unique_order_preserving,
-    _merge_categorical_series,
-    _convert_to_categorical_series,
-)
 from cellrank._utils._colors import (
-    _map_names_and_colors,
     _convert_to_hex_colors,
     _create_categorical_colors,
+    _map_names_and_colors,
 )
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._key import Key
 from cellrank._utils._lineage import Lineage
-from cellrank.kernels._base_kernel import KernelExpression
+from cellrank._utils._utils import (
+    RandomKeys,
+    _convert_to_categorical_series,
+    _merge_categorical_series,
+    _unique_order_preserving,
+)
+from cellrank.estimators._base_estimator import BaseEstimator
 from cellrank.estimators.mixins._utils import (
     PlotMode,
     SafeGetter,
@@ -28,14 +36,7 @@ from cellrank.estimators.mixins._utils import (
     logger,
     shadow,
 )
-from cellrank.estimators._base_estimator import BaseEstimator
-
-import numpy as np
-import pandas as pd
-from scipy.sparse import spmatrix
-from pandas.api.types import infer_dtype, is_categorical_dtype
-
-from matplotlib.colors import to_hex
+from cellrank.kernels._base_kernel import KernelExpression
 
 __all__ = ["TermStatesEstimator"]
 
@@ -240,9 +241,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         if memberships is not None:
             memberships.names = [old_new.get(n, n) for n in memberships.names]
 
-        self._term_states = self._term_states.set(
-            assignment=assignment, memberships=memberships
-        )
+        self._term_states = self._term_states.set(assignment=assignment, memberships=memberships)
         return self
 
     @d.dedent
@@ -296,9 +295,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         if memberships is not None:
             memberships.names = [old_new.get(n, n) for n in memberships.names]
 
-        self._init_states = self._init_states.set(
-            assignment=assignment, memberships=memberships
-        )
+        self._init_states = self._init_states.set(assignment=assignment, memberships=memberships)
         return self
 
     @d.dedent
@@ -359,8 +356,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
             obj = self._term_states
         else:
             raise ValueError(
-                f"Unable to plot `{which!r}` states. "
-                f"Valid options are: `{['all', 'initial', 'terminal']}`."
+                f"Unable to plot `{which!r}` states. " f"Valid options are: `{['all', 'initial', 'terminal']}`."
             )
 
         name = "macrostates" if which == "macro" else f"{which} states"
@@ -413,21 +409,15 @@ class TermStatesEstimator(BaseEstimator, ABC):
         **kwargs: Any,
     ) -> None:
         if not isinstance(_data, pd.Series):
-            raise TypeError(
-                f"Expected `data` to be of type `pandas.Series`, found `{type(_data)}`."
-            )
+            raise TypeError(f"Expected `data` to be of type `pandas.Series`, found `{type(_data)}`.")
         if not is_categorical_dtype(_data):
-            raise TypeError(
-                f"Expected `data` to be `categorical`, found `{infer_dtype(_data)}`."
-            )
+            raise TypeError(f"Expected `data` to be `categorical`, found `{infer_dtype(_data)}`.")
 
         names = list(_data.cat.categories)
         if _colors is None:
             _colors = _create_categorical_colors(len(names))
         if len(_colors) != len(names):
-            raise ValueError(
-                f"Expected `colors` to be of length `{len(names)}`, found `{len(_colors)}`."
-            )
+            raise ValueError(f"Expected `colors` to be of length `{len(names)}`, found `{len(_colors)}`.")
         color_mapper = dict(zip(names, _colors))
 
         states = _unique_order_preserving(states or names)
@@ -436,9 +426,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         for name in states:
             if name not in names:
-                raise ValueError(
-                    f"Invalid name `{name!r}`. Valid options are: `{sorted(names)}`."
-                )
+                raise ValueError(f"Invalid name `{name!r}`. Valid options are: `{sorted(names)}`.")
         _data = _data.cat.set_categories(states)
 
         color = [] if color is None else (color,) if isinstance(color, str) else color
@@ -487,9 +475,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     ) -> None:
         mode = PlotMode(mode)
         if not isinstance(_data, Lineage):
-            raise TypeError(
-                f"Expected data to be of type `Lineage`, found `{type(_data)}`."
-            )
+            raise TypeError(f"Expected data to be of type `Lineage`, found `{type(_data)}`.")
 
         if states is None:
             states = _data.names
@@ -499,9 +485,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         _data = _data[states].copy()
 
         if mode == "time" and same_plot:
-            logg.warning(
-                "Invalid combination `mode='time'` and `same_plot=True`. Using `same_plot=False`"
-            )
+            logg.warning("Invalid combination `mode='time'` and `same_plot=True`. Using `same_plot=False`")
             same_plot = False
 
         _data_X = _data.X  # list(_data.T) behaves differently than a numpy.array

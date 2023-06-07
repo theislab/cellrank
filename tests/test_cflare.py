@@ -1,18 +1,19 @@
+import os
 from typing import Tuple
 
-import os
 import pytest
 from _helpers import assert_estimators_equal
-
-import cellrank as cr
-from anndata import AnnData
-from cellrank.kernels import VelocityKernel, ConnectivityKernel
-from cellrank._utils._key import Key
-from cellrank.estimators.mixins._utils import StatesHolder
 
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
+
+from anndata import AnnData
+
+import cellrank as cr
+from cellrank._utils._key import Key
+from cellrank.estimators.mixins._utils import StatesHolder
+from cellrank.kernels import ConnectivityKernel, VelocityKernel
 
 EPS = np.finfo(np.float64).eps
 
@@ -232,28 +233,18 @@ class TestCFLARE:
         np.testing.assert_allclose(l_iter.X, l_iter_petsc.X, rtol=0, atol=tol)
 
     @pytest.mark.parametrize("calculate_variance", [False, True])
-    def test_compute_absorption_times(
-        self, adata_large: AnnData, calculate_variance: bool
-    ):
+    def test_compute_absorption_times(self, adata_large: AnnData, calculate_variance: bool):
         keys = ["0", "1", "2, 3"]
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
-        mc = (
-            cr.estimators.CFLARE(terminal_kernel)
-            .fit(k=5)
-            .predict(use=4, n_clusters_kmeans=4, method="kmeans")
-        )
+        mc = cr.estimators.CFLARE(terminal_kernel).fit(k=5).predict(use=4, n_clusters_kmeans=4, method="kmeans")
 
         mc.compute_absorption_times(keys=keys, calculate_variance=calculate_variance)
         at = mc.absorption_times
         expected_cols = sorted(
-            [
-                f"{k}_{mod}"
-                for k in keys
-                for mod in ["mean"] + (["var"] if calculate_variance else [])
-            ]
+            [f"{k}_{mod}" for k in keys for mod in ["mean"] + (["var"] if calculate_variance else [])]
         )
         actual_cols = sorted(at.columns)
 
@@ -294,9 +285,7 @@ class TestCFLARE:
         mc.predict(use=2)
         mc.compute_fate_probabilities()
         with pytest.raises(KeyError):
-            mc.compute_lineage_drivers(
-                use_raw=False, cluster_key="clusters", clusters=["foo"]
-            )
+            mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters", clusters=["foo"])
 
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -382,11 +371,7 @@ class TestCFLARE:
 
         arcs = ["0", "2"]
         arc_colors = [
-            c
-            for arc, c in zip(
-                mc_fwd.terminal_states.cat.categories, mc_fwd._term_states.colors
-            )
-            if arc in arcs
+            c for arc, c in zip(mc_fwd.terminal_states.cat.categories, mc_fwd._term_states.colors) if arc in arcs
         ]
 
         mc_fwd.compute_fate_probabilities(keys=arcs)
@@ -435,9 +420,7 @@ class TestCFLARE:
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
-        c._term_states = StatesHolder(
-            assignment=state_annotation, colors=np.array(["#000000", "#ffffff"])
-        )
+        c._term_states = StatesHolder(assignment=state_annotation, colors=np.array(["#000000", "#ffffff"]))
 
         c.compute_fate_probabilities()
         fate_probabilities_query = c.fate_probabilities[state_annotation.isna()]
@@ -471,9 +454,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.set_terminal_states(
-            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
-        )
+        mc.set_terminal_states({"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]})
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         fate_prob = np.zeros((adata_large.n_obs - n_term, n_term))
@@ -484,9 +465,7 @@ class TestCFLARE:
             return_value=fate_prob,
         )
 
-        with pytest.raises(
-            ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."
-        ):
+        with pytest.raises(ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."):
             mc.compute_fate_probabilities()
 
     def test_fate_probs_negative(self, adata_large: AnnData, mocker):
@@ -496,9 +475,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        mc.set_terminal_states(
-            {"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]}
-        )
+        mc.set_terminal_states({"x": adata_large.obs_names[:3], "y": adata_large.obs_names[3:6]})
 
         n_term = np.sum(~pd.isnull(mc.terminal_states))
         fate_prob = np.zeros((adata_large.n_obs - n_term, n_term))
@@ -516,9 +493,7 @@ class TestCFLARE:
 
 class TestCFLAREIO:
     @pytest.mark.parametrize("deep", [False, True])
-    def test_copy(
-        self, adata_cflare_fwd: Tuple[AnnData, cr.estimators.CFLARE], deep: bool
-    ):
+    def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.estimators.CFLARE], deep: bool):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy(deep=deep)
 

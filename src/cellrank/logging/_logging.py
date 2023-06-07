@@ -1,9 +1,8 @@
-from typing import Optional
-
 import logging
-from logging import INFO, DEBUG, ERROR, WARNING, CRITICAL
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import partial, update_wrapper
+from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING
+from typing import Optional
 
 __all__ = [
     "print_versions",
@@ -70,9 +69,7 @@ class _RootLogger(logging.RootLogger):
 
 
 class _LogFormatter(logging.Formatter):
-    def __init__(
-        self, fmt="{levelname}: {message}", datefmt="%Y-%m-%d %H:%M", style="{"
-    ):
+    def __init__(self, fmt="{levelname}: {message}", datefmt="%Y-%m-%d %H:%M", style="{"):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record: logging.LogRecord):
@@ -86,13 +83,9 @@ class _LogFormatter(logging.Formatter):
         if record.time_passed:
             # strip microseconds
             if record.time_passed.microseconds:
-                record.time_passed = timedelta(
-                    seconds=int(record.time_passed.total_seconds())
-                )
+                record.time_passed = timedelta(seconds=int(record.time_passed.total_seconds()))
             if "{time_passed}" in record.msg:
-                record.msg = record.msg.replace(
-                    "{time_passed}", str(record.time_passed)
-                )
+                record.msg = record.msg.replace("{time_passed}", str(record.time_passed))
             else:
                 self._style._fmt += " ({time_passed})"
         if record.deep:
@@ -152,8 +145,7 @@ def print_version_and_date():
 
     Useful for starting a notebook so you see when you started working.
     """
-
-    from cellrank import settings, __full_version__
+    from cellrank import __full_version__, settings
 
     print(
         f"Running CellRank {__full_version__}, on {datetime.now():%Y-%m-%d %H:%M}.",

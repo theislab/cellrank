@@ -1,15 +1,15 @@
-from typing import Iterable, Optional
-
 import warnings
 from inspect import signature
-
-from anndata import AnnData
-from cellrank.models import BaseModel
-from cellrank._utils._docs import d
+from typing import Iterable, Optional
 
 import numpy as np
 from sklearn.base import BaseEstimator
 from sklearn.utils import check_X_y
+
+from anndata import AnnData
+
+from cellrank._utils._docs import d
+from cellrank.models import BaseModel
 
 __all__ = ["SKLearnModel"]
 
@@ -45,9 +45,7 @@ class SKLearnModel(BaseModel):
         ignore_raise: bool = False,
     ):
         if not isinstance(model, BaseEstimator):
-            raise TypeError(
-                f"Expected model to be of type `BaseEstimator`, found `{type(model).__name__!r}`."
-            )
+            raise TypeError(f"Expected model to be of type `BaseEstimator`, found `{type(model).__name__!r}`.")
 
         super().__init__(adata, model)
 
@@ -55,11 +53,7 @@ class SKLearnModel(BaseModel):
         predict_name = self._find_func(self._predict_names)
         ci_name = self._find_func(self._conf_int_names, use_default=True, default=None)
 
-        self._weight_name = (
-            self._find_arg_name(fit_name, self._weight_names)
-            if weight_name is None
-            else weight_name
-        )
+        self._weight_name = self._find_arg_name(fit_name, self._weight_names) if weight_name is None else weight_name
 
         if self._weight_name is None:
             raise RuntimeError(
@@ -69,8 +63,7 @@ class SKLearnModel(BaseModel):
         elif (
             not ignore_raise
             and self._weight_name != ""
-            and self._weight_name
-            not in signature(getattr(self.model, fit_name)).parameters
+            and self._weight_name not in signature(getattr(self.model, fit_name)).parameters
         ):
             raise ValueError(
                 f"Unable to detect `{weight_name!r}` in the signature of `{fit_name!r}`."
@@ -100,7 +93,6 @@ class SKLearnModel(BaseModel):
         -------
         Fits the model and returns self.
         """  # noqa: D400
-
         super().fit(x, y, w, **kwargs)
 
         if self._weight_name not in (None, ""):
@@ -120,9 +112,7 @@ class SKLearnModel(BaseModel):
         return self
 
     @d.dedent
-    def predict(
-        self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs
-    ) -> np.ndarray:
+    def predict(self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs) -> np.ndarray:
         """
         %(base_model_predict.full_desc)s
 
@@ -143,9 +133,7 @@ class SKLearnModel(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """
         %(base_model_ci.full_desc)s
 
@@ -190,19 +178,14 @@ class SKLearnModel(BaseModel):
         -------
         Name of the function or the default name.
         """
-
         for name in func_names:
             if hasattr(self.model, name) and callable(getattr(self.model, name)):
                 return name
         if use_default:
             return default
-        raise RuntimeError(
-            f"Unable to find function and no default specified, searched for `{list(func_names)}`."
-        )
+        raise RuntimeError(f"Unable to find function and no default specified, searched for `{list(func_names)}`.")
 
-    def _find_arg_name(
-        self, func_name: Optional[str], param_names: Iterable[str]
-    ) -> Optional[str]:
+    def _find_arg_name(self, func_name: Optional[str], param_names: Iterable[str]) -> Optional[str]:
         """
         Find an argument in :attr:`model`'s ``func_name``.
 
@@ -217,7 +200,6 @@ class SKLearnModel(BaseModel):
         -------
         The parameter name or `None`, if `None` was found or ``func_name`` was `None`.
         """
-
         if func_name is None:
             return None
 
@@ -235,9 +217,7 @@ class SKLearnModel(BaseModel):
     @d.dedent
     def copy(self) -> "SKLearnModel":
         """%(copy)s"""  # noqa
-        res = SKLearnModel(
-            self.adata, self._model, weight_name=self._weight_name, ignore_raise=True
-        )
+        res = SKLearnModel(self.adata, self._model, weight_name=self._weight_name, ignore_raise=True)
         self._shallowcopy_attributes(res)  # this deepcopies the underlying model
 
         return res

@@ -1,18 +1,19 @@
 import pickle
-import pytest
-from io import BytesIO
-from unittest import mock
 from collections import defaultdict
 from html.parser import HTMLParser
+from io import BytesIO
+from unittest import mock
 
-from cellrank._utils import Lineage
-from cellrank._utils._colors import _compute_mean_color, _create_categorical_colors
-from cellrank._utils._lineage import _HT_CELLS, LineageView, PrimingDegree
+import pytest
 
 import numpy as np
 from pandas import DataFrame
 
 import matplotlib.colors as colors
+
+from cellrank._utils import Lineage
+from cellrank._utils._colors import _compute_mean_color, _create_categorical_colors
+from cellrank._utils._lineage import _HT_CELLS, LineageView, PrimingDegree
 
 
 class SimpleHTMLValidator(HTMLParser):
@@ -472,9 +473,7 @@ class TestLineageAccessor:
 
     def test_reordering(self):
         x = np.random.random((10, 3))
-        l = Lineage(
-            x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
-        )
+        l = Lineage(x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"])
 
         y = l[["baz", "bar", "foo"]]
 
@@ -483,9 +482,7 @@ class TestLineageAccessor:
 
     def test_non_trivial_subset(self):
         x = np.random.random((10, 3))
-        l = Lineage(
-            x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
-        )
+        l = Lineage(x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"])
 
         mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
@@ -497,9 +494,7 @@ class TestLineageAccessor:
 
     def test_non_trivial_subset_2(self):
         x = np.random.random((10, 3))
-        l = Lineage(
-            x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"]
-        )
+        l = Lineage(x, names=["foo", "bar", "baz"], colors=["#ff0000", "#00ff00", "#0000ff"])
 
         mask = np.ones((x.shape[0]), dtype=bool)
         mask[5:] = False
@@ -718,9 +713,7 @@ class TestLineageNormalization:
         assert lin.shape == (10, 2)
         np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
         np.testing.assert_array_equal(lin.names, ["bar, foo", "baz, quux"])
-        np.testing.assert_array_equal(
-            lin.colors, lineage[["foo, bar", "baz, quux"]].colors
-        )
+        np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz, quux"]].colors)
 
     @mock.patch("cellrank._utils._lineage._cosine_sim")
     def test_cosine(self, mocker, lineage: Lineage):
@@ -734,9 +727,7 @@ class TestLineageNormalization:
     @mock.patch("cellrank._utils._lineage._wasserstein_dist")
     def test_wasserstein(self, mocker, lineage: Lineage):
         try:
-            _ = lineage.reduce(
-                "foo", "bar", dist_measure="wasserstein_dist", mode="dist"
-            )
+            _ = lineage.reduce("foo", "bar", dist_measure="wasserstein_dist", mode="dist")
         except ValueError:
             pass
         finally:
@@ -935,15 +926,11 @@ class TestUfuncs:
     def test_pretty_naming_axis_0(self, lineage: Lineage):
         y = lineage.std(axis=0)
 
-        np.testing.assert_array_equal(
-            y.names, ["std of foo", "std of bar", "std of baz", "std of quux"]
-        )
+        np.testing.assert_array_equal(y.names, ["std of foo", "std of bar", "std of baz", "std of quux"])
 
     def test_color_propagation_axis_0(self, lineage: Lineage):
         lineage = lineage.copy()
-        lineage.colors = [
-            ["red", "green", "blue"][i % 3] for i in range(lineage.shape[1])
-        ]
+        lineage.colors = [["red", "green", "blue"][i % 3] for i in range(lineage.shape[1])]
 
         y = lineage.mean(0)
 

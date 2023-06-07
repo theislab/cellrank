@@ -1,26 +1,11 @@
-from typing import Any, Tuple, Union, Literal, Mapping, Optional, Sequence
-
 import math
-from enum import auto
-from types import MappingProxyType
-from pathlib import Path
 from collections import OrderedDict as odict
+from enum import auto
+from pathlib import Path
+from types import MappingProxyType
+from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils import Lineage
-from scanpy.plotting import violin
 from scvelo.plotting import paga
-from cellrank.pl._utils import _position_legend
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import (
-    RandomKeys,
-    save_fig,
-    valuedispatch,
-    _unique_order_preserving,
-)
 
 import numpy as np
 import pandas as pd
@@ -29,8 +14,24 @@ from scipy.sparse import csr_matrix
 import matplotlib as mpl
 import matplotlib.colors
 import matplotlib.pyplot as plt
-from seaborn import heatmap, clustermap
 from matplotlib import cm
+from seaborn import clustermap, heatmap
+
+from anndata import AnnData
+from scanpy.plotting import violin
+
+from cellrank import logging as logg
+from cellrank._utils import Lineage
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._key import Key
+from cellrank._utils._utils import (
+    RandomKeys,
+    _unique_order_preserving,
+    save_fig,
+    valuedispatch,
+)
+from cellrank.pl._utils import _position_legend
 
 __all__ = ["aggregate_fate_probabilities"]
 
@@ -48,9 +49,7 @@ class AggregationMode(ModeEnum):
 @inject_docs(m=AggregationMode)
 def aggregate_fate_probabilities(
     adata: AnnData,
-    mode: Literal[
-        "bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"
-    ] = AggregationMode.PAGA_PIE,
+    mode: Literal["bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"] = AggregationMode.PAGA_PIE,
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
     cluster_key: Optional[str] = "clusters",
@@ -129,9 +128,7 @@ def aggregate_fate_probabilities(
     def _():
         cols = 4 if ncols is None else ncols
         n_rows = math.ceil(len(clusters) / cols)
-        fig = plt.figure(
-            None, (3.5 * cols, 5 * n_rows) if figsize is None else figsize, dpi=dpi
-        )
+        fig = plt.figure(None, (3.5 * cols, 5 * n_rows) if figsize is None else figsize, dpi=dpi)
         fig.tight_layout()
 
         gs = plt.GridSpec(n_rows, cols, figure=fig, wspace=0.5, hspace=0.5)
@@ -218,9 +215,7 @@ def aggregate_fate_probabilities(
 
     @plot.register(AggregationMode.PAGA_PIE)
     def _():
-        colors = {
-            i: odict(zip(probs.colors, mean)) for i, (mean, _) in enumerate(d.values())
-        }
+        colors = {i: odict(zip(probs.colors, mean)) for i, (mean, _) in enumerate(d.values())}
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
         fig.tight_layout()
@@ -272,10 +267,7 @@ def aggregate_fate_probabilities(
             handles = []
             for lineage_name, color in zip(probs.names, colors[0].keys()):
                 handles += [ax.scatter([], [], label=lineage_name, c=color)]
-            if (
-                len(colors[0].keys())
-                != Lineage.from_adata(adata, backward=backward).nlin
-            ):
+            if len(colors[0].keys()) != Lineage.from_adata(adata, backward=backward).nlin:
                 handles += [ax.scatter([], [], label="Rest", c="grey")]
 
             second_legend = _position_legend(
@@ -341,11 +333,7 @@ def aggregate_fate_probabilities(
         tmp = AnnData(csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
         tmp.obs["fate probability"] = data
         tmp.obs[term_states] = (
-            pd.Series(
-                np.concatenate(
-                    [[f"{direction.lower()} {n}"] * adata.n_obs for n in probs.names]
-                )
-            )
+            pd.Series(np.concatenate([[f"{direction.lower()} {n}"] * adata.n_obs for n in probs.names]))
             .astype("category")
             .values
         )
@@ -354,9 +342,7 @@ def aggregate_fate_probabilities(
         )
         tmp.uns[f"{term_states}_colors"] = probs.colors
 
-        fig, ax = plt.subplots(
-            figsize=figsize if figsize is not None else (8, 6), dpi=dpi
-        )
+        fig, ax = plt.subplots(figsize=figsize if figsize is not None else (8, 6), dpi=dpi)
         ax.set_title(term_states.capitalize())
 
         violin(tmp, keys=["fate probability"], ax=ax, **kwargs)
@@ -365,9 +351,7 @@ def aggregate_fate_probabilities(
 
     @plot.register(AggregationMode.HEATMAP)
     def _():
-        data = pd.DataFrame(
-            [mean for mean, _ in d.values()], columns=probs.names, index=clusters
-        ).T
+        data = pd.DataFrame([mean for mean, _ in d.values()], columns=probs.names, index=clusters).T
 
         title = kwargs.pop("title", "average fate per cluster")
         vmin, vmax = data.values.min(), data.values.max()
@@ -445,16 +429,12 @@ def aggregate_fate_probabilities(
                 clusters = [clusters]
             clusters = _unique_order_preserving(clusters)
             if mode in (mode.PAGA, mode.PAGA_PIE):
-                logg.debug(
-                    f"Setting `clusters` to all available ones because of `mode={mode!r}`"
-                )
+                logg.debug(f"Setting `clusters` to all available ones because of `mode={mode!r}`")
                 clusters = list(adata.obs[cluster_key].cat.categories)
             else:
                 for cname in clusters:
                     if cname not in adata.obs[cluster_key].cat.categories:
-                        raise KeyError(
-                            f"Cluster `{cname!r}` not found in `adata.obs[{cluster_key!r}]`."
-                        )
+                        raise KeyError(f"Cluster `{cname!r}` not found in `adata.obs[{cluster_key!r}]`.")
         else:
             clusters = list(adata.obs[cluster_key].cat.categories)
     else:
@@ -477,9 +457,7 @@ def aggregate_fate_probabilities(
 
     d = odict()
     for name in clusters:
-        data = (
-            probs.X if is_all else probs.X[(adata.obs[cluster_key] == name).to_numpy()]
-        )
+        data = probs.X if is_all else probs.X[(adata.obs[cluster_key] == name).to_numpy()]
         mean = np.nanmean(data, axis=0)
         std = np.nanstd(data, axis=0) / np.sqrt(data.shape[0])
         d[name] = [mean, std]
@@ -489,19 +467,10 @@ def aggregate_fate_probabilities(
     if mode == mode.CLUSTERMAP:
         use_clustermap = True
         mode = mode.HEATMAP
-    elif (
-        mode in (AggregationMode.PAGA, AggregationMode.PAGA_PIE)
-        and "paga" not in adata.uns
-    ):
-        raise KeyError(
-            "Compute PAGA first as `scvelo.tl.paga()` or `scanpy.tl.paga()`."
-        )
+    elif mode in (AggregationMode.PAGA, AggregationMode.PAGA_PIE) and "paga" not in adata.uns:
+        raise KeyError("Compute PAGA first as `scvelo.tl.paga()` or `scanpy.tl.paga()`.")
 
-    fig = (
-        plot_violin_no_cluster_key()
-        if mode == AggregationMode.VIOLIN and cluster_key is None
-        else plot(mode)
-    )
+    fig = plot_violin_no_cluster_key() if mode == AggregationMode.VIOLIN and cluster_key is None else plot(mode)
 
     if save is not None:
         save_fig(fig, save)

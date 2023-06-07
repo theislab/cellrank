@@ -1,16 +1,18 @@
-from typing import Any, Tuple, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
+
+from numba import njit, prange
 
 import wrapt
 
-from anndata import AnnData
-from cellrank import logging as logg
-
 import numpy as np
 import pandas as pd
-from numba import njit, prange
-from scipy.sparse import csr_matrix
 from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import is_numeric_dtype, is_categorical_dtype
+from pandas.core.dtypes.common import is_categorical_dtype, is_numeric_dtype
+from scipy.sparse import csr_matrix
+
+from anndata import AnnData
+
+from cellrank import logging as logg
 
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
@@ -33,7 +35,6 @@ def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
     -------
     The reduced array.
     """
-
     assert arr.ndim == 2
     assert axis in [0, 1]
 
@@ -99,21 +100,13 @@ def _random_normal(
     :class:`numpy.ndarray`
         `(n_samples x m.shape[0])` array from normal distribution.
     """
-
     assert m.ndim == 1, "Means are not 1 dimensional."
     assert m.shape == v.shape, "Means and variances have different shape."
 
     if n_samples == 1:
-        return np.expand_dims(
-            np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0
-        )
+        return np.expand_dims(np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)
 
-    return np.array(
-        [
-            [np.random.normal(m[i], v[i]) for _ in prange(n_samples)]
-            for i in prange(m.shape[0])
-        ]
-    ).T
+    return np.array([[np.random.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]).T
 
 
 @njit(**jit_kwargs)
@@ -131,7 +124,6 @@ def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
     :class:`numpy.ndarray`, :class:`numpy.ndarray`
         The probability and variance vectors.
     """
-
     # float32 doesn't have enough precision
     return (
         np.ones(size, dtype=np.float64) / size,
@@ -161,7 +153,6 @@ def _reconstruct_one(
     :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
         The probability and correlation matrix.
     """
-
     assert data.ndim == 2 and data.shape == (
         2,
         mat.nnz,
@@ -179,9 +170,7 @@ def _reconstruct_one(
     cors = csr_matrix((np.array(data[1]), np.array(mat.indices), np.array(mat.indptr)))
 
     if aixs is not None:
-        assert (
-            len(aixs) == probs.shape[0]
-        ), f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
+        assert len(aixs) == probs.shape[0], f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
         probs, cors = probs[aixs], cors[aixs]
 
     probs.eliminate_zeros()
@@ -190,9 +179,7 @@ def _reconstruct_one(
     row_sums = np.array(probs.sum(1).squeeze())
     close_to_1 = np.isclose(row_sums, 1.0)
     if not np.all(close_to_1):
-        raise ValueError(
-            f"Matrix is not row-stochastic. The following rows don't sum to 1: `{row_sums[~close_to_1]}`."
-        )
+        raise ValueError(f"Matrix is not row-stochastic. The following rows don't sum to 1: `{row_sums[~close_to_1]}`.")
 
     return probs, cors
 
@@ -214,7 +201,6 @@ def _calculate_starts(indptr: np.ndarray, ixs: np.ndarray) -> np.ndarray:
     :class:`numpy.ndarray`
         The starting positions.
     """
-
     starts = np.cumsum(indptr[ixs + 1] - indptr[ixs])
     return np.hstack((np.array([0], dtype=starts.dtype), starts))
 
@@ -226,9 +212,7 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
         try:
             return adata.obsm[basis]  # e.g. 'spatial'
         except KeyError:
-            raise KeyError(
-                f"Unable to find a basis in `adata.obsm['X_{basis}']` or `adata.obsm[{basis!r}]`."
-            ) from None
+            raise KeyError(f"Unable to find a basis in `adata.obsm['X_{basis}']` or `adata.obsm[{basis!r}]`.") from None
 
 
 def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
@@ -286,7 +270,5 @@ def require_tmat(
     """Require that the transition matrix is computed before calling the wrapped function."""
     # this can trigger combinations, but not individual kernels
     if instance.transition_matrix is None:
-        raise RuntimeError(
-            "Compute transition matrix first as `.compute_transition_matrix()`."
-        )
+        raise RuntimeError("Compute transition matrix first as `.compute_transition_matrix()`.")
     return wrapped(*args, **kwargs)

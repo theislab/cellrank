@@ -1,7 +1,7 @@
+from textwrap import dedent
 from typing import Any
 
 from docrep import DocstringProcessor
-from textwrap import dedent
 
 __all__ = ["d", "inject_docs"]
 
@@ -244,9 +244,7 @@ d = DocstringProcessor(
     velocity_scheme=_velocity_scheme,
     cond_num=_cond_num,
     soft_scheme=_soft_scheme_fmt.format("", "", ""),
-    soft_scheme_kernel=_soft_scheme_fmt.format(
-        *([" Only used when ``threshold_scheme = 'soft'``."] * 3)
-    ),
+    soft_scheme_kernel=_soft_scheme_fmt.format(*([" Only used when ``threshold_scheme = 'soft'``."] * 3)),
     rw_ixs=_rw_ixs,
     gene_symbols=_gene_symbols,
     absorption_utils=_absorption_utils,

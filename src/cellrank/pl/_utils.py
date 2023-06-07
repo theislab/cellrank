@@ -1,34 +1,23 @@
+from collections import defaultdict, namedtuple
+from copy import copy
+from itertools import combinations
+from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Dict,
     List,
-    Tuple,
-    Union,
     Mapping,
-    TypeVar,
-    Callable,
     Optional,
     Sequence,
+    Tuple,
+    TypeVar,
+    Union,
 )
-
-from copy import copy
-from pathlib import Path
-from itertools import combinations
-from collections import namedtuple, defaultdict
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank.models import GAMR, BaseModel, FailedModel, SKLearnModel
-from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND
-from cellrank._utils._utils import save_fig, _unique_order_preserving
-from cellrank._utils._colors import _create_categorical_colors
-from cellrank.models._base_model import ColorType
-from cellrank._utils._parallelize import parallelize
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import infer_dtype, is_numeric_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 
 import matplotlib as mpl
 import matplotlib.colors as mcolors
@@ -36,16 +25,24 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._colors import _create_categorical_colors
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND
+from cellrank._utils._parallelize import parallelize
+from cellrank._utils._utils import _unique_order_preserving, save_fig
+from cellrank.models import GAMR, BaseModel, FailedModel, SKLearnModel
+from cellrank.models._base_model import ColorType
+
 __all__ = ["composition"]
 
 Queue = TypeVar("Queue")
 Graph = TypeVar("Graph")
 
 
-_ERROR_INCOMPLETE_SPEC = (
-    "No options were specified for {}. "
-    "Consider specifying a fallback model using '*'."
-)
+_ERROR_INCOMPLETE_SPEC = "No options were specified for {}. " "Consider specifying a fallback model using '*'."
 _time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
 _return_model_type = Mapping[str, Mapping[str, BaseModel]]
 _input_model_type = Union[BaseModel, _return_model_type]
@@ -67,10 +64,8 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
     -------
     `True` if any of the models is from R's mgcv package, else `False`.
     """
-
     return isinstance(models, GAMR) or (
-        isinstance(models, dict)
-        and any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
+        isinstance(models, dict) and any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
     )
 
 
@@ -92,9 +87,7 @@ def _create_models(
     The created models.
     """
 
-    def process_lineages(
-        obs_name: str, lin_names: Union[BaseModel, Dict[Optional[str], Any]]
-    ):
+    def process_lineages(obs_name: str, lin_names: Union[BaseModel, Dict[Optional[str], Any]]):
         if isinstance(lin_names, BaseModel):
             # sharing the same models for all lineages
             for lin_name in lineages:
@@ -130,9 +123,7 @@ def _create_models(
             for lin_name in lineages - set(models[obs_name].keys()):
                 models[obs_name][lin_name] = copy(lin_rest_model)
         else:
-            raise ValueError(
-                _ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`")
-            )
+            raise ValueError(_ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`"))
 
     if not len(lineages):
         raise ValueError("No lineages have been selected.")
@@ -142,8 +133,7 @@ def _create_models(
 
     if isinstance(model, BaseModel):
         return {
-            o: {lin: copy(model) for lin in _unique_order_preserving(lineages)}
-            for o in _unique_order_preserving(obs)
+            o: {lin: copy(model) for lin in _unique_order_preserving(lineages)} for o in _unique_order_preserving(obs)
         }
 
     lineages, obs = (
@@ -167,11 +157,7 @@ def _create_models(
             for obs_name in obs - set(model.keys()):
                 process_lineages(obs_name, model.get(obs_name, obs_rest_model))
         elif set(model.keys()) != obs:
-            raise ValueError(
-                _ERROR_INCOMPLETE_SPEC.format(
-                    f"genes `{list(obs - set(model.keys()))}`."
-                )
-            )
+            raise ValueError(_ERROR_INCOMPLETE_SPEC.format(f"genes `{list(obs - set(model.keys()))}`."))
     else:
         raise TypeError(
             f"Class `{type(model).__name__!r}` must be of type `BaseModel` or "
@@ -179,15 +165,11 @@ def _create_models(
         )
 
     if set(models.keys()) & obs != obs:
-        raise ValueError(
-            f"Missing gene models for the following genes: `{list(obs - set(models.keys()))}`."
-        )
+        raise ValueError(f"Missing gene models for the following genes: `{list(obs - set(models.keys()))}`.")
 
     for gene, vs in models.items():
         if set(vs.keys()) & lineages != lineages:
-            raise ValueError(
-                f"Missing lineage models for the gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`."
-            )
+            raise ValueError(f"Missing lineage models for the gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`.")
 
     return models
 
@@ -258,9 +240,7 @@ def _fit_bulk_helper(
                 model.predict()
                 model.confidence_interval()
 
-            res[gene][ln] = (
-                model if return_models else BulkRes(model.x_test, model.y_test)
-            )
+            res[gene][ln] = model if return_models else BulkRes(model.x_test, model.y_test)
 
         if queue is not None:
             queue.put(1)
@@ -319,7 +299,6 @@ def _fit_bulk(
 
     All the lineage of the filtered models.
     """
-
     if isinstance(genes, str):
         genes = [genes]
 
@@ -329,9 +308,7 @@ def _fit_bulk(
     if isinstance(time_range, (tuple, float, int, type(None))):
         time_range = [time_range] * len(lineages)
     elif len(time_range) != len(lineages):
-        raise ValueError(
-            f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`."
-        )
+        raise ValueError(f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`.")
 
     n_jobs = parallel_kwargs.pop("n_jobs", 1)
 
@@ -352,9 +329,7 @@ def _fit_bulk(
     )
     logg.info("    Finish", time=start)
 
-    return _filter_models(
-        models, return_models=return_models, filter_all_failed=filter_all_failed
-    )
+    return _filter_models(models, return_models=return_models, filter_all_failed=filter_all_failed)
 
 
 def _filter_models(
@@ -362,16 +337,10 @@ def _filter_models(
 ) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
     def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
         if return_models:
-            assert isinstance(
-                x, BaseModel
-            ), f"Expected `BaseModel`, found `{type(x).__name__!r}`."
+            assert isinstance(x, BaseModel), f"Expected `BaseModel`, found `{type(x).__name__!r}`."
             return bool(x)
 
-        return (
-            x.x_test is not None
-            and x.y_test is not None
-            and np.all(np.isfinite(x.y_test))
-        )
+        return x.x_test is not None and x.y_test is not None and np.all(np.isfinite(x.y_test))
 
     modelmat = pd.DataFrame(models).T
     modelmask = modelmat.applymap(is_valid)
@@ -381,11 +350,7 @@ def _filter_models(
     filtered_models = {
         gene: {
             ln: models[gene][ln]
-            for ln in (
-                ln
-                for ln in v.keys()
-                if (is_valid(models[gene][ln]) if filter_all_failed else True)
-            )
+            for ln in (ln for ln in v if (is_valid(models[gene][ln]) if filter_all_failed else True))
         }
         for gene, v in to_keep.to_dict().items()
     }
@@ -398,9 +363,7 @@ def _filter_models(
             )
         for ms in models.values():
             for model in ms.values():
-                assert isinstance(
-                    model, FailedModel
-                ), f"Expected `FailedModel`, found `{type(model).__name__!r}`."
+                assert isinstance(model, FailedModel), f"Expected `FailedModel`, found `{type(model).__name__!r}`."
                 model.reraise()
 
     if not np.all(modelmask.values):
@@ -410,11 +373,7 @@ def _filter_models(
             if return_models
             else "Consider specify `return_models=True` for further inspection."
         )
-        logg.debug(
-            "The failed models were:\n`{}`".format(
-                "\n".join(f"    {m}" for m in failed_models)
-            )
-        )
+        logg.debug("The failed models were:\n`{}`".format("\n".join(f"    {m}" for m in failed_models)))
 
     # lineages is the max number of lineages
     return models, filtered_models, tuple(filtered_models.keys()), tuple(to_keep.index)
@@ -486,7 +445,6 @@ def _trends_helper(
     -------
     %(just_plots)s
     """
-
     n_lineages = len(lineage_names)
     if same_plot:
         axes = [axes] * len(lineage_names)
@@ -500,9 +458,7 @@ def _trends_helper(
     same_perc = False  # we need to show colorbar always if percs differ
     if len(percs) != n_lineages or n_lineages == 1:
         if len(percs) != 1:
-            raise ValueError(
-                f"Percentile must be a collection of size `1` or `{n_lineages}`, got `{len(percs)}`."
-            )
+            raise ValueError(f"Percentile must be a collection of size `1` or `{n_lineages}`, got `{len(percs)}`.")
         same_perc = True
         percs = percs * n_lineages
 
@@ -513,9 +469,7 @@ def _trends_helper(
     if same_plot:
         if not transpose:
             lineage_colors = (
-                lineage_cmap.colors
-                if lineage_cmap is not None and hasattr(lineage_cmap, "colors")
-                else lineage_cmap
+                lineage_cmap.colors if lineage_cmap is not None and hasattr(lineage_cmap, "colors") else lineage_cmap
             )
         else:
             # this should be fine w.r.t. to the missing genes, since they are in the same order AND
@@ -530,19 +484,13 @@ def _trends_helper(
             else:
                 lineage_colors = _create_categorical_colors(n_lineages)
     else:
-        lineage_colors = (
-            ("black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap),
-        ) * n_lineages
+        lineage_colors = (("black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap),) * n_lineages
 
     if n_lineages > len(lineage_colors):
-        raise ValueError(
-            f"Expected at least `{n_lineages}` colors, found `{len(lineage_colors)}`."
-        )
+        raise ValueError(f"Expected at least `{n_lineages}` colors, found `{len(lineage_colors)}`.")
 
     lineage_color_mapper = {ln: lineage_colors[i] for i, ln in enumerate(lineage_names)}
-    successful_models = {
-        ln: models[gene][ln] for ln in lineage_names if models[gene][ln]
-    }
+    successful_models = {ln: models[gene][ln] for ln in lineage_names if models[gene][ln]}
 
     if show_prob and same_plot:
         minns, maxxs = zip(
@@ -599,11 +547,7 @@ def _trends_helper(
                 title = None
                 ylabel = "expression" if not ylabel_shown else None
             else:
-                title = (
-                    (name if name is not None else "no lineage")
-                    if show_lineage[i]
-                    else ""
-                )
+                title = (name if name is not None else "no lineage") if show_lineage[i] else ""
                 ylabel = gene if not ylabel_shown else None
 
         model.plot(
@@ -638,44 +582,37 @@ def _trends_helper(
     key, color, typp, mapper = model._get_colors(cell_color, same_plot=same_plot)
     if typp == ColorType.CAT:
         if not hide_cells:
-            model._maybe_add_legend(
-                fig, ax, mapper=mapper, title=key, loc=obs_legend_loc, is_line=False
-            )
-    elif typp == ColorType.CONT:
-        if same_perc and show_cbar and not hide_cells:
-            if isinstance(color, np.ndarray):
-                # plotting cont. observation other than lin. probs as a color
-                vmin = np.min(color)
-                vmax = np.max(color)
-            else:
-                vmin = np.min([model.w_all for model in successful_models.values()])
-                vmax = np.max([model.w_all for model in successful_models.values()])
-            norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+            model._maybe_add_legend(fig, ax, mapper=mapper, title=key, loc=obs_legend_loc, is_line=False)
+    elif typp == ColorType.CONT and same_perc and show_cbar and not hide_cells:
+        if isinstance(color, np.ndarray):
+            # plotting cont. observation other than lin. probs as a color
+            vmin = np.min(color)
+            vmax = np.max(color)
+        else:
+            vmin = np.min([model.w_all for model in successful_models.values()])
+            vmax = np.max([model.w_all for model in successful_models.values()])
+        norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
 
-            for ax in axes:
-                children = [
-                    c
-                    for c in ax.get_children()
-                    if isinstance(c, mpl.collections.PathCollection)
-                ]
-                if len(children):
-                    children[0].set_norm(norm)
+        for ax in axes:
+            children = [c for c in ax.get_children() if isinstance(c, mpl.collections.PathCollection)]
+            if len(children):
+                children[0].set_norm(norm)
 
-            divider = make_axes_locatable(last_ax)
-            cax = divider.append_axes("right", size="2%", pad=0.1)
-            _ = mpl.colorbar.ColorbarBase(
-                cax,
-                norm=norm,
-                cmap=fate_prob_cmap,
-                label=key,
-                ticks=np.linspace(norm.vmin, norm.vmax, 5),
-            )
+        divider = make_axes_locatable(last_ax)
+        cax = divider.append_axes("right", size="2%", pad=0.1)
+        _ = mpl.colorbar.ColorbarBase(
+            cax,
+            norm=norm,
+            cmap=fate_prob_cmap,
+            label=key,
+            ticks=np.linspace(norm.vmin, norm.vmax, 5),
+        )
 
     if same_plot and lineage_names != [None]:
         model._maybe_add_legend(
             fig,
             ax,
-            mapper={ln: lineage_color_mapper[ln] for ln in successful_models.keys()},
+            mapper={ln: lineage_color_mapper[ln] for ln in successful_models},
             loc=legend_loc,
         )
 
@@ -697,7 +634,6 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
     -------
     The created legend.
     """
-
     if legend_loc == "center center out":
         raise ValueError("Invalid option: `'center center out'`.")
     if legend_loc == "best":
@@ -712,13 +648,9 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         height, width, *rest = legend_loc.split(" ")
         if rest:
             if len(rest) != 1:
-                raise ValueError(
-                    f"Expected only 1 additional modifier ('in' or 'out'), found `{list(rest)}`."
-                )
+                raise ValueError(f"Expected only 1 additional modifier ('in' or 'out'), found `{list(rest)}`.")
             elif rest[0] not in ("in", "out"):
-                raise ValueError(
-                    f"Invalid modifier `{rest[0]!r}`. Valid options are: `'in', 'out'`."
-                )
+                raise ValueError(f"Invalid modifier `{rest[0]!r}`. Valid options are: `'in', 'out'`.")
             if rest[0] == "in":  # ignore in, it's default
                 rest = []
 
@@ -749,8 +681,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         loc += " left" if rest else " right"
     else:
         raise ValueError(
-            f"Invalid legend position on x-axis: `{width!r}`. "
-            f"Valid options are: `'left', 'center', 'right'`."
+            f"Invalid legend position on x-axis: `{width!r}`. " f"Valid options are: `'left', 'center', 'right'`."
         )
 
     if rest:
@@ -797,9 +728,7 @@ def _create_callbacks(
     The created callbacks.
     """
 
-    def process_lineages(
-        obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]
-    ) -> None:
+    def process_lineages(obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]) -> None:
         if lin_names is None:
             lin_names = _default_model_callback
 
@@ -814,9 +743,7 @@ def _create_callbacks(
                 f"found `{type(lin_names).__name__!r}`."
             )
 
-        lin_rest_callback = (
-            lin_names.get("*", _default_model_callback) or _default_model_callback
-        )  # do not pop
+        lin_rest_callback = lin_names.get("*", _default_model_callback) or _default_model_callback  # do not pop
         if not callable(lin_rest_callback):
             raise TypeError(
                 f"Expected the lineage fallback callback for gene `{obs_name!r}` to be `callable`, "
@@ -843,22 +770,17 @@ def _create_callbacks(
         from sklearn.svm import SVR
 
         logg.debug("Performing callback sanity checks")
-        for gene in callbacks.keys():
+        for gene in callbacks:
             for lineage, cb in callbacks[gene].items():
                 # create the model here because the callback can search the attribute
                 dummy_model = SKLearnModel(adata, model=SVR())
                 try:
                     model = cb(dummy_model, gene=gene, lineage=lineage, **kwargs)
                     assert model is dummy_model, (
-                        "Creation of new models is not allowed. "
-                        "Ensure that callback returns the same model."
+                        "Creation of new models is not allowed. " "Ensure that callback returns the same model."
                     )
-                    assert (
-                        model.prepared
-                    ), "Model is not prepared. Ensure that callback calls `.prepare()`."
-                    assert (
-                        model._gene == gene
-                    ), f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
+                    assert model.prepared, "Model is not prepared. Ensure that callback calls `.prepare()`."
+                    assert model._gene == gene, f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
                     assert (
                         model._lineage == lineage
                     ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
@@ -910,9 +832,7 @@ def _create_callbacks(
 
     if isinstance(callback, dict):
         # can be specified as None
-        obs_rest_callback = (
-            callback.pop("*", _default_model_callback) or _default_model_callback
-        )
+        obs_rest_callback = callback.pop("*", _default_model_callback) or _default_model_callback
 
         for obs_name, lin_names in callback.items():
             process_lineages(obs_name, lin_names)
@@ -932,15 +852,11 @@ def _create_callbacks(
         )
 
     if set(callbacks.keys()) & obs != obs:
-        raise ValueError(
-            f"Missing gene callbacks for the following genes: `{list(obs - set(callbacks.keys()))}`."
-        )
+        raise ValueError(f"Missing gene callbacks for the following genes: `{list(obs - set(callbacks.keys()))}`.")
 
     for gene, vs in callbacks.items():
         if set(vs.keys()) & lineages != lineages:
-            raise ValueError(
-                f"Missing lineage callbacks for gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`."
-            )
+            raise ValueError(f"Missing lineage callbacks for gene `{gene!r}`: `{list(lineages - set(vs.keys()))}`.")
 
     maybe_sanity_check(callbacks)
 
@@ -980,13 +896,11 @@ def composition(
     -------
     %(just_plots)s
     """
-
     if key not in adata.obs:
         raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
     if not is_categorical_dtype(adata.obs[key]):
         raise TypeError(
-            f"Expected `adata.obs[{key!r}]` is not `categorical`, "
-            f"found `{infer_dtype(adata.obs[key])}`."
+            f"Expected `adata.obs[{key!r}]` is not `categorical`, " f"found `{infer_dtype(adata.obs[key])}`."
         )
 
     colors = adata.uns.get(f"{key}_colors", None)
@@ -1078,9 +992,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
     return opt, np.array(path)[::-1]
 
 
-def _get_categorical_colors(
-    adata: AnnData, cluster_key: str
-) -> Tuple[np.ndarray, Mapping[str, str]]:
+def _get_categorical_colors(adata: AnnData, cluster_key: str) -> Tuple[np.ndarray, Mapping[str, str]]:
     if cluster_key not in adata.obs:
         raise KeyError(f"Unable to find data in `adata.obs[{cluster_key!r}].`")
     if not is_categorical_dtype(adata.obs[cluster_key]):
@@ -1093,9 +1005,7 @@ def _get_categorical_colors(
     try:
         colors = adata.uns[color_key]
     except KeyError:
-        adata.uns[color_key] = colors = _create_categorical_colors(
-            len(adata.obs[cluster_key].cat.categories)
-        )
+        adata.uns[color_key] = colors = _create_categorical_colors(len(adata.obs[cluster_key].cat.categories))
     mapper = dict(zip(adata.obs[cluster_key].cat.categories, colors))
     mapper[np.nan] = "grey"
 
@@ -1114,9 +1024,7 @@ def _get_sorted_colors(
             raise KeyError(f"Unable to find time in `adata.obs[{time_key!r}]`.")
         adata = adata[(adata.obs[time_key] >= tmin) & (adata.obs[time_key] <= tmax)]
         if not adata.n_obs:
-            raise ValueError(
-                f"Specified time range `{[tmin, tmax]}` does not contain any data."
-            )
+            raise ValueError(f"Specified time range `{[tmin, tmax]}` does not contain any data.")
         order = np.argsort(adata.obs[time_key].values)
     else:
         order = np.arange(adata.n_obs)
@@ -1129,11 +1037,7 @@ def _get_sorted_colors(
     for ck in cluster_key:
         try:
             colors, mapper = _get_categorical_colors(adata, ck)
-            res.append(
-                np.array(
-                    [mcolors.to_hex(mapper[v]) for v in adata.obs[ck].values[order]]
-                )
-            )
+            res.append(np.array([mcolors.to_hex(mapper[v]) for v in adata.obs[ck].values[order]]))
         except TypeError:
             if not is_numeric_dtype(adata.obs[ck]):
                 raise TypeError(

@@ -1,10 +1,10 @@
-from typing import Any, Tuple, Union, Optional, Protocol
-
 import pickle
-from pathlib import Path
 from contextlib import contextmanager
+from pathlib import Path
+from typing import Any, Optional, Protocol, Tuple, Union
 
 from anndata import AnnData
+
 from cellrank import logging as logg
 
 __all__ = ["IOMixin"]
@@ -66,7 +66,6 @@ class IOMixin:
         -------
         Nothing, just writes itself to a file using :mod:`pickle`.
         """
-
         fname = str(fname)
         if ext is not None:
             if not ext.startswith("."):
@@ -81,14 +80,11 @@ class IOMixin:
                 pickle.dump(self, fout)
             return
 
-        with self._remove_adata:
-            with open(fname, "wb") as fout:
-                pickle.dump(self, fout)
+        with self._remove_adata, open(fname, "wb") as fout:
+            pickle.dump(self, fout)
 
     @staticmethod
-    def read(
-        fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False
-    ) -> "IOMixin":
+    def read(fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False) -> "IOMixin":
         """
         De-serialize self from a file.
 
@@ -106,28 +102,22 @@ class IOMixin:
         -------
         The de-serialized object.
         """
-
         with open(fname, "rb") as fin:
             obj: IOMixinProtocol = pickle.load(fin)
 
         if hasattr(obj, "adata"):
             if isinstance(obj.adata, AnnData):
                 if adata is not None:
-                    logg.warning(
-                        "Ignoring supplied `adata` object because it is already present"
-                    )
+                    logg.warning("Ignoring supplied `adata` object because it is already present")
                 return obj
 
             if not isinstance(adata, AnnData):
                 raise TypeError(
-                    "This object was saved without its `adata` object. "
-                    "Please supply one as `adata=...`."
+                    "This object was saved without its `adata` object. " "Please supply one as `adata=...`."
                 )
 
             if obj.shape[0] != len(adata):
-                raise ValueError(
-                    f"Expected `adata` to be of length `{len(adata)}`, found `{obj.shape[0]}`."
-                )
+                raise ValueError(f"Expected `adata` to be of length `{len(adata)}`, found `{obj.shape[0]}`.")
             if copy or adata.is_view:
                 adata = adata.copy()
 

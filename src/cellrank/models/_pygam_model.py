@@ -1,30 +1,31 @@
-from typing import Any, Union, Literal, Mapping, Optional
-
 import warnings
+from collections import defaultdict
 from copy import copy as _copy
 from copy import deepcopy
 from enum import auto
 from types import MappingProxyType
-from collections import defaultdict
+from typing import Any, Literal, Mapping, Optional, Union
+
+from pygam import GAM as pGAM
+from pygam import (
+    ExpectileGAM,
+    GammaGAM,
+    InvGaussGAM,
+    LinearGAM,
+    LogisticGAM,
+    PoissonGAM,
+    s,
+)
+
+import numpy as np
 
 from anndata import AnnData
+
 from cellrank import logging as logg
-from cellrank.models import BaseModel
 from cellrank._utils._docs import d
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._utils import _filter_kwargs
-
-import numpy as np
-from pygam import GAM as pGAM
-from pygam import (
-    GammaGAM,
-    LinearGAM,
-    PoissonGAM,
-    InvGaussGAM,
-    LogisticGAM,
-    ExpectileGAM,
-    s,
-)
+from cellrank.models import BaseModel
 
 __all__ = ["GAM"]
 
@@ -95,9 +96,7 @@ class GAM(BaseModel):
         adata: AnnData,
         n_knots: Optional[int] = 6,
         spline_order: int = 3,
-        distribution: Literal[
-            "normal", "binomial", "poisson", "gamma", "gaussian", "inv_gauss"
-        ] = "gamma",
+        distribution: Literal["normal", "binomial", "poisson", "gamma", "gaussian", "inv_gauss"] = "gamma",
         link: Literal["identity", "logit", "inverse", "log", "inverse-squared"] = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
@@ -119,17 +118,13 @@ class GAM(BaseModel):
 
         if expectile is not None:
             if not (0 < expectile < 1):
-                raise ValueError(
-                    f"Expected `expectile` to be in `(0, 1)`, found `{expectile}`."
-                )
+                raise ValueError(f"Expected `expectile` to be in `(0, 1)`, found `{expectile}`.")
             if distribution != "normal" or link != "identity":
                 logg.warning(
                     f"Expectile GAM works only with `normal` distribution and `identity` link function,"
                     f"found `{distribution!r}` distribution and {link!r} link functions."
                 )
-            model = ExpectileGAM(
-                term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs
-            )
+            model = ExpectileGAM(term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs)
         else:
             # doing it like this ensure that user can specify scale
             gam = _gams[distribution, link]
@@ -137,8 +132,7 @@ class GAM(BaseModel):
             filtered_kwargs = _filter_kwargs(gam.__init__, **kwargs)
             if len(kwargs) != len(filtered_kwargs):
                 raise TypeError(
-                    f"Invalid arguments `{list(set(kwargs) - set(filtered_kwargs))}` "
-                    f"for `{type(gam).__name__!r}`."
+                    f"Invalid arguments `{list(set(kwargs) - set(filtered_kwargs))}` " f"for `{type(gam).__name__!r}`."
                 )
 
             filtered_kwargs["link"] = link
@@ -159,9 +153,7 @@ class GAM(BaseModel):
         elif isinstance(grid, str):
             self._grid = object() if grid == "default" else None
         else:
-            raise TypeError(
-                f"Expected `grid` to be `dict`, `str` or `None`, found `{type(grid).__name__!r}`."
-            )
+            raise TypeError(f"Expected `grid` to be `dict`, `str` or `None`, found `{type(grid).__name__!r}`.")
 
     @d.dedent
     def fit(
@@ -208,9 +200,7 @@ class GAM(BaseModel):
                 except Exception as e:  # noqa: B902
                     # workaround for: https://github.com/dswah/pyGAM/issues/273
                     self.model.fit(self.x, self.y, weights=self.w, **kwargs)
-                    logg.error(
-                        f"Grid search failed, reason: `{e}`. Fitting with default values"
-                    )
+                    logg.error(f"Grid search failed, reason: `{e}`. Fitting with default values")
 
             try:
                 self.model.fit(self.x, self.y, weights=self.w, **kwargs)
@@ -254,9 +244,7 @@ class GAM(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(
-        self, x_test: Optional[np.ndarray] = None, **kwargs
-    ) -> np.ndarray:
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
         """
         %(base_model_ci.summary)s
 
@@ -276,9 +264,7 @@ class GAM(BaseModel):
                 category=DeprecationWarning,
                 message=".* is a deprecated alias for the builtin",
             )
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(
-                self._dtype
-            )
+            self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(self._dtype)
 
         return self.conf_int
 

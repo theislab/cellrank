@@ -1,22 +1,22 @@
-from typing import Any, Union, Literal, Callable, Optional
-
 from enum import auto
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
-from cellrank._utils._utils import _connected, _irreducible
-from cellrank.kernels.mixins import ConnectivityMixin
-from cellrank.kernels._base_kernel import BidirectionalKernel
-from cellrank.kernels.utils._pseudotime_scheme import (
-    ThresholdSchemeABC,
-    HardThresholdScheme,
-    SoftThresholdScheme,
-    CustomThresholdScheme,
-)
+from typing import Any, Callable, Literal, Optional, Union
 
 import numpy as np
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t, ModeEnum
+from cellrank._utils._utils import _connected, _irreducible
+from cellrank.kernels._base_kernel import BidirectionalKernel
+from cellrank.kernels.mixins import ConnectivityMixin
+from cellrank.kernels.utils._pseudotime_scheme import (
+    CustomThresholdScheme,
+    HardThresholdScheme,
+    SoftThresholdScheme,
+    ThresholdSchemeABC,
+)
 
 __all__ = ["PseudotimeKernel"]
 
@@ -137,9 +137,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
                 scheme = HardThresholdScheme()
                 kwargs["frac_to_keep"] = frac_to_keep
             else:
-                raise NotImplementedError(
-                    f"Threshold scheme `{threshold_scheme}` is not yet implemented."
-                )
+                raise NotImplementedError(f"Threshold scheme `{threshold_scheme}` is not yet implemented.")
         elif isinstance(threshold_scheme, ThresholdSchemeABC):
             scheme = threshold_scheme
         elif callable(threshold_scheme):

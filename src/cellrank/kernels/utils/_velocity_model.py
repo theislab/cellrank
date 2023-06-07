@@ -1,16 +1,15 @@
-from typing import Any, Tuple, Union, Callable, Optional
-
 from abc import ABC, abstractmethod
 from enum import auto
 from math import fsum
-
-from cellrank._utils._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
-from cellrank.kernels._utils import _random_normal, _calculate_starts
-from cellrank._utils._parallelize import parallelize
-from cellrank.kernels.utils._similarity import SimilarityABC
+from typing import Any, Callable, Optional, Tuple, Union
 
 import numpy as np
-from scipy.sparse import spmatrix, csr_matrix
+from scipy.sparse import csr_matrix, spmatrix
+
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t, ModeEnum
+from cellrank._utils._parallelize import parallelize
+from cellrank.kernels._utils import _calculate_starts, _random_normal
+from cellrank.kernels.utils._similarity import SimilarityABC
 
 __all__ = ["Deterministic", "Stochastic", "MonteCarlo"]
 
@@ -49,9 +48,7 @@ class ModelABC(ABC):
         self._dtype = dtype
 
     @abstractmethod
-    def _compute(
-        self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def _compute(self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]:
         pass
 
     def __call__(
@@ -69,15 +66,11 @@ class ModelABC(ABC):
             backend=backend,
             show_progress_bar=show_progress_bar,
             as_array=False,
-            extractor=lambda data: self._reconstruct_output(
-                np.concatenate(data, axis=-1), ixs
-            ),
+            extractor=lambda data: self._reconstruct_output(np.concatenate(data, axis=-1), ixs),
             unit=self._unit,
         )(**kwargs)
 
-    def _compute_helper(
-        self, ixs: np.ndarray, queue=None, **kwargs
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def _compute_helper(self, ixs: np.ndarray, queue=None, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         indptr, indices = self._conn.indptr, self._conn.indices
         starts = _calculate_starts(indptr, ixs)
         probs_logits = np.empty((2, starts[-1]), dtype=np.float64)
@@ -89,9 +82,7 @@ class ModelABC(ABC):
 
             ps, ls = self._compute(ix, neigh_ixs, **kwargs)
             if np.shape(ps) != (n_neigh,):
-                raise ValueError(
-                    f"Expected row of shape `{(2, n_neigh)}`, found `{np.shape(ps)}`."
-                )
+                raise ValueError(f"Expected row of shape `{(2, n_neigh)}`, found `{np.shape(ps)}`.")
 
             probs_logits[0, starts[i] : starts[i] + n_neigh] = ps
             probs_logits[1, starts[i] : starts[i] + n_neigh] = ls
@@ -137,9 +128,7 @@ class ModelABC(ABC):
             return data
 
         if data.shape != (2, self._conn.nnz):
-            raise ValueError(
-                f"Dimension or shape mismatch: `{data.shape}`, `{(2, self._conn.nnz)}`."
-            )
+            raise ValueError(f"Dimension or shape mismatch: `{data.shape}`, `{(2, self._conn.nnz)}`.")
 
         if ixs is None:
             aixs, conn = None, self._conn
@@ -150,9 +139,7 @@ class ModelABC(ABC):
         probs, logits = reconstruct(data[0]), reconstruct(data[1])
         close_to_1 = np.isclose(probs.sum(1), 1.0)
         if not np.all(close_to_1):
-            raise ValueError(
-                f"Matrix is not row-stochastic, `{(~close_to_1).sum()}` do not sum to 1."
-            )
+            raise ValueError(f"Matrix is not row-stochastic, `{(~close_to_1).sum()}` do not sum to 1.")
 
         return probs, logits
 
@@ -223,9 +210,7 @@ class Stochastic(ModelABC):
     ):
         super().__init__(conn, x, vmean, dtype=dtype, **kwargs)
         if not hasattr(self._similarity, "hessian"):
-            raise AttributeError(
-                "SimilarityABC scheme doesn't have a `hessian` function."
-            )
+            raise AttributeError("SimilarityABC scheme doesn't have a `hessian` function.")
         self._var = vvar.astype(dtype, copy=False)
 
     def _compute(

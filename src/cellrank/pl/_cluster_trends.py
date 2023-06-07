@@ -1,32 +1,6 @@
-from typing import Any, Dict, Tuple, Union, Optional, Sequence
-
-from types import MappingProxyType
 from pathlib import Path
-
-import scanpy as sc
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils import Lineage
-from cellrank.pl._utils import (
-    _fit_bulk,
-    _get_backend,
-    _callback_type,
-    _create_models,
-    _time_range_type,
-    _create_callbacks,
-    _input_model_type,
-    _get_sorted_colors,
-    _return_model_type,
-)
-from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
-from cellrank._utils._utils import (
-    save_fig,
-    _genesymbols,
-    _check_collection,
-    _unique_order_preserving,
-)
-from cellrank._utils._parallelize import _get_n_cores
+from types import MappingProxyType
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -34,6 +8,32 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, is_color_like
 from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+
+import scanpy as sc
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils import Lineage
+from cellrank._utils._docs import d
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._parallelize import _get_n_cores
+from cellrank._utils._utils import (
+    _check_collection,
+    _genesymbols,
+    _unique_order_preserving,
+    save_fig,
+)
+from cellrank.pl._utils import (
+    _callback_type,
+    _create_callbacks,
+    _create_models,
+    _fit_bulk,
+    _get_backend,
+    _get_sorted_colors,
+    _input_model_type,
+    _return_model_type,
+    _time_range_type,
+)
 
 __all__ = ["cluster_trends"]
 
@@ -138,9 +138,7 @@ def cluster_trends(
           shape `(n_genes, n_points)` containing the clustered genes.
     """
 
-    def plot_cluster(
-        row: int, col: int, cluster: str, sharey_ax: Optional[str] = None
-    ) -> Optional[plt.Axes]:
+    def plot_cluster(row: int, col: int, cluster: str, sharey_ax: Optional[str] = None) -> Optional[plt.Axes]:
         gss = GridSpecFromSubplotSpec(
             row_delta,
             1,
@@ -159,9 +157,7 @@ def cluster_trends(
         ax.plot(mean, lw=2, color="black")
         ax.plot(mean - sd, lw=1.5, color="black", linestyle="--")
         ax.plot(mean + sd, lw=1.5, color="black", linestyle="--")
-        ax.fill_between(
-            range(len(mean)), mean - sd, mean + sd, color="black", alpha=0.1
-        )
+        ax.fill_between(range(len(mean)), mean - sd, mean + sd, color="black", alpha=0.1)
 
         ax.set_title(f"cluster {cluster}")
         ax.set_xticks([])
@@ -182,9 +178,7 @@ def cluster_trends(
                 ax_clusters.set_yticks([])
 
             ax_clusters.set_xticks(np.linspace(0, len(colors), 5))
-            ax_clusters.set_xticklabels(
-                [f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)]
-            )
+            ax_clusters.set_xticklabels([f"{v:.3f}" for v in np.linspace(tmin, tmax, 5)])
 
         return ax if sharey else None
 
@@ -232,13 +226,9 @@ def cluster_trends(
 
         # sanity check
         if trends.n_obs != len(genes):
-            raise RuntimeError(
-                f"Expected to find `{len(genes)}` genes, found `{trends.n_obs}`."
-            )
+            raise RuntimeError(f"Expected to find `{len(genes)}` genes, found `{trends.n_obs}`.")
         if trends.n_vars != n_points:
-            raise RuntimeError(
-                f"Expected to find `{n_points}` points, found `{trends.n_vars}`."
-            )
+            raise RuntimeError(f"Expected to find `{n_points}` points, found `{trends.n_vars}`.")
 
         random_state = np.random.RandomState(random_state).randint(2**16)
 
@@ -272,8 +262,7 @@ def cluster_trends(
     for c in clusters:
         if c not in trends.obs["clusters"].cat.categories:
             raise ValueError(
-                f"Invalid cluster name `{c!r}`. "
-                f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
+                f"Invalid cluster name `{c!r}`. " f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
             )
 
     nrows = int(np.ceil(len(clusters) / ncols))

@@ -1,37 +1,10 @@
-from typing import Any, Dict, List, Tuple, Union, Literal, Optional, Sequence
-
 import os
+from collections import defaultdict
+from collections.abc import Iterable
 from enum import auto
 from math import fabs
 from pathlib import Path
-from collections import defaultdict
-from collections.abc import Iterable
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils import Lineage
-from cellrank.pl._utils import (
-    _fit_bulk,
-    _get_backend,
-    _callback_type,
-    _create_models,
-    _time_range_type,
-    _create_callbacks,
-    _input_model_type,
-    _return_model_type,
-    _get_categorical_colors,
-)
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import _DEFAULT_BACKEND, ModeEnum, Backend_t
-from cellrank._utils._utils import (
-    save_fig,
-    _genesymbols,
-    valuedispatch,
-    _min_max_scale,
-    _check_collection,
-    _unique_order_preserving,
-)
-from cellrank._utils._parallelize import _get_n_cores
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -40,10 +13,37 @@ from scipy.ndimage.filters import convolve
 import matplotlib as mpl
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from seaborn import clustermap
 from matplotlib import cm
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from seaborn import clustermap
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils import Lineage
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t, ModeEnum
+from cellrank._utils._parallelize import _get_n_cores
+from cellrank._utils._utils import (
+    _check_collection,
+    _genesymbols,
+    _min_max_scale,
+    _unique_order_preserving,
+    save_fig,
+    valuedispatch,
+)
+from cellrank.pl._utils import (
+    _callback_type,
+    _create_callbacks,
+    _create_models,
+    _fit_bulk,
+    _get_backend,
+    _get_categorical_colors,
+    _input_model_type,
+    _return_model_type,
+    _time_range_type,
+)
 
 __all__ = ["heatmap"]
 
@@ -91,9 +91,7 @@ def heatmap(
     dpi: Optional[int] = None,
     save: Optional[Union[str, Path]] = None,
     **kwargs: Any,
-) -> Optional[
-    Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]
-]:
+) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
     """
     Plot a heatmap of smoothed gene expression along specified lineages.
 
@@ -175,10 +173,7 @@ def heatmap(
     def find_indices(series: pd.Series, values) -> List[int]:
         def find_nearest(array: np.ndarray, value: float) -> int:
             ix = np.searchsorted(array, value, side="left")
-            if ix > 0 and (
-                ix == len(array)
-                or fabs(value - array[ix - 1]) < fabs(value - array[ix])
-            ):
+            if ix > 0 and (ix == len(array) or fabs(value - array[ix - 1]) < fabs(value - array[ix])):
                 return int(ix - 1)
             return int(ix)
 
@@ -194,18 +189,14 @@ def heatmap(
             return lin.copy()
         return convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
 
-    def create_col_colors(
-        lname: str, rng: np.ndarray
-    ) -> Tuple[np.ndarray, mcolors.Colormap, mcolors.Normalize]:
+    def create_col_colors(lname: str, rng: np.ndarray) -> Tuple[np.ndarray, mcolors.Colormap, mcolors.Normalize]:
         color = probs[lname].colors[0]
         lin = subset_lineage(lname, rng)
 
         h, _, v = mcolors.rgb_to_hsv(mcolors.to_rgb(color))
         end_color = mcolors.hsv_to_rgb([h, 1, v])
 
-        lineage_cmap = mcolors.LinearSegmentedColormap.from_list(
-            "lineage_cmap", ["#ffffff", end_color], N=len(rng)
-        )
+        lineage_cmap = mcolors.LinearSegmentedColormap.from_list("lineage_cmap", ["#ffffff", end_color], N=len(rng))
         norm = mcolors.Normalize(vmin=np.min(lin), vmax=np.max(lin))
         scalar_map = cm.ScalarMappable(cmap=lineage_cmap, norm=norm)
 
@@ -219,9 +210,7 @@ def heatmap(
         colors, mapper = _get_categorical_colors(adata, cluster_key)
         ixs = find_indices(adata.obs[time_key], rng)
 
-        return np.array(
-            [mcolors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values]
-        )
+        return np.array([mcolors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values])
 
     def create_cbar(
         ax,
@@ -261,17 +250,13 @@ def heatmap(
             x = 0
             for i, (color, x, y1, y2) in enumerate(zip(colors, xs, y1, y2)):
                 dx = (xs[i + 1] - xs[i]) if i < len(x) else (xs[-1] - xs[-2])
-                ax.add_patch(
-                    plt.Rectangle((x, y1), dx, y2 - y1, color=color, ec=color, **kwargs)
-                )
+                ax.add_patch(plt.Rectangle((x, y1), dx, y2 - y1, color=color, ec=color, **kwargs))
 
             ax.plot(x, y2, lw=0)
 
         fig, axes = plt.subplots(
             nrows=len(genes) + show_fate_probabilities,
-            figsize=(12, len(genes) + len(lineages) * lineage_height)
-            if figsize is None
-            else figsize,
+            figsize=(12, len(genes) + len(lineages) * lineage_height) if figsize is None else figsize,
             dpi=dpi,
             constrained_layout=True,
         )
@@ -301,9 +286,7 @@ def heatmap(
                     y = np.ones_like(x)
                     c = subset_lineage(ln, x.squeeze())
 
-                    color_fill_rec(
-                        ax, x, y * ix, y * (ix + lineage_height), colors=norm(c)
-                    )
+                    color_fill_rec(ax, x, y * ix, y * (ix + lineage_height), colors=norm(c))
 
                     ix += lineage_height
                     ys.append(ix)
@@ -312,9 +295,7 @@ def heatmap(
                     y = np.ones_like(x)
                     c = _min_max_scale(c) if scale else c
 
-                    color_fill_rec(
-                        ax, x, y * ix, y * (ix + lineage_height), colors=norm(c)
-                    )
+                    color_fill_rec(ax, x, y * ix, y * (ix + lineage_height), colors=norm(c))
 
                     ix += lineage_height
                     ys.append(ix)
@@ -324,9 +305,7 @@ def heatmap(
             ax.set_xticks(np.linspace(x_min, x_max, _N_XTICKS))
 
             ax.set_yticks(np.array(ys[:-1]) + lineage_height / 2)
-            ax.spines["left"].set_position(
-                ("data", 0)
-            )  # move the left spine to the rectangles to get nicer yticks
+            ax.spines["left"].set_position(("data", 0))  # move the left spine to the rectangles to get nicer yticks
             ax.set_yticklabels(models.keys(), ha="right")
 
             ax.set_title(gene, fontdict={"fontsize": fontsize})
@@ -342,11 +321,7 @@ def heatmap(
                     ticks=np.linspace(vmin, vmax, 5),
                     norm=norm,
                     cmap=cmap,
-                    label="value"
-                    if gene == "fate probability"
-                    else "scaled expression"
-                    if scale
-                    else "expression",
+                    label="value" if gene == "fate probability" else "scaled expression" if scale else "expression",
                 )
 
             ax.tick_params(
@@ -393,9 +368,7 @@ def heatmap(
                 if gene_order is not None:
                     df = df.loc[gene_order]
                 else:
-                    max_sort = np.argsort(
-                        np.argmax(df.apply(_min_max_scale, axis=1).values, axis=1)
-                    )
+                    max_sort = np.argsort(np.argmax(df.apply(_min_max_scale, axis=1).values, axis=1))
                     df = df.iloc[max_sort, :]
                     if keep_gene_order:
                         gene_order = df.index
@@ -403,19 +376,12 @@ def heatmap(
             cat_colors = None
             if cluster_key is not None:
                 cat_colors = np.stack(
-                    [
-                        create_col_categorical_color(
-                            c, np.linspace(x_min, x_max, df.shape[1])
-                        )
-                        for c in cluster_key
-                    ],
+                    [create_col_categorical_color(c, np.linspace(x_min, x_max, df.shape[1])) for c in cluster_key],
                     axis=0,
                 )
 
             if show_fate_probabilities:
-                col_colors, col_cmap, col_norm = create_col_colors(
-                    lname, np.linspace(x_min, x_max, df.shape[1])
-                )
+                col_colors, col_cmap, col_norm = create_col_colors(lname, np.linspace(x_min, x_max, df.shape[1]))
                 if cat_colors is not None:
                     col_colors = np.vstack([cat_colors, col_colors[None, :]])
             else:
@@ -427,9 +393,7 @@ def heatmap(
             g = clustermap(
                 data=df,
                 cmap=cmap,
-                figsize=(10, min(len(genes) / 8 + 1, 10))
-                if figsize is None
-                else figsize,
+                figsize=(10, min(len(genes) / 8 + 1, 10)) if figsize is None else figsize,
                 xticklabels=False,
                 row_cluster=row_cluster,
                 col_colors=col_colors,
@@ -465,15 +429,11 @@ def heatmap(
 
             if g.ax_col_colors:
                 main_bbox = _get_ax_bbox(g.fig, g.ax_heatmap)
-                n_bars = show_fate_probabilities + (
-                    len(cluster_key) if cluster_key is not None else 0
-                )
+                n_bars = show_fate_probabilities + (len(cluster_key) if cluster_key is not None else 0)
                 _set_ax_height_to_cm(
                     g.fig,
                     g.ax_col_colors,
-                    height=min(
-                        5, max(n_bars * main_bbox.height / len(df), 0.25 * n_bars)
-                    ),
+                    height=min(5, max(n_bars * main_bbox.height / len(df), 0.25 * n_bars)),
                 )
                 g.ax_col_colors.set_title(lname, fontdict={"fontsize": fontsize})
             else:
@@ -496,9 +456,9 @@ def heatmap(
                 dendro_box = g.ax_row_dendrogram.get_position()
 
                 pad = 0.005
-                bb = g.ax_heatmap.yaxis.get_tightbbox(
-                    g.fig.canvas.get_renderer()
-                ).transformed(g.fig.transFigure.inverted())
+                bb = g.ax_heatmap.yaxis.get_tightbbox(g.fig.canvas.get_renderer()).transformed(
+                    g.fig.transFigure.inverted()
+                )
 
                 dendro_box.x0 = bb.x0 - dendro_box.width - pad
                 dendro_box.x1 = bb.x0 - pad
@@ -585,7 +545,7 @@ def _get_ax_bbox(fig: plt.Figure, ax: plt.Axes):
 
 
 def _set_ax_height_to_cm(fig: plt.Figure, ax: plt.Axes, height: float) -> None:
-    from mpl_toolkits.axes_grid1 import Size, Divider
+    from mpl_toolkits.axes_grid1 import Divider, Size
 
     height /= 2.54  # cm to inches
 

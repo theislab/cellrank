@@ -2,19 +2,18 @@ from typing import Optional
 
 import pytest
 
-import cellrank.external as cre
-from anndata import AnnData
-from cellrank.kernels import ConnectivityKernel
-
 import numpy as np
 import pandas as pd
 from scipy.sparse import csr_matrix
 
+from anndata import AnnData
+
+import cellrank.external as cre
+from cellrank.kernels import ConnectivityKernel
+
 
 def _wot_not_installed() -> bool:
     try:
-        import wot
-
         return False
     except ImportError:
         return True
@@ -22,19 +21,13 @@ def _wot_not_installed() -> bool:
 
 def _statot_not_installed() -> bool:
     try:
-        import statot
-
         return False
     except ImportError:
         return True
 
 
-wot_not_installed_skip = pytest.mark.skipif(
-    _wot_not_installed(), reason="WOT is not installed."
-)
-statot_not_installed_skip = pytest.mark.skipif(
-    _statot_not_installed(), reason="statOT is not installed."
-)
+wot_not_installed_skip = pytest.mark.skipif(_wot_not_installed(), reason="WOT is not installed.")
+statot_not_installed_skip = pytest.mark.skipif(_statot_not_installed(), reason="statOT is not installed.")
 
 
 @statot_not_installed_skip
@@ -50,9 +43,7 @@ class TestOTKernel:
             g=np.ones((adata_large.n_obs,), dtype=np.float64),
         )
 
-        with pytest.raises(
-            NotImplementedError, match="Method `'unbal'` is not yet implemented."
-        ):
+        with pytest.raises(NotImplementedError, match="Method `'unbal'` is not yet implemented."):
             ok.compute_transition_matrix(1, 0.001, method="unbal")
 
     def test_no_terminal_states(self, adata_large: AnnData):
@@ -80,9 +71,7 @@ class TestOTKernel:
         assert isinstance(ok.params, dict)
 
     @pytest.mark.parametrize("connectivity_kernel", (None, ConnectivityKernel))
-    def test_compute_projection(
-        self, adata_large: AnnData, connectivity_kernel: Optional[ConnectivityKernel]
-    ):
+    def test_compute_projection(self, adata_large: AnnData, connectivity_kernel: Optional[ConnectivityKernel]):
         terminal_states = np.full((adata_large.n_obs,), fill_value=np.nan, dtype=object)
         ixs = np.where(adata_large.obs["clusters"] == "Granule immature")[0]
         terminal_states[ixs] = "GI"

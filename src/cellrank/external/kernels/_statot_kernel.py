@@ -1,12 +1,13 @@
-from typing import Any, Union, Literal, Optional
-
-from anndata import AnnData
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank.kernels.mixins import UnidirectionalMixin
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
+
+from anndata import AnnData
+
+from cellrank._utils._docs import d
+from cellrank._utils._key import Key
+from cellrank.kernels.mixins import UnidirectionalMixin
 
 __all__ = ["StationaryOTKernel"]
 
@@ -118,9 +119,7 @@ class StationaryOTKernel(UnidirectionalMixin, OTKernel_, error=_error):
         Self and updates :attr:`transition_matrix` and :attr:`params`.
         """
         if method not in ("ent", "quad", "unbal"):
-            raise ValueError(
-                f"Invalid method `{method!r}`. Valid options are: `{['ent', 'quad', 'unbal']}`."
-            )
+            raise ValueError(f"Invalid method `{method!r}`. Valid options are: `{['ent', 'quad', 'unbal']}`.")
         if method == "unbal":
             raise NotImplementedError("Method `'unbal'` is not yet implemented.")
 

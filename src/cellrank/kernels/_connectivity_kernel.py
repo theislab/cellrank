@@ -1,8 +1,9 @@
 from anndata import AnnData
+
 from cellrank import logging as logg
 from cellrank._utils._docs import d
-from cellrank.kernels.mixins import ConnectivityMixin
 from cellrank.kernels._base_kernel import UnidirectionalKernel
+from cellrank.kernels.mixins import ConnectivityMixin
 
 __all__ = ["ConnectivityKernel"]
 
@@ -44,9 +45,7 @@ class ConnectivityKernel(ConnectivityMixin, UnidirectionalKernel):
             check_connectivity=check_connectivity,
         )
 
-    def compute_transition_matrix(
-        self, density_normalize: bool = True
-    ) -> "ConnectivityKernel":
+    def compute_transition_matrix(self, density_normalize: bool = True) -> "ConnectivityKernel":
         """
         Compute transition matrix based on transcriptomic similarity.
 

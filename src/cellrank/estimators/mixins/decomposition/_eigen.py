@@ -1,21 +1,21 @@
-from typing import Any, Dict, Tuple, Union, Literal, Mapping, Optional
-
-from types import MappingProxyType
 from pathlib import Path
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._key import Key
-from cellrank._utils._docs import d
-from cellrank._utils._utils import save_fig, _eigengap
-from cellrank.estimators.mixins._utils import SafeGetter, BaseProtocol, logger, shadow
+from types import MappingProxyType
+from typing import Any, Dict, Literal, Mapping, Optional, Tuple, Union
 
 import numpy as np
 from scipy.sparse import issparse, spmatrix
 from scipy.sparse.linalg import eigs
 
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, MultipleLocator
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._docs import d
+from cellrank._utils._key import Key
+from cellrank._utils._utils import _eigengap, save_fig
+from cellrank.estimators.mixins._utils import BaseProtocol, SafeGetter, logger, shadow
 
 __all__ = ["EigenMixin"]
 
@@ -114,9 +114,7 @@ class EigenMixin:
                 return
             _, V_r = eigs(self.transition_matrix, k=k, which=which, ncv=ncv)
         else:
-            logg.warning(
-                "This transition matrix is not sparse, computing full eigendecomposition"
-            )
+            logg.warning("This transition matrix is not sparse, computing full eigendecomposition")
             D, V_l = np.linalg.eig(self.transition_matrix.T)
             if only_evals:
                 self._write_eigendecomposition(
@@ -195,12 +193,9 @@ class EigenMixin:
         -------
         %(just_plots)s
         """
-
         eig = self.eigendecomposition
         if eig is None:
-            raise RuntimeError(
-                "Compute eigendecomposition first as `.compute_eigendecomposition()`."
-            )
+            raise RuntimeError("Compute eigendecomposition first as `.compute_eigendecomposition()`.")
 
         if n is None:
             n = len(eig["D"])
@@ -365,15 +360,9 @@ class EigenMixin:
         params = params or decomp.get("params", {})
         self.params[key] = dict(params)
 
-        return (
-            f"Adding `adata.uns[{key!r}]`\n"
-            f"       `.eigendecomposition`\n"
-            "    Finish"
-        )
+        return f"Adding `adata.uns[{key!r}]`\n" f"       `.eigendecomposition`\n" "    Finish"
 
-    def _read_eigendecomposition(
-        self: EigenProtocol, adata: AnnData, allow_missing: bool = True
-    ) -> bool:
+    def _read_eigendecomposition(self: EigenProtocol, adata: AnnData, allow_missing: bool = True) -> bool:
         key = Key.uns.eigen(self.backward)
         with SafeGetter(self, allowed=KeyError) as sg:
             self._eigendecomposition = self._get(

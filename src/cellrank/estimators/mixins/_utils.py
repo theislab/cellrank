@@ -1,30 +1,31 @@
+from copy import copy, deepcopy
+from enum import auto
 from typing import (
     Any,
+    Callable,
     Dict,
-    Tuple,
-    Union,
+    Iterable,
     Literal,
     Mapping,
-    TypeVar,
-    Callable,
-    Iterable,
+    NamedTuple,
     Optional,
     Protocol,
     Sequence,
-    NamedTuple,
+    Tuple,
+    TypeVar,
+    Union,
 )
 
-from copy import copy, deepcopy
-from enum import auto
 from wrapt import decorator
-
-from anndata import AnnData
-from cellrank import logging as logg
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._lineage import Lineage
 
 import numpy as np
 import pandas as pd
+
+from anndata import AnnData
+
+from cellrank import logging as logg
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._lineage import Lineage
 
 __all__ = [
     "BaseProtocol",
@@ -68,9 +69,7 @@ class BaseProtocol(Protocol):  # noqa: D101
         attr: Optional[str] = None,
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
-        value: Optional[
-            Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]
-        ] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]] = None,
         copy: bool = True,
         shadow_only: bool = False,
     ) -> None:
@@ -101,9 +100,7 @@ class BaseProtocol(Protocol):  # noqa: D101
 
 
 @decorator()
-def logger(
-    wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Dict[str, Any]
-) -> str:
+def logger(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Dict[str, Any]) -> str:
     """Handle logging for :class:`anndata.AnnData` writing functions of :class:`cellrank.estimators.BaseEstimator`."""
     log, time = kwargs.pop("log", True), kwargs.pop("time", None)
     msg = wrapped(*args, **kwargs)
@@ -115,9 +112,7 @@ def logger(
 
 
 @decorator()
-def shadow(
-    wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mapping[str, Any]
-) -> str:
+def shadow(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mapping[str, Any]) -> str:
     """
     Duplicate function call with shadowed :class:`anndata.AnnData.object`.
 
@@ -129,9 +124,7 @@ def shadow(
             # don't care what the "shadowed" function returns
             _ = wrapped(*args, **kwargs)
         except Exception as e:  # noqa: B902
-            logg.error(
-                f"Unable to duplicate function call using shadow `anndata.AnnData` object. Reason: `{e}`"
-            )
+            logg.error(f"Unable to duplicate function call using shadow `anndata.AnnData` object. Reason: `{e}`")
 
     return res
 
@@ -177,9 +170,7 @@ class SafeGetter:
         self._exc_type = exc_type
         # TODO(michalk8): log properly
         if not self.ok:
-            logg.debug(
-                f"The estimator will not be completely initialized, reason: {exc_type(exc_val)}"
-            )
+            logg.debug(f"The estimator will not be completely initialized, reason: {exc_type(exc_val)}")
             self._obj.__dict__ = self._dict
             return self._exc_type in self._allowed
 

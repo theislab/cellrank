@@ -1,23 +1,24 @@
-from typing import Tuple, Optional
+import warnings
+from pathlib import Path
+from sys import version_info
+from typing import Optional, Tuple
 
 import pytest
-import warnings
-from sys import version_info
-from pathlib import Path
 from _helpers import create_model
 from filelock import FileLock
-
-import scanpy as sc
-import cellrank as cr
-from anndata import AnnData
-from cellrank.models import GAM, GAMR, SKLearnModel
-from cellrank.kernels import VelocityKernel, ConnectivityKernel
-from cellrank.estimators import GPCCA, CFLARE
-
-import numpy as np
 from numba.core.errors import NumbaPerformanceWarning
 
+import numpy as np
+
 import matplotlib
+
+import scanpy as sc
+from anndata import AnnData
+
+import cellrank as cr
+from cellrank.estimators import CFLARE, GPCCA
+from cellrank.kernels import ConnectivityKernel, VelocityKernel
+from cellrank.models import GAM, GAMR, SKLearnModel
 
 _adata_small = sc.read("tests/_ground_truth_adatas/adata_50.h5ad")
 _adata_medium = sc.read("tests/_ground_truth_adatas/adata_100.h5ad")
@@ -50,9 +51,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
 
     sc.tl.paga(adata, groups="clusters")
 
-    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-        softmax_scale=4
-    )
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -75,9 +74,7 @@ def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
 
     sc.tl.paga(adata, groups="clusters")
 
-    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-        softmax_scale=4
-    )
+    vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata).compute_transition_matrix()
     final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -107,17 +104,17 @@ def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
         return None
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata() -> AnnData:
     return _adata_small.copy()
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata_large() -> AnnData:
     return _adata_large.copy()
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata_cflare_fwd(
     adata_cflare=_create_cflare(backward=False),
 ) -> Tuple[AnnData, CFLARE]:
@@ -125,24 +122,24 @@ def adata_cflare_fwd(
     return adata.copy(), cflare
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
-@pytest.fixture
+@pytest.fixture()
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:
     return adata_cflare[0].copy()
 
 
-@pytest.fixture
+@pytest.fixture()
 def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:
     return adata_gpcca[1].copy()
 
@@ -153,9 +150,7 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:
 
 
 @pytest.fixture(scope="session")
-def gamr_model(
-    adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str
-) -> Optional[GAMR]:
+def gamr_model(adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str) -> Optional[GAMR]:
     model = None
 
     if version_info[:2] <= (3, 6):
@@ -180,7 +175,7 @@ def gamr_model(
     return model
 
 
-@pytest.fixture
+@pytest.fixture()
 def pygam_model(adata_cflare: AnnData) -> GAM:
     m = GAM(adata_cflare)
     m.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
@@ -190,7 +185,7 @@ def pygam_model(adata_cflare: AnnData) -> GAM:
     return m
 
 
-@pytest.fixture
+@pytest.fixture()
 def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     m = create_model(adata_cflare)
     assert isinstance(m, SKLearnModel), m
@@ -202,7 +197,7 @@ def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     return m
 
 
-@pytest.fixture
+@pytest.fixture()
 def lineage():
     x = cr._utils.Lineage(
         np.array(
@@ -224,7 +219,7 @@ def lineage():
     return x / x.sum(1)
 
 
-@pytest.fixture
+@pytest.fixture()
 def kernel(adata_large: AnnData):
     vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata_large).compute_transition_matrix()

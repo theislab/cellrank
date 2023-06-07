@@ -1,18 +1,19 @@
-from typing import Union, Optional, Sequence
-
 from enum import auto
+from typing import Optional, Sequence, Union
 
-import cellrank.logging as logg
-from anndata import AnnData
-from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import valuedispatch
-from cellrank._utils._parallelize import parallelize
+from numba import njit, prange
 
 import numpy as np
-from numba import njit, prange
 from scipy.sparse import issparse, spmatrix
 from sklearn.utils.sparsefuncs import csc_median_axis_0
+
+from anndata import AnnData
+
+import cellrank.logging as logg
+from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._enum import ModeEnum
+from cellrank._utils._parallelize import parallelize
+from cellrank._utils._utils import valuedispatch
 
 _OFFSET_KEY = "cellrank_offset"
 
@@ -25,9 +26,7 @@ class NormMode(ModeEnum):  # noqa: D101
 
 
 @d.dedent
-def _extract_data(
-    data: AnnData, layer: Optional[str] = None, use_raw: bool = True
-) -> Union[np.ndarray, spmatrix]:
+def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = True) -> Union[np.ndarray, spmatrix]:
     """
     Extract expression data from an object.
 
@@ -175,22 +174,17 @@ def _calculate_norm_factors(
         *Evaluation of statistical methods for normalization and differential expression in mRNA-Seq experiments*,
         `BMC Bioinformatics <https://doi.org/10.1186/1471-2105-11-94>`__.
     """
-
     method = NormMode(method)
 
     if not (0 <= perc <= 1):
-        raise ValueError(
-            f"Expected the percentile to be within interval `[0, 1]`, found `{perc}`."
-        )
+        raise ValueError(f"Expected the percentile to be within interval `[0, 1]`, found `{perc}`.")
 
     x = _extract_data(data, layer, use_raw)
 
     if library_size is None:
         library_size = np.array(x.sum(1)).squeeze()
     elif library_size.shape != (x.shape[0],):
-        raise ValueError(
-            f"Expected `library_size` to be of shape `({x.shape[0]},)`, found `{library_size.shape}`."
-        )
+        raise ValueError(f"Expected `library_size` to be of shape `({x.shape[0]},)`, found `{library_size.shape}`.")
 
     f = _dispatch_computation(
         method,
@@ -245,9 +239,7 @@ def _(
 
 
 @_dispatch_computation.register(NormMode.UPPER_QUANT)
-def _calc_factor_quant(
-    x: Union[np.ndarray, spmatrix], library_size: np.ndarray, p: float, **_
-) -> np.ndarray:
+def _calc_factor_quant(x: Union[np.ndarray, spmatrix], library_size: np.ndarray, p: float, **_) -> np.ndarray:
     # unused, because we fix the reference cell to 0
 
     library_size = np.array(library_size).reshape((-1, 1))
@@ -297,9 +289,7 @@ def _(x: Union[np.ndarray, spmatrix], **_) -> np.ndarray:
     if not issparse(x):
         return np.median(x[:, mask][:, gm_mask] / gm[gm_mask], axis=1)
 
-    return csc_median_axis_0(
-        x.tocsr()[:, mask][:, gm_mask].multiply(1.0 / gm[gm_mask]).tocsr().T
-    )
+    return csc_median_axis_0(x.tocsr()[:, mask][:, gm_mask].multiply(1.0 / gm[gm_mask]).tocsr().T)
 
 
 @_dispatch_computation.register(NormMode.NONE)
@@ -369,9 +359,7 @@ def _calc_factor_weighted_helper(
 
     log_r = log_obs - log_ref
     abs_e = (log_obs + log_ref) / 2.0
-    v = ((obs_lib_size - obs) / obs_lib_size / obs) + (
-        ref_lib_size - ref
-    ) / ref_lib_size / ref
+    v = ((obs_lib_size - obs) / obs_lib_size / obs) + (ref_lib_size - ref) / ref_lib_size / ref
 
     mask = np.isfinite(log_r) & np.isfinite(abs_e) & (abs_e > a_cutoff)
 
@@ -390,18 +378,9 @@ def _calc_factor_weighted_helper(
     his = n + 1 - los
 
     rank_log_r, rank_abs_e = _rankdata(log_r), _rankdata(abs_e)
-    mask = (
-        (rank_log_r >= lol)
-        & (rank_log_r <= hil)
-        & (rank_abs_e >= los)
-        & (rank_abs_e <= his)
-    )
+    mask = (rank_log_r >= lol) & (rank_log_r <= hil) & (rank_abs_e >= los) & (rank_abs_e <= his)
 
-    f = (
-        (np.nansum(log_r[mask] / v[mask]) / np.nansum(1.0 / v[mask]))
-        if weight
-        else np.nanmean(log_r[mask])
-    )
+    f = (np.nansum(log_r[mask] / v[mask]) / np.nansum(1.0 / v[mask])) if weight else np.nanmean(log_r[mask])
 
     return 2 ** f if np.isfinite(f) else 1.0
 
@@ -429,7 +408,6 @@ def _get_knotlocs(
     -------
     Array of shape `(n_knots,)` containing the locations of knots along the pseudotime.
     """
-
     if n_knots <= 0:
         raise ValueError(f"Expected number of knots to be positive, found `{n_knots}`.")
 
@@ -445,9 +423,7 @@ def _get_knotlocs(
     if pseudotime.ndim == 2 and pseudotime.shape[1] == 1:
         pseudotime = pseudotime.squeeze(1)
     if pseudotime.ndim != 1:
-        raise ValueError(
-            f"Expected `pseudotime` to have `1` dimension, found `{pseudotime.ndim}`."
-        )
+        raise ValueError(f"Expected `pseudotime` to have `1` dimension, found `{pseudotime.ndim}`.")
 
     if uniform:
         # replicate the result from not uniform
@@ -457,9 +433,7 @@ def _get_knotlocs(
             else np.array([np.max(pseudotime)])
         )
 
-    x = np.quantile(
-        pseudotime, q=np.arange(n_knots, dtype=np.float64) / max(n_knots - 1, 1)
-    )
+    x = np.quantile(pseudotime, q=np.arange(n_knots, dtype=np.float64) / max(n_knots - 1, 1))
     x[0] = np.min(pseudotime)
     x[-1] = np.max(pseudotime)
 
@@ -469,9 +443,7 @@ def _get_knotlocs(
         knotlocs = []
         for start, end, size in zip(x[ix], x[ix[1:]], c):
             knotlocs.extend(np.linspace(start, end, size, endpoint=False))
-        knotlocs.extend(
-            np.linspace(knotlocs[-1], x[ix[-1]], c[-1] + 1, endpoint=True)[1:]
-        )
+        knotlocs.extend(np.linspace(knotlocs[-1], x[ix[-1]], c[-1] + 1, endpoint=True)[1:])
         knotlocs = np.array(knotlocs)
     else:
         knotlocs = x
@@ -521,13 +493,9 @@ def _get_offset(
 
         data = _extract_data(adata, layer=layer, use_raw=use_raw)
         try:
-            nf = _calculate_norm_factors(
-                adata, layer=layer, use_raw=use_raw, ref_ix=ref_ix, **kwargs
-            )
+            nf = _calculate_norm_factors(adata, layer=layer, use_raw=use_raw, ref_ix=ref_ix, **kwargs)
         except Exception as e:  # noqa: B902
-            logg.debug(
-                f"Unable to calculate the normalization factors, setting them to `1`. Reason: `{e}`"
-            )
+            logg.debug(f"Unable to calculate the normalization factors, setting them to `1`. Reason: `{e}`")
             nf = np.ones(len(adata), dtype=np.float64)
 
         offset = np.log(nf * np.array(data.sum(1)).squeeze())
@@ -535,9 +503,7 @@ def _get_offset(
 
         mask = ~np.isfinite(offset) | np.isnan(offset)
         if np.any(mask):
-            logg.warning(
-                f"`{np.sum(mask)}` elements are not finite. Setting them to `1`"
-            )
+            logg.warning(f"`{np.sum(mask)}` elements are not finite. Setting them to `1`")
             offset[mask] = 1.0
 
         if isinstance(adata, AnnData):

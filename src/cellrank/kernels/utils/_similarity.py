@@ -1,15 +1,15 @@
-from typing import Any, Tuple
-
 from abc import ABC, abstractmethod
 from enum import auto
 from functools import partial
+from typing import Any, Tuple
+
+from numba import njit
+
+import numpy as np
 
 from cellrank._utils._docs import d
 from cellrank._utils._enum import ModeEnum
-from cellrank.kernels._utils import norm, np_mean, jit_kwargs
-
-import numpy as np
-from numba import njit
+from cellrank.kernels._utils import jit_kwargs, norm, np_mean
 
 __all__ = ["DotProduct", "Cosine", "Correlation"]
 
@@ -22,7 +22,7 @@ class Similarity(ModeEnum):
 
 try:
     import jax.numpy as jnp
-    from jax import jit, hessian
+    from jax import hessian, jit
 
     @jit
     def _softmax_jax(x: np.ndarray, softmax_scale) -> np.ndarray:
@@ -31,9 +31,7 @@ try:
         return numerator / jnp.sum(numerator)
 
     @jit
-    def _softmax_masked_jax(
-        x: np.ndarray, mask: np.ndarray, softmax_scale
-    ) -> np.ndarray:
+    def _softmax_masked_jax(x: np.ndarray, mask: np.ndarray, softmax_scale) -> np.ndarray:
         numerator = x * softmax_scale
         numerator = jnp.exp(numerator - jnp.nanmax(numerator))
         numerator = jnp.where(mask, 0, numerator)  # essential
@@ -61,9 +59,7 @@ try:
 
         return _softmax_jax(W.dot(X), softmax_scale)
 
-    _predict_transition_probabilities_jax_H = hessian(
-        _predict_transition_probabilities_jax
-    )
+    _predict_transition_probabilities_jax_H = hessian(_predict_transition_probabilities_jax)
 
     _HAS_JAX = True
 except ImportError:
@@ -85,9 +81,7 @@ def _softmax(x: np.ndarray, softmax_scale: float) -> Tuple[np.ndarray, np.ndarra
 
 
 @njit(**jit_kwargs)
-def _softmax_masked(
-    x: np.ndarray, mask: np.ndarray, softmax_scale: float
-) -> Tuple[np.ndarray, np.ndarray]:
+def _softmax_masked(x: np.ndarray, mask: np.ndarray, softmax_scale: float) -> Tuple[np.ndarray, np.ndarray]:
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.nanmax(numerator))
     numerator = np.where(mask, 0, numerator)  # essential
@@ -136,18 +130,14 @@ def _predict_transition_probabilities_numpy(
             softmax_scale,
         )
 
-    return _softmax(
-        np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]), softmax_scale
-    )
+    return _softmax(np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]), softmax_scale)
 
 
 class Hessian(ABC):
     @d.get_full_description(base="hessian")
     @d.get_sections(base="hessian", sections=["Parameters", "Returns"])
     @abstractmethod
-    def hessian(
-        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
+    def hessian(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> np.ndarray:
         """
         Compute the Hessian.
 
@@ -182,9 +172,7 @@ class SimilarityABC(ABC):
     @d.get_full_description(base="sim_scheme")
     @d.get_sections(base="sim_scheme", sections=["Parameters", "Returns"])
     @abstractmethod
-    def __call__(
-        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
         """
         Compute transition probability of a cell to its nearest neighbors using RNA velocity.
 
@@ -240,9 +228,7 @@ class SimilarityHessian(SimilarityABC, Hessian):
         self._scale_by_norm = scale_by_norm
 
     @d.dedent
-    def __call__(
-        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
         """
         %(sim_scheme.full_desc)s
 
@@ -254,14 +240,10 @@ class SimilarityHessian(SimilarityABC, Hessian):
         -------
         %(sim_scheme.returns)s
         """  # noqa: D400
-        return _predict_transition_probabilities_numpy(
-            v, D, softmax_scale, self._center_mean, self._scale_by_norm
-        )
+        return _predict_transition_probabilities_numpy(v, D, softmax_scale, self._center_mean, self._scale_by_norm)
 
     @d.dedent
-    def hessian(
-        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> np.ndarray:
+    def hessian(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> np.ndarray:
         """
         %(hessian.full_desc)s
 
@@ -273,9 +255,7 @@ class SimilarityHessian(SimilarityABC, Hessian):
         -------
         %(hessian.returns)s
         """  # noqa: D400
-        return _predict_transition_probabilities_jax_H(
-            v, D, softmax_scale, self._center_mean, self._scale_by_norm
-        )
+        return _predict_transition_probabilities_jax_H(v, D, softmax_scale, self._center_mean, self._scale_by_norm)
 
     def __getattribute__(self, name: str) -> Any:
         if name == "hessian" and self.__use_jax__ and not _HAS_JAX:
