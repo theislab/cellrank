@@ -20,7 +20,7 @@ class TestRandomWalk:
     @pytest.mark.parametrize("kind", ["simulations", "iterations", "hits"])
     def test_invalid_numbers(self, test_matrix_1: np.ndarray, kind: str):
         rw = RandomWalk(AnnData(test_matrix_1), test_matrix_1)
-        with pytest.raises(ValueError, match=kind):
+        with pytest.raises(ValueError, match=kind):  # noqa: PT012
             if kind == "simulations":
                 rw.simulate_many(n_sims=0)
             elif kind == "iterations":
