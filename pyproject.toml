@@ -250,8 +250,7 @@ set_env = SPHINXOPTS = -W -q --keep-going
 changedir = {tox_root}{/}docs
 commands =
     make linkcheck {posargs}
-    # TODO(michalk8)
-    # make spelling {posargs}
+    make spelling {posargs}
 
 [testenv:clean-docs]
 description = Remove the documentation.
