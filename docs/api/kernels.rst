@@ -21,13 +21,3 @@ takes in multi-view single-cell data and outputs a cell-cell transition matrix.
     kernels.CytoTRACEKernel
     kernels.TransportMapKernel
     kernels.PrecomputedKernel
-
-External Kernels
-----------------
-.. module:: cellrank.external
-.. currentmodule:: cellrank
-
-.. autosummary::
-    :toctree: _autosummary/kernels
-
-    external.kernels.StationaryOTKernel

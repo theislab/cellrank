@@ -1,7 +1,8 @@
-from cellrank import pl, models, kernels, logging, datasets, external, estimators
-from cellrank.settings import settings
-from cellrank._utils._lineage import Lineage
 from importlib import metadata
+
+from cellrank import datasets, estimators, kernels, logging, models, pl
+from cellrank._utils._lineage import Lineage
+from cellrank.settings import settings
 
 try:
     md = metadata.metadata(__name__)
