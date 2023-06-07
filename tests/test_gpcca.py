@@ -299,7 +299,7 @@ def _assert_gpcca_attrs(
                 obj = getattr(g, attr)
                 assert isinstance(obj, dtype)
         else:
-            for attr, dtype in state.attrs:
+            for attr, _ in state.attrs:
                 obj = getattr(g, attr)
                 assert obj is None, attr
         _assert_gpcca_attrs(g, state.next, fwd=True, init=False)
@@ -1166,8 +1166,9 @@ class TestGPCCAIO:
             _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=None)
 
     def test_write_no_adata_read_wrong_length(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
+        rng = np.random.default_rng()
         _, mc1 = adata_gpcca_fwd
-        adata = AnnData(np.random.normal(size=(len(mc1) + 1, 1)))
+        adata = AnnData(rng.normal(size=(len(mc1) + 1, 1)))
 
         mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
         with pytest.raises(ValueError, match="Expected `adata` to be of length"):

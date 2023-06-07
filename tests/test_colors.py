@@ -27,8 +27,8 @@ class TestColors:
         colors = _create_categorical_colors(62)
 
         assert len(colors) == 62
-        assert all(map(lambda c: isinstance(c, str), colors))
-        assert all(map(lambda c: is_color_like(c), colors))
+        assert all(isinstance(c, str) for c in colors), colors
+        assert all(is_color_like(c, str) for c in colors), colors
 
 
 class TestMappingColors:
