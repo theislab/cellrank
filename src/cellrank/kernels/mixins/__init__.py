@@ -1,7 +1,7 @@
+from cellrank.kernels.mixins._anndata import AnnDataMixin
 from cellrank.kernels.mixins._io import IOMixin
 from cellrank.kernels.mixins._kernel import (
-    ConnectivityMixin,
     BidirectionalMixin,
+    ConnectivityMixin,
     UnidirectionalMixin,
 )
-from cellrank.kernels.mixins._anndata import AnnDataMixin

@@ -1,11 +1,10 @@
-from typing import Any, Tuple, Union, TypeVar, Optional
-
 from abc import ABC
-
-from anndata import AnnData
+from typing import Any, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 from scipy.sparse import spmatrix
+
+from anndata import AnnData
 
 __all__ = ["KernelMixin"]
 

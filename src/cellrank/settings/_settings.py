@@ -2,7 +2,8 @@ import logging
 from copy import copy
 
 from scanpy import settings
-from cellrank.logging._logging import _RootLogger, _LogFormatter
+
+from cellrank.logging._logging import _LogFormatter, _RootLogger
 
 __all__ = ["settings"]
 

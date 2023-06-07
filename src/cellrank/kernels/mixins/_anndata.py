@@ -1,8 +1,8 @@
+from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from abc import ABC, abstractmethod
-
 from anndata import AnnData
+
 from cellrank._utils._docs import d
 
 __all__ = ["AnnDataMixin"]

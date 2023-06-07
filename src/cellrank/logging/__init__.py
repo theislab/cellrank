@@ -1,9 +1,9 @@
 from cellrank.logging._logging import (
-    hint,
-    info,
     debug,
     error,
-    warning,
-    print_versions,
+    hint,
+    info,
     print_version_and_date,
+    print_versions,
+    warning,
 )

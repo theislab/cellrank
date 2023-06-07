@@ -1,9 +1,9 @@
 from cellrank.datasets._datasets import (
+    bone_marrow,
     lung,
     pancreas,
-    zebrafish,
-    bone_marrow,
-    reprogramming_morris,
     pancreas_preprocessed,
+    reprogramming_morris,
     reprogramming_schiebinger,
+    zebrafish,
 )
