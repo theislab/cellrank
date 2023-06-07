@@ -732,7 +732,7 @@ class TestKernelCopy:
         assert ck1.transition_matrix is not None
         assert ck2.transition_matrix is None
 
-    @pytest.mark.parametrize("ignored", (("_transition_matrix",), ("_params", "foobar")))
+    @pytest.mark.parametrize("ignored", [("_transition_matrix",), ("_params", "foobar")])
     def test_copy_ignore(self, adata: AnnData, ignored: Tuple[str, ...]):
         ck1 = ConnectivityKernel(adata).compute_transition_matrix()
         ck2 = ck1._copy_ignore(*ignored)
@@ -1145,18 +1145,19 @@ class TestTransportMapKernel:
 
     @pytest.mark.parametrize("correct_shape", [False, True])
     def test_explicit_initialization(self, adata: AnnData, correct_shape: bool):
+        rng = np.random.default_rng()
         adata.obs["exp_time"] = col = pd.cut(adata.obs["dpt_pseudotime"], 3)
         cats = col.cat.categories
 
         couplings = {}
         for src, tgt in zip(cats[:-1], cats[1:]):
             n, m = np.sum(col == src), np.sum(col == tgt)
-            val = np.abs(np.random.normal(size=(n, m)))
+            val = np.abs(rng.normal(size=(n, m)))
             if not correct_shape:
                 n += 1
                 val = AnnData(val)
-                val.obs_names == adata.obs_names[col == src]
-                val.var_names == adata.obs_names[col == tgt]
+                val.obs_names = adata.obs_names[col == src]
+                val.var_names = adata.obs_names[col == tgt]
             couplings[src, tgt] = val
 
         tmk = TransportMapKernel(adata, couplings=couplings, time_key="exp_time")
@@ -1252,6 +1253,7 @@ class TestTransportMapKernel:
         assert tmk.obs.shape == (adata.n_obs, gr_iters + 1)
 
     def test_from_moscot_set_solution(self, adata_large: AnnData):
+        rng = np.random.default_rng()
         moscot = pytest.importorskip("moscot")
 
         col = pd.cut(adata_large.obs["dpt_pseudotime"], 4)
@@ -1262,9 +1264,8 @@ class TestTransportMapKernel:
         problem = problem.prepare(policy="sequential", time_key="exp_time", xy_callback_kwargs={"n_comps": 6})
 
         expected = {}
-        for src, tgt in problem.problems:
-            subprob = problem[src, tgt]
-            tmp = np.abs(np.random.normal(size=subprob.shape)) + 1.0
+        for (src, tgt), subprob in problem.problems.items():
+            tmp = np.abs(rng.normal(size=subprob.shape)) + 1.0
             expected[src, tgt] = tmp = tmp / np.sum(tmp, axis=-1, keepdims=True)
             subprob.set_solution(tmp)
 
@@ -1330,7 +1331,7 @@ class TestPrecomputedKernel:
 
     def test_precomputed_not_square(self):
         with pytest.raises(ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"):
-            _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
+            _ = PrecomputedKernel(np.ones(size=(10, 9)))
 
     def test_precomputed_not_a_transition_matrix(self):
         mat = random_transition_matrix(100)
