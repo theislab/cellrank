@@ -83,27 +83,27 @@ class TestToolsUtils:
         np.testing.assert_array_equal(res.cat.categories.values, ["b"])
 
     def test_merge_colors_not_colorlike(self):
-        with pytest.raises(ValueError):
-            x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-            y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
-            colors_x = ["red", "foo"]
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
+        colors_x = ["red", "foo"]
 
+        with pytest.raises(ValueError):
             _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_wrong_number_of_colors(self):
-        with pytest.raises(ValueError):
-            x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-            y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
-            colors_x = ["red"]
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
+        colors_x = ["red"]
 
+        with pytest.raises(ValueError):
             _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_wrong_dict(self):
-        with pytest.raises(ValueError):
-            x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
-            y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
-            colors_x = {"a": "red", "foo": "blue"}
+        x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
+        y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
+        colors_x = {"a": "red", "foo": "blue"}
 
+        with pytest.raises(ValueError):
             _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_simple_old(self):
@@ -302,7 +302,8 @@ class TestOneHot:
 class TestFuzzyToDiscrete:
     def test_normal_run(self):
         # create random data that sums to one row-wise
-        a_fuzzy = np.random.standard_normal((100, 3))
+        rng = np.random.default_rng(42)
+        a_fuzzy = rng.normal(size=(100, 3))
         a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
 
         # check with both overlap handling
@@ -312,19 +313,22 @@ class TestFuzzyToDiscrete:
 
     def test_one_state(self):
         # create random data that sums to one row-wise
-        a_fuzzy = np.random.standard_normal((100, 1))
+        rng = np.random.default_rng(42)
+        a_fuzzy = rng.normal(size=(100, 1))
         a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
 
-        # check with both overlap handlings
+        # check with both overlap handling
         _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
 
     def test_normalization(self):
-        a_fuzzy = np.random.standard_normal((100, 3))
+        rng = np.random.default_rng(42)
+        a_fuzzy = rng.normal(size=(100, 3))
         with pytest.raises(ValueError):
             _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
 
     def test_too_many_cells(self):
-        a_fuzzy = np.random.standard_normal((100, 3))
+        rng = np.random.default_rng(42)
+        a_fuzzy = rng.normal(size=(100, 3))
         a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
         with pytest.raises(ValueError):
             _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=50)
@@ -515,13 +519,13 @@ class TestCreateModels:
             _create_models({"foo": {"baz": m}}, ["foo"], ["bar", "baz"])
 
     def test_create_model_no_genes(self, adata: AnnData):
+        m = create_model(adata)
         with pytest.raises(ValueError):
-            m = create_model(adata)
             _create_models(m, [], ["foo"])
 
     def test_create_model_no_lineage(self, adata: AnnData):
+        m = create_model(adata)
         with pytest.raises(ValueError):
-            m = create_model(adata)
             _create_models(m, ["foo"], [])
 
     def test_create_models_1_model(self, adata: AnnData):
@@ -554,7 +558,7 @@ class TestCreateModels:
         models = _create_models({"foo": m1, "*": m2}, ["foo", "bar", "baz", "quux"], ["quas", "wex"])
         assert set(models.keys()) == {"foo", "bar", "baz", "quux"}
         for k, vs in models.items():
-            assert set(vs.keys()) == {"quas", "wex"}
+            assert set(vs.keys()) == {"quas", "wex"}, k
 
         for g in {"foo"}:
             for l in {"quas", "wex"}:
@@ -590,7 +594,7 @@ class TestCreateModels:
         assert set(models.keys()) == {"foo", "bar"}
 
         for k, vs in models.items():
-            assert set(vs.keys()) == {"baz", "quux", "quas", "wex"}
+            assert set(vs.keys()) == {"baz", "quux", "quas", "wex"}, k
 
         assert isinstance(models["foo"]["baz"], type(m1))
         assert models["foo"]["baz"] is not m1
@@ -897,17 +901,19 @@ class TestKernelUtils:
 
     @pytest.mark.parametrize(("seed", "shuffle"), zip(range(4), [False] * 2 + [True] * 2))
     def test_reconstruct_one(self, seed: int, shuffle: bool):
+        rng = np.random.default_rng(42)
+
         m1 = random(100, 10, random_state=seed, density=0.5, format="lil")
         m1[:, 0] = 0.1
         m1 /= m1.sum(1)
         m1 = csr_matrix(m1)
 
-        m2_data = np.random.normal(size=(m1.nnz))
+        m2_data = rng.normal(size=(m1.nnz))
         m2 = csr_matrix((m2_data, m1.indices, m1.indptr))
 
         if shuffle:
             ixs = np.arange(100)
-            np.random.shuffle(ixs)
+            rng.shuffle(ixs)
             data = np.c_[m1[ixs, :].data, m2[ixs, :].data].T
         else:
             ixs = None
@@ -924,9 +930,9 @@ class TestKernelUtils:
         zip(range(4), [True, True, False, False], [True, False, True, False]),
     )
     def test_numpy_and_jax(self, seed: int, c: bool, s: bool):
-        np.random.seed(seed)
-        x = np.random.normal(size=(100,))
-        w = np.random.normal(size=(1, 100))
+        rng = np.random.default_rng(self)
+        x = rng.normal(size=(100,))
+        w = rng.normal(size=(1, 100))
 
         np_res, _ = _predict_transition_probabilities_numpy(x[None, :], w, 1, center_mean=c, scale_by_norm=s)
         jax_res = _predict_transition_probabilities_jax(x, w, 1, c, s)
