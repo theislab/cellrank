@@ -140,6 +140,8 @@ class SchurMixin:
             - :attr:`schur_matrix` -  %(schur_matrix.summary)s
             - :attr:`eigendecomposition` - %(eigen.summary)s
         """
+        from cellrank._utils._linear_solver import _is_petsc_slepc_available
+
         if n_components < 2:
             logg.warning(
                 f"Number of Schur vectors `>=2`, but only `{n_components}` " f"were requested. Using `n_components=2`"
@@ -149,9 +151,7 @@ class SchurMixin:
         if method not in ("brandts", "krylov"):
             raise ValueError(f"Invalid method `{method!r}`. Valid options are:`'brandts'` or `'krylov'`.")
 
-        try:
-            pass
-        except ImportError:
+        if not _is_petsc_slepc_available():
             method = "brandts"
             logg.warning(f"Unable to import `petsc4py` or `slepc4py`. Using `method={method!r}`")
         if verbose is None:

@@ -387,16 +387,13 @@ def _solve_lin_system(
 
     n_jobs = _get_n_cores(n_jobs, n_jobs=None)
 
-    if use_petsc:
-        try:
-            pass
-        except ImportError:
-            global _PETSC_ERROR_MSG_SHOWN
-            if not _PETSC_ERROR_MSG_SHOWN:
-                _PETSC_ERROR_MSG_SHOWN = True
-                logg.warning(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
-            solver = _DEFAULT_SOLVER
-            use_petsc = False
+    if use_petsc and not _is_petsc_slepc_available():
+        global _PETSC_ERROR_MSG_SHOWN
+        if not _PETSC_ERROR_MSG_SHOWN:
+            _PETSC_ERROR_MSG_SHOWN = True
+            logg.warning(_PETSC_ERROR_MSG.format(_DEFAULT_SOLVER))
+        solver = _DEFAULT_SOLVER
+        use_petsc = False
 
     if use_eye:
         mat_a = (speye(mat_a.shape[0]) if issparse(mat_a) else np.eye(mat_a.shape[0])) - mat_a
@@ -473,3 +470,13 @@ def _solve_lin_system(
         logg.warning(f"`{mat_b.shape[0] - n_converged}` solution(s) did not converge")
 
     return mat_x
+
+
+def _is_petsc_slepc_available() -> bool:
+    try:
+        import petsc4py  # noqa
+        import slepc4py  # noqa
+
+        return True
+    except ImportError:
+        return False

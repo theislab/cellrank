@@ -50,7 +50,7 @@ dependencies = [
     "joblib>=0.13.1",
     "matplotlib>=3.5.0",
     "networkx>=2.2",
-    "numba>=0.51.0",
+    "numba>=0.51.0,!=0.57.0",
     "numpy>=1.17.0",
     "pandas>=1.5.0",
     "pygam>=0.8.0",
@@ -176,6 +176,7 @@ known_bio = ["anndata", "scanpy", "squidpy"]
 known_plotting = ["IPython", "matplotlib", "mpl_toolkits", "seaborn"]
 
 [tool.pytest.ini_options]
+testpaths = "tests"
 xfail_strict = true
 
 [tool.coverage.run]
