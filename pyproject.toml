@@ -225,6 +225,8 @@ env_list = lint-code,py{3.8,3.9,3.10,3.11}
 skip_missing_interpreters = true
 
 [testenv]
+# TODO(michalk8): remove after new scVelo version is up
+deps = git+https://github.com/theislab/scvelo
 extras = test
 pass_env = PYTEST_*,CI
 commands =
