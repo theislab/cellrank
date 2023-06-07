@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import pytest
 
 import numpy as np
@@ -7,41 +9,31 @@ from scipy.sparse import random
 
 from cellrank._utils._linear_solver import (
     _create_petsc_matrix,
+    _is_petsc_slepc_available,
     _petsc_direct_solve,
     _solve_lin_system,
 )
 
-
-def _petsc_not_installed() -> bool:
-    try:
-        import petsc4py  # noqa
-        import slepc4py  # noqa
-
-        return False
-    except ImportError:
-        return True
+petsc_slepc_skip = pytest.mark.skipif(not _is_petsc_slepc_available(), reason="PETSc or SLEPc is not installed.")
 
 
-petsc_slepc_skip = pytest.mark.skipif(_petsc_not_installed(), reason="PETSc or SLEPc is not installed.")
-
-
-def _create_a_b_matrices(seed: int, sparse: bool):
-    np.random.seed(seed)
+def _create_a_b_matrices(seed: int, sparse: bool) -> Tuple[np.ndarray, np.ndarray]:
+    rng = np.random.default_rng(seed)
     if sparse:
-        A = random(20, 20, density=0.8, random_state=np.random.randint(0, 100), format="csr")
-        B = random(20, 10, density=1, random_state=np.random.randint(0, 100), format="csr")
+        A = random(20, 20, density=0.8, random_state=rng.integers(0, 100), format="csr")
+        B = random(20, 10, density=1, random_state=rng.integers(0, 100), format="csr")
     else:
-        A = np.random.normal(size=(20, 20))
-        B = np.random.normal(size=(20, 10))
+        A = rng.normal(size=(20, 20))
+        B = rng.normal(size=(20, 10))
 
     return A, B
 
 
 class TestScipyLinearSolver:
     def test_invalid_solver(self):
-        np.random.seed(42)
-        A = np.random.normal(size=(20, 10))
-        B = np.random.normal(size=(20, 10))
+        rng = np.random.default_rng(42)
+        A = rng.normal(size=(20, 10))
+        B = rng.normal(size=(20, 10))
 
         with pytest.raises(ValueError):
             _solve_lin_system(A, B, solver="foobar", use_petsc=False)
@@ -118,7 +110,8 @@ class TestLinearSolverPETSc:
             _create_petsc_matrix(np.empty((100,)))
 
     def test_create_petsc_matrix_from_dense(self):
-        x = np.random.normal(size=(10, 2))
+        rng = np.random.default_rng(42)
+        x = rng.normal(size=(10, 2))
         res = _create_petsc_matrix(x)
 
         assert res.assembled
@@ -153,8 +146,10 @@ class TestLinearSolverPETSc:
     def test_create_solver_invalid_solver(self):
         from petsc4py.PETSc import Error
 
-        A = np.random.normal(size=(20, 20))
-        B = np.random.normal(size=(20, 10))
+        rng = np.random.default_rng(42)
+
+        A = rng.normal(size=(20, 20))
+        B = rng.normal(size=(20, 10))
 
         with pytest.raises(Error):
             _solve_lin_system(A, B, solver="foobar", use_petsc=True)
@@ -162,8 +157,10 @@ class TestLinearSolverPETSc:
     def test_create_solver_invalid_preconditioner(self):
         from petsc4py.PETSc import Error
 
-        A = np.random.normal(size=(20, 20))
-        B = np.random.normal(size=(20, 10))
+        rng = np.random.default_rng(42)
+
+        A = rng.normal(size=(20, 20))
+        B = rng.normal(size=(20, 10))
 
         with pytest.raises(Error):
             _solve_lin_system(A, B, preconditioner="foobar", use_petsc=True)
@@ -171,8 +168,10 @@ class TestLinearSolverPETSc:
     def test_solve_invalid_dimension(self):
         from petsc4py.PETSc import Error
 
-        A = np.random.normal(size=(20, 10))
-        B = np.random.normal(size=(20, 10))
+        rng = np.random.default_rng()
+
+        A = rng.normal(size=(20, 10))
+        B = rng.normal(size=(20, 10))
 
         with pytest.raises(Error):
             _solve_lin_system(A, B, use_petsc=True)
