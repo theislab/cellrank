@@ -169,13 +169,14 @@ class TestUtils:
 
     @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
     def test_rank_data(self, method: str):
-        x = np.random.normal(size=(10,))
+        rng = np.random.default_rng(42)
+        x = rng.normal(size=(10,))
 
         np.testing.assert_array_equal(_rankdata(x), rankdata(x))
 
     def test_rank_data_invalid_method(self):
         with pytest.raises(AssertionError):
-            _rankdata(np.random.normal(size=(10,)), method="foobar")
+            _rankdata(np.empty(size=(10,)), method="foobar")
 
     def test_get_knots_invalid_n_knots(self):
         with pytest.raises(ValueError):
@@ -224,8 +225,8 @@ class TestUtils:
 
     @pytest.mark.parametrize(("seed", "n_knots"), zip(range(10), range(2, 11)))
     def test_get_knots_unique(self, seed: int, n_knots: int):
-        np.random.seed(seed)
-        x = np.random.normal(size=(100,))
+        rng = np.random.default_rng(seed)
+        x = rng.normal(size=(100,))
         actual = _get_knotlocs(x, n_knots=n_knots)
 
         assert actual.shape == (n_knots,)
@@ -256,8 +257,8 @@ class TestUtils:
 
     @pytest.mark.parametrize(("method", "seed"), zip(list(NormMode), range(len(list(NormMode)))))
     def test_get_offset(self, method: str, seed: int):
-        np.random.seed(seed)
-        x = np.random.normal(size=(100, 50))
+        rng = np.random.default_rng(seed)
+        x = rng.normal(size=(100, 50))
 
         offset = _get_offset(x, method=method, ref_ix=0)
 
