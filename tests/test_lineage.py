@@ -54,11 +54,11 @@ class TestLineageCreation:
         np.testing.assert_array_equal(l.colors, np.array(colors))
 
     def test_zero_cells(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             Lineage(np.zeros((0, 2)), names=["foo", "bar"])
 
     def test_zero_lineages(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             Lineage(np.zeros((10, 0)), names=[])
 
     def test_non_null_1d(self):
@@ -77,7 +77,7 @@ class TestLineageCreation:
         np.testing.assert_array_equal(y.colors, lineage.colors)
 
     def test_wrong_number_of_dimensions(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = Lineage(
                 np.random.random((10, 3, 1)),
                 names=["foo", "bar", "baz"],
@@ -85,7 +85,7 @@ class TestLineageCreation:
             )
 
     def test_names_length_mismatch(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = Lineage(
                 np.random.random((10, 3)),
                 names=["foo", "bar"],
@@ -93,7 +93,7 @@ class TestLineageCreation:
             )
 
     def test_colors_length_mismatch(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = Lineage(
                 np.random.random((10, 3)),
                 names=["foo", "bar", "baz"],
@@ -101,7 +101,7 @@ class TestLineageCreation:
             )
 
     def test_wrong_colors(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = Lineage(
                 np.random.random((10, 3)),
                 names=["foo", "bar", "baz"],
@@ -127,7 +127,7 @@ class TestLineageCreation:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             l.colors = ["#ffffff", "#ffffff", "foo"]
 
     def test_names_setter(self):
@@ -160,7 +160,7 @@ class TestLineageCreation:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             l.names = ["foo1", "bar1"]
 
     def test_names_setter_non_unique(self):
@@ -170,11 +170,11 @@ class TestLineageCreation:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             l.names = ["foo1", "bar1", "bar1"]
 
     def test_non_unique_names(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = Lineage(
                 np.random.random((10, 3, 1)),
                 names=["foo", "bar", "baz"],
@@ -182,7 +182,7 @@ class TestLineageCreation:
             )
 
     def test_non_unique_names_conversion(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = Lineage(
                 np.random.random((10, 3, 1)),
                 names=["foo", "1", 1],
@@ -192,7 +192,7 @@ class TestLineageCreation:
 
 class TestLineageAccessor:
     def test_too_large_tuple(self, lineage: Lineage):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = lineage[0, 0, 0]
 
     def test_none(self, lineage: Lineage):
@@ -300,7 +300,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             _ = l["quux"]
 
     def test_row_subset_with_ints(self):
@@ -335,7 +335,7 @@ class TestLineageAccessor:
             colors=[(0, 0, 0), (0.5, 0.5, 0.5), (1, 1, 1)],
         )
 
-        with pytest.raises(IndexError):
+        with pytest.raises(IndexError, match="REPLACE_ME"):
             _ = l[:, [True]]
 
     def test_row_subset_with_mask(self):
@@ -601,13 +601,13 @@ class TestLineageMixing:
     def test_overlap(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = x[["foo, bar", "foo"]]
 
     def test_overlap_mix(self):
         x = Lineage(np.random.random((10, 4)), names=["foo", "bar", "baz", "quux"])
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = x[["foo, bar", 0]]
 
     def test_no_rest_or_none(self):
@@ -635,16 +635,16 @@ class TestLineageMixing:
 
 class TestLineageNormalization:
     def test_empty_keys(self, lineage: Lineage):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             lineage.reduce()
 
     def test_not_summing_to_1(self, lineage: Lineage):
         lineage[0, 0] = 0
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             lineage.reduce("foo")
 
     def test_invalid_key(self, lineage: Lineage):
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             lineage.reduce("non_existent")
 
     def test_all_names(self, lineage: Lineage):
@@ -652,15 +652,15 @@ class TestLineageNormalization:
         np.testing.assert_array_equal(lin.X, lineage.X)
 
     def test_invalid_mode(self, lineage: Lineage):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             lineage.reduce("foo", "bar", mode="foo")
 
     def test_invalid_dist_measure(self, lineage: Lineage):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             lineage.reduce("foo", "bar", dist_measure="foo")
 
     def test_invalid_weight_normalize(self, lineage: Lineage):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             lineage.reduce("foo", "bar", normalize_weights="foo")
 
     def test_return_weights_mode_scale(self, lineage: Lineage):
@@ -833,7 +833,7 @@ class TestTransposition:
 
     def test_simple_access(self, lineage: Lineage):
         y = lineage.T["foo"]
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = lineage.T[:, "foo"]
 
         assert y.shape == (1, lineage.shape[0])
@@ -921,7 +921,7 @@ class TestUfuncs:
         assert y.X[0, 0] == np.max(lineage.X)
 
     def test_expand_dims_not_implemented(self, lineage: Lineage):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             np.expand_dims(lineage, -1)
 
     def test_pretty_naming_axis_0(self, lineage: Lineage):
@@ -961,10 +961,10 @@ class TestView:
 
     def test_unable_to_set_attributes(self, lineage: Lineage):
         x = lineage.view()
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             x.names = lineage.names[::-1]
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             x.colors = lineage.colors[::-1]
 
     def test_double_view_owner(self, lineage: Lineage):

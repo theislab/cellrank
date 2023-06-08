@@ -35,7 +35,7 @@ class TestScipyLinearSolver:
         A = rng.normal(size=(20, 10))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _solve_lin_system(A, B, solver="foobar", use_petsc=False)
 
     @pytest.mark.parametrize(("seed", "sparse"), zip(range(10), [False] * 5 + [True] * 5))
@@ -106,7 +106,7 @@ class TestScipyLinearSolver:
 @petsc_slepc_skip
 class TestLinearSolverPETSc:
     def test_create_petsc_matrix_no_a_matrix(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _create_petsc_matrix(np.empty((100,)))
 
     def test_create_petsc_matrix_from_dense(self):
@@ -151,7 +151,7 @@ class TestLinearSolverPETSc:
         A = rng.normal(size=(20, 20))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(Error):
+        with pytest.raises(Error, match="REPLACE_ME"):
             _solve_lin_system(A, B, solver="foobar", use_petsc=True)
 
     def test_create_solver_invalid_preconditioner(self):
@@ -162,7 +162,7 @@ class TestLinearSolverPETSc:
         A = rng.normal(size=(20, 20))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(Error):
+        with pytest.raises(Error, match="REPLACE_ME"):
             _solve_lin_system(A, B, preconditioner="foobar", use_petsc=True)
 
     def test_solve_invalid_dimension(self):
@@ -173,7 +173,7 @@ class TestLinearSolverPETSc:
         A = rng.normal(size=(20, 10))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(Error):
+        with pytest.raises(Error, match="REPLACE_ME"):
             _solve_lin_system(A, B, use_petsc=True)
 
     @pytest.mark.parametrize(

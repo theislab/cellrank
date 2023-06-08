@@ -11,7 +11,7 @@ from cellrank._utils._colors import _create_categorical_colors, _map_names_and_c
 
 class TestColors:
     def test_create_categorical_colors_too_many_colors(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _create_categorical_colors(1000)
 
     def test_create_categorical_colors_no_categories(self):
@@ -20,7 +20,7 @@ class TestColors:
         assert c == []
 
     def test_create_categorical_colors_neg_categories(self):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             _create_categorical_colors(-1)
 
     def test_create_categorical_colors_normal_run(self):
@@ -36,35 +36,35 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="str")
         reference = pd.Series(["foo", np.nan, "bar", "baz"], dtype="category")
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _map_names_and_colors(reference, query)
 
     def test_mapping_colors_invalid_size(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", np.nan, "bar", "baz"], dtype="category")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _map_names_and_colors(reference, query)
 
     def test_mapping_colors_different_index(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category", index=[2, 3, 4])
         reference = pd.Series(["foo", "bar", "baz"], dtype="category", index=[1, 2, 3])
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _map_names_and_colors(reference, query)
 
     def test_mapping_colors_invalid_colors(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _map_names_and_colors(reference, query, colors_reference=["red", "green", "foo"])
 
     def test_mapping_colors_too_few_colors(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _map_names_and_colors(reference, query, colors_reference=["red", "green"])
 
     def test_mapping_colors_simple_1(self):
@@ -185,7 +185,7 @@ class TestMappingColors:
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
         reference = pd.Series(["foo", "bar", "baz"], dtype="category")
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _map_names_and_colors(reference, query, en_cutoff=-1)
 
     def test_mapping_colors_0_en_cutoff(self):

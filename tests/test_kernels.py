@@ -140,7 +140,7 @@ class TestInitializeKernel:
     def test_accessor_out_of_range(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with pytest.raises(IndexError):
+        with pytest.raises(IndexError, match="REPLACE_ME"):
             _ = k[2]
 
     def test_parent(self, adata: AnnData):
@@ -161,13 +161,13 @@ class TestInitializeKernel:
     def test_uninitialized_both(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             k.compute_transition_matrix()
 
     def test_uninitialized_one(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata).compute_transition_matrix()
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             k.compute_transition_matrix()
 
     def test_initialized(self, adata: AnnData):
@@ -180,15 +180,15 @@ class TestInitializeKernel:
         assert k.transition_matrix is not None
 
     def test_invalida_type(self, adata: AnnData):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = None * VelocityKernel(adata)
 
     def test_negative_constant(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = -1 * VelocityKernel(adata)
 
     def test_invalid_constant(self, adata: AnnData):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = Constant(adata, None)
 
     def test_inversion(self, adata: AnnData):
@@ -844,7 +844,7 @@ class TestMonteCarlo:
 class TestVelocityScheme:
     def test_invalid_string_key(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             vk.compute_transition_matrix(similarity="foobar")
 
     def test_not_callable(self, adata: AnnData):

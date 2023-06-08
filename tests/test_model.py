@@ -31,7 +31,7 @@ from cellrank.models._utils import (
 
 class TestModel:
     def test_wrong_type(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             SKLearnModel(0, SVR())
 
     def test_initialize(self, adata: AnnData):
@@ -41,27 +41,27 @@ class TestModel:
 
     def test_prepare_invalid_gene(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             model.prepare("foo", "0", "latent_time")
 
     def test_prepare_invalid_lineage(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             model.prepare(adata_cflare.var_names[0], "foo", "latent_time")
 
     def test_prepare_invalid_data_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", data_key="foo")
 
     def test_prepare_invalid_time_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             model.prepare(adata_cflare.var_names[0], "0", "foo")
 
     def test_prepare_invalid_time_range(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", time_range=(0, 1, 2))
 
     def test_prepare_normal_run(self, adata_cflare):
@@ -130,16 +130,16 @@ class TestModel:
 
 class TestUtils:
     def test_extract_data_wrong_type(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = _extract_data(None)
 
     def test_extract_data_raw_None(self, adata: AnnData):
         adata = AnnData(adata.X, raw=None)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = _extract_data(adata, use_raw=True)
 
     def test_extract_data_invalid_layer(self, adata: AnnData):
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match="REPLACE_ME"):
             _extract_data(adata, layer="foo", use_raw=False)
 
     def test_extract_data_normal_run(self, adata: AnnData):
@@ -175,29 +175,29 @@ class TestUtils:
         np.testing.assert_array_equal(_rankdata(x), rankdata(x))
 
     def test_rank_data_invalid_method(self):
-        with pytest.raises(AssertionError):
+        with pytest.raises(AssertionError, match="REPLACE_ME"):
             _rankdata(np.empty(size=(10,)), method="foobar")
 
     def test_get_knots_invalid_n_knots(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _get_knotlocs([0, 1, 2], 0)
 
     def test_get_knots_non_finite_values(self):
         x = np.array([0, 1, 2, 3], dtype=np.float64)
         x[-1] = np.inf
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _get_knotlocs(x, 1)
 
     def test_get_knots_wrong_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _get_knotlocs(np.array([0, 1, 2, 3]).reshape((2, 2)), 1)
 
     def test_get_knots_only_same_value(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _get_knotlocs(np.array([42] * 10), 1)
 
     def test_get_knots_empty_pseudotime(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _get_knotlocs(np.array([]), 2)
 
     def test_get_knots_uniform(self):
@@ -297,15 +297,15 @@ class TestUtils:
 @gamr_skip
 class TestGAMR:
     def test_invalid_n_knots(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = GAMR(adata, n_knots=0)
 
     def test_invalid_smoothing_penalty(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = GAMR(adata, smoothing_penalty=-0.001)
 
     def test_invalid_knotlocs(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             _ = GAMR(adata, knotlocs="foobar")
 
     def test_density_knotlocs(self, adata_cflare: AnnData):
@@ -325,11 +325,11 @@ class TestGAMR:
         assert m._offset is None
 
     def test_negative_binomial_invalid_offset_str(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             GAMR(adata_cflare, offset="foobar", distribution="nb")
 
     def test_negative_binomial_invalid_offset_shape(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             GAMR(
                 adata_cflare,
                 offset=np.empty(
@@ -392,7 +392,7 @@ class TestGAMR:
 class TestSKLearnModel:
     def test_wrong_model_type(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             SKLearnModel(adata_cflare, model)
 
     def test_svr_correct_no_weights(self, adata_cflare: AnnData):
@@ -409,7 +409,7 @@ class TestSKLearnModel:
         assert not np.allclose(model.predict(), model_w.predict())
 
     def test_svr_invalid_weight_name(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             SKLearnModel(adata_cflare, SVR(), weight_name="foobar")
 
     def test_svr_invalid_weight_name_no_raise_fit(self, adata_cflare: AnnData):
@@ -417,7 +417,7 @@ class TestSKLearnModel:
             adata_cflare.var_names[0], "0", "latent_time"
         )
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             model.fit()
 
     def test_svr_invalid_weight_name_no_raise(self, adata_cflare: AnnData):
@@ -433,15 +433,15 @@ class TestSKLearnModel:
 
 class TestGAM:
     def test_invalid_distribution(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             GAM(adata, distribution="foobar")
 
     def test_invalid_link_function(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             GAM(adata, link="foob")
 
     def test_invalid_grid_type(self, adata: AnnData):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = GAM(adata, grid=1311)
 
     def test_default_grid(self, adata_cflare: AnnData):
@@ -471,9 +471,9 @@ class TestGAM:
         assert g.conf_int is not None
 
     def test_expectilegam_invalid_expectile(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             GAM(adata, expectile=0)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             GAM(adata, expectile=1)
 
     def test_expectile_sets_correct_distribution_and_link(self, adata_cflare: AnnData):
@@ -489,7 +489,7 @@ class TestGAM:
         assert g.conf_int is not None
 
     def test_raises_invalid_kwargs(self, adata_cflare: AnnData):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             GAM(adata_cflare, n_lineages=12)
 
     @pytest.mark.parametrize(("dist", "link"), product(list(GamDistribution), list(GamLinkFunction)))
@@ -504,7 +504,7 @@ class TestGAM:
 
 class TestFailedModel:
     def test_wrong_model_type(self):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = FailedModel(SVR())
 
     def test_correct_gene_and_lineage(self, gamr_model):
@@ -526,7 +526,7 @@ class TestFailedModel:
             "default_confidence_interval",
             "plot",
         ]:
-            with pytest.raises(UnknownModelError):
+            with pytest.raises(UnknownModelError, match="REPLACE_ME"):
                 getattr(fm, fn)()
 
     def test_do_nothing_bulk_fit(self, gamr_model: GAMR):
@@ -554,13 +554,13 @@ class TestFailedModel:
         assert fm1.adata is fm2.adata
 
     def test_exception_not_base_exception(self, gamr_model: GAMR):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             _ = FailedModel(gamr_model, exc=0)
 
     def test_reraise(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc=ValueError("foobar"))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             fm.reraise()
 
         assert isinstance(fm._exc, ValueError)
@@ -568,7 +568,7 @@ class TestFailedModel:
     def test_reraise_str(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc="foobar")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             fm.reraise()
 
         assert isinstance(fm._exc, RuntimeError)
@@ -639,19 +639,19 @@ class TestModelsIO:
 
 class TestFittedModel:
     def test_wrong_xt_yt_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(np.array([1]), np.array([2, 3]))
 
     def test_wrong_xt_dum(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(np.array([[0, 1], [1, 2]]), np.array([2, 3]))
 
     def test_wrong_conf_int_dim(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(np.array([0, 1]), np.array([2, 3]), conf_int=np.array([4, 5]))
 
     def test_wrong_conf_int_wrong_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(
                 np.array([0, 1]),
                 np.array([2, 3]),
@@ -659,11 +659,11 @@ class TestFittedModel:
             )
 
     def test_densify_only_first_axis(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(np.array([[[0, 1]]]), np.array([2, 3]))
 
     def test_wrong_x_all_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),
@@ -672,7 +672,7 @@ class TestFittedModel:
             )
 
     def test_wrong_y_all_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),
@@ -681,7 +681,7 @@ class TestFittedModel:
             )
 
     def test_wrong_w_all_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),
@@ -692,10 +692,10 @@ class TestFittedModel:
 
     def test_conf_int_raise_error_missing(self):
         fm = FittedModel([0, 1, 2], [3, 4, 5])
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             fm.confidence_interval()
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="REPLACE_ME"):
             fm.default_confidence_interval()
 
     def test_zero_array(self):
@@ -783,12 +783,12 @@ class TestFittedModel:
 
     def test_from_model_wrong_type(self, adata_cflare):
         m = create_model(adata_cflare)
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="REPLACE_ME"):
             FittedModel.from_model(m.model)
 
     def test_from_model_not_fitted_model(self, adata_cflare: AnnData):
         m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1", "latent_time")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="REPLACE_ME"):
             FittedModel.from_model(m)
 
     def test_from_model_normal_run(self, adata_cflare: AnnData):
