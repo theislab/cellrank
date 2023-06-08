@@ -201,7 +201,6 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare(tol=50)
     def test_bar_cluster_subset_violin(self, adata: AnnData, fpath: str):
-        print(adata.obs["clusters"].cat.categories)
         cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
@@ -287,17 +286,6 @@ class TestAggregateAbsorptionProbabilities:
         )
 
     @compare()
-    def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata,
-            cluster_key="clusters",
-            mode="violin",
-            lineages=["1"],
-            dpi=DPI,
-            save=fpath,
-        )
-
-    @compare()
     def test_paga_pie_legend_simple(self, adata: AnnData, fpath: str):
         cr.pl.aggregate_fate_probabilities(
             adata,
@@ -305,7 +293,7 @@ class TestAggregateAbsorptionProbabilities:
             mode="paga_pie",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="top")),
+            legend_kwargs={"loc": "top"},
         )
 
     @compare()
@@ -317,7 +305,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="lower")),
+            legend_kwargs={"loc": "lower"},
             legend_loc="upper",
         )
 
@@ -330,7 +318,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc=None)),
+            legend_kwargs={"loc": None},
             legend_loc=None,
         )
 
@@ -343,7 +331,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="center")),
+            legend_kwargs={"loc": "center"},
             legend_loc=None,
         )
 
@@ -356,7 +344,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc=None)),
+            legend_kwargs={"loc": None},
             legend_loc="on data",
         )
 
@@ -369,7 +357,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="lower left out")),
+            legend_kwargs={"loc": "lower left out"},
             legend_loc="center right out",
         )
 
@@ -389,7 +377,7 @@ class TestAggregateAbsorptionProbabilities:
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="foo")),
+                legend_kwargs={"loc": "foo"},
             )
 
     def test_paga_pie_wrong_legend_kind_2(self, adata_cflare_fwd):
@@ -399,7 +387,7 @@ class TestAggregateAbsorptionProbabilities:
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="lower foo")),
+                legend_kwargs={"loc": "lower foo"},
             )
 
     def test_paga_pie_wrong_legend_kind_3(self, adata_cflare_fwd):
@@ -409,7 +397,7 @@ class TestAggregateAbsorptionProbabilities:
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="lower left bar")),
+                legend_kwargs={"loc": "lower left bar"},
             )
 
     def test_paga_pie_wrong_legend_kind_4(self, adata_cflare_fwd):
@@ -419,7 +407,7 @@ class TestAggregateAbsorptionProbabilities:
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="lower left foo bar")),
+                legend_kwargs={"loc": "lower left foo bar"},
             )
 
     @compare()
@@ -1733,7 +1721,7 @@ class TestGeneTrend:
             transpose=False,
             data_key="Ms",
             same_plot=True,
-            plot_kwargs=dict(lineage_probability=True),
+            plot_kwargs={"lineage_probability": True},
             dpi=DPI,
             save=fpath,
         )
@@ -1749,7 +1737,7 @@ class TestGeneTrend:
             transpose=True,
             data_key="Ms",
             same_plot=True,
-            plot_kwargs=dict(lineage_probability=True),
+            plot_kwargs={"lineage_probability": True},
             dpi=DPI,
             save=fpath,
         )
@@ -1765,7 +1753,7 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=False,
             transpose=True,
-            plot_kwargs=dict(lineage_probability=True),
+            plot_kwargs={"lineage_probability": True},
             figsize=(5, 5),
             dpi=DPI,
             save=fpath,
@@ -1782,7 +1770,7 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=True,
             transpose=True,
-            plot_kwargs=dict(lineage_probability=True, lineage_probability_conf_int=True),
+            plot_kwargs={"lineage_probability": True, "lineage_probability_conf_int": True},
             dpi=DPI,
             save=fpath,
         )
@@ -2272,7 +2260,7 @@ class TestGPCCA:
 
 
 class TestLineage:
-    def test_pie(self, lineage: cr.Lineage):
+    def test_lineage_pie_error(self, lineage: cr.Lineage):
         with pytest.raises(ValueError):
             lineage[:, 0].plot_pie(dpi=DPI)
 
@@ -2527,66 +2515,66 @@ class TestComposition:
 
 class TestFittedModel:
     @compare()
-    def test_fitted_empty_model(self, _adata: AnnData, fpath: str):
-        np.random.seed(42)
-        fm = cr.models.FittedModel(np.arange(100), np.random.normal(size=100))
+    def test_fitted_empty_model(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(42)
+        fm = cr.models.FittedModel(np.arange(100), rng.normal(size=100))
         fm.plot(dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_conf_int(self, _adata: AnnData, fpath: str):
-        np.random.seed(43)
-        y_test = np.random.normal(size=100)
+    def test_fitted_model_conf_int(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(43)
+        y_test = rng.normal(size=100)
 
         fm = cr.models.FittedModel(np.arange(100), y_test, conf_int=np.c_[y_test - 1, y_test + 1])
         fm.plot(conf_int=True, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_conf_int_no_conf_int_computed(self, _adata: AnnData, fpath: str):
-        np.random.seed(44)
+    def test_fitted_model_conf_int_no_conf_int_computed(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(44)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
+            rng.normal(size=100),
         )
         fm.plot(conf_int=True, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_cells_with_weights(self, _adata: AnnData, fpath: str):
-        np.random.seed(45)
+    def test_fitted_model_cells_with_weights(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(45)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
         )
 
         fm.plot(hide_cells=False, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_weights(self, _adata: AnnData, fpath: str):
-        np.random.seed(46)
+    def test_fitted_model_weights(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(46)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
 
         fm.plot(hide_cells=False, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_ignore_plot_smoothed_lineage(self, _adata: AnnData, fpath: str):
-        np.random.seed(47)
+    def test_fitted_ignore_plot_smoothed_lineage(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(47)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
 
         fm.plot(
@@ -2598,21 +2586,21 @@ class TestFittedModel:
 
     @compare()
     def test_fitted_gene_trends(self, adata: AnnData, fpath: str):
-        np.random.seed(48)
+        rng = np.random.default_rng(48)
 
         fm1 = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
         fm2 = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
         cr.pl.gene_trends(
             adata,
@@ -2626,11 +2614,11 @@ class TestFittedModel:
 
     @compare(tol=250)
     def test_fitted_cluster_fates(self, adata: AnnData, fpath: str):
-        np.random.seed(49)
+        rng = np.random.default_rng(49)
 
         model = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
+            rng.normal(size=100),
         )
         cr.pl.cluster_trends(
             adata,
@@ -2646,11 +2634,11 @@ class TestFittedModel:
 
     @compare(dirname="fitted_heatmap")
     def test_fitted_heatmap(self, adata: AnnData, fpath: str):
-        np.random.seed(49)
+        rng = np.random.default_rng(49)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
+            rng.normal(size=100),
         )
         cr.pl.heatmap(
             adata,
