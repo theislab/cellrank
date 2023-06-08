@@ -213,6 +213,7 @@ ignore_directives = [
     "automodule",
     "autoclass",
     "bibliography",
+    "grid",
 ]
 ignore_roles = [
     "mod",
@@ -220,11 +221,13 @@ ignore_roles = [
     "attr",
     "func",
     "meth",
+    "doc",
     "cite",
 ]
 
 [tool.doc8]
 max_line_length = 120
+ignore-path = "docs/release/**.rst"
 
 [tool.tox]
 legacy_tox_ini = """

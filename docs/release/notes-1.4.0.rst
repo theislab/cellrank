@@ -53,4 +53,4 @@ Features
 - Prune *requirements.txt* `PR 571 <https://github.com/theislab/cellrank/pull/571>`_.
 - Add small improvements to documentation `PR 584 <https://github.com/theislab/cellrank/pull/584>`_
   `PR 601 <https://github.com/theislab/cellrank/pull/601>`_ `PR 605 <https://github.com/theislab/cellrank/pull/605>`_
-  `PR 648 <https://github.com/theislab/cellrank/issues/648>`_ `PR 35 <https://github.com/theislab/cellrank_notebooks/pull/35>`_.
+  `PR 648 <https://github.com/theislab/cellrank/issues/648>`_.
