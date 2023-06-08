@@ -222,7 +222,7 @@ class TransportMapKernel(UnidirectionalKernel):
     def from_moscot(
         cls,
         problem: "Union[TemporalProblem, LineageProblem, SpatioTemporalProblem]",
-        sparsify: bool = False,
+        sparse_mode: Optional[Literal["threshold", "percentile", "min_row"]] = None,
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> "TransportMapKernel":
@@ -248,9 +248,10 @@ class TransportMapKernel(UnidirectionalKernel):
         ----------
         problem
             A :mod:`moscot` problem.
-        sparsify
-            Whether to sparsify the transport maps using
-            :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
+        sparse_mode
+            Sparsification mode for :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
+            If `None`, do not sparsify the outputs. Note that :meth:`compute_transition_matrix`
+            can also sparsify the final :attr:`transition_matrix`.
         sparsify_kwargs
             Keyword arguments for the sparsification.
         kwargs
@@ -277,8 +278,8 @@ class TransportMapKernel(UnidirectionalKernel):
         for (t1, t2), solution in problem.solutions.items():
             adata_src = problem[t1, t2].adata_src
             adata_tgt = problem[t1, t2].adata_tgt
-            if sparsify:
-                solution = solution.sparsify(**sparsify_kwargs)
+            if sparse_mode is not None:
+                solution = solution.sparsify(mode=sparse_mode, **sparsify_kwargs)
             coupling = solution.transport_matrix
             if not (isinstance(coupling, np.ndarray) or sp.issparse(coupling)):
                 # convert from, e.g., `jax`

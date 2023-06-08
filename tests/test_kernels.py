@@ -1194,14 +1194,20 @@ class TestTransportMapKernel:
             np.testing.assert_allclose(tmat[src_mask, :][:, tgt_mask].A, expected[src, tgt])
 
     @pytest.mark.parametrize(
-        ("problem", "sparsify", "policy"),
+        ("problem", "sparse_mode", "policy"),
         [
-            ("temporal", False, "sequential"),
-            ("temporal", False, "triu"),
-            ("spatiotemporal", True, "sequential"),
+            ("temporal", None, "sequential"),
+            ("temporal", "min_row", "triu"),
+            ("spatiotemporal", "min_row", "sequential"),
         ],
     )
-    def test_from_moscot(self, adata_large: AnnData, problem: str, sparsify: bool, policy: str):
+    def test_from_moscot(
+        self,
+        adata_large: AnnData,
+        problem: str,
+        sparse_mode: Optional[str],
+        policy: str,
+    ):
         moscot = pytest.importorskip("moscot")
 
         col = pd.cut(adata_large.obs["dpt_pseudotime"], 3)
@@ -1221,12 +1227,13 @@ class TestTransportMapKernel:
 
         tmk = TransportMapKernel.from_moscot(
             problem,
-            sparsify=sparsify,
-            sparsify_kwargs={"mode": "min_row"},
+            sparse_mode=sparse_mode,
         )
-        if sparsify:
-            for k, v in tmk.couplings.items():
+        for k, v in tmk.couplings.items():
+            if sparse_mode is not None:
                 assert issparse(v.X), k
+            else:
+                assert isinstance(v.X, np.ndarray), k
 
         tmk = tmk.compute_transition_matrix()
 
