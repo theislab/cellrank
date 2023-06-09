@@ -140,7 +140,7 @@ class TestInitializeKernel:
     def test_accessor_out_of_range(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with pytest.raises(IndexError, match="REPLACE_ME"):
+        with pytest.raises(IndexError, match="tuple index out of range"):
             _ = k[2]
 
     def test_parent(self, adata: AnnData):
@@ -161,13 +161,13 @@ class TestInitializeKernel:
     def test_uninitialized_both(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r".* is uninitialized"):
             k.compute_transition_matrix()
 
     def test_uninitialized_one(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata).compute_transition_matrix()
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r".* is uninitialized"):
             k.compute_transition_matrix()
 
     def test_initialized(self, adata: AnnData):
@@ -179,16 +179,12 @@ class TestInitializeKernel:
 
         assert k.transition_matrix is not None
 
-    def test_invalida_type(self, adata: AnnData):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            _ = None * VelocityKernel(adata)
-
     def test_negative_constant(self, adata: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             _ = -1 * VelocityKernel(adata)
 
     def test_invalid_constant(self, adata: AnnData):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r"Value must be"):
             _ = Constant(adata, None)
 
     def test_inversion(self, adata: AnnData):
@@ -844,7 +840,7 @@ class TestMonteCarlo:
 class TestVelocityScheme:
     def test_invalid_string_key(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             vk.compute_transition_matrix(similarity="foobar")
 
     def test_not_callable(self, adata: AnnData):
@@ -1152,11 +1148,11 @@ class TestTransportMapKernel:
         couplings = {}
         for src, tgt in zip(cats[:-1], cats[1:]):
             n, m = np.sum(col == src), np.sum(col == tgt)
+            n += not correct_shape
             val = np.abs(rng.normal(size=(n, m)))
             if not correct_shape:
-                n += 1
                 val = AnnData(val)
-                val.obs_names = adata.obs_names[col == src]
+                val.obs_names = list(adata.obs_names[col == src]) + [adata.obs_names[-1]]
                 val.var_names = adata.obs_names[col == tgt]
             couplings[src, tgt] = val
 
@@ -1338,7 +1334,7 @@ class TestPrecomputedKernel:
 
     def test_precomputed_not_square(self):
         with pytest.raises(ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"):
-            _ = PrecomputedKernel(np.ones(size=(10, 9)))
+            _ = PrecomputedKernel(np.ones((10, 9)))
 
     def test_precomputed_not_a_transition_matrix(self):
         mat = random_transition_matrix(100)

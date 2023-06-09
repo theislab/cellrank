@@ -44,7 +44,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.estimators.CFLARE(terminal_kernel)
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match="Compute eigendecomposition"):
             mc.predict(use=2)
 
     def test_compute_terminal_states_too_large_use(self, adata_large: AnnData):
@@ -54,7 +54,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=2)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match="Maximum specified eigenvector"):
             mc.predict(use=1000)
 
     def test_compute_approx_normal_run(self, adata_large: AnnData):
@@ -81,7 +81,7 @@ class TestCFLARE:
 
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Compute terminal"):
             mc.rename_terminal_states({"foo": "bar"})
 
     def test_rename_terminal_states_invalid_old_name(self, adata_large: AnnData):
@@ -92,7 +92,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid terminal states names"):
             mc.rename_terminal_states({"foo": "bar"})
 
     def test_rename_terminal_states_invalid_new_name(self, adata_large: AnnData):
@@ -103,7 +103,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2, method="kmeans")
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"After renaming"):
             mc.rename_terminal_states({"0": "1"})
 
     def test_rename_terminal_states_try_joining_states(self, adata_large: AnnData):
@@ -114,7 +114,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid terminal states names"):
             mc.rename_terminal_states({"0, 1": "foo"})
 
     def test_rename_terminal_states_empty_mapping(self, adata_large: AnnData):
@@ -153,7 +153,7 @@ class TestCFLARE:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.estimators.CFLARE(terminal_kernel)
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Compute terminal states"):
             mc.compute_fate_probabilities()
 
     def test_compute_fate_probabilities_normal_run(self, adata_large: AnnData):
@@ -260,7 +260,7 @@ class TestCFLARE:
         mc = cr.estimators.CFLARE(terminal_kernel)
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r".*fate_probabilities"):
             mc.compute_lineage_drivers()
 
     def test_compute_lineage_drivers_invalid_lineages(self, adata_large: AnnData):
@@ -272,7 +272,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
         mc.compute_fate_probabilities()
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Invalid lineage name"):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
@@ -284,7 +284,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
         mc.compute_fate_probabilities()
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Clusters"):
             mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters", clusters=["foo"])
 
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
@@ -316,7 +316,7 @@ class TestCFLARE:
         mc.predict(use=2)
         mc.compute_fate_probabilities()
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r".*lineage_drivers"):
             mc.plot_lineage_drivers("0")
 
     def test_plot_lineage_drivers_invalid_name(self, adata_large: AnnData):
@@ -330,7 +330,7 @@ class TestCFLARE:
         mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Lineage .* not found"):
             mc.plot_lineage_drivers("foo", use_raw=False)
 
     def test_plot_lineage_drivers_invalid_n_genes(self, adata_large: AnnData):
@@ -344,7 +344,7 @@ class TestCFLARE:
         mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".*to be positive"):
             mc.plot_lineage_drivers("0", use_raw=False, n_genes=0)
 
     def test_plot_lineage_drivers_normal_run(self, adata_large: AnnData):

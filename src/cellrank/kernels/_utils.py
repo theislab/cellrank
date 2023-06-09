@@ -102,11 +102,12 @@ def _random_normal(
     assert m.ndim == 1, "Means are not 1 dimensional."
     assert m.shape == v.shape, "Means and variances have different shape."
 
-    rng = np.random.RandomState()
     if n_samples == 1:
-        return np.expand_dims(np.array([rng.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)
+        return np.expand_dims(np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)  # noqa: NPY002
 
-    return np.array([[rng.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]).T
+    return np.array(
+        [[np.random.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]  # noqa: NPY002
+    ).T
 
 
 @njit(**jit_kwargs)

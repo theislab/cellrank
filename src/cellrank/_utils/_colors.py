@@ -185,7 +185,7 @@ def _map_names_and_colors(
         raise TypeError(f"Query series must be `categorical`, found `{infer_dtype(series_query)}`.")
     if len(series_reference) != len(series_query):
         raise ValueError(
-            f"Expected the reference and query to have same length,"
+            f"Expected the reference and query to have the same length, "
             f"found `{len(series_reference)}`, `{len(series_query)}`."
         )
 

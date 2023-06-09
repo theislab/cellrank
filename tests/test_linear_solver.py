@@ -35,7 +35,7 @@ class TestScipyLinearSolver:
         A = rng.normal(size=(20, 10))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match="Invalid solver"):
             _solve_lin_system(A, B, solver="foobar", use_petsc=False)
 
     @pytest.mark.parametrize(("seed", "sparse"), zip(range(10), [False] * 5 + [True] * 5))

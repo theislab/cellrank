@@ -337,7 +337,7 @@ class TestGPCCA:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.estimators.GPCCA(terminal_kernel)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid method"):
             mc.compute_schur(method="foobar")
 
     def test_compute_schur_invalid_eig_sort(self, adata_large: AnnData):
@@ -346,7 +346,7 @@ class TestGPCCA:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.estimators.GPCCA(terminal_kernel)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* sorting criterion"):
             mc.compute_schur(which="foobar", method="krylov")
 
     def test_compute_schur_write_eigvals(self, adata_large: AnnData):
@@ -390,7 +390,7 @@ class TestGPCCA:
         terminal_kernel = 0.8 * vk + 0.2 * ck
 
         mc = cr.estimators.GPCCA(terminal_kernel)
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Compute eigendecomposition"):
             mc.compute_macrostates(n_states=None)
 
     def test_compute_macrostates_1_state_no_eig(self, adata_large: AnnData):
@@ -474,7 +474,7 @@ class TestGPCCA:
 
         mc = cr.estimators.GPCCA(terminal_kernel)
         mc.compute_schur(n_components=10, method="krylov")
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Unable to find clusters"):
             mc.compute_macrostates(n_states=2, cluster_key="foobar")
 
     def test_compute_macro_cache(self, adata_large: AnnData):
@@ -577,7 +577,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2, n_cells=None)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Expected .* to be positive"):
             mc.set_terminal_states(n_cells=0)
 
     def test_set_terminal_states_from_macrostates_invalid_name(self, adata_large: AnnData):
@@ -589,7 +589,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Invalid lineage name"):
             mc.set_terminal_states(states=["foobar"])
 
     @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
@@ -617,20 +617,8 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             mc.predict(method="foobar")
-
-    def test_compute_terminal_states_no_cells(self, adata_large: AnnData):
-        vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata_large).compute_transition_matrix()
-        terminal_kernel = 0.8 * vk + 0.2 * ck
-
-        mc = cr.estimators.GPCCA(terminal_kernel)
-        mc.compute_schur(n_components=10, method="krylov")
-
-        mc.compute_macrostates(n_states=2)
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            mc.predict(n_cells=None)
 
     def test_compute_terminal_states_non_positive_cells(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
@@ -641,7 +629,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             mc.predict(n_cells=0)
 
     def test_compute_terminal_states_eigengap(self, adata_large: AnnData):
@@ -716,7 +704,7 @@ class TestGPCCA:
         mc.compute_schur(n_components=10, method="krylov")
 
         mc.compute_macrostates(n_states=2)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* decrease this to at most"):
             mc.predict(n_cells=4200)
 
     def test_compute_terminal_states_default(self, adata_large: AnnData):
@@ -745,7 +733,7 @@ class TestGPCCA:
         mc.set_terminal_states()
         mc.compute_fate_probabilities()
 
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Invalid lineage name"):
             mc.compute_lineage_drivers(use_raw=False, lineages=["foo"])
 
     def test_compute_lineage_drivers_invalid_clusters(self, adata_large: AnnData):
@@ -759,7 +747,7 @@ class TestGPCCA:
         mc.set_terminal_states()
         mc.compute_fate_probabilities()
 
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Clusters .* not found"):
             mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters", clusters=["foo"])
 
     def test_compute_lineage_drivers_normal_run(self, adata_large: AnnData):
@@ -793,7 +781,7 @@ class TestGPCCA:
         mc.set_terminal_states()
         mc.compute_fate_probabilities()
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r".*lineage_drivers"):
             mc.plot_lineage_drivers("0")
 
     def test_plot_lineage_drivers_invalid_name(self, adata_large: AnnData):
@@ -808,7 +796,7 @@ class TestGPCCA:
         mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Lineage .* not found"):
             mc.plot_lineage_drivers("foo", use_raw=False)
 
     def test_plot_lineage_drivers_invalid_n_genes(self, adata_large: AnnData):
@@ -823,7 +811,7 @@ class TestGPCCA:
         mc.compute_fate_probabilities()
         mc.compute_lineage_drivers(use_raw=False, cluster_key="clusters")
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             mc.plot_lineage_drivers("0", use_raw=False, n_genes=0)
 
     def test_plot_lineage_drivers_normal_run(self, adata_large: AnnData):

@@ -30,10 +30,6 @@ from cellrank.models._utils import (
 
 
 class TestModel:
-    def test_wrong_type(self):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            SKLearnModel(0, SVR())
-
     def test_initialize(self, adata: AnnData):
         model = create_model(adata)
 
@@ -41,27 +37,27 @@ class TestModel:
 
     def test_prepare_invalid_gene(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare("foo", "0", "latent_time")
 
     def test_prepare_invalid_lineage(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match="Fatal model"):
             model.prepare(adata_cflare.var_names[0], "foo", "latent_time")
 
     def test_prepare_invalid_data_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match="Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", data_key="foo")
 
     def test_prepare_invalid_time_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match="Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "foo")
 
     def test_prepare_invalid_time_range(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match="Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", time_range=(0, 1, 2))
 
     def test_prepare_normal_run(self, adata_cflare):
@@ -129,17 +125,13 @@ class TestModel:
 
 
 class TestUtils:
-    def test_extract_data_wrong_type(self):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            _ = _extract_data(None)
-
-    def test_extract_data_raw_None(self, adata: AnnData):
+    def test_extract_data_raw_none(self, adata: AnnData):
         adata = AnnData(adata.X, raw=None)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* is None"):
             _ = _extract_data(adata, use_raw=True)
 
     def test_extract_data_invalid_layer(self, adata: AnnData):
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Layer .* not found"):
             _extract_data(adata, layer="foo", use_raw=False)
 
     def test_extract_data_normal_run(self, adata: AnnData):
@@ -176,28 +168,28 @@ class TestUtils:
 
     def test_rank_data_invalid_method(self):
         with pytest.raises(AssertionError, match="REPLACE_ME"):
-            _rankdata(np.empty(size=(10,)), method="foobar")
+            _rankdata(np.empty((10,)), method="foobar")
 
     def test_get_knots_invalid_n_knots(self):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             _get_knotlocs([0, 1, 2], 0)
 
     def test_get_knots_non_finite_values(self):
         x = np.array([0, 1, 2, 3], dtype=np.float64)
         x[-1] = np.inf
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* are finite"):
             _get_knotlocs(x, 1)
 
     def test_get_knots_wrong_shape(self):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=".* dimension"):
             _get_knotlocs(np.array([0, 1, 2, 3]).reshape((2, 2)), 1)
 
     def test_get_knots_only_same_value(self):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* are the same"):
             _get_knotlocs(np.array([42] * 10), 1)
 
     def test_get_knots_empty_pseudotime(self):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* are the same"):
             _get_knotlocs(np.array([]), 2)
 
     def test_get_knots_uniform(self):

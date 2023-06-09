@@ -255,10 +255,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         elif input_array.ndim > 2:
             raise ValueError(f"Input array must be 2-dimensional, found `{input_array.ndim}`.")
 
-        if input_array.shape[0] == 0:
-            raise ValueError("Expected number cells to be at least 1, found 0.")
-        if input_array.shape[1] == 0:
-            raise ValueError("Expected number of lineages to be at least 1, found 0.")
+        if not input_array.shape[0]:
+            raise ValueError("Expected number cells to be at least `1`, found `0`.")
+        if not input_array.shape[1]:
+            raise ValueError("Expected number of lineages to be at least `1`, found `0`.")
 
         obj = np.array(input_array, copy=True).view(cls)
         obj._n_lineages = obj.shape[1]
