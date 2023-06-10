@@ -233,12 +233,19 @@ ignore-path = "docs/release/**.rst"
 legacy_tox_ini = """
 [tox]
 min_version = 4.0
-env_list = lint-code,py{3.8,3.9,3.10,3.11}
+requires = tox-conda
+env_list = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
 # TODO(michalk8): remove after new scVelo version is up
 deps = git+https://github.com/theislab/scvelo
+conda_deps =
+    slepc: mpi4py
+    slepc: petsc4py
+    slepc: slepc4py
+conda_channels=
+    conda-forge
 extras = test
 pass_env = PYTEST_*,CI
 commands =

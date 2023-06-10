@@ -20,9 +20,13 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python: ['3.8', '3.10']  # , '3.11']
+        slepc: [noslepc]
         include:
         - os: macos-latest
           python: '3.9'
+        - os: ubunti-latest
+          python: '3.9'
+          slepc: [slepc]
 
     steps:
     - uses: actions/checkout@v3
@@ -39,7 +43,7 @@ jobs:
     # TODO(michalk8): test PETSc/SLEPc
     - name: Test
       run: |
-        tox -e py-${{ matrix.python }}
+        tox -e py-${{ matrix.python }}-${{ matrix.slepc }}
       env:
         PYTEST_ADDOPTS: -vv -n 2
 
