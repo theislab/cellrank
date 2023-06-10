@@ -42,22 +42,22 @@ class TestModel:
 
     def test_prepare_invalid_lineage(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="Fatal model"):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "foo", "latent_time")
 
     def test_prepare_invalid_data_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="Fatal model"):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", data_key="foo")
 
     def test_prepare_invalid_time_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="Fatal model"):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "foo")
 
     def test_prepare_invalid_time_range(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(ValueError, match="Fatal model"):
+        with pytest.raises(ValueError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", time_range=(0, 1, 2))
 
     def test_prepare_normal_run(self, adata_cflare):
@@ -661,7 +661,7 @@ class TestFittedModel:
             )
 
     def test_wrong_w_all_shape(self):
-        with pytest.raises(ValueError, match="r.* of shape"):
+        with pytest.raises(ValueError, match=r".* of shape"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),

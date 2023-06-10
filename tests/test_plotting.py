@@ -363,7 +363,7 @@ class TestAggregateAbsorptionProbabilities:
 
     def test_invalid_mode(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
@@ -372,7 +372,7 @@ class TestAggregateAbsorptionProbabilities:
 
     def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid legend position"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
@@ -382,7 +382,7 @@ class TestAggregateAbsorptionProbabilities:
 
     def test_paga_pie_wrong_legend_kind_2(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid legend position"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
@@ -392,7 +392,7 @@ class TestAggregateAbsorptionProbabilities:
 
     def test_paga_pie_wrong_legend_kind_3(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid modifier"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
@@ -402,7 +402,7 @@ class TestAggregateAbsorptionProbabilities:
 
     def test_paga_pie_wrong_legend_kind_4(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Expected only 1 additional"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
@@ -1795,7 +1795,7 @@ class TestGeneTrend:
 
     def test_invalid_time_key(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError, match="REPLACE_ME"):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             cr.pl.gene_trends(
                 adata_cflare,
                 model,

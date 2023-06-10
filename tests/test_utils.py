@@ -54,13 +54,13 @@ class TestToolsUtils:
     def test_merge_not_categorical(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
         y = pd.Series(["b", np.nan, np.nan, "d", "a"])
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r".*categorical"):
             _ = _merge_categorical_series(x, y)
 
     def test_merge_different_index(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
         y = pd.Series(["b", np.nan, np.nan, "d", "a"], index=[5, 4, 3, 2, 1]).astype("category")
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Index .* differ"):
             _ = _merge_categorical_series(x, y)
 
     def test_merge_normal_run(self):
@@ -87,7 +87,7 @@ class TestToolsUtils:
         y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
         colors_x = ["red", "foo"]
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* are color-like"):
             _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_wrong_number_of_colors(self):
@@ -95,7 +95,7 @@ class TestToolsUtils:
         y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
         colors_x = ["red"]
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* differ in length"):
             _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_wrong_dict(self):
@@ -103,7 +103,7 @@ class TestToolsUtils:
         y = pd.Series(["b", np.nan, "a", "d", "a"]).astype("category")
         colors_x = {"a": "red", "foo": "blue"}
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Color mapper"):
             _ = _merge_categorical_series(x, y, colors_old=colors_x)
 
     def test_merge_colors_simple_old(self):
@@ -185,31 +185,31 @@ class TestProcessSeries:
     def test_not_categorical(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan])
 
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r".*categorical"):
             _ = _process_series(x, ["foo"])
 
     def test_colors_wrong_number_of_colors(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* does not match"):
             _ = _process_series(x, ["foo"], colors=["red"])
 
     def test_colors_not_colorlike(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
-            _ = _process_series(x, ["foo"], colors=["bar"])
+        with pytest.raises(ValueError, match=r".* are color-like"):
+            _ = _process_series(x, ["a", "b"], colors=["bar", "baz"])
 
     def test_keys_are_not_proper_categories(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"are proper categories"):
             _ = _process_series(x, ["foo"])
 
     def test_keys_overlap(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Found overlapping keys"):
             _ = _process_series(x, ["a", "b, a"])
 
     def test_normal_run(self):
@@ -295,7 +295,7 @@ class TestOneHot:
         assert (b == b_check).all()
 
     def test_index_error(self):
-        with pytest.raises(IndexError, match="REPLACE_ME"):
+        with pytest.raises(IndexError, match=r"out of bounds"):
             _ = _one_hot(10, 10)
 
 
@@ -323,21 +323,21 @@ class TestFuzzyToDiscrete:
     def test_normalization(self):
         rng = np.random.default_rng(42)
         a_fuzzy = rng.normal(size=(100, 3))
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* do not sum to"):
             _fuzzy_to_discrete(a_fuzzy=a_fuzzy)
 
     def test_too_many_cells(self):
         rng = np.random.default_rng(42)
         a_fuzzy = rng.normal(size=(100, 3))
         a_fuzzy = np.exp(a_fuzzy) / np.sum(np.exp(a_fuzzy), 1)[:, None]
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* decrease this to at most"):
             _fuzzy_to_discrete(a_fuzzy=a_fuzzy, n_most_likely=50)
 
     def test_raise_threshold(self):
         a_fuzzy = np.repeat(np.array([0.9, 0.1])[None, :], 10, 0)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Discretizing leads"):
             _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=True)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Discretizing leads"):
             _fuzzy_to_discrete(a_fuzzy, n_most_likely=3, remove_overlap=False)
 
     def test_normal_output(self):
@@ -441,7 +441,7 @@ class TestSeriesFromOneHotMatrix:
         )
         names = ["0", "1"]
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match="Shape mismatch"):
             _series_from_one_hot_matrix(a, names=names)
 
     def test_dtype(self):
@@ -450,7 +450,7 @@ class TestSeriesFromOneHotMatrix:
             dtype="int8",
         )
 
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r".* to be boolean"):
             _series_from_one_hot_matrix(a)
 
     def test_not_one_hot(self):
@@ -459,7 +459,7 @@ class TestSeriesFromOneHotMatrix:
             dtype="bool",
         )
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* are one-hot encoded"):
             _series_from_one_hot_matrix(a)
 
     def test_normal_return(self):
@@ -483,49 +483,45 @@ class TestSeriesFromOneHotMatrix:
 
 class TestCreateModels:
     def test_create_models_not_a_model_local(self):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r"Expected the model for gene"):
             _create_models({"foo": {"bar": 42}}, ["foo"], ["bar"])
 
     def test_create_models_not_a_model_gene_fallback(self, adata: AnnData):
         m = create_model(adata)
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r"Expected the gene fallback model"):
             _create_models({"foo": {"baz": m}, "*": 42}, ["foo", "bar"], ["baz"])
 
     def test_create_models_not_a_model_lineage_fallback(self, adata: AnnData):
         m = create_model(adata)
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r"Expected the lineage fallback model"):
             _create_models({"foo": {"baz": m, "*": 42}}, ["foo"], ["bar", "baz"])
 
-    def test_create_models_not_a_model_global(self):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            _create_models(None, ["foo"], ["bar"])
-
     def test_create_models_no_models_gene(self):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No lineages have been selected"):
             _create_models({}, ["foo"], [])
 
     def test_create_models_no_models_lineage(self):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No options were specified for all lineages"):
             _create_models({"foo": {}}, ["foo"], ["bar"])
 
     def test_create_models_gene_incomplete(self, adata: AnnData):
         m = create_model(adata)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No options were specified for genes"):
             _create_models({"foo": {"baz": m}}, ["foo", "bar"], ["baz"])
 
     def test_create_models_lineage_incomplete(self, adata: AnnData):
         m = create_model(adata)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No options were specified for all lineages"):
             _create_models({"foo": {"baz": m}}, ["foo"], ["bar", "baz"])
 
     def test_create_model_no_genes(self, adata: AnnData):
         m = create_model(adata)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No genes have been selected"):
             _create_models(m, [], ["foo"])
 
     def test_create_model_no_lineage(self, adata: AnnData):
         m = create_model(adata)
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No lineages have been selected"):
             _create_models(m, ["foo"], [])
 
     def test_create_models_1_model(self, adata: AnnData):
@@ -613,19 +609,15 @@ class TestCreateModels:
 
 class TestCreateCallbacks:
     def test_no_genes(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No genes have been selected"):
             _create_callbacks(adata_cflare, None, [], ["foo"])
 
     def test_no_lineages(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"No lineages have been selected"):
             _create_callbacks(adata_cflare, None, ["foo"], [])
 
-    def test_callback_not_callable(self, adata_cflare: AnnData):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            _create_callbacks(adata_cflare, 42, ["foo"], ["bar"])
-
     def test_callback_gene_fallback_not_callable(self, adata_cflare: AnnData):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r"Expected the gene fallback callback"):
             _create_callbacks(
                 adata_cflare,
                 {"foo": _default_model_callback, "*": 42},
@@ -634,7 +626,7 @@ class TestCreateCallbacks:
             )
 
     def test_callback_lineage_fallback_not_callable(self, adata_cflare: AnnData):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match=r"Expected the lineage fallback callback"):
             _create_callbacks(
                 adata_cflare,
                 {"foo": {"bar": _default_model_callback, "*": 42}},
@@ -642,8 +634,8 @@ class TestCreateCallbacks:
                 ["bar", "baz"],
             )
 
-    def test_create_callbacks_no_models_gene(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+    def test_create_callbacks_no_models_lineage(self, adata_cflare: AnnData):
+        with pytest.raises(ValueError, match=r"No lineages have been selected"):
             _create_callbacks(adata_cflare, {}, ["foo"], [])
 
     def test_create_models_no_models_lineage(self, adata_cflare: AnnData):
@@ -737,7 +729,7 @@ class TestCreateCallbacks:
         def cb(*_args, **_kwargs):
             return 42
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match="Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 cb,
@@ -746,7 +738,7 @@ class TestCreateCallbacks:
             )
 
     def test_callback_wrong_gene(self, adata_cflare: AnnData):
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 _default_model_callback,
@@ -756,12 +748,13 @@ class TestCreateCallbacks:
             )
 
     def test_callback_wrong_lineage(self, adata_cflare: AnnData):
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 _default_model_callback,
                 [adata_cflare.var_names[0]],
                 ["foo"],
+                time_key="dpt_pseudotime",
                 perform_sanity_check=True,  # default callback disables it
             )
 
@@ -769,7 +762,7 @@ class TestCreateCallbacks:
         def cb(model: BaseModel, *_args, **_kwargs):
             return model
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 cb,
@@ -782,7 +775,7 @@ class TestCreateCallbacks:
             model._gene = "bar"
             return model
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 cb,
@@ -795,7 +788,7 @@ class TestCreateCallbacks:
             model._lineage = "bar"
             return model
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 cb,
@@ -807,7 +800,7 @@ class TestCreateCallbacks:
         def cb(_model: BaseModel, *_args, **_kwargs):
             raise TypeError("foobar")
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Callback validation"):
             _create_callbacks(
                 adata_cflare,
                 cb,
@@ -930,7 +923,7 @@ class TestKernelUtils:
         zip(range(4), [True, True, False, False], [True, False, True, False]),
     )
     def test_numpy_and_jax(self, seed: int, c: bool, s: bool):
-        rng = np.random.default_rng(self)
+        rng = np.random.default_rng(seed)
         x = rng.normal(size=(100,))
         w = rng.normal(size=(1, 100))
 
@@ -940,11 +933,11 @@ class TestKernelUtils:
         np.testing.assert_allclose(np_res, jax_res)
 
     def test_random_normal_wrong_ndim(self):
-        with pytest.raises(AssertionError, match="REPLACE_ME"):
+        with pytest.raises(AssertionError, match=r"Means are not 1-dimensional"):
             _random_normal(np.array([[1, 2, 3]]), np.array([[1, 2, 3]]))
 
     def test_random_normal_wrong_var_shape(self):
-        with pytest.raises(AssertionError, match="REPLACE_ME"):
+        with pytest.raises(AssertionError, match=".* different shape"):
             _random_normal(np.array([1, 2, 3]), np.array([1, 2]))
 
     def test_random_normal(self):

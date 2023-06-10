@@ -99,7 +99,7 @@ def _random_normal(
     -------
     `(n_samples x m.shape[0])` array from normal distribution.
     """
-    assert m.ndim == 1, "Means are not 1 dimensional."
+    assert m.ndim == 1, "Means are not 1-dimensional."
     assert m.shape == v.shape, "Means and variances have different shape."
 
     if n_samples == 1:
