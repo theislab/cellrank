@@ -40,7 +40,6 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install tox
 
-    # TODO(michalk8): test PETSc/SLEPc
     - name: Test
       run: |
         tox -e py-${{ matrix.python }}-${{ matrix.slepc }}
@@ -51,7 +50,7 @@ jobs:
       uses: codecov/codecov-action@v3
       with:
         files: ./coverage.xml
-        flags: tests-${{ matrix.os }}-${{ matrix.python }}
+        flags: tests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.slepc }}
         name: unittests
         env_vars: OS,PYTHON
         fail_ci_if_error: false
