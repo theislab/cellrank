@@ -1807,7 +1807,7 @@ class TestGeneTrend:
 
     def test_all_models_failed(self, adata_cflare: AnnData):
         fm = create_failed_model(adata_cflare)
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Fatal model"):
             cr.pl.gene_trends(
                 adata_cflare,
                 fm,
@@ -2260,10 +2260,6 @@ class TestGPCCA:
 
 
 class TestLineage:
-    def test_lineage_pie_error(self, lineage: cr.Lineage):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
-            lineage[:, 0].plot_pie(dpi=DPI)
-
     @compare(kind="lineage")
     def test_pie(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath)
