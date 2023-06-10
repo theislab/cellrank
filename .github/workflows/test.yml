@@ -42,7 +42,7 @@ jobs:
 
     - name: Test
       run: |
-        tox -e py-${{ matrix.python }}-${{ matrix.slepc }}
+        tox -e py${{ matrix.python }}-${{ matrix.slepc }}
       env:
         PYTEST_ADDOPTS: -vv -n 2
 
