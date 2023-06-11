@@ -5,7 +5,7 @@ import scvelo as scv
 from scvelo.tools.velocity_embedding import quiver_autoscale
 
 import numpy as np
-from scipy.sparse import issparse, isspmatrix_csr, spmatrix
+import scipy.sparse as sp
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -16,8 +16,7 @@ __all__ = ["TmatProjection"]
 
 
 class TmatProjection:
-    """
-    Project transition matrix onto a low-dimensional embedding.
+    """Project transition matrix onto a low-dimensional embedding.
 
     Should be used for visualization purposes.
 
@@ -26,7 +25,7 @@ class TmatProjection:
     kexpr
         Kernel that contains a transition matrix.
     basis
-        Key in :attr:`anndata.AnnData.obsm` where the basis is stored.
+        Key in :attr:`~anndata.AnnData.obsm` where the basis is stored.
     """
 
     def __init__(self, kexpr: "ExpernelExpression", basis: str = "umap"):  # noqa: F821
@@ -47,25 +46,24 @@ class TmatProjection:
         self,
         key_added: Optional[str] = None,
         recompute: bool = False,
-        connectivities: Optional[spmatrix] = None,
+        connectivities: Optional[sp.spmatrix] = None,
     ) -> None:
-        """
-        Project transition matrix onto an embedding.
+        """Project transition matrix onto an embedding.
 
-        This function has been adapted from :func:`scvelo.tl.velocity_embedding`.
+        This function is adapted from :func:`~scvelo.tl.velocity_embedding`.
 
         Parameters
         ----------
         key_added
-            Key in :attr:`anndata.AnnData.obsm` where to store the projection.
+            Key in :attr:`~anndata.AnnData.obsm` where to store the projection.
         recompute
-            Whether to recompute the projection if it already exists.
+            Whether to recompute an existing projection.
         connectivities
-            Connectivity matrix to use for projection. If ``None``, use ones from the underlying kernel, is possible.
+            Connectivity matrix to use for projection. If :obj:`None`, use ones from the underlying kernel, is possible.
 
         Returns
         -------
-        Nothing, just updates :attr:`anndata.AnnData` with the projection and the parameters used for computation.
+        Nothing, just updates :attr:`adata` with the projection and the parameters used for computation.
         """
         from cellrank.kernels.mixins import ConnectivityMixin
 
@@ -86,7 +84,7 @@ class TmatProjection:
                     "Unable to find connectivities in the kernel. "
                     "Please supply them explicitly as `connectivities=...`."
                 ) from None
-        if not isspmatrix_csr(connectivities):
+        if not sp.isspmatrix_csr(connectivities):
             connectivities = connectivities.tocsr()
 
         emb = _get_basis(self._kexpr.adata, self._basis)
@@ -100,7 +98,7 @@ class TmatProjection:
                 if np.any(np.isnan(dX)):
                     T_emb[row_id, :] = np.nan
                 else:
-                    probs = row[:, conn_idxs].A.squeeze() if issparse(row) else row[conn_idxs]
+                    probs = row[:, conn_idxs].A.squeeze() if sp.issparse(row) else row[conn_idxs]
                     dX /= np.linalg.norm(dX, axis=1)[:, None]
                     dX = np.nan_to_num(dX)
                     T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]
@@ -121,18 +119,17 @@ class TmatProjection:
 
     @d.dedent
     def plot(self, *args: Any, stream: bool = True, **kwargs: Any) -> None:
-        """
-        Plot projected transition matrix in a embedding.
+        """Plot projected transition matrix in a embedding.
 
         Parameters
         ----------
         args
             Positional argument for the plotting function.
         stream
-            If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
-            Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
+            If :obj:`True``, use :func:`~scvelo.plotting.velocity_embedding_stream`.
+            Otherwise, use :func:`~scvelo.plotting.velocity_embedding_grid`.
         kwargs
-            Keyword argument for the chosen plotting function.
+            Keyword argument for the above-mentioned plotting function.
 
         Returns
         -------
