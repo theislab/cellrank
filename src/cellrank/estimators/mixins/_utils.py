@@ -1,5 +1,5 @@
-from copy import copy, deepcopy
-from enum import auto
+import copy
+import enum
 from typing import (
     Any,
     Callable,
@@ -47,8 +47,8 @@ class StatesHolder(NamedTuple):  # noqa: D101
 
 
 class PlotMode(ModeEnum):
-    EMBEDDING = auto()
-    TIME = auto()
+    EMBEDDING = enum.auto()
+    TIME = enum.auto()
 
 
 class BaseProtocol(Protocol):  # noqa: D101
@@ -101,7 +101,7 @@ class BaseProtocol(Protocol):  # noqa: D101
 
 @decorator()
 def logger(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Dict[str, Any]) -> str:
-    """Handle logging for :class:`anndata.AnnData` writing functions of :class:`cellrank.estimators.BaseEstimator`."""
+    """Handle logging for :class:`~anndata.AnnData` writing functions of :class:`~cellrank.estimators.BaseEstimator`."""
     log, time = kwargs.pop("log", True), kwargs.pop("time", None)
     msg = wrapped(*args, **kwargs)
 
@@ -113,10 +113,9 @@ def logger(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Dict[s
 
 @decorator()
 def shadow(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mapping[str, Any]) -> str:
-    """
-    Duplicate function call with shadowed :class:`anndata.AnnData.object`.
+    """Duplicate function call with shadow :class:`~anndata.AnnData` object.
 
-    Used to easily create :class:`anndata.AnnData` serialization object in :class:`cellrank.estimators.BaseEstimator`.
+    Used to create :class:`~anndata.AnnData` serialization object in the :class:`~cellrank.estimators.BaseEstimator`.
     """
     res = wrapped(*args, **kwargs)
     with instance._shadow:
@@ -130,23 +129,23 @@ def shadow(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Mappin
 
 
 class SafeGetter:
-    """
-    Context manager that does a simple rollback on :attr:`object.__dict__`.
+    """Context manager that does a simple rollback on :attr:`object.__dict__`.
 
-    Used in :class:`cellrank.estimators.BaseEstimator` to maintain consistency
-    during deserialization from :class:`anndata.AnnData`.
+    Used in :class:`~cellrank.estimators.BaseEstimator` to maintain consistency
+    during deserialization from :class:`~anndata.AnnData`.
 
     Parameters
     ----------
     obj
-        Object to watch. Shallow copy of ``obj.__dict__`` is made during initialization, with the exception
-        of the `_shadow_adata` (deep copy), if present.
+        Object to watch. Shallow copy of :attr:`obj.__dict__` is made during initialization,
+        except `_shadow_adata` (deep copy), if present.
     allowed
-        Allow these exception to occur with the context.
+        Whether to allow these exception to occur with the context.
 
     Notes
     -----
-    :attr:`ok` is `False` iff any exception, regardless of whether it is in ``allowed``, has been encountered.
+    :attr:`ok` is :obj:`False` if and only if any exception, regardless of whether it is in ``allowed``,
+    has been encountered.
     """
 
     def __init__(self, obj: Any, allowed: Union[type, Sequence[type]] = ()):
@@ -156,12 +155,12 @@ class SafeGetter:
             allowed = (allowed,)
         self._allowed = allowed
 
-        self._dict = copy(obj.__dict__)
+        self._dict = copy.copy(obj.__dict__)
         if "_shadow_adata" in self._dict:
             # deepcopy `_shadow_adata` (small cost) to easily revert changes
             # do not run deepcopy on the full `__dict__` (possibly large cost)
             # silent assumption is that within the context `adata` is not modified
-            self._dict["_shadow_adata"] = deepcopy(self._dict["_shadow_adata"])
+            self._dict["_shadow_adata"] = copy.deepcopy(self._dict["_shadow_adata"])
 
     def __enter__(self) -> "SafeGetter":
         return self
@@ -178,5 +177,5 @@ class SafeGetter:
 
     @property
     def ok(self) -> bool:
-        """Return `True` if no exception has been raised."""
+        """Return :obj:`True` if no exception has been raised."""
         return self._exc_type is None
