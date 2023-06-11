@@ -1,14 +1,13 @@
 from typing import Any, Callable, Optional, Tuple
 
-from numba import njit, prange
+import numba as nb
 
 import wrapt
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import is_categorical_dtype, is_numeric_dtype
-from scipy.sparse import csr_matrix
+import scipy.sparse as sp
+from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 
 from anndata import AnnData
 
@@ -17,10 +16,9 @@ from cellrank import logging as logg
 jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
 
 
-@njit(parallel=False, **jit_kwargs)
+@nb.njit(parallel=False, **jit_kwargs)
 def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
-    """
-    Apply a reduction function over a given axis.
+    """Apply a reduction function over a given axis.
 
     Parameters
     ----------
@@ -51,40 +49,39 @@ def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
     return result
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def np_mean(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.mean, axis, array)
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def np_std(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.std, axis, array)
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def np_max(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.max, axis, array)
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def np_sum(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.sum, axis, array)
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.linalg.norm, axis, array)
 
 
 # this is faster than using flat array
-@njit(parallel=True)
+@nb.njit(parallel=True)
 def _random_normal(
     m: np.ndarray,
     v: np.ndarray,
     n_samples: int = 1,
 ) -> np.ndarray:
-    """
-    Sample number from normal distribution.
+    """Sample number from normal distribution.
 
     Parameters
     ----------
@@ -93,27 +90,28 @@ def _random_normal(
     v
         Variance vector.
     n_samples
-        Number of samples to be generated
+        Number of samples to be generated.
 
     Returns
     -------
-    `(n_samples x m.shape[0])` array from normal distribution.
+    Array of shape ``(n_samples x m.shape[0])``.
     """
     assert m.ndim == 1, "Means are not 1-dimensional."
     assert m.shape == v.shape, "Means and variances have different shape."
 
     if n_samples == 1:
-        return np.expand_dims(np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)  # noqa: NPY002
+        return np.expand_dims(
+            np.array([np.random.normal(m[i], v[i]) for i in np.prange(m.shape[0])]), 0  # noqa: NPY002
+        )
 
     return np.array(
-        [[np.random.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]  # noqa: NPY002
+        [[np.random.normal(m[i], v[i]) for _ in nb.prange(n_samples)] for i in nb.prange(m.shape[0])]  # noqa: NPY002
     ).T
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Get a vector with uniform probability and a vector of zeros.
+    """Get a vector with uniform probability and a vector of zeros.
 
     Parameters
     ----------
@@ -122,8 +120,7 @@ def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
 
     Returns
     -------
-    :class:`numpy.ndarray`, :class:`numpy.ndarray`
-        The probability and variance vectors.
+    The probability and variance vectors.
     """
     # float32 doesn't have enough precision
     return (
@@ -134,16 +131,15 @@ def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
 
 def _reconstruct_one(
     data: np.ndarray,
-    mat: csr_matrix,
+    mat: sp.csr_matrix,
     ixs: Optional[np.ndarray] = None,
-) -> Tuple[csr_matrix, csr_matrix]:
-    """
-    Transform :class:`numpy.ndarray` into :class:`scipy.sparse.csr_matrix`.
+) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
+    """Transform :class:`~numpy.ndarray` into :class:`~scipy.sparse.csr_matrix`.
 
     Parameters
     ----------
     data
-        Array of shape `(2 x number_of_nnz)`.
+        Array of shape ``(2 x number_of_nnz)``.
     mat
         The original sparse matrix.
     ixs
@@ -151,8 +147,7 @@ def _reconstruct_one(
 
     Returns
     -------
-    :class:`scipy.sparse.csr_matrix`, :class:`scipy.sparse.csr_matrix`
-        The probability and correlation matrix.
+    The probability and correlation matrix.
     """
     assert data.shape == (2, mat.nnz), f"Dimension or shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
 
@@ -164,8 +159,8 @@ def _reconstruct_one(
 
     # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
     # only happens when using numba
-    probs = csr_matrix((np.array(data[0]), np.array(mat.indices), np.array(mat.indptr)))
-    cors = csr_matrix((np.array(data[1]), np.array(mat.indices), np.array(mat.indptr)))
+    probs = sp.csr_matrix((np.array(data[0]), np.array(mat.indices), np.array(mat.indptr)))
+    cors = sp.csr_matrix((np.array(data[1]), np.array(mat.indices), np.array(mat.indptr)))
 
     if aixs is not None:
         assert len(aixs) == probs.shape[0], f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
@@ -182,22 +177,20 @@ def _reconstruct_one(
     return probs, cors
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def _calculate_starts(indptr: np.ndarray, ixs: np.ndarray) -> np.ndarray:
-    """
-    Get the position where to put the data.
+    """Get the position where to put the data.
 
     Parameters
     ----------
     indptr
-        Pointer of indices from :class:`scipy.sparse.csr_matrix`.
+        Pointer of indices from :class:`~scipy.sparse.csr_matrix`.
     ixs
         Row indices for which to calculate the starts.
 
     Returns
     -------
-    :class:`numpy.ndarray`
-        The starting positions.
+    The starting positions.
     """
     starts = np.cumsum(indptr[ixs + 1] - indptr[ixs])
     return np.hstack((np.array([0], dtype=starts.dtype), starts))
