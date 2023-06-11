@@ -7,6 +7,8 @@ import joblib as jl
 import numpy as np
 import scipy.sparse as sp
 
+__all__ = ["parallelize", "_get_n_cores"]
+
 
 def parallelize(
     callback: Callable[[Any], Any],
