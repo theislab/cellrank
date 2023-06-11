@@ -1,4 +1,4 @@
-from abc import ABC
+import abc
 from typing import Any, Optional
 
 import numpy as np
@@ -17,9 +17,8 @@ __all__ = ["ExperimentalTimeKernel"]
 
 
 @d.dedent
-class ExperimentalTimeKernel(BidirectionalKernel, ABC):
-    """
-    Kernel base class which computes directed transition probabilities based on experimental time.
+class ExperimentalTimeKernel(BidirectionalKernel, abc.ABC):
+    """Kernel base class which computes transition probabilities based on experimental time.
 
     %(density_correction)s
 
@@ -28,7 +27,7 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
     %(adata)s
     %(backward)s
     time_key
-        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
+        Key in :attr:`~anndata.AnnData.obs` where experimental time is stored.
         The experimental time can be of either of a numeric or an ordered categorical type.
     kwargs
         Keyword arguments for the parent class.
@@ -72,8 +71,7 @@ class ExperimentalTimeKernel(BidirectionalKernel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        """
-        %(plot_single_flow.full_desc)s
+        """%(plot_single_flow.full_desc)s
 
         Parameters
         ----------
