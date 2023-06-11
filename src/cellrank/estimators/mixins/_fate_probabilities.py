@@ -1,4 +1,4 @@
-from types import MappingProxyType
+import types
 from typing import (
     Any,
     Dict,
@@ -13,8 +13,8 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse import issparse, spmatrix
 
 from anndata import AnnData
 
@@ -43,8 +43,8 @@ __all__ = ["FateProbsMixin"]
 
 
 class RecTransStates(NamedTuple):
-    q: Union[np.ndarray, spmatrix]
-    s: Union[np.ndarray, spmatrix]
+    q: Union[np.ndarray, sp.spmatrix]
+    s: Union[np.ndarray, sp.spmatrix]
     trans_indices: np.ndarray
     rec_indices: np.ndarray
     name_to_ixs: Dict[str, np.ndarray]
@@ -56,7 +56,7 @@ class FateProbsProtocol(BaseProtocol):
     _term_states: StatesHolder
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
         ...
 
     @property
@@ -80,8 +80,8 @@ class FateProbsProtocol(BaseProtocol):
 
     def _compute_fate_probabilities(
         self,
-        q: Union[np.ndarray, spmatrix],
-        s: Union[np.ndarray, spmatrix],
+        q: Union[np.ndarray, sp.spmatrix],
+        s: Union[np.ndarray, sp.spmatrix],
         trans_indices: np.ndarray,
         term_states: np.ndim,
         solver: str,
@@ -121,7 +121,7 @@ class FateProbsProtocol(BaseProtocol):
     def _write_absorption_times(
         self,
         abs_times: Optional[pd.DataFrame],
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         ...
 
@@ -201,8 +201,8 @@ class FateProbsMixin:
         to reach cell :math:`j` from :math:`R` is the probability that a random walk initialized in :math:`i`
         will reach absorbing state :math:`j`.
 
-        In our context, states correspond to cells, in particular, absorbing states correspond to cells in terminal
-        states.
+        In our context, states correspond to cells, in particular, absorbing states correspond to cells
+        in :attr:`terminal_states`.
         """
         return self._fate_probabilities
 
@@ -249,14 +249,14 @@ class FateProbsMixin:
         ----------
         keys
             Terminal states for which to compute the fate probabilities.
-            If `None`, use all states defined in :attr:`terminal_states`.
+            If :obj:`None`, use all states defined in :attr:`terminal_states`.
         %(absorption_utils)s
 
         Returns
         -------
-        Nothing, just updates the following field:
+        Nothing, just updates the following fields:
 
-            - :attr:`fate_probabilities` - %(fate_probs.summary)s
+        - :attr:`fate_probabilities` - %(fate_probs.summary)s
         """
         start = logg.info("Computing fate probabilities")
         data = self._rec_trans_states(keys, ctx="fate_probs")
@@ -303,11 +303,13 @@ class FateProbsMixin:
         Parameters
         ----------
         states
-            Subset of the macrostates to show. If ``None``, plot all macrostates.
+            Subset of the macrostates to show. If :obj:`None`, plot all macrostates.
         color
-            Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
+            Key in :attr:`~anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
+        mode
+            Whether to plot the probabilities in an embedding or across pseudotime.
         time_key
-            Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
+            Key in :attr:`~anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
         title
             Title of the plot.
         same_plot
@@ -316,7 +318,7 @@ class FateProbsMixin:
         cmap
             Colormap for continuous annotations.
         kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scvelo.pl.scatter`.
 
         Returns
         -------
@@ -358,16 +360,16 @@ class FateProbsMixin:
         ----------
         keys
             Terminal states for which to compute the fate probabilities.
-            If `None`, use all states defined in :attr:`terminal_states`.
+            If :obj:`None`, use all states defined in :attr:`terminal_states`.
         calculate_variance
             Whether to calculate the variance.
         %(absorption_utils)s
 
         Returns
         -------
-        Nothing, just updates the following field:
+        Nothing, just updates the following fields:
 
-            - :attr:`absorption_times` - %(abs_times.summary)s
+        - :attr:`absorption_times` - %(abs_times.summary)s
         """
         start = logg.info("Computing absorption times")
         if show_progress_bar is None:
@@ -404,22 +406,19 @@ class FateProbsMixin:
         method: Literal["kl_divergence", "entropy"] = "kl_divergence",
         early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
     ) -> pd.Series:
-        """
-        %(lin_pd.full_desc)s
+        """%(lin_pd.full_desc)s
 
         Parameters
         ----------
         %(lin_pd.parameters)s
-            If a :class:`dict`, the key specifies a cluster key in :attr:`anndata.AnnData.obs` and the values
+            If a :class:`dict`, the key specifies a cluster key in :attr:`~anndata.AnnData.obs` and the values
             specify cluster labels containing early cells.
 
         Returns
         -------
-        %(lin_pd.returns)s
+        Returns the priming degree and updates the following fields:
 
-        Also updates the following field:
-
-            - :attr:`priming_degree` - %(priming_degree.summary)s
+        - :attr:`priming_degree` - %(priming_degree.summary)s
         """  # noqa: D400
         fate_probs = self.fate_probabilities
         if fate_probs is None:
@@ -457,7 +456,7 @@ class FateProbsMixin:
             keys = sorted(set(keys))
 
         # get the transition matrix
-        if not issparse(self.transition_matrix):
+        if not sp.issparse(self.transition_matrix):
             logg.warning("Attempting to solve a potentially large linear system with dense transition matrix")
 
         # process the current annotations according to `keys`
@@ -496,8 +495,8 @@ class FateProbsMixin:
 
     def _compute_fate_probabilities(
         self: FateProbsProtocol,
-        q: Union[np.ndarray, spmatrix],
-        s: Union[np.ndarray, spmatrix],
+        q: Union[np.ndarray, sp.spmatrix],
+        s: Union[np.ndarray, sp.spmatrix],
         trans_indices: np.ndarray,
         term_states: np.ndim,
         solver: str,
@@ -548,7 +547,7 @@ class FateProbsMixin:
     def _write_fate_probabilities(
         self: FateProbsProtocol,
         fate_probs: Optional[Lineage],
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         # fmt: off
         key = Key.obsm.fate_probs(self.backward)
@@ -564,13 +563,13 @@ class FateProbsMixin:
     def _write_absorption_times(
         self: FateProbsProtocol,
         abs_times: Optional[pd.DataFrame],
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         key = Key.obsm.abs_times(self.backward)
         self._set("_absorption_times", self.adata.obsm, key=key, value=abs_times)
         self.params[key] = dict(params)
 
-        return f"Adding `adata.obsm[{key!r}]`\n" f"       `.absorption_times`\n" f"    Finish"
+        return f"Adding `adata.obsm[{key!r}]`\n       `.absorption_times`\n    Finish"
 
     @logger
     @shadow
