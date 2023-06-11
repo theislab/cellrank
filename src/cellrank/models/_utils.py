@@ -1,10 +1,10 @@
-from enum import auto
-from typing import Optional, Sequence, Union
+import enum
+from typing import Any, Optional, Sequence, Union
 
-from numba import njit, prange
+import numba as nb
 
 import numpy as np
-from scipy.sparse import issparse, spmatrix
+import scipy.sparse as sp
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from anndata import AnnData
@@ -19,26 +19,25 @@ _OFFSET_KEY = "cellrank_offset"
 
 
 class NormMode(ModeEnum):  # noqa: D101
-    TMM = auto()
-    RLE = auto()
-    UPPER_QUANT = auto()
-    NONE = auto()
+    TMM = enum.auto()
+    RLE = enum.auto()
+    UPPER_QUANT = enum.auto()
+    NONE = enum.auto()
 
 
 @d.dedent
-def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = True) -> Union[np.ndarray, spmatrix]:
-    """
-    Extract expression data from an object.
+def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = True) -> Union[np.ndarray, sp.spmatrix]:
+    """Extract expression data from an object.
 
     Parameters
     ----------
     data
         Annotated data object or an array.
     layer
-        Key in :attr:`anndata.AnnData.layers` accessed when ``use_raw = False``.
-        Only used when ``data`` is :class:`anndata.AnnData`.
+        Key in :attr:`~anndata.AnnData.layers` accessed when ``use_raw = False``.
+        Only used when ``data`` is :class:`~anndata.AnnData`.
     use_raw
-        Whether to access ``adata.raw``. Only used when ``data`` is :class:`anndata.AnnData`.
+        Whether to access :attr:`anndata.AnnData.raw`. Only used when ``data`` is :class:`~anndata.AnnData`.
 
     Returns
     -------
@@ -60,7 +59,7 @@ def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = Tr
             x = data.layers[layer]
         else:
             x = data.X
-    elif not isinstance(data, (np.ndarray, spmatrix)):
+    elif not isinstance(data, (np.ndarray, sp.spmatrix)):
         raise TypeError(
             f"Expected parameter `data` to be either `anndata.AnnData`, `numpy.ndarray` "
             f"or `scipy.sparse.spmatrix`, found `{type(data).__name__!r}`."
@@ -71,7 +70,7 @@ def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = Tr
     return x
 
 
-@njit(fastmath=True, cache=True)
+@nb.njit(fastmath=True, cache=True)
 def _rankdata(a: np.ndarray, method: str = "average") -> np.ndarray:
     assert method in (
         "average",
@@ -114,7 +113,7 @@ def _rankdata(a: np.ndarray, method: str = "average") -> np.ndarray:
 
 @inject_docs(m=NormMode)
 def _calculate_norm_factors(
-    data: Union[AnnData, np.ndarray, spmatrix],
+    data: Union[AnnData, np.ndarray, sp.spmatrix],
     method: str = NormMode.TMM,
     layer: Optional[str] = None,
     use_raw: bool = True,
@@ -134,25 +133,25 @@ def _calculate_norm_factors(
     Parameters
     ----------
     data
-        Data of shape `(n_cells, n_genes)` containing e.g. the counts.
+        Data of shape ``(n_cells, n_genes)`` containing, e.g., the counts.
     method
         Which method to use. Valid options are:
 
-            - `{m.TMM!r}` - weighted trimmed mean of M-values from :cite:`robinson:10`.
-            - `{m.RLE!r}` - relative log expression from [Anders10]_.
-            - `{m.UPPER_QUANT!r}` - upper-quartile normalization method from [Bullard10]_.
-            - `{m.NONE!r}` - all the factors are set to 1.
+        - ``{m.TMM!r}`` - weighted trimmed mean of M-values from :cite:`robinson:10`.
+        - ``{m.RLE!r}`` - relative log expression from [Anders10]_.
+        - ``{m.UPPER_QUANT!r}`` - upper-quartile normalization method from [Bullard10]_.
+        - ``{m.NONE!r}`` - all the factors are set to :math:`1`.
     layer
         Layer in :attr:`anndata.AnnData.layers` or `None` for :attr:`anndata.AnnData.X`.
         Only used when ``use_raw = False``.
     use_raw
-        Whether to access :attr:`anndata.AnnData.raw` or not.
+        Whether to access :attr:`~anndata.AnnData.raw` or not.
     library_size
-        Library size. If `None`, it will be set as the sum of values for each cell.
+        Library size. If :obj:`None`, it will be set as the sum of values for each cell.
     ref_ix
-        Index of a reference cell. If `None`, it will be determined automatically.
+        Index of a reference cell. If :obj:`None`, it will be determined automatically.
     logratio_trim
-        Amount of trim to use on log-ratios ('M' values) when ``method={m.TMM!r}``.
+        Amount of trim to use on log-ratios ('M' values) when ``method = {m.TMM!r}``.
     sum_trim
         Amount of trim to use on the combined absolute levels ('A' values) when ``method = {m.TMM!r}``.
     weight
@@ -164,7 +163,7 @@ def _calculate_norm_factors(
 
     Returns
     -------
-    Array of shape `(data.shape[0],)` containing the factors.
+    Array of shape ``(data.shape[0],)`` containing the factors.
 
     References
     ----------
@@ -209,7 +208,7 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 
 @_dispatch_computation.register(NormMode.TMM)
 def _(
-    x: Union[np.ndarray, spmatrix],
+    x: Union[np.ndarray, sp.spmatrix],
     library_size: np.ndarray,
     ref_ix: Optional[int] = None,
     **kwargs,
@@ -219,7 +218,7 @@ def _(
         ref_ix = np.argmin(np.abs(f75 - np.mean(f75)))
 
     ref = x[ref_ix]
-    if issparse(ref):
+    if sp.issparse(ref):
         ref = ref.A.squeeze(0)  # (genes,)
 
     return parallelize(
@@ -240,11 +239,11 @@ def _(
 
 
 @_dispatch_computation.register(NormMode.UPPER_QUANT)
-def _calc_factor_quant(x: Union[np.ndarray, spmatrix], library_size: np.ndarray, p: float, **_) -> np.ndarray:
+def _calc_factor_quant(x: Union[np.ndarray, sp.spmatrix], library_size: np.ndarray, p: float, **_) -> np.ndarray:
     # unused, because we fix the reference cell to 0
 
     library_size = np.array(library_size).reshape((-1, 1))
-    if not issparse(x):
+    if not sp.issparse(x):
         # this is same as below, which is R's default
         # return mquantiles(x / library_size, prob=q, alphap=1, betap=1, axis=1).data.squeeze()
         return np.quantile(x / library_size, p, axis=1)
@@ -253,7 +252,7 @@ def _calc_factor_quant(x: Union[np.ndarray, spmatrix], library_size: np.ndarray,
     return _calc_factor_quant_sparse_helper(y.data, y.indptr, p=p, n_cols=y.shape[1])
 
 
-@njit(parallel=True, fastmath=True, cache=True)
+@nb.njit(parallel=True, fastmath=True, cache=True)
 def _calc_factor_quant_sparse_helper(
     data: np.ndarray,
     indptr: np.ndarray,
@@ -264,7 +263,7 @@ def _calc_factor_quant_sparse_helper(
     out = np.empty(n)
 
     # maybe disable parallel
-    for ix in prange(n):
+    for ix in nb.prange(n):
         d = data[indptr[ix] : indptr[ix + 1]]
         tmp = np.zeros(shape=(n_cols,))
         tmp[: len(d)] = d
@@ -274,34 +273,34 @@ def _calc_factor_quant_sparse_helper(
 
 
 @_dispatch_computation.register(NormMode.RLE)
-def _(x: Union[np.ndarray, spmatrix], **_) -> np.ndarray:
+def _(x: Union[np.ndarray, sp.spmatrix], **_) -> np.ndarray:
     # unused
 
     # log 0 -> inf -> masked out anyway, so we select only genes in every cell
     # this is the exact replica an in edgeR
     mask = np.array((x > 0).sum(0)).squeeze() == x.shape[0]
     tmp = x[:, mask]
-    if issparse(tmp):
+    if sp.issparse(tmp):
         tmp = tmp.A
 
     gm = np.array(np.exp(np.mean(np.log(tmp), axis=0))).squeeze()
     gm_mask = (gm > 0) & np.isfinite(gm)
 
-    if not issparse(x):
+    if not sp.issparse(x):
         return np.median(x[:, mask][:, gm_mask] / gm[gm_mask], axis=1)
 
     return csc_median_axis_0(x.tocsr()[:, mask][:, gm_mask].multiply(1.0 / gm[gm_mask]).tocsr().T)
 
 
 @_dispatch_computation.register(NormMode.NONE)
-def _(x: Union[np.ndarray, spmatrix], **_) -> np.ndarray:
+def _(x: Union[np.ndarray, sp.spmatrix], **_) -> np.ndarray:
     # unused
     return np.ones((x.shape[0],), dtype=x.dtype)
 
 
 def _calc_factor_weighted(
     ixs: np.ndarray,
-    obs_: Union[np.ndarray, spmatrix],
+    obs_: Union[np.ndarray, sp.spmatrix],
     obs_lib_size_: np.ndarray,
     ref: np.ndarray,
     ref_lib_size: float,
@@ -310,7 +309,7 @@ def _calc_factor_weighted(
     weight: bool = True,
     a_cutoff: float = -1e10,
     queue=None,
-    **_,
+    **_: Any,
 ) -> np.ndarray:
     with np.errstate(divide="ignore", invalid="ignore"):
         log_ref = np.log2(ref / ref_lib_size)
@@ -321,7 +320,7 @@ def _calc_factor_weighted(
             queue.put(1)
 
         obs = obs_[ix]
-        if issparse(obs):
+        if sp.issparse(obs):
             obs = obs.A.squeeze(0)  # (genes,)
         obs_lib_size = obs_lib_size_[ix]
 
@@ -343,7 +342,7 @@ def _calc_factor_weighted(
     return res
 
 
-@njit(fastmath=True, cache=True)
+@nb.njit(fastmath=True, cache=True)
 def _calc_factor_weighted_helper(
     obs: np.ndarray,
     obs_lib_size: float,
@@ -391,8 +390,7 @@ def _get_knotlocs(
     n_knots: int,
     uniform: bool = False,
 ) -> np.ndarray:
-    """
-    Find knot locations.
+    """Find knot locations.
 
     The first and last knots are always placed at the beginning and the of the ``pseudotime``.
 
@@ -407,7 +405,7 @@ def _get_knotlocs(
 
     Returns
     -------
-    Array of shape `(n_knots,)` containing the locations of knots along the pseudotime.
+    Array of shape ``(n_knots,)`` containing the locations of knots along the pseudotime.
     """
     if n_knots <= 0:
         raise ValueError(f"Expected number of knots to be positive, found `{n_knots}`.")
@@ -457,33 +455,33 @@ def _get_knotlocs(
 @inject_docs(key=_OFFSET_KEY)
 @d.dedent
 def _get_offset(
-    adata: Union[AnnData, np.ndarray, spmatrix],
+    adata: Union[AnnData, np.ndarray, sp.spmatrix],
     layer: Optional[str] = None,
     use_raw: bool = True,
     ref_ix: Optional[int] = None,
     recompute: bool = False,
     **kwargs,
 ) -> np.ndarray:
-    """
-    Return an offset for GAM.
+    """Return an offset for GAM.
 
     Parameters
     ----------
     %(adata)s
     layer
-        Layer in ``adata.layers`` or `None` for ``adata.X``. Only used when ``use_raw=False``.
+        Layer in :attr:`~anndata.AnnData.layers`` or :obj:`None` for :attr:`~anndata.AnnData.X`.
+        Only used when ``use_raw=False``.
     use_raw
-        Whether to access ``adata.raw``.
+        Whether to access :attr:`~anndata.AnnData.raw`.
     ref_ix
-        Index of a reference cell. If `None`, it will be determined automatically.
+        Index of a reference cell. If :obj:`None`, it will be determined automatically.
     recompute
-        Whether to recompute the offset if already found in ``adata.obs[{key!r}]``.
+        Whether to recompute the offset if already found in :attr:`adata.obs['{key}'] <anndata.AnnData.obs>`.
     kwargs
         Keyword arguments for :func:`_utils._calc_norm_factors`.
 
     Returns
     -------
-    Array of shape `(adata.n_obs,)` containing the offset.
+    Array of shape ``(adata.n_obs,)`` containing the offset.
     """
     with np.errstate(divide="ignore", invalid="ignore"):
         if not recompute and isinstance(adata, AnnData) and _OFFSET_KEY in adata.obs:
