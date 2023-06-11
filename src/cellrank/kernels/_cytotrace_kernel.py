@@ -1,10 +1,10 @@
-from enum import auto
+import enum
 from typing import Any, List, Literal, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse
-from scipy.stats import gmean, hmean
+import scipy.sparse as sp
+import scipy.stats as st
 
 from anndata import AnnData
 
@@ -19,22 +19,23 @@ __all__ = ["CytoTRACEKernel"]
 
 
 class CytoTRACEAggregation(ModeEnum):
-    MEAN = auto()
-    MEDIAN = auto()
-    GMEAN = auto()
-    HMEAN = auto()
+    MEAN = enum.auto()
+    MEDIAN = enum.auto()
+    GMEAN = enum.auto()
+    HMEAN = enum.auto()
 
 
 @d.dedent
 class CytoTRACEKernel(PseudotimeKernel):
-    """Kernel which computes directed transition probabilities usign the CytoTRACE score :cite:`gulati:20`.
+    """Kernel which computes directed transition probabilities using the CytoTRACE score :cite:`gulati:20`.
 
-    The KNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
+    The k-NN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
     plastic to less plastic states. It relies on the assumption that differentiated cells express, on average,
     less genes than naive cells.
-    This kernel internally uses the :class:`cellrank.kernels.PseudotimeKernel` to direct the kNN graph
-    on the basis of the CytoTRACE-derived pseudotime.
+
+    This kernel internally uses the :class:`~cellrank.kernels.PseudotimeKernel` to direct the k-NN graph
+    on the basis of the CytoTRACE pseudotime.
 
     %(density_correction)s
 
@@ -43,36 +44,31 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(adata)s
     %(backward)s
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.PseudotimeKernel`.
+        Keyword arguments for the :class:`~cellrank.kernels.PseudotimeKernel`.
 
-    Example
-    -------
-    Workflow::
+    Examples
+    --------
+    .. code-block::
 
-        # import packages and load data
         import scvelo as scv
         import cellrank as cr
+
         adata = cr.datasets.pancreas()
 
-        # standard pre-processing
         sc.pp.filter_genes(adata, min_cells=10)
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
 
-        # CytoTRACE by default uses imputed data - a simple way to compute kNN-imputed data is to use scVelo's moments
+        # CytoTRACE by default uses imputed data - a simple way to compute k-NN imputed data is to use scVelo's moments
         # function. However, note that this function expects `spliced` counts because it's designed for RNA velocity,
         # so we're using a simple hack here:
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
-
-        # compute kNN-imputation using scVelo's moments function
         scv.pp.moments(adata)
 
-        # import and initialize the CytoTRACE kernel, compute transition matrix - done!
-        from cellrank.kernels import CytoTRACEKernel
-        ctk = CytoTRACEKernel(adata).compute_cytotrace().compute_transition_matrix()
+        ctk = cr.kernels.CytoTRACEKernel(adata).compute_cytotrace().compute_transition_matrix()
     """
 
     def __init__(
@@ -111,8 +107,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         use_raw: bool = False,
         n_genes: int = 200,
     ) -> "CytoTRACEKernel":
-        """
-        Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
+        """Re-implementation of the CytoTRACE algorithm :cite:`gulati:20` to estimate cellular plasticity.
 
         Computes the number of genes expressed per cell and ranks genes according to their correlation with this
         measure. Next, it selects to top-correlating genes and aggregates their (imputed) expression to obtain
@@ -122,34 +117,34 @@ class CytoTRACEKernel(PseudotimeKernel):
         Parameters
         ----------
         layer
-            Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X`
+            Key in :attr:`~anndata.AnnData.layers` or ``'X'`` for :attr:`~anndata.AnnData.X`
             from where to get the expression.
         aggregation
             How to aggregate expression of the top-correlating genes. Valid options are:
 
-                - `{ct.MEAN!r}` - arithmetic mean.
-                - `{ct.MEDIAN!r}` - median.
-                - `{ct.HMEAN!r}` - harmonic mean.
-                - `{ct.GMEAN!r}` - geometric mean.
+            - ``{ct.MEAN!r}`` - arithmetic mean.
+            - ``{ct.MEDIAN!r}`` - median.
+            - ``{ct.HMEAN!r}`` - harmonic mean.
+            - ``{ct.GMEAN!r}`` - geometric mean.
         use_raw
-            Whether to use the :attr:`anndata.AnnData.raw` to compute the number of genes expressed per cell
+            Whether to use the :attr:`~anndata.AnnData.raw` to compute the number of genes expressed per cell
             (#genes/cell) and the correlation of gene expression across cells with #genes/cell.
         n_genes
             Number of top positively correlated genes to compute the CytoTRACE score.
 
         Returns
         -------
-        Nothing, just modifies :attr:`anndata.AnnData.obs` with the following keys:
+        Nothing, just modifies :attr:`~anndata.AnnData.obs` with the following keys:
 
-            - `'ct_score'` - the normalized CytoTRACE score.
-            - `'ct_pseudotime'` - associated pseudotime, essentially `1 - CytoTRACE score`.
-            - `'ct_num_exp_genes'` - the number of genes expressed per cell, basis of the CytoTRACE score.
+        - ``'ct_score'`` - the normalized CytoTRACE score.
+        - ``'ct_pseudotime'`` - associated pseudotime, essentially ``1 - CytoTRACE score``.
+        - ``'ct_num_exp_genes'`` - the number of genes expressed per cell, basis of the CytoTRACE score.
 
-        It also modifies :attr:`anndata.AnnData.var` with the following keys:
+        It also modifies :attr:`~anndata.AnnData.var` with the following keys:
 
-            - `'ct_gene_corr'` - the correlation as specified above.
-            - `'ct_correlates'` - indication of the genes used to compute the CytoTRACE score, i.e. the ones that
-              correlated positively with `'ct_num_exp_genes'`.
+        - ``'ct_gene_corr'`` - the correlation as specified above.
+        - ``'ct_correlates'`` - indication of the genes used to compute the CytoTRACE score, i.e. the ones that
+          correlated positively with ``'ct_num_exp_genes'``.
 
         Notes
         -----
@@ -255,20 +250,20 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         # fmt: off
         imputed_exp = self.adata[:, top_genes].X if layer == "X" else self.adata[:, top_genes].layers[layer]
-        if issparse(imputed_exp) and aggregation not in (CytoTRACEAggregation.MEAN, CytoTRACEAggregation.MEDIAN):
+        if sp.issparse(imputed_exp) and aggregation not in (CytoTRACEAggregation.MEAN, CytoTRACEAggregation.MEDIAN):
             imputed_exp = imputed_exp.A
 
         if aggregation == CytoTRACEAggregation.MEAN:
             cytotrace_score = np.asarray(imputed_exp.mean(axis=1)).reshape((-1,))
         elif aggregation == CytoTRACEAggregation.MEDIAN:
-            if issparse(imputed_exp):
+            if sp.issparse(imputed_exp):
                 cytotrace_score = np.asarray(csc_median_axis_0(imputed_exp.T.tocsc())).reshape((-1,))
             else:
                 cytotrace_score = np.median(imputed_exp, axis=1)
         elif aggregation == CytoTRACEAggregation.GMEAN:
-            cytotrace_score = gmean(imputed_exp, axis=1)
+            cytotrace_score = st.gmean(imputed_exp, axis=1)
         elif aggregation == CytoTRACEAggregation.HMEAN:
-            cytotrace_score = hmean(imputed_exp, axis=1)
+            cytotrace_score = st.hmean(imputed_exp, axis=1)
         else:
             raise NotImplementedError(f"Aggregation method `{aggregation}` is not yet implemented.")
         # fmt: on
