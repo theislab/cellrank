@@ -30,7 +30,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils._colors import _create_categorical_colors
 from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND
+from cellrank._utils._enum import DEFAULT_BACKEND
 from cellrank._utils._parallelize import parallelize
 from cellrank._utils._utils import _unique_order_preserving, save_fig
 from cellrank.models import GAMR, BaseModel, FailedModel, SKLearnModel
@@ -691,7 +691,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
 
 
 def _get_backend(model, backend: str) -> str:
-    return _DEFAULT_BACKEND if _is_any_gam_mgcv(model) else backend
+    return DEFAULT_BACKEND if _is_any_gam_mgcv(model) else backend
 
 
 @d.dedent

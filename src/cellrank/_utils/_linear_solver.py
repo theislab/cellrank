@@ -9,7 +9,7 @@ from scipy.sparse import issparse, isspmatrix_csc, isspmatrix_csr, spmatrix
 from scipy.sparse.linalg import bicgstab, gcrotmk, gmres, lgmres
 
 from cellrank import logging as logg
-from cellrank._utils._enum import _DEFAULT_BACKEND
+from cellrank._utils._enum import DEFAULT_BACKEND
 from cellrank._utils._parallelize import _get_n_cores, parallelize
 
 _DEFAULT_SOLVER = "gmres"
@@ -327,7 +327,7 @@ def _solve_lin_system(
     use_petsc: bool = False,
     preconditioner: Optional[str] = None,
     n_jobs: Optional[int] = None,
-    backend: str = _DEFAULT_BACKEND,
+    backend: str = DEFAULT_BACKEND,
     tol: float = 1e-5,
     use_eye: bool = False,
     show_progress_bar: bool = True,

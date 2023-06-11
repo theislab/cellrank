@@ -7,7 +7,7 @@ from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t, ModeEnum
+from cellrank._utils._enum import DEFAULT_BACKEND, Backend_t, ModeEnum
 from cellrank._utils._utils import _connected, _irreducible
 from cellrank.kernels._base_kernel import BidirectionalKernel
 from cellrank.kernels.mixins import ConnectivityMixin
@@ -83,7 +83,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         nu: float = 0.5,
         check_irreducibility: bool = False,
         n_jobs: Optional[int] = None,
-        backend: Backend_t = _DEFAULT_BACKEND,
+        backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":

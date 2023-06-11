@@ -1,13 +1,15 @@
-from abc import ABC, ABCMeta
-from enum import Enum, EnumMeta
-from functools import wraps
+import abc
+import enum
+import functools
 from typing import Any, Callable, Dict, Literal, Tuple, Type
 
-_DEFAULT_BACKEND = "loky"
+__all__ = ["ModeEnum", "DEFAULT_BACKEND"]
+
+DEFAULT_BACKEND = "loky"
 Backend_t = Literal["loky", "multiprocessing", "threading"]
 
 
-class PrettyEnum(Enum):
+class PrettyEnum(enum.Enum):
     """Enum with a pretty :meth:`__str__` and :meth:`__repr__`."""
 
     @property
@@ -23,7 +25,7 @@ class PrettyEnum(Enum):
 
 
 def _pretty_raise_enum(cls: Type["ErrorFormatterABC"], func: Callable) -> Callable:
-    @wraps(func)
+    @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> "ErrorFormatterABC":
         try:
             return func(*args, **kwargs)
@@ -41,7 +43,7 @@ def _pretty_raise_enum(cls: Type["ErrorFormatterABC"], func: Callable) -> Callab
     return wrapper
 
 
-class ABCEnumMeta(EnumMeta, ABCMeta):  # noqa: D101
+class ABCEnumMeta(enum.EnumMeta, abc.ABCMeta):  # noqa: D101
     def __call__(cls, *args, **kwargs):  # noqa
         if getattr(cls, "__error_format__", None) is None:
             raise TypeError(f"Can't instantiate class `{cls.__name__}` " f"without `__error_format__` class attribute.")
@@ -53,7 +55,7 @@ class ABCEnumMeta(EnumMeta, ABCMeta):  # noqa: D101
         return res
 
 
-class ErrorFormatterABC(ABC):  # noqa: D101
+class ErrorFormatterABC(abc.ABC):  # noqa: D101
     __error_format__ = "Invalid option `{!r}` for `{}`. Valid options are: `{}`."
 
     @classmethod

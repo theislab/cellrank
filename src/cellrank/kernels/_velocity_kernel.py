@@ -9,7 +9,7 @@ from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._enum import DEFAULT_BACKEND, Backend_t
 from cellrank.kernels._base_kernel import BidirectionalKernel
 from cellrank.kernels.mixins import ConnectivityMixin
 from cellrank.kernels.utils import Deterministic, MonteCarlo, Stochastic
@@ -169,7 +169,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             seed=seed,
         )
         if isinstance(model, Stochastic):
-            kwargs["backend"] = _DEFAULT_BACKEND
+            kwargs["backend"] = DEFAULT_BACKEND
         self.transition_matrix, self._logits = model(**kwargs)
 
         logg.info("    Finish", time=start)
@@ -245,7 +245,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     def _estimate_softmax_scale(
         self,
         n_jobs: Optional[int] = None,
-        backend: Backend_t = _DEFAULT_BACKEND,
+        backend: Backend_t = DEFAULT_BACKEND,
         **kwargs,
     ) -> float:
         model = self._create_model(VelocityModel.DETERMINISTIC, softmax_scale=1.0, **kwargs)

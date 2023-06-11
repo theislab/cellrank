@@ -20,7 +20,7 @@ from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._enum import DEFAULT_BACKEND, Backend_t
 from cellrank._utils._key import Key
 from cellrank._utils._lineage import Lineage
 from cellrank._utils._linear_solver import _solve_lin_system
@@ -234,7 +234,7 @@ class FateProbsMixin:
         solver: Union[str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]] = "gmres",
         use_petsc: bool = True,
         n_jobs: Optional[int] = None,
-        backend: Backend_t = _DEFAULT_BACKEND,
+        backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
@@ -347,7 +347,7 @@ class FateProbsMixin:
         solver: Union[str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]] = "gmres",
         use_petsc: bool = True,
         n_jobs: Optional[int] = None,
-        backend: Backend_t = _DEFAULT_BACKEND,
+        backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: Optional[bool] = None,
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,

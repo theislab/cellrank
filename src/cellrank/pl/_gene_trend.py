@@ -14,7 +14,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils import Lineage
 from cellrank._utils._docs import d
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t
+from cellrank._utils._enum import DEFAULT_BACKEND, Backend_t
 from cellrank._utils._parallelize import _get_n_cores
 from cellrank._utils._utils import (
     _check_collection,
@@ -72,7 +72,7 @@ def gene_trends(
     suptitle: Optional[str] = None,
     return_models: bool = False,
     n_jobs: Optional[int] = 1,
-    backend: Backend_t = _DEFAULT_BACKEND,
+    backend: Backend_t = DEFAULT_BACKEND,
     show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,

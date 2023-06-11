@@ -1,4 +1,4 @@
-from textwrap import dedent
+import textwrap
 from typing import Any
 
 from docrep import DocstringProcessor
@@ -198,11 +198,11 @@ allow_overlap
 
 def inject_docs(**kwargs: Any):  # noqa
     def decorator(obj):
-        obj.__doc__ = dedent(obj.__doc__).format(**kwargs)
+        obj.__doc__ = textwrap.dedent(obj.__doc__).format(**kwargs)
         return obj
 
     def decorator2(obj):
-        obj.__doc__ = dedent(kwargs["__doc__"])
+        obj.__doc__ = textwrap.dedent(kwargs["__doc__"])
         return obj
 
     if isinstance(kwargs.get("__doc__", None), str) and len(kwargs) == 1:

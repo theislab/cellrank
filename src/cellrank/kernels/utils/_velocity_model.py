@@ -6,7 +6,7 @@ from typing import Any, Callable, Optional, Tuple, Union
 import numpy as np
 from scipy.sparse import csr_matrix, spmatrix
 
-from cellrank._utils._enum import _DEFAULT_BACKEND, Backend_t, ModeEnum
+from cellrank._utils._enum import DEFAULT_BACKEND, Backend_t, ModeEnum
 from cellrank._utils._parallelize import parallelize
 from cellrank.kernels._utils import _calculate_starts, _random_normal
 from cellrank.kernels.utils._similarity import SimilarityABC
@@ -54,7 +54,7 @@ class ModelABC(ABC):
     def __call__(
         self,
         n_jobs: Optional[int] = None,
-        backend: Backend_t = _DEFAULT_BACKEND,
+        backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> Tuple[np.ndarray, np.ndarray]:
