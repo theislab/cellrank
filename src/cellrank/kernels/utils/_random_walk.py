@@ -1,12 +1,12 @@
-from itertools import chain
-from pathlib import Path
+import itertools
+import pathlib
 from typing import Any, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
 
 import numpy as np
+import scipy.sparse as sp
 from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
-from scipy.sparse import issparse, spmatrix
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -27,8 +27,7 @@ Indices_t = Optional[Union[Sequence[str], Mapping[str, Union[str, Sequence[str],
 
 @d.dedent
 class RandomWalk:
-    """
-    Class that simulates a random walk on a Markov chain.
+    """Class that simulates a random walk on a Markov chain.
 
     Parameters
     ----------
@@ -36,7 +35,7 @@ class RandomWalk:
     transition_matrix
         Row-stochastic transition matrix.
     start_ixs
-        Indices from which to uniformly sample the starting points. If `None`, use all points.
+        Indices from which to uniformly sample the starting points. If :obj:`None`, use all points.
     stop_ixs
         Indices which when hit, the random walk is terminated.
     """
@@ -44,7 +43,7 @@ class RandomWalk:
     def __init__(
         self,
         adata: AnnData,
-        transition_matrix: Union[np.ndarray, spmatrix],
+        transition_matrix: Union[np.ndarray, sp.spmatrix],
         start_ixs: Optional[Sequence[int]] = None,
         stop_ixs: Optional[Sequence[int]] = None,
     ):
@@ -61,7 +60,7 @@ class RandomWalk:
         self._adata = adata
         self._tmat = transition_matrix
         self._ixs = np.arange(self._tmat.shape[0])
-        self._is_sparse = issparse(self._tmat)
+        self._is_sparse = sp.issparse(self._tmat)
 
         start_ixs = self._normalize_ixs(start_ixs, kind="start")
         stop_ixs = self._normalize_ixs(stop_ixs, kind="stop")
@@ -80,8 +79,7 @@ class RandomWalk:
         seed: Optional[int] = None,
         successive_hits: int = 0,
     ) -> np.ndarray:
-        """
-        Simulate one random walk.
+        """Simulate one random walk.
 
         Parameters
         ----------
@@ -95,8 +93,8 @@ class RandomWalk:
 
         Returns
         -------
-        Array of shape ``(max_iter + 1,)`` of states that have been visited. If ``stop_ixs`` was specified, the array
-        may have smaller shape.
+        Array of shape ``(max_iter + 1,)`` of states that have been visited.
+        If ``stop_ixs`` was specified, the array may have a smaller shape.
         """
         max_iter = self._max_iter(max_iter)
         if successive_hits < 0:
@@ -150,8 +148,7 @@ class RandomWalk:
         backend: str = "loky",
         show_progress_bar: bool = True,
     ) -> List[np.ndarray]:
-        """
-        Simulate many random walks.
+        """Simulate many random walks.
 
         Parameters
         ----------
@@ -179,7 +176,7 @@ class RandomWalk:
             as_array=False,
             unit="sim",
         )(max_iter=max_iter, seed=seed, successive_hits=successive_hits)
-        simss = list(chain.from_iterable(simss))
+        simss = list(itertools.chain.from_iterable(simss))
 
         logg.info("    Finish", time=start)
 
@@ -196,11 +193,10 @@ class RandomWalk:
         ixs_legend_loc: Optional[str] = None,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Plot simulated random walks.
+        """Plot simulated random walks.
 
         Parameters
         ----------
@@ -218,7 +214,7 @@ class RandomWalk:
             Position of the legend describing start- and endpoints.
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scvelo.pl.scatter`.
 
         Returns
         -------

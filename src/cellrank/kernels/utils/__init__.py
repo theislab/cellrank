@@ -3,7 +3,6 @@ from cellrank.kernels.utils._pseudotime_scheme import (
     CustomThresholdScheme,
     HardThresholdScheme,
     SoftThresholdScheme,
-    ThresholdSchemeABC,
 )
 from cellrank.kernels.utils._random_walk import RandomWalk
 from cellrank.kernels.utils._similarity import (
@@ -22,7 +21,6 @@ __all__ = [
     "CustomThresholdScheme",
     "HardThresholdScheme",
     "SoftThresholdScheme",
-    "ThresholdSchemeABC",
     "RandomWalk",
     "Cosine",
     "Correlation",

@@ -1,8 +1,8 @@
-from abc import ABC, abstractmethod
+import abc
 from typing import Any, Callable, Optional, Tuple
 
 import numpy as np
-from scipy.sparse import csr_matrix
+import scipy.sparse as sp
 
 from cellrank._utils._docs import d
 from cellrank._utils._parallelize import parallelize
@@ -10,12 +10,12 @@ from cellrank._utils._parallelize import parallelize
 __all__ = ["HardThresholdScheme", "SoftThresholdScheme", "CustomThresholdScheme"]
 
 
-class ThresholdSchemeABC(ABC):
+class ThresholdSchemeABC(abc.ABC):
     """Base class for all connectivity biasing schemes."""
 
     @d.get_summary(base="pt_scheme")
     @d.get_sections(base="pt_scheme", sections=["Parameters", "Returns"])
-    @abstractmethod
+    @abc.abstractmethod
     def __call__(
         self,
         cell_pseudotime: float,
@@ -23,8 +23,7 @@ class ThresholdSchemeABC(ABC):
         neigh_conn: np.ndarray,
         **kwargs: Any,
     ) -> np.ndarray:
-        """
-        Calculate biased connections for a given cell.
+        """Calculate biased connections for a given cell.
 
         Parameters
         ----------
@@ -43,13 +42,12 @@ class ThresholdSchemeABC(ABC):
     def _bias_knn_helper(
         self,
         ixs: np.ndarray,
-        conn: csr_matrix,
+        conn: sp.csr_matrix,
         pseudotime: np.ndarray,
         queue=None,
         **kwargs: Any,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        indices, indptr, data = [], [], []
-
+        i, indices, indptr, data = 0, [], [], []
         for i in ixs:
             row = conn[i]
             biased_row = self(pseudotime[i], pseudotime[row.indices], row.data, **kwargs)
@@ -73,15 +71,14 @@ class ThresholdSchemeABC(ABC):
     @d.dedent
     def bias_knn(
         self,
-        conn: csr_matrix,
+        conn: sp.csr_matrix,
         pseudotime: np.ndarray,
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
         **kwargs: Any,
-    ) -> csr_matrix:
-        """
-        Bias cell-cell connectivities of a KNN graph.
+    ) -> sp.csr_matrix:
+        """Bias cell-cell connectivities of a KNN graph.
 
         Parameters
         ----------
@@ -106,28 +103,27 @@ class ThresholdSchemeABC(ABC):
         )(conn, pseudotime, **kwargs)
         data, indices, indptr = zip(*res)
 
-        conn = csr_matrix((np.concatenate(data), np.concatenate(indices), np.concatenate(indptr)))
+        conn = sp.csr_matrix((np.concatenate(data), np.concatenate(indices), np.concatenate(indptr)))
         conn.eliminate_zeros()
 
         return conn
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<{self.__class__.__name__}>"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)
 
 
 class HardThresholdScheme(ThresholdSchemeABC):
-    """
-    Thresholding scheme inspired by *Palantir* :cite:`setty:19`.
+    """Thresholding scheme inspired by *Palantir* :cite:`setty:19`.
 
-    Note that this won't exactly reproduce the original *Palantir* results, for three reasons:
+    Note that this won't exactly reproduce the original *Palantir* results:
 
-        - *Palantir* computes the KNN graph in a scaled space of diffusion components.
-        - *Palantir* uses its own pseudotime to bias the KNN graph which is not implemented here.
-        - *Palantir* uses a slightly different mechanism to ensure the graph remains connected when removing edges
-          that point into the "pseudotime past".
+    - *Palantir* computes the kNN graph in a scaled space of diffusion components.
+    - *Palantir* uses its own pseudotime to bias the kNN graph which is not implemented here.
+    - *Palantir* uses a slightly different mechanism to ensure the graph remains connected when removing edges
+      that point into the "pseudotime past".
     """
 
     @d.dedent
@@ -138,8 +134,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
         neigh_conn: np.ndarray,
         frac_to_keep: float = 0.3,
     ) -> np.ndarray:
-        """
-        Convert the undirected graph of cell-cell similarities into a directed one by removing "past" edges.
+        """Convert the undirected graph of cell-cell similarities into a directed one by removing "past" edges.
 
         This uses a pseudotemporal measure to remove graph-edges that point into the pseudotime-past. For each cell,
         it keeps the closest neighbors, even if they are in the pseudotime past, to make sure the graph remains
@@ -149,9 +144,8 @@ class HardThresholdScheme(ThresholdSchemeABC):
         ----------
         %(pt_scheme.parameters)s
         frac_to_keep
-            The `frac_to_keep` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
-            whether they lie in the pseudotemporal past or future. `frac_to_keep` needs to fall within the
-            interval `[0, 1]`.
+            The ``frac_to_keep`` * n_neighbors closest neighbors (according to graph connectivities) are kept, no matter
+            whether they lie in the pseudotemporal past or future. Must be in :math:`[0, 1]`.
 
         Returns
         -------
@@ -175,8 +169,7 @@ class HardThresholdScheme(ThresholdSchemeABC):
 
 
 class SoftThresholdScheme(ThresholdSchemeABC):
-    """
-    Thresholding scheme inspired by :cite:`stassen:21`.
+    """Thresholding scheme inspired by :cite:`stassen:21`.
 
     The idea is to downweight edges that points against the direction of increasing pseudotime. Essentially, the
     further "behind" a query cell is in pseudotime with respect to the current reference cell, the more penalized will
@@ -192,8 +185,7 @@ class SoftThresholdScheme(ThresholdSchemeABC):
         b: float = 10.0,
         nu: float = 0.5,
     ) -> np.ndarray:
-        """
-        Bias the connectivities by downweighting ones to past cells.
+        """Bias the connectivities by downweighting ones to past cells.
 
         This function uses `generalized logistic regression
         <https://en.wikipedia.org/wiki/Generalized_logistic_function>`_ to weight the past connectivities.
@@ -220,8 +212,7 @@ class SoftThresholdScheme(ThresholdSchemeABC):
 
 
 class CustomThresholdScheme(ThresholdSchemeABC):
-    """
-    Class that wraps a user supplied scheme.
+    """Class that wraps a user supplied scheme.
 
     Parameters
     ----------
@@ -244,8 +235,7 @@ class CustomThresholdScheme(ThresholdSchemeABC):
         neigh_conn: np.ndarray,
         **kwargs: Any,
     ) -> np.ndarray:
-        """
-        %(pt_scheme.summary)s
+        """%(pt_scheme.summary)s
 
         Parameters
         ----------
