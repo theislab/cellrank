@@ -1,13 +1,12 @@
-from dataclasses import dataclass
+import dataclasses
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import is_categorical_dtype
+import scipy.sparse as sp
+import scipy.stats as st
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.interpolate import interp1d
-from scipy.sparse import issparse, spmatrix
-from scipy.stats import logistic
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
 import matplotlib.pyplot as plt
@@ -27,7 +26,7 @@ __all__ = ["FlowPlotter"]
 Numeric_t = Union[float, int]
 
 
-@dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True)
 class Point:
     x: float
     xt: float
@@ -35,10 +34,9 @@ class Point:
 
 @d.dedent
 class FlowPlotter:
-    """
-    Class that plots outgoing flow for a specific cluster :cite:`mittnenzweig:21`.
+    """Class that plots outgoing flow for a specific cluster :cite:`mittnenzweig:21`.
 
-    It should be able to recreate (to a high degree) figures such as Fig. 4a in the above mentioned paper.
+    It should be able to recreate (to a high degree) figures such as Fig. 4a in the above-mentioned paper.
 
     Parameters
     ----------
@@ -46,9 +44,9 @@ class FlowPlotter:
     tmat
         Matrix of shape ``(adata.n_obs, adata.n_obs)``.
     cluster_key
-        Key in :attr:`anndata.AnnData.obs` where clustering is stored.
+        Key in :attr:`~anndata.AnnData.obs` where clustering is stored.
     time_key
-        Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
+        Key in :attr:`~anndata.AnnData.obs` where experimental time is stored.
     """
 
     TIME_KEY = "time"
@@ -56,7 +54,7 @@ class FlowPlotter:
     def __init__(
         self,
         adata: AnnData,
-        tmat: Union[np.ndarray, spmatrix],
+        tmat: Union[np.ndarray, sp.spmatrix],
         cluster_key: str,
         time_key: str,
     ):
@@ -86,21 +84,20 @@ class FlowPlotter:
         clusters: Optional[Sequence[Any]] = None,
         time_points: Optional[Sequence[Numeric_t]] = None,
     ) -> "FlowPlotter":
-        """
-        Prepare itself for plotting by computing flow and contingency matrix.
+        """Prepare itself for plotting by computing flow and contingency matrix.
 
         Parameters
         ----------
         cluster
             Source cluster for flow calculation.
         clusters
-            Target clusters for flow calculation. If `None`, use all clusters.
+            Target clusters for flow calculation. If :obj:`None`, use all clusters.
         time_points
-            Restrict flow calculation only to these time points. If `None`, use all time points.
+            Restrict flow calculation only to these time points. If :obj:`None`, use all time points.
 
         Returns
         -------
-        Returns self and modifies internal internal attributes.
+        Returns and modifies self.
         """
         if clusters is None:
             self._clusters = self.clusters.cat.categories
@@ -149,27 +146,27 @@ class FlowPlotter:
         time_points: Sequence[Tuple[Numeric_t, Numeric_t]],
         cluster: Optional[str] = None,
     ) -> pd.DataFrame:
-        """
-        Compute outgoing flow.
+        """Compute outgoing flow.
 
         Parameters
         ----------
         time_points
             Time point pair for which to calculate the flow.
         cluster
-            Cluster for which to calculate the outgoing flow. If `None`, calculate the flow for all clusters.
+            Cluster for which to calculate the outgoing flow. If :obj:`None`, calculate the flow for all clusters.
 
         Returns
         -------
         Dataframe of shape ``(n_time_points, n_clusters)`` if ``cluster != None`` or
         a dataframe of shape ``(n_time_points * n_clusters, n_clusters)`` otherwise.
-        The dataframe's index is a multi-index and the 1st level corresponds to time, the 2nd level to source clusters.
+        The dataframe's index is a multi-index and the 1st level corresponds to time and
+        the 2nd level to source clusters.
         """
 
         def default_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
             subset, row_cls, col_cls = self._get_time_subset(t1, t2)
 
-            df = pd.DataFrame(subset.A if issparse(subset) else subset)
+            df = pd.DataFrame(subset.A if sp.issparse(subset) else subset)
             df = df.groupby(row_cls).sum().T.groupby(col_cls).sum().T
 
             res = pd.DataFrame(np.zeros((n, n)), index=categories, columns=categories)
@@ -181,7 +178,7 @@ class FlowPlotter:
         def cluster_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
             subset, row_cls, col_cls = self._get_time_subset(t1, t2, cluster=cluster)
 
-            df = pd.DataFrame(subset.A if issparse(subset) else subset).sum(0)
+            df = pd.DataFrame(subset.A if sp.issparse(subset) else subset).sum(0)
             df = df.groupby(col_cls).sum()
             df = pd.DataFrame([df], index=[cluster], columns=df.index)
 
@@ -225,13 +222,12 @@ class FlowPlotter:
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
     ) -> plt.Axes:
-        """
-        Plot outgoing flow.
+        """Plot outgoing flow.
 
         Parameters
         ----------
         min_flow
-            Only show flow edges with flow greater than this value. Flow values are always in `[0, 1]`.
+            Only show flow edges with flow greater than this value. Flow values are always in :math:`[0, 1]`.
         remove_empty_clusters
             Whether to remove clusters with no incoming flow edges.
         ascending
@@ -240,9 +236,13 @@ class FlowPlotter:
         alpha
             Alpha value for cell proportions.
         xticks_step_size
-            Show only every other *n-th* tick on the x-axis. If `None`, don't show any ticks.
+            Show only every other *n-th* tick on the x-axis. If :obj:`None`, don't show any ticks.
         legend_loc
-            Position of the legend. If `None`, do not show the legend.
+            Position of the legend. If :obj:`None`, do not show the legend.
+        figsize
+            Size of the figure.
+        dpi
+            Dots per inch.
 
         Returns
         -------
@@ -275,7 +275,7 @@ class FlowPlotter:
 
     def _get_time_subset(
         self, t1: Numeric_t, t2: Numeric_t, cluster: Optional[str] = None
-    ) -> Tuple[Union[np.ndarray, spmatrix], pd.Series, pd.Series]:
+    ) -> Tuple[Union[np.ndarray, sp.spmatrix], pd.Series, pd.Series]:
         if cluster is None:
             row_ixs = np.where(self.time == t1)[0]
         else:
@@ -538,4 +538,4 @@ class FlowPlotter:
 
 
 def _lcdf(x: Union[int, float, np.ndarray], loc: float = 0.5, scale: float = 0.2) -> float:
-    return logistic.cdf(x, loc=loc, scale=scale)
+    return st.logistic.cdf(x, loc=loc, scale=scale)
