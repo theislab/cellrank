@@ -1,9 +1,8 @@
+import collections
+import copy
+import enum
+import types
 import warnings
-from collections import defaultdict
-from copy import copy as _copy
-from copy import deepcopy
-from enum import auto
-from types import MappingProxyType
 from typing import Any, Literal, Mapping, Optional, Union
 
 from pygam import GAM as pGAM
@@ -31,23 +30,23 @@ __all__ = ["GAM"]
 
 
 class GamLinkFunction(ModeEnum):
-    IDENTITY = auto()
-    LOGIT = auto()
-    INVERSE = auto()
-    LOG = auto()
+    IDENTITY = enum.auto()
+    LOGIT = enum.auto()
+    INVERSE = enum.auto()
+    LOG = enum.auto()
     INV_SQUARED = "inverse-squared"
 
 
 class GamDistribution(ModeEnum):
-    NORMAL = auto()
-    BINOMIAL = auto()
-    POISSON = auto()
-    GAMMA = auto()
-    GAUSSIAN = auto()
-    INV_GAUSS = auto()
+    NORMAL = enum.auto()
+    BINOMIAL = enum.auto()
+    POISSON = enum.auto()
+    GAMMA = enum.auto()
+    GAUSSIAN = enum.auto()
+    INV_GAUSS = enum.auto()
 
 
-_gams = defaultdict(
+_gams = collections.defaultdict(
     lambda: pGAM,
     {
         (GamDistribution.NORMAL, GamLinkFunction.IDENTITY): LinearGAM,
@@ -61,8 +60,7 @@ _gams = defaultdict(
 
 @d.dedent
 class GAM(BaseModel):
-    """
-    Fit Generalized Additive Models (GAMs) using :mod:`pygam`.
+    """Fit Generalized Additive Models (GAMs) using :mod:`pygam`.
 
     Parameters
     ----------
@@ -70,7 +68,7 @@ class GAM(BaseModel):
     n_knots
         Number of knots.
     spline_order
-        Order of the splines, i.e. `3` for cubic splines.
+        Order of the splines, e.g., :math:`3` for cubic splines.
     distribution
         Name of the distribution. Available distributions can be found
         `here <https://pygam.readthedocs.io/en/latest/notebooks/tour_of_pygam.html#Distribution:>`__.
@@ -80,15 +78,15 @@ class GAM(BaseModel):
     max_iter
         Maximum number of iterations for optimization.
     expectile
-        Expectile for :class:`pygam.pygam.ExpectileGAM`. This forces the distribution to be `'normal'`
-        and link function to `'identity'`. Must be in interval `(0, 1)`.
+        Expectile for :class:`~pygam.pygam.ExpectileGAM`. This forces the distribution to be ``'normal'``
+        and link function to ``'identity'``. Must be in :math:`(0, 1)`.
     grid
         Whether to perform a grid search. Keys correspond to a parameter names and values to range to be searched.
-        If `'default'`, use the default grid. If `None`, don't perform a grid search.
+        If ``'default'``, use the default grid. If :obj:`None`, don't perform a grid search.
     spline_kwargs
-        Keyword arguments for :class:`pygam.s`.
+        Keyword arguments for :class:`~pygam.s`.
     kwargs
-        Keyword arguments for :class:`pygam.pygam.GAM`.
+        Keyword arguments for :class:`~pygam.pygam.GAM`.
     """
 
     def __init__(
@@ -101,7 +99,7 @@ class GAM(BaseModel):
         max_iter: int = 2000,
         expectile: Optional[float] = None,
         grid: Optional[Union[str, Mapping[str, Any]]] = None,
-        spline_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        spline_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ):
         term = s(
@@ -149,7 +147,7 @@ class GAM(BaseModel):
         if grid is None:
             self._grid = None
         elif isinstance(grid, dict):
-            self._grid = _copy(grid)
+            self._grid = copy.copy(grid)
         elif isinstance(grid, str):
             self._grid = object() if grid == "default" else None
         else:
@@ -161,10 +159,9 @@ class GAM(BaseModel):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "GAM":
-        """
-        %(base_model_fit.full_desc)s
+        """%(base_model_fit.full_desc)s
 
         Parameters
         ----------
@@ -216,10 +213,9 @@ class GAM(BaseModel):
         self,
         x_test: Optional[np.ndarray] = None,
         key_added: Optional[str] = "_x_test",
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
-        """
-        %(base_model_predict.full_desc)s
+        """%(base_model_predict.full_desc)s
 
         Parameters
         ----------
@@ -244,9 +240,8 @@ class GAM(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
-        """
-        %(base_model_ci.summary)s
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray:
+        """%(base_model_ci.summary)s
 
         Parameters
         ----------
@@ -273,7 +268,5 @@ class GAM(BaseModel):
         """%(copy)s"""  # noqa
         res = GAM(self.adata)
         self._shallowcopy_attributes(res)
-
-        res._grid = deepcopy(self._grid)
-
+        res._grid = copy.deepcopy(self._grid)
         return res
