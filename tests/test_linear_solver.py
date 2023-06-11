@@ -106,7 +106,7 @@ class TestScipyLinearSolver:
 @petsc_slepc_skip
 class TestLinearSolverPETSc:
     def test_create_petsc_matrix_no_a_matrix(self):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
+        with pytest.raises(TypeError, match="integer is required"):
             _create_petsc_matrix(np.empty((100,)))
 
     def test_create_petsc_matrix_from_dense(self):
@@ -151,7 +151,7 @@ class TestLinearSolverPETSc:
         A = rng.normal(size=(20, 20))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(Error, match="REPLACE_ME"):
+        with pytest.raises(Error, match=r".*foobar"):
             _solve_lin_system(A, B, solver="foobar", use_petsc=True)
 
     def test_create_solver_invalid_preconditioner(self):
@@ -162,7 +162,7 @@ class TestLinearSolverPETSc:
         A = rng.normal(size=(20, 20))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(Error, match="REPLACE_ME"):
+        with pytest.raises(Error, match=r".*foobar"):
             _solve_lin_system(A, B, preconditioner="foobar", use_petsc=True)
 
     def test_solve_invalid_dimension(self):
@@ -173,7 +173,7 @@ class TestLinearSolverPETSc:
         A = rng.normal(size=(20, 10))
         B = rng.normal(size=(20, 10))
 
-        with pytest.raises(Error, match="REPLACE_ME"):
+        with pytest.raises(Error, match=r".* square"):
             _solve_lin_system(A, B, use_petsc=True)
 
     @pytest.mark.parametrize(
@@ -281,7 +281,7 @@ class TestLinearSolverPETSc:
         A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
         B = B[:, 0]
 
-        X = _petsc_direct_solve(A, B, tol=1e-8)
+        X = _petsc_direct_solve(A, B, tol=1e-12)
         assert X.ndim == 2
         assert X.shape[1] == 1
         if sparse:
