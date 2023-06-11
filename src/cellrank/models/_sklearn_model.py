@@ -1,6 +1,6 @@
+import inspect
 import warnings
-from inspect import signature
-from typing import Iterable, Optional
+from typing import Any, Iterable, Optional
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -16,20 +16,20 @@ __all__ = ["SKLearnModel"]
 
 @d.dedent
 class SKLearnModel(BaseModel):
-    """
-    Wrapper around :class:`sklearn.base.BaseEstimator`.
+    """Wrapper around :class:`~sklearn.base.BaseEstimator`.
 
     Parameters
     ----------
     %(adata)s
     model
-        Instance of the underlying :mod:`sklearn` estimator, such as :class:`sklearn.svm.SVR`.
+        Instance of the underlying :mod:`sklearn` estimator, such as :class:`~sklearn.svm.SVR`.
     weight_name
-        Name of the weight argument for :attr:`model` ``.fit``. If `None`, to determine it automatically.
-        If and empty string, no weights will be used.
+        Name of the weight argument when fitting the model. If :obj:`None`, to determine it automatically.
+        If an empty :class:`str`, no weights will be used.
     ignore_raise
-        Do not raise an exception if weight argument is not found in the fitting function of :attr:`model`.
-        This is useful in case when weight is passed in ``**kwargs`` and cannot be determined from signature.
+        Do not raise an exception if weight argument is not found when fitting the :attr:`model`.
+        This is useful in case when the weight argument is passed in the ``**kwargs`` and
+        cannot be determined from signature.
     """
 
     _fit_names = ("fit", "__init__")
@@ -63,7 +63,7 @@ class SKLearnModel(BaseModel):
         if (
             not ignore_raise
             and self._weight_name != ""
-            and self._weight_name not in signature(getattr(self.model, fit_name)).parameters
+            and self._weight_name not in inspect.signature(getattr(self.model, fit_name)).parameters
         ):
             raise ValueError(
                 f"Unable to detect `{weight_name!r}` in the signature of `{fit_name!r}`."
@@ -80,10 +80,9 @@ class SKLearnModel(BaseModel):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "SKLearnModel":
-        """
-        %(base_model_fit.full_desc)s
+        """%(base_model_fit.full_desc)s
 
         Parameters
         ----------
@@ -113,8 +112,7 @@ class SKLearnModel(BaseModel):
 
     @d.dedent
     def predict(self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs) -> np.ndarray:
-        """
-        %(base_model_predict.full_desc)s
+        """%(base_model_predict.full_desc)s
 
         Parameters
         ----------
@@ -123,8 +121,7 @@ class SKLearnModel(BaseModel):
         Returns
         -------
         %(base_model_predict.returns)s
-        """  # noqa
-
+        """  # noqa: D400
         x_test = self._check(key_added, x_test)
 
         self._y_test = self._pred_fn(x_test, **kwargs)
@@ -133,9 +130,8 @@ class SKLearnModel(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
-        """
-        %(base_model_ci.full_desc)s
+    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray:
+        """%(base_model_ci.full_desc)s
 
         Parameters
         ----------
@@ -144,8 +140,7 @@ class SKLearnModel(BaseModel):
         Returns
         -------
         %(base_model_ci.returns)s
-        """  # noqa
-
+        """  # noqa: D400
         if self._ci_fn is None:
             return self.default_confidence_interval(x_test=x_test, **kwargs)
 
@@ -160,19 +155,18 @@ class SKLearnModel(BaseModel):
         use_default: bool = False,
         default: Optional[str] = None,
     ) -> Optional[str]:
-        """
-        Find a function in :attr:`model` from given names.
+        """Find a function in :attr:`model` from given names.
 
-        If `None` is found, use ``default`` or raise a :class:`RuntimeError`.
+        If :obj:`None` is found, use the ``default`` or raise a :class:`RuntimeError`.
 
         Parameters
         ----------
         func_names
             Function names to search. The first one found is returned.
         use_default
-            Whether to return the ``default`` if it is `None` or raise :class:`RuntimeError`.
+            Whether to return the ``default`` if it is :obj:`None` or raise :class:`RuntimeError`.
         default
-            The default function name to use if `None` was found.
+            The default function name to use if :obj:`None` was found.
 
         Returns
         -------
@@ -186,8 +180,7 @@ class SKLearnModel(BaseModel):
         raise RuntimeError(f"Unable to find function and no default specified, searched for `{list(func_names)}`.")
 
     def _find_arg_name(self, func_name: Optional[str], param_names: Iterable[str]) -> Optional[str]:
-        """
-        Find an argument in :attr:`model`'s ``func_name``.
+        """Find an argument in :attr:`model`'s ``func_name``.
 
         Parameters
         ----------
@@ -198,12 +191,12 @@ class SKLearnModel(BaseModel):
 
         Returns
         -------
-        The parameter name or `None`, if `None` was found or ``func_name`` was `None`.
+        The parameter name or :obj:`None`, if :obj:`None` was found or ``func_name`` was :obj:`None`.
         """
         if func_name is None:
             return None
 
-        for param in signature(getattr(self.model, func_name)).parameters:
+        for param in inspect.signature(getattr(self.model, func_name)).parameters:
             if param in param_names:
                 return param
 
@@ -211,7 +204,7 @@ class SKLearnModel(BaseModel):
 
     @property
     def model(self) -> BaseEstimator:
-        """The underlying :class:`sklearn.base.BaseEstimator`."""
+        """The underlying :class:`~sklearn.base.BaseEstimator`."""
         return self._model
 
     @d.dedent
