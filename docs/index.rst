@@ -19,7 +19,7 @@ want to make a comment/suggestion.
 
 CellRank's key applications
 ---------------------------
-- Under reconstruction .. TODO(Marius1311): please re-factor this page
+- Under reconstruction. .. TODO(Marius1311): please re-factor this page
 
 Getting started with CellRank
 -----------------------------
