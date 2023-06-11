@@ -1,7 +1,7 @@
 from typing import Any, Optional, Tuple, TypeVar, Union
 
 import numpy as np
-from scipy.sparse import spmatrix
+import scipy.sparse as sp
 
 from anndata import AnnData
 
@@ -41,11 +41,11 @@ class KernelMixin:
         return self._n_obs
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
-        """Transition matrix of :attr:`kernel`."""
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
+        """Transition matrix of the :attr:`kernel`."""
         return self.kernel.transition_matrix
 
     @property
     def backward(self) -> bool:
-        """Direction of :attr:`kernel`."""
+        """Direction of the :attr:`kernel`."""
         return self.kernel.backward
