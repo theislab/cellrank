@@ -1,13 +1,13 @@
-from datetime import datetime
-from enum import auto
-from pathlib import Path
-from types import MappingProxyType
+import datetime
+import enum
+import pathlib
+import types
 from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse import spmatrix
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -40,23 +40,22 @@ __all__ = ["GPCCA"]
 
 
 class TermStatesMethod(ModeEnum):
-    EIGENGAP = auto()
-    EIGENGAP_COARSE = auto()
-    TOP_N = auto()
-    STABILITY = auto()
+    EIGENGAP = enum.auto()
+    EIGENGAP_COARSE = enum.auto()
+    TOP_N = enum.auto()
+    STABILITY = enum.auto()
 
 
 class CoarseTOrder(ModeEnum):
-    STABILITY = auto()  # diagonal
-    INCOMING = auto()
-    OUTGOING = auto()
-    STAT_DIST = auto()
+    STABILITY = enum.auto()  # diagonal
+    INCOMING = enum.auto()
+    OUTGOING = enum.auto()
+    STAT_DIST = enum.auto()
 
 
 @d.dedent
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
-    """
-    Generalized Perron Cluster Cluster Analysis (GPCCA) :cite:`reuter:18,reuter:19`.
+    """Generalized Perron Cluster Cluster Analysis (GPCCA) :cite:`reuter:18,reuter:19`.
 
     This is our main and recommended estimator implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_ .
     Use it to compute macrostates, automatically and semi-automatically classify these as initial, intermediate and
@@ -73,7 +72,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def __init__(
         self,
-        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
+        object: Union[str, bool, np.ndarray, sp.spmatrix, AnnData, KernelExpression],
         **kwargs: Any,
     ):
         super().__init__(object=object, **kwargs)
@@ -142,14 +141,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cluster_key: Optional[str] = None,
         **kwargs: Any,
     ) -> "GPCCA":
-        """
-        Compute the macrostates.
+        """Compute the macrostates.
 
         Parameters
         ----------
         n_states
             Number of macrostates to compute. If a :class:`~typing.Sequence`, use the *minChi*
-            criterion :cite:`reuter:18`. If `None`, use the *eigengap* heuristic.
+            criterion :cite:`reuter:18`. If :obj:`None`, use the *eigengap* heuristic.
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
@@ -160,14 +158,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`macrostates` - %(gpcca_macro.summary)s
-            - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
-            - :attr:`coarse_T` - %(gpcca_coarse_tmat.summary)s
-            - :attr:`coarse_initial_distribution` - %(gpcca_coarse_init.summary)s
-            - :attr:`coarse_stationary_distribution` - %(gpcca_coarse_stat.summary)s
-            - :attr:`schur_vectors` - %(schur_vectors.summary)s
-            - :attr:`schur_matrix` - %(schur_matrix.summary)s
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+        - :attr:`macrostates` - %(gpcca_macro.summary)s
+        - :attr:`macrostates_memberships` - %(gpcca_macro_memberships.summary)s
+        - :attr:`coarse_T` - %(gpcca_coarse_tmat.summary)s
+        - :attr:`coarse_initial_distribution` - %(gpcca_coarse_init.summary)s
+        - :attr:`coarse_stationary_distribution` - %(gpcca_coarse_stat.summary)s
+        - :attr:`schur_vectors` - %(schur_vectors.summary)s
+        - :attr:`schur_matrix` - %(schur_matrix.summary)s
+        - :attr:`eigendecomposition` - %(eigen.summary)s
         """
         n_states = self._n_states(n_states)
         if n_states == 1:
@@ -212,9 +210,20 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
         return self
 
-    @d.dedent
     def predict(self, *args: Any, **kwargs: Any) -> "GPCCA":
-        """Alias for :meth:`predict_terminal_states`."""
+        """Alias for :meth:`predict_terminal_states`.
+
+        Parameters
+        ----------
+        args
+            Positional arguments.
+        kwargs
+            Keyword arguments.
+
+        Returns
+        -------
+        Same as :meth:`predict_terminal_states`.
+        """
         return self.predict_terminal_states(*args, **kwargs)
 
     @d.dedent
@@ -227,20 +236,19 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states: Optional[int] = None,
         allow_overlap: bool = False,
     ) -> "GPCCA":
-        """
-        Automatically select terminal states from macrostates.
+        """Automatically select terminal states from macrostates.
 
         Parameters
         ----------
         method
             How to select the terminal states. Valid option are:
 
-                - `'eigengap'` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
-                - `'eigengap_coarse'` - select the number of states based on the *eigengap* of the diagonal
-                  of :attr:`coarse_T`.
-                - `'top_n'` - select top ``n_states`` based on the probability of the diagonal of :attr:`coarse_T`.
-                - `'stability'` - select states which have a stability >= ``stability_threshold``.
-                  The stability is given by the diagonal elements of :attr:`coarse_T`.
+            - ``'eigengap'`` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
+            - ``'eigengap_coarse'`` - select the number of states based on the *eigengap* of the diagonal
+              of :attr:`coarse_T`.
+            - ``'top_n'`` - select top ``n_states`` based on the probability of the diagonal of :attr:`coarse_T`.
+            - ``'stability'`` - select states which have a stability >= ``stability_threshold``.
+              The stability is given by the diagonal elements of :attr:`coarse_T`.
         %(n_cells)s
         alpha
             Weight given to the deviation of an eigenvalue from one.
@@ -255,9 +263,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
-            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
+        - :attr:`terminal_states` - %(tse_term_states.summary)s
+        - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+        - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
         """
         if self.macrostates is None:
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
@@ -314,8 +322,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @d.dedent
     def predict_initial_states(self, n_states: int = 1, n_cells: int = 30, allow_overlap: bool = False) -> "GPCCA":
-        """
-        Compute initial states from macrostates using :attr:`coarse_stationary_distribution`.
+        """Compute initial states from macrostates using :attr:`coarse_stationary_distribution`.
 
         Parameters
         ----------
@@ -328,9 +335,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`initial_states` - %(tse_init_states.summary)s
-            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-            - :attr:`initial_states_memberships` - %(gpcca_init_states_memberships.summary)s
+        - :attr:`initial_states` - %(tse_init_states.summary)s
+        - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+        - :attr:`initial_states_memberships` - %(gpcca_init_states_memberships.summary)s
         """
         if n_states <= 0:
             raise ValueError(f"Expected `n_states` to be positive, found `{n_states}`.")
@@ -364,24 +371,24 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cluster_key: Optional[str] = None,
         **kwargs: Any,
     ) -> "GPCCA":
-        """Set :attr:`terminal_states`.
+        """Set the :attr:`terminal_states`.
 
         Parameters
         ----------
         states
             Which states to select. Valid options are:
 
-                - :class:`str`, :class:`~typing.Sequence` - subset of :attr:`macrostates`. Multiple states can be
-                  combined using ``','``, such as ``['Alpha, Beta', 'Epsilon']``.
-                - :class:`dict` - keys correspond to terminal states and values to cell IDs in
-                  :attr:`~anndata.AnnData.obs_names`.
-                - :class:`~pandas.Series` - categorical series where each category corresponds to a macrostate.
-                  `NaN` values mark cells that should not be marked as :attr:`terminal_states`.
-                - :obj:`None` - select all :attr:`macrostates`.
+            - :class:`str`, :class:`~typing.Sequence` - subset of :attr:`macrostates`. Multiple states can be
+              combined using ``','``, such as ``['Alpha, Beta', 'Epsilon']``.
+            - :class:`dict` - keys correspond to terminal states and values to cell IDs in
+              :attr:`~anndata.AnnData.obs_names`.
+            - :class:`~pandas.Series` - categorical series where each category corresponds to a macrostate.
+              `NaN` values mark cells that should not be marked as :attr:`terminal_states`.
+            - :obj:`None` - select all :attr:`macrostates`.
         %(n_cells)s
         %(allow_overlap)s
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` to associate names and colors with :attr:`terminal_states`.
+            Key in :attr:`~anndata.AnnData.obs` to associate names and colors with :attr:`terminal_states`.
             Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
             Only used when ``states`` is a :class:`dict` or :class:`~pandas.Series`.
         kwargs
@@ -391,9 +398,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
-            - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
+        - :attr:`terminal_states` - %(tse_term_states.summary)s
+        - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+        - :attr:`terminal_states_memberships` - %(gpcca_term_states_memberships.summary)s
         """
         if isinstance(states, (dict, pd.Series)):
             return super().set_terminal_states(states, cluster_key=cluster_key, allow_overlap=allow_overlap, **kwargs)
@@ -445,24 +452,24 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cluster_key: Optional[str] = None,
         **kwargs: Any,
     ) -> "GPCCA":
-        """Set :attr:`initial_states`.
+        """Set the :attr:`initial_states`.
 
         Parameters
         ----------
         states
             Which states to select. Valid options are:
 
-                - :class:`str`, :class:`~typing.Sequence` - subset of :attr:`macrostates`. Multiple states can be
-                  combined using ``','``, such as ``['Alpha, Beta', 'Epsilon']``.
-                - :class:`dict` - keys correspond to initial states and values to cell IDs in
-                  :attr:`~anndata.AnnData.obs_names`.
-                - :class:`~pandas.Series` - categorical series where each category corresponds to a macrostate.
-                  `NaN` values mark cells that should not be marked as :attr:`initial_states`.
-                - :obj:`None` - select all :attr:`macrostates`.
+            - :class:`str`, :class:`~typing.Sequence` - subset of :attr:`macrostates`. Multiple states can be
+              combined using ``','``, such as ``['Alpha, Beta', 'Epsilon']``.
+            - :class:`dict` - keys correspond to initial states and values to cell IDs in
+              :attr:`~anndata.AnnData.obs_names`.
+            - :class:`~pandas.Series` - categorical series where each category corresponds to a macrostate.
+              `NaN` values mark cells that should not be marked as :attr:`initial_states`.
+            - :obj:`None` - select all :attr:`macrostates`.
         %(n_cells)s
         %(allow_overlap)s
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` to associate names and colors with :attr:`initial_states`.
+            Key in :attr:`~anndata.AnnData.obs` to associate names and colors with :attr:`initial_states`.
             Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
             Only used when ``states`` is a :class:`dict` or :class:`~pandas.Series`.
         kwargs
@@ -472,9 +479,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`initial_states` - %(tse_init_states.summary)s
-            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
-            - :attr:`initial_states_memberships` - %(gpcca_init_states_memberships.summary)s
+        - :attr:`initial_states` - %(tse_init_states.summary)s
+        - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+        - :attr:`initial_states_memberships` - %(gpcca_init_states_memberships.summary)s
         """
         if isinstance(states, (pd.Series, dict)):
             return super().set_initial_states(states, cluster_key=cluster_key, allow_overlap=allow_overlap, **kwargs)
@@ -562,12 +569,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         title: Optional[str] = None,
         figsize: Tuple[float, float] = (8, 8),
         dpi: int = 80,
-        save: Optional[Union[Path, str]] = None,
-        text_kwargs: Mapping[str, Any] = MappingProxyType({}),
+        save: Optional[Union[str, pathlib.Path]] = None,
+        text_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> None:
-        """
-        Plot the coarse-grained transition matrix between macrostates.
+        """Plot the coarse-grained transition matrix.
 
         Parameters
         ----------
@@ -578,10 +584,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         order
             How to order the coarse-grained transition matrix. Valid options are:
 
-                - `{o.STABILITY!r}` - order by the values on the diagonal.
-                - `{o.INCOMING!r}` - order by the incoming mass, excluding the diagonal.
-                - `{o.OUTGOING!r}` - order by the outgoing mass, excluding the diagonal.
-                - `{o.STAT_DIST!r}` - order by coarse stationary distribution. If not present, use `{o.STABILITY!r}`.
+            - ``{o.STABILITY!r}`` - order by the values on the diagonal.
+            - ``{o.INCOMING!r}`` - order by the incoming mass, excluding the diagonal.
+            - ``{o.OUTGOING!r}`` - order by the outgoing mass, excluding the diagonal.
+            - ``{o.STAT_DIST!r}`` - order by coarse stationary distribution. If not present, use ``{o.STABILITY!r}``.
         cmap
             Colormap to use.
         xtick_rotation
@@ -589,14 +595,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         annotate
             Whether to display the text on each cell.
         show_cbar
-            Whether to show colorbar.
+            Whether to show the colorbar.
         title
             Title of the figure.
         %(plotting)s
         text_kwargs
-            Keyword arguments for :func:`matplotlib.pyplot.text`.
+            Keyword arguments for :meth:`~matplotlib.axes.Axes.text`.
         kwargs
-            Keyword arguments for :func:`matplotlib.pyplot.imshow`.
+            Keyword arguments for :meth:`~matplotlib.axes.Axes.imshow`.
 
         Returns
         -------
@@ -828,33 +834,32 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         legend_loc: Optional[str] = "upper right out",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,
     ) -> Optional[Axes]:
-        """
-        Plot stacked histogram of macrostates over categorical annotations.
+        """Plot histogram of macrostates over categorical annotations.
 
         Parameters
         ----------
         %(adata)s
         key
-            Key from :attr:`anndata.AnnData.obs` containing categorical annotations.
+            Key from :attr:`~anndata.AnnData.obs` containing categorical annotations.
         width
-            Bar width in `[0, 1]`.
+            Bar width in :math:`[0, 1]`.
         title
-            Title of the figure. If `None`, create one automatically.
+            Title of the figure. If :obj:`None`, create one automatically.
         labelrot
             Rotation of labels on x-axis.
         legend_loc
-            Position of the legend. If `None`, don't show legend.
+            Position of the legend. If :obj:`None`, don't show the legend.
         %(plotting)s
         show
-            If `False`, return :class:`~matplotlib.axes.Axes`.
+            If `False`, return the :class:`~matplotlib.axes.Axes` object.
 
         Returns
         -------
-        The axes object, if ``show = False``.
-        %(just_plots)s
+        If ``show = True``, nothing, just plots, otherwise returns the axes object.
+        Optionally saves it based on ``save``.
         """
         from cellrank.pl._utils import _position_legend
 
@@ -1032,11 +1037,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_cells: Optional[int] = 30,
         cluster_key: str = "clusters",
         check_row_sums: bool = True,
-        time: Optional[datetime] = None,
-        params: Dict[str, Any] = MappingProxyType({}),
+        time: Optional[datetime.datetime] = None,
+        params: Dict[str, Any] = types.MappingProxyType({}),
     ) -> None:
-        """
-        Map fuzzy clustering to pre-computed annotations to get names and colors.
+        """Map fuzzy clustering to pre-computed annotations to get names and colors.
 
         Given the fuzzy clustering, we would like to select the most likely cells from each state and use these to
         give each state a name and a color by comparing with pre-computed, categorical cluster annotations.
@@ -1047,9 +1051,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Fuzzy clustering.
         %(n_cells)s
         cluster_key
-            Key from :attr:`anndata.AnnData.obs` to get reference cluster annotations.
+            Key from :attr:`~anndata.AnnData.obs` to get reference cluster annotations.
         check_row_sums
-            Check whether rows in `memberships` sum to `1`.
+            Check whether rows in `memberships` sum to :math:`1`.
         time
             Start time of macrostates computation.
         params
@@ -1108,7 +1112,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         macrostates: pd.Series,
         colors: np.ndarray,
         memberships: Lineage,
-        params: Dict[str, Any] = MappingProxyType({}),
+        params: Dict[str, Any] = types.MappingProxyType({}),
     ) -> str:
         # fmt: off
         key = Key.obs.macrostates(self.backward)
@@ -1172,7 +1176,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         memberships: Optional[Lineage] = None,
-        params: Dict[str, Any] = MappingProxyType({}),
+        params: Dict[str, Any] = types.MappingProxyType({}),
         allow_overlap: bool = False,
     ) -> str:
         msg = super()._write_states(
