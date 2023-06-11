@@ -1,6 +1,6 @@
 import contextlib
-from pathlib import Path
-from types import MappingProxyType
+import pathlib
+import types
 from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
@@ -33,7 +33,7 @@ class LinDriversProtocol(BaseProtocol):
         self,
         drivers: Optional[pd.DataFrame],
         use_raw: bool,
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> None:
         ...
 
@@ -82,23 +82,23 @@ class LinDriversMixin(FateProbsMixin):
         Parameters
         ----------
         lineages
-            Lineage names from :attr:`fate_probabilities`. If `None`, use all lineages.
+            Lineage names from :attr:`fate_probabilities`. If :obj:`None`, use all lineages.
         method
             Mode to use when calculating p-values and confidence intervals. Valid options are:
 
-                - `{tm.FISHER!r}` - use Fisher transformation :cite:`fisher:21`.
-                - `{tm.PERM_TEST!r}` - use permutation test.
+            - ``{tm.FISHER!r}`` - Fisher transformation :cite:`fisher:21`.
+            - ``{tm.PERM_TEST!r}`` - permutation test.
         cluster_key
             Key from :attr:`anndata.AnnData.obs` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
             Restrict the correlations to these clusters.
         layer
-            Key from :attr:`anndata.AnnData.layers` from which to get the expression.
-            If `None` or `'X'`, use :attr:`anndata.AnnData.X`.
+            Key from :attr:`~anndata.AnnData.layers` from which to get the expression.
+            If :obj:`None` or `'X'`, use :attr:`~anndata.AnnData.X`.
         use_raw
-            Whether to use :attr:`anndata.AnnData.raw` to correlate gene expression.
+            Whether to use :attr:`~anndata.AnnData.raw` to correlate gene expression.
         confidence_level
-            Confidence level for the confidence interval calculation. Must be in interval `[0, 1]`.
+            Confidence level for the confidence interval calculation. Must be in interval :math:`[0, 1]`.
         n_perms
             Number of permutations to use when ``method = {tm.PERM_TEST!r}``.
         seed
@@ -107,11 +107,9 @@ class LinDriversMixin(FateProbsMixin):
 
         Returns
         -------
-        %(correlation_test.returns)s
+        %(correlation_test.returns)s Also updates the following field:
 
-        Also updates the following field:
-
-            - :attr:`lineage_drivers` - the same :class:`pandas.DataFrame` as described above.
+        - :attr:`lineage_drivers` - the same :class:`pandas.DataFrame` as described above.
         """
         # check that lineage probs have been computed
         method = TestMethod(method)
@@ -213,11 +211,10 @@ class LinDriversMixin(FateProbsMixin):
         title_fmt: str = "{gene} qval={qval:.4e}",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Plot lineage drivers discovered by :meth:`compute_lineage_drivers`.
+        """Plot lineage drivers.
 
         Parameters
         ----------
@@ -226,17 +223,17 @@ class LinDriversMixin(FateProbsMixin):
         n_genes
             Top most correlated genes to plot.
         use_raw
-            Whether to access in :attr:`anndata.AnnData.raw` or not.
+            Whether to access data in :attr:`~anndata.AnnData.raw` or not.
         ascending
             Whether to sort the genes in ascending order.
         ncols
             Number of columns.
         title_fmt
-            Title format. Can include `{gene}`, `{pval}`, `{qval}` or `{corr}`, which will be substituted
+            Title format. Can include ``{gene}``, ``{pval}``, ``{qval}`` or ``{corr}``, which will be substituted
             with the actual values.
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scvelo.pl.scatter`.
 
         Returns
         -------
@@ -329,14 +326,13 @@ class LinDriversMixin(FateProbsMixin):
         legend_loc: Optional[str] = "best",
         figsize: Optional[Tuple[float, float]] = (4, 4),
         dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,
         **kwargs: Any,
     ) -> Optional[Axes]:
-        """
-        Show scatter plot of gene-correlations between two lineages.
+        """Show scatter plot of gene-correlations between two lineages.
 
-        Optionally, you can pass a :class:`dict` of gene names that will be annotated in the plot.
+        Optionally, a :class:`dict` of gene names can be passed to highlight in the plot.
 
         Parameters
         ----------
@@ -345,7 +341,7 @@ class LinDriversMixin(FateProbsMixin):
         lineage_y
             Name of the lineage on the y-axis.
         color
-            Key in :attr:`anndata.AnnData.var` or :attr:`anndata.AnnData.varm`, preferring for the former.
+            Key in :attr:`~anndata.AnnData.var` or :attr:`~anndata.AnnData.varm`, preferring for the former.
         gene_sets
             Gene sets annotations of the form `{'gene_set_name': ['gene_1', 'gene_2'], ...}`.
         gene_sets_colors
@@ -353,7 +349,7 @@ class LinDriversMixin(FateProbsMixin):
             If `None` and keys in ``gene_sets`` correspond to lineage names, use the lineage colors.
             Otherwise, use default colors.
         use_raw
-            Whether to access :attr:`anndata.AnnData.raw` or not.
+            Whether to access :attr:`~anndata.AnnData.raw` or not.
         cmap
             Colormap to use.
         fontsize
@@ -361,17 +357,17 @@ class LinDriversMixin(FateProbsMixin):
         adjust_text
             Whether to automatically adjust text in order to reduce overlap.
         legend_loc
-            Position of the legend. If `None`, don't show the legend. Only used when ``gene_sets != None``.
+            Position of the legend. If :obj:`None`, don't show the legend. Only used when ``gene_sets != None``.
         %(plotting)s
         show
-            If `False`, return :class:`matplotlib.pyplot.Axes`.
+            If :obj:`False`, return the :class:`~matplotlib.axes.Axes` object.
         kwargs
-            Keyword arguments for :func:`scanpy.pl.scatter`.
+            Keyword arguments for :func:`~scanpy.pl.scatter`.
 
         Returns
         -------
-        The axes object, if ``show = False``.
-        %(just_plots)s
+        If ``show = True``, nothing, just plots, otherwise returns the axes object.
+        Optionally saves it based on ``save``.
 
         Notes
         -----
@@ -526,7 +522,7 @@ class LinDriversMixin(FateProbsMixin):
     def _write_fate_probabilities(
         self: LinDriversProtocol,
         fate_probs: Optional[Lineage],
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         self._write_lineage_drivers(None, use_raw=False, log=False)
         with contextlib.suppress(AttributeError):
@@ -540,7 +536,7 @@ class LinDriversMixin(FateProbsMixin):
         self: LinDriversProtocol,
         drivers: Optional[pd.DataFrame],
         use_raw: bool,
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         # fmt: off
         key = Key.varm.lineage_drivers(self.backward)
@@ -573,8 +569,7 @@ class LinDriversMixin(FateProbsMixin):
     @property
     @d.dedent
     def lineage_drivers(self) -> Optional[pd.DataFrame]:
-        """
-        Potential lineage drivers.
+        """Potential lineage drivers.
 
         Computes Pearson correlation of each gene with fate probabilities for every terminal state. High Pearson
         correlation indicates potential lineage drivers. Also computes p-values and confidence intervals.
