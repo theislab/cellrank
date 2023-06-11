@@ -307,7 +307,7 @@ class FateProbsMixin:
         color
             Key in :attr:`~anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
         mode
-            Whether to plot the probabilities in an embedding or across pseudotime.
+            Whether to plot the probabilities in an embedding or along the pseudotime.
         time_key
             Key in :attr:`~anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
         title

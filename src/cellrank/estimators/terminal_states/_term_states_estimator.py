@@ -1,13 +1,13 @@
-from abc import ABC
-from types import MappingProxyType
+import abc
+import types
 from typing import Any, Dict, Literal, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.sparse import spmatrix
 
 from matplotlib.colors import to_hex
 
@@ -42,9 +42,8 @@ __all__ = ["TermStatesEstimator"]
 
 
 @d.dedent
-class TermStatesEstimator(BaseEstimator, ABC):
-    """
-    Base class for all estimators predicting terminal states.
+class TermStatesEstimator(BaseEstimator, abc.ABC):
+    """Base class for all estimators predicting the initial and terminal states.
 
     Parameters
     ----------
@@ -53,7 +52,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
     def __init__(
         self,
-        object: Union[AnnData, np.ndarray, spmatrix, KernelExpression],
+        object: Union[AnnData, np.ndarray, sp.spmatrix, KernelExpression],
         **kwargs: Any,
     ):
         super().__init__(object=object, **kwargs)
@@ -98,21 +97,21 @@ class TermStatesEstimator(BaseEstimator, ABC):
         allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "TermStatesEstimator":
-        """Set :attr:`terminal_states`.
+        """Set the :attr:`terminal_states`.
 
         Parameters
         ----------
         states
             States to select. Valid options are:
 
-                - categorical :class:`~pandas.Series` where each category corresponds to an individual state.
-                  `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
-                - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
-                  annotations in :attr:`anndata.AnnData.obs_names`.
-                  If only 1 key is provided, values should correspond to clusters if a categorical
-                  :class:`~pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
+            - categorical :class:`~pandas.Series` where each category corresponds to an individual state.
+              `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
+            - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
+              annotations in :attr:`~anndata.AnnData.obs_names`.
+              If only 1 key is provided, values should correspond to clusters if a categorical
+              :class:`~pandas.Series` can be found in :attr:`~anndata.AnnData.obs`.
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` to associate names and colors with :attr:`terminal_states`.
+            Key in :attr:`~anndata.AnnData.obs` to associate names and colors with :attr:`terminal_states`.
             Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
         %(allow_overlap)s
         kwargs
@@ -122,8 +121,8 @@ class TermStatesEstimator(BaseEstimator, ABC):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+        - :attr:`terminal_states` - %(tse_term_states.summary)s
+        - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
         states, colors = self._set_categorical_labels(
             categories=states,
@@ -147,21 +146,21 @@ class TermStatesEstimator(BaseEstimator, ABC):
         allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "TermStatesEstimator":
-        """Set :attr:`initial_states`.
+        """Set the :attr:`initial_states`.
 
         Parameters
         ----------
         states
             Which states to select. Valid options are:
 
-                - categorical :class:`~pandas.Series` where each category corresponds to an individual state.
-                  `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
-                - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
-                  annotations in :attr:`anndata.AnnData.obs_names`.
-                  If only 1 key is provided, values should correspond to clusters if a categorical
-                  :class:`~pandas.Series` can be found in :attr:`anndata.AnnData.obs`.
+            - categorical :class:`~pandas.Series` where each category corresponds to an individual state.
+              `NaN` entries denote cells that do not belong to any state, i.e., transient cells.
+            - :class:`dict` where keys are states and values are lists of cell barcodes corresponding to
+              annotations in :attr:`~anndata.AnnData.obs_names`.
+              If only 1 key is provided, values should correspond to clusters if a categorical
+              :class:`~pandas.Series` can be found in :attr:`~anndata.AnnData.obs`.
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` to associate names and colors :attr:`initial_states`.
+            Key in :attr:`~anndata.AnnData.obs` to associate names and colors :attr:`initial_states`.
             Each state will be given the name and color corresponding to the cluster it mostly overlaps with.
         %(allow_overlap)s
         kwargs
@@ -171,8 +170,8 @@ class TermStatesEstimator(BaseEstimator, ABC):
         -------
         Returns self and updates the following fields:
 
-            - :attr:`initial_states` - %(tse_init_states.summary)s
-            - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
+        - :attr:`initial_states` - %(tse_init_states.summary)s
+        - :attr:`initial_states_probabilities` - %(tse_init_states_probs.summary)s
         """
         states, colors = self._set_categorical_labels(
             categories=states,
@@ -192,7 +191,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
     def rename_terminal_states(self, old_new: Dict[str, str]) -> "TermStatesEstimator":
-        """Rename :attr:`terminal_states`.
+        """Rename the :attr:`terminal_states`.
 
         Parameters
         ----------
@@ -201,9 +200,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Returns self and updates the following field:
+        Returns self and updates the following fields:
 
-            - :attr:`terminal_states` - %(tse_term_states.summary)s
+        - :attr:`terminal_states` - %(tse_term_states.summary)s
         """
         states = self.terminal_states
         if states is None:
@@ -246,7 +245,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
     @d.dedent
     def rename_initial_states(self, old_new: Dict[str, str]) -> "TermStatesEstimator":
-        """Rename :attr:`initial_states`.
+        """Rename the :attr:`initial_states`.
 
         Parameters
         ----------
@@ -255,9 +254,9 @@ class TermStatesEstimator(BaseEstimator, ABC):
 
         Returns
         -------
-        Returns self and updates the following field:
+        Returns self and updates the following fields:
 
-            - :attr:`initial_states` - %(tse_init_states.summary)s
+        - :attr:`initial_states` - %(tse_init_states.summary)s
         """
         states = self.initial_states
         if states is None:
@@ -320,18 +319,20 @@ class TermStatesEstimator(BaseEstimator, ABC):
         which
             Which macrostates to plot. Valid options are:
 
-                - ``'all'`` - plot all macrostates.
-                - ``'initial'`` - plot macrostates marked as :attr:`initial_states`.
-                - ``'terminal'`` - plot macrostates marked as :attr:`terminal_states`.
+            - ``'all'`` - plot all macrostates.
+            - ``'initial'`` - plot macrostates marked as :attr:`initial_states`.
+            - ``'terminal'`` - plot macrostates marked as :attr:`terminal_states`.
         states
-            Subset of the macrostates to show. If obj:`None`, plot all macrostates.
+            Subset of the macrostates to show. If :obj:`None`, plot all macrostates.
         color
-            Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var` used to color the observations.
+            Key in :attr:`~anndata.AnnData.obs` or :attr:`~anndata.AnnData.var` used to color the observations.
         discrete
             Whether to plot the data as continuous or discrete observations.
             If the data cannot be plotted as continuous observations, it will be plotted as discrete.
+        mode
+            Whether to plot the probabilities in an embedding or along the pseudotime.
         time_key
-            Key in :attr:`anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
+            Key in :attr:`~anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
         title
             Title of the plot.
         same_plot
@@ -340,7 +341,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         cmap
             Colormap for continuous annotations.
         kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scvelo.pl.scatter`.
 
         Returns
         -------
@@ -615,7 +616,7 @@ class TermStatesEstimator(BaseEstimator, ABC):
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
-        params: Dict[str, Any] = MappingProxyType({}),
+        params: Dict[str, Any] = types.MappingProxyType({}),
         allow_overlap: bool = False,
     ) -> str:
         # fmt: off
