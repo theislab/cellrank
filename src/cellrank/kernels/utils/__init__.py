@@ -16,3 +16,22 @@ from cellrank.kernels.utils._similarity import (
 )
 from cellrank.kernels.utils._tmat_flow import FlowPlotter
 from cellrank.kernels.utils._velocity_model import Deterministic, MonteCarlo, Stochastic
+
+__all__ = [
+    "TmatProjection",
+    "CustomThresholdScheme",
+    "HardThresholdScheme",
+    "SoftThresholdScheme",
+    "ThresholdSchemeABC",
+    "RandomWalk",
+    "Cosine",
+    "Correlation",
+    "DotProduct",
+    "Similarity",
+    "SimilarityABC",
+    "SimilarityHessian",
+    "FlowPlotter",
+    "Deterministic",
+    "MonteCarlo",
+    "Stochastic",
+]

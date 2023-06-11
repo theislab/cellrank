@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import pickle
-from typing import Any, Optional, Protocol, Tuple, Union
+from typing import Optional, Protocol, Tuple, Union
 
 from anndata import AnnData
 
@@ -26,9 +26,6 @@ class IOMixinProtocol(Protocol):
 
 class IOMixin:
     """Mixin that allows for serialization from/to files using :mod:`pickle`."""
-
-    def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(*args, **kwargs)
 
     @property
     @contextlib.contextmanager
