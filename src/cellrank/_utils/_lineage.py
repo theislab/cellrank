@@ -49,6 +49,8 @@ _HTML_REPR_THRESH = 100
 _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
 
+__all__ = ["Lineage", "LineageView"]
+
 
 class PrimingDegree(ModeEnum):  # noqa: D101
     KL_DIVERGENCE = auto()

@@ -1,6 +1,6 @@
+import enum
 import os
-from enum import auto
-from pathlib import Path
+import pathlib
 from typing import Any, Literal, Tuple, Union
 
 from anndata import AnnData
@@ -10,7 +10,7 @@ from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
 
-__all__ = (
+__all__ = [
     "pancreas",
     "pancreas_preprocessed",
     "lung",
@@ -18,11 +18,11 @@ __all__ = (
     "reprogramming_schiebinger",
     "zebrafish",
     "bone_marrow",
-)
+]
 
 
 class ReprogrammingSubset(ModeEnum):
-    FULL = auto()
+    FULL = enum.auto()
     K48 = "48k"
     K85 = "85k"
 
@@ -42,7 +42,7 @@ _datasets = {
 
 
 def _load_dataset_from_url(
-    fpath: Union[str, Path], url: str, expected_shape: Tuple[int, int], **kwargs: Any
+    fpath: Union[str, pathlib.Path], url: str, expected_shape: Tuple[int, int], **kwargs: Any
 ) -> AnnData:
     fpath = str(fpath)
     if not fpath.endswith(".h5ad"):
@@ -77,11 +77,10 @@ def _load_dataset_from_url(
 @d.get_sections(base="dataset", sections=["Parameters"])
 @d.dedent
 def pancreas(
-    path: Union[str, Path] = "datasets/endocrinogenesis_day15.5.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
-    """
-    Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
+    """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
     sc-RNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
     to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
@@ -105,12 +104,12 @@ def pancreas(
 
 @d.dedent
 def pancreas_preprocessed(
-    path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
-    TODO(michalk8): mention pre-processing
+    .. TODO(michalk8): mention pre-processing
 
     Parameters
     ----------
@@ -125,7 +124,7 @@ def pancreas_preprocessed(
 
 @d.dedent
 def lung(
-    path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/lung_regeneration.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Regeneration of murine lung epithelial cells at 13 time points from :cite:`strunz:20`.
@@ -153,7 +152,7 @@ def lung(
 @d.dedent
 def reprogramming_morris(
     subset: Literal["full", "48k", "85k"] = ReprogrammingSubset.FULL,
-    path: Union[str, Path] = "datasets/reprogramming_morris.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/reprogramming_morris.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors from :cite:`morris:18`.
@@ -202,7 +201,7 @@ def reprogramming_morris(
 
 @d.dedent
 def reprogramming_schiebinger(
-    path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/reprogramming_schiebinger.h5ad",
     subset_to_serum: bool = False,
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
@@ -239,7 +238,7 @@ def reprogramming_schiebinger(
 
 @d.dedent
 def zebrafish(
-    path: Union[str, Path] = "datasets/zebrafish.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/zebrafish.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Zebrafish embryogenesis assayed using drop-seq from :cite:`farrell:18`.
@@ -260,7 +259,7 @@ def zebrafish(
 
 @d.dedent
 def bone_marrow(
-    path: Union[str, Path] = "datasets/bone_marrow.h5ad",
+    path: Union[str, pathlib.Path] = "datasets/bone_marrow.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.
