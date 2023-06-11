@@ -1,4 +1,5 @@
 # modified from: https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_logging.py
+import datetime
 import io
 import sys
 
@@ -64,3 +65,43 @@ class TestLogging:
         logg.hint("test2")
         logg.debug("invisible")
         assert settings.logpath.read_text() == "--> test2\n"
+
+    def test_timing(self, monkeypatch, capsys, logging_state):
+        import cellrank.logging._logging as logg
+
+        class IncTime:
+            def __init__(self):
+                self.counter = 0
+
+            def now(self, tz):
+                self.counter += 1
+                return datetime.datetime(2000, 1, 1, second=self.counter, microsecond=self.counter, tzinfo=tz)
+
+            @property
+            def datetime(self) -> "IncTime":
+                return self
+
+            @property
+            def timezone(self):
+                return datetime.timezone
+
+        settings.logfile = sys.stderr
+        t = IncTime()
+        monkeypatch.setattr(logg, "datetime", t)
+        settings.verbosity = Verbosity.debug
+
+        logg.hint("1")
+        assert t.counter == 1
+        assert capsys.readouterr().err == "--> 1\n"
+        start = logg.info("2")
+        assert t.counter == 2
+        assert capsys.readouterr().err == "2\n"
+        logg.hint("3")
+        assert t.counter == 3
+        assert capsys.readouterr().err == "--> 3\n"
+        logg.info("4", time=start)
+        assert t.counter == 4
+        assert capsys.readouterr().err == "4 (0:00:02)\n"
+        logg.info("5 {time_passed}", time=start)
+        assert t.counter == 5
+        assert capsys.readouterr().err == "5 0:00:03\n"
