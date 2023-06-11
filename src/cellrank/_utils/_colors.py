@@ -1,13 +1,11 @@
 from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from pandas import DataFrame, Series, to_numeric
-from pandas._libs.lib import infer_dtype
-from pandas.core.dtypes.common import is_categorical_dtype
+import pandas as pd
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from scipy.stats import entropy
 
-from matplotlib import cm
-from matplotlib import colors as mcolors
+from matplotlib import cm, colors
 
 from cellrank import logging as logg
 
@@ -21,8 +19,7 @@ def _create_colors(
     convert_to_rgb: bool = True,
     as_hex: bool = True,
 ) -> List[Any]:
-    """
-    Create variations of colors from base color.
+    """Create variations of colors from base color.
 
     Parameters
     ----------
@@ -48,18 +45,18 @@ def _create_colors(
     -------
     List of colors, either as a hex string or an RGB array.
     """
-    if not mcolors.is_color_like(base_color):
+    if not colors.is_color_like(base_color):
         raise ValueError("Base color is not color-like.")
     if n <= 0:
         raise ValueError(f"Number of colors must be > 0, found `{n}`.")
 
-    base_color = mcolors.rgb_to_hsv(mcolors.to_rgb(base_color))
+    base_color = colors.rgb_to_hsv(colors.to_rgb(base_color))
 
     if n == 1:
-        colors = [base_color]
+        res = [base_color]
     else:
         n *= 2  # sometimes the colors are too similar, we take every 2nd one
-        colors = np.repeat(base_color[..., np.newaxis], n, axis=1).T
+        res = np.repeat(base_color[..., np.newaxis], n, axis=1).T
 
         for i, r in enumerate((hue_range, saturation_range, value_range)):
             if r is None:
@@ -67,30 +64,30 @@ def _create_colors(
             r_low, r_high = sorted(r)
             c = base_color[i]
 
-            colors[:, i] = np.linspace(max(c + r_low, 0), min(c + r_high, 1), n)
+            res[:, i] = np.linspace(max(c + r_low, 0), min(c + r_high, 1), n)
 
     if convert_to_rgb:
-        colors = map(mcolors.hsv_to_rgb, colors)
+        res = [colors.hsv_to_rgb(c) for c in res]
     if as_hex:
-        colors = map(mcolors.to_hex, colors)
+        res = [colors.to_hex(c) for c in res]
 
-    return list(colors)[::2]  # we've created twice as much colors, select every other
+    return res[::2]  # we've created twice as many colors, select every other
 
 
-def _convert_to_hex_colors(colors: Sequence[Any]) -> List[str]:
-    if not all(mcolors.is_color_like(c) for c in colors):
+def _convert_to_hex_colors(cols: Sequence[Any]) -> List[str]:
+    if not all(colors.is_color_like(c) for c in cols):
         raise ValueError("Not all values are color-like.")
 
-    return [mcolors.to_hex(c) for c in colors]
+    return [colors.to_hex(c) for c in cols]
 
 
 def _create_categorical_colors(n_categories: Optional[int] = None):
     from scanpy.plotting.palettes import vega_20_scanpy
 
     cmaps = [
-        mcolors.ListedColormap(vega_20_scanpy),
+        colors.ListedColormap(vega_20_scanpy),
         cm.Accent,
-        mcolors.ListedColormap(np.array(cm.Dark2.colors)[[1, 2, 4, 5, 6]]),
+        colors.ListedColormap(np.array(cm.Dark2.colors)[[1, 2, 4, 5, 6]]),
         cm.Set1,
         cm.Set2,
         cm.Set3,
@@ -102,11 +99,11 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
     if n_categories > max_cats:
         raise ValueError(f"Number of categories `{n_categories}` exceeded the maximum number of colors `{max_cats}`.")
 
-    colors = []
+    res = []
     for cmap in cmaps:
-        colors += [cmap(i) for i in range(cmap.N)][: n_categories - len(colors)]
-        if len(colors) == n_categories:
-            return _convert_to_hex_colors(colors)
+        res += [cmap(i) for i in range(cmap.N)][: n_categories - len(res)]
+        if len(res) == n_categories:
+            return _convert_to_hex_colors(res)
 
     raise RuntimeError(f"Unable to create `{n_categories}` colors.")
 
@@ -139,28 +136,27 @@ def _get_black_or_white(value: float, cmap) -> str:
 
 
 def _get_bg_fg_colors(color, sat_scale: Optional[float] = None) -> Tuple[str, str]:
-    if not mcolors.is_color_like(color):
+    if not colors.is_color_like(color):
         raise ValueError(f"Value `{color}` is not color-like.")
 
-    color = np.squeeze(mcolors.to_rgba_array(color, alpha=1))[:3]
+    color = np.squeeze(colors.to_rgba_array(color, alpha=1))[:3]
     if sat_scale is not None:
-        h, s, v = mcolors.rgb_to_hsv(color)
-        color = mcolors.hsv_to_rgb([h, s * sat_scale, v])
+        h, s, v = colors.rgb_to_hsv(color)
+        color = colors.hsv_to_rgb([h, s * sat_scale, v])
 
     return (
-        mcolors.to_hex(color),
+        colors.to_hex(color),
         _contrasting_color(*np.array(color * 255).astype(int)),
     )
 
 
 def _map_names_and_colors(
-    series_reference: Series,
-    series_query: Series,
+    series_reference: pd.Series,
+    series_query: pd.Series,
     colors_reference: Optional[np.array] = None,
     en_cutoff: Optional[float] = None,
-) -> Union[Series, Tuple[Series, List[Any]]]:
-    """
-    Map annotations and colors from one series to another.
+) -> Union[pd.Series, Tuple[pd.Series, List[Any]]]:
+    """Map annotations and colors from one series to another.
 
     Parameters
     ----------
@@ -198,7 +194,7 @@ def _map_names_and_colors(
     process_colors = colors_reference is not None
 
     if not len(series_query):
-        res = Series([], dtype="category")
+        res = pd.Series([], dtype="category")
         return (res, []) if process_colors else res
 
     if process_colors:
@@ -208,7 +204,7 @@ def _map_names_and_colors(
                 f"length of reference categories `{len(series_reference.cat.categories)}`."
             )
         colors_reference = colors_reference[: len(series_reference.cat.categories)]
-        if not all(mcolors.is_color_like(c) for c in colors_reference):
+        if not all(colors.is_color_like(c) for c in colors_reference):
             raise ValueError("Not all values are valid colors.")
         if len(set(colors_reference)) != len(colors_reference):
             logg.warning("Color sequence contains non-unique elements")
@@ -216,13 +212,13 @@ def _map_names_and_colors(
     # create dataframe to store the associations between reference and query
     cats_query = series_query.cat.categories
     cats_reference = series_reference.cat.categories
-    association_df = DataFrame(None, index=cats_query, columns=cats_reference)
+    association_df = pd.DataFrame(None, index=cats_query, columns=cats_reference)
 
     # populate the dataframe - compute the overlap
     for cl in cats_query:
         row = [np.sum(series_reference.loc[np.array(series_query == cl)] == key) for key in cats_reference]
         association_df.loc[cl] = row
-    association_df = association_df.apply(to_numeric)
+    association_df = association_df.apply(pd.to_numeric)
 
     # find the mapping which maximizes overlap
     names_query = association_df.T.idxmax()
@@ -238,14 +234,14 @@ def _map_names_and_colors(
 
     # next, we need to make sure that we have unique names and colors. In a first step, compute how many repetitions
     # we have
-    names_query_series = Series(names_query, dtype="category")
+    names_query_series = pd.Series(names_query, dtype="category")
     frequ = {key: np.sum(names_query == key) for key in names_query_series.cat.categories}
 
     # warning: do NOT use np.array - if I pass for e.g. colors ['red'], the dtype will be '<U3'
     # but _create_colors convert them to hex, which will leave them trimmed to #ff or similar
-    names_query_new = Series(names_query.copy())
+    names_query_new = pd.Series(names_query.copy())
     if process_colors:
-        colors_query_new = Series(colors_query.copy())
+        colors_query_new = pd.Series(colors_query.copy())
 
     # Create unique names by adding suffixes "..._1, ..._2" etc and unique colors by shifting the original color
     for key, value in frequ.items():
@@ -274,14 +270,14 @@ def _map_names_and_colors(
     return (names_query_new, list(_convert_to_hex_colors(colors_query_new))) if process_colors else names_query_new
 
 
-def _compute_mean_color(color_list: List[str]) -> str:
+def _compute_mean_color(cols: List[str]) -> str:
     """Compute mean color."""
-    if not all(mcolors.is_color_like(c) for c in color_list):
-        raise ValueError(f"Not all values are valid colors `{color_list}`.")
+    if not all(colors.is_color_like(c) for c in cols):
+        raise ValueError(f"Not all values are valid colors `{cols}`.")
 
-    color_list = np.array([mcolors.rgb_to_hsv(mcolors.to_rgb(c)) for c in color_list])
+    cols = np.array([colors.rgb_to_hsv(colors.to_rgb(c)) for c in cols])
 
-    return mcolors.to_hex(mcolors.hsv_to_rgb(np.mean(color_list, axis=0)))
+    return colors.to_hex(colors.hsv_to_rgb(np.mean(cols, axis=0)))
 
 
 def _colors_in_order(
@@ -289,8 +285,7 @@ def _colors_in_order(
     clusters: Optional[Iterable[str]] = None,
     cluster_key: str = "clusters",
 ) -> List[Any]:
-    """
-    Get list of colors from AnnData in defined order.
+    """Get list of colors from AnnData in defined order.
 
     Extracts a list of colors from ``adata.uns[cluster_key]`` in the order defined by the ``clusters``.
 
