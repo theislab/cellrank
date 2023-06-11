@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
-from copy import deepcopy
-from pathlib import Path
+import abc
+import copy
+import pathlib
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, isspmatrix_csr, spmatrix
+import scipy.sparse as sp
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -21,10 +21,10 @@ from cellrank.kernels.utils._random_walk import Indices_t
 
 __all__ = ["Kernel", "UnidirectionalKernel", "BidirectionalKernel"]
 
-Tmat_t = Union[np.ndarray, spmatrix]
+Tmat_t = Union[np.ndarray, sp.spmatrix]
 
 
-class KernelExpression(IOMixin, ABC):
+class KernelExpression(IOMixin, abc.ABC):
     def __init__(
         self,
         parent: Optional["KernelExpression"] = None,
@@ -40,10 +40,9 @@ class KernelExpression(IOMixin, ABC):
     def __init_subclass__(cls, **_: Any) -> None:
         super().__init_subclass__()
 
-    @abstractmethod
+    @abc.abstractmethod
     def compute_transition_matrix(self, *args: Any, **kwargs: Any) -> "KernelExpression":
-        """
-        Compute transition matrix.
+        """Compute transition matrix.
 
         Parameters
         ----------
@@ -57,40 +56,40 @@ class KernelExpression(IOMixin, ABC):
         Modifies :attr:`transition_matrix` and returns self.
         """
 
-    @abstractmethod
+    @abc.abstractmethod
     def copy(self, *, deep: bool = False) -> "KernelExpression":
-        """Return a copy of itself. The underlying :attr:`adata` object is not copied."""
+        """Return a copy of self. The :attr:`adata` object is not copied."""
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def adata(self) -> AnnData:
         """Annotated data object."""
 
     @adata.setter
-    @abstractmethod
+    @abc.abstractmethod
     def adata(self, value: Optional[AnnData]) -> None:
         pass
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def kernels(self) -> Tuple["KernelExpression", ...]:
         """Underlying base kernels."""
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def shape(self) -> Tuple[int, int]:
         """``(n_cells, n_cells)``."""
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def backward(self) -> Optional[bool]:
         """Direction of the process."""
 
-    @abstractmethod
+    @abc.abstractmethod
     def __getitem__(self, ix: int) -> "KernelExpression":
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def __len__(self) -> int:
         pass
 
@@ -113,28 +112,27 @@ class KernelExpression(IOMixin, ABC):
         xticks_step_size: Optional[int] = 1,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,
     ) -> Optional[plt.Axes]:
-        """
-        Visualize outgoing flow from a cluster of cells :cite:`mittnenzweig:21`.
+        """Visualize outgoing flow from a cluster of cells :cite:`mittnenzweig:21`.
 
         Parameters
         ----------
         cluster
             Cluster for which to visualize outgoing flow.
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` where clustering is stored.
+            Key in :attr:`~anndata.AnnData.obs` where clustering is stored.
         time_key
-            Key in :attr:`anndata.AnnData.obs` where experimental time is stored.
+            Key in :attr:`~anndata.AnnData.obs` where experimental time is stored.
         clusters
-            Visualize flow only for these clusters. If `None`, use all clusters.
+            Visualize flow only for these clusters. If :obj:`None`, use all clusters.
         time_points
-            Visualize flow only for these time points. If `None`, use all time points.
+            Visualize flow only for these time points. If :obj:`None`, use all time points.
         %(flow.parameters)s
         %(plotting)s
         show
-            If `False`, return :class:`matplotlib.pyplot.Axes`.
+            If :obj:`False`, return :class:`~matplotlib.axes.Axes`.
 
         Returns
         -------
@@ -189,11 +187,10 @@ class KernelExpression(IOMixin, ABC):
         show_progress_bar: bool = True,
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Plot random walks in an embedding.
+        """Plot random walks in an embedding.
 
         This method simulates random walks on the Markov chain defined though the corresponding transition matrix. The
         method is intended to give qualitative rather than quantitative insights into the transition matrix. Random
@@ -205,18 +202,18 @@ class KernelExpression(IOMixin, ABC):
             Number of random walks to simulate.
         %(rw_sim.parameters)s
         start_ixs
-            Cells from which to sample the starting points. If `None`, use all cells.
+            Cells from which to sample the starting points. If :obj:`None`, use all cells.
             %(rw_ixs)s
             For example ``{'dpt_pseudotime': [0, 0.1]}`` means that starting points for random walks
-            will be sampled uniformly from cells whose pseudotime is in `[0, 0.1]`.
+            will be sampled uniformly from cells whose pseudotime is in :math:`[0, 0.1]`.
         stop_ixs
-            Cells which when hit, the random walk is terminated. If `None`, terminate after ``max_iters``.
+            Cells which when hit, the random walk is terminated. If :obj:`None`, terminate after ``max_iters``.
             %(rw_ixs)s
             For example ``{'clusters': ['Alpha', 'Beta']}`` and ``successive_hits = 3`` means that the random walk will
-            stop prematurely after cells in the above specified clusters have been visited successively 3 times in a
-            row.
+            stop prematurely after cells in the above specified clusters have been visited successively 3 times in
+            a row.
         basis
-            Basis in :attr:`anndata.AnnData.obsm` to use as an embedding.
+            Basis in :attr:`~anndata.AnnData.obsm` to use as an embedding.
         cmap
             Colormap for the random walk lines.
         linewidth
@@ -266,32 +263,31 @@ class KernelExpression(IOMixin, ABC):
         key_added: Optional[str] = None,
         recompute: bool = False,
         stream: bool = True,
-        connectivities: Optional[spmatrix] = None,
+        connectivities: Optional[sp.spmatrix] = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Plot :attr:`transition_matrix` as a stream or a grid plot.
+        """Plot :attr:`transition_matrix` as a stream or a grid plot.
 
         Parameters
         ----------
         basis
             Key in :attr:`anndata.AnnData.obsm` containing the basis.
         key_added
-            If not `None`, save the result to :attr:`anndata.AnnData.obsm` ``['{key_added}']``.
-            Otherwise, save the result to `'T_fwd_{basis}'` or `T_bwd_{basis}`, depending on the direction.
+            If not :obj:`None`, save the result to :attr:`adata.obsm['{key_added}'] <anndata.AnnData.obsm>`.
+            Otherwise, save the result to ``'T_fwd_{basis}'`` or ``'T_bwd_{basis}'``, depending on the direction.
         recompute
             Whether to recompute the projection if it already exists.
         stream
-            If ``True``, use :func:`scvelo.pl.velocity_embedding_stream`.
-            Otherwise, use :func:`scvelo.pl.velocity_embedding_grid`.
+            If :obj:`True`, use :func:`~scvelo.plotting.velocity_embedding_stream`.
+            Otherwise, use :func:`~scvelo.plotting.velocity_embedding_grid`.
         connectivities
-            Connectivity matrix to use for projection. If ``None``, use ones from the underlying kernel, is possible.
+            Connectivity matrix to use for projection. If :obj:`None`, use ones from the underlying kernel, is possible.
         kwargs
-            Keyword argument for the chosen plotting function.
+            Keyword argument for the above-mentioned plotting function.
 
         Returns
         -------
-        Nothing, just plots and modifies :attr:`anndata.AnnData.obsm` with a key based on ``key_added``.
+        Nothing, just plots and modifies :attr:`~anndata.AnnData.obsm` with a key based on the ``key_added``.
         """
         proj = TmatProjection(self, basis=basis)
         proj.project(key_added=key_added, recompute=recompute, connectivities=connectivities)
@@ -366,14 +362,13 @@ class KernelExpression(IOMixin, ABC):
     @d.dedent
     @require_tmat
     def write_to_adata(self, key: Optional[str] = None, copy: bool = False) -> None:
-        """
-        Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
+        """Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
 
         Parameters
         ----------
         key
             Key used when writing transition matrix to :attr:`adata`.
-            If `None`, the key will be determined automatically.
+            If :obj:`None`, the key will be determined automatically.
 
         Returns
         -------
@@ -394,16 +389,15 @@ class KernelExpression(IOMixin, ABC):
         self.adata.obsp[key] = self.transition_matrix.copy() if copy else self.transition_matrix
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
+    def transition_matrix(self) -> Union[np.ndarray, sp.csr_matrix]:
         """Row-normalized transition matrix."""
         if self._parent is None and self._transition_matrix is None:
             self.compute_transition_matrix()
         return self._transition_matrix
 
     @transition_matrix.setter
-    def transition_matrix(self, matrix: Union[np.ndarray, spmatrix]) -> None:
-        """
-        Set the transition matrix.
+    def transition_matrix(self, matrix: Tmat_t) -> None:
+        """Set the transition matrix.
 
         Parameters
         ----------
@@ -420,16 +414,16 @@ class KernelExpression(IOMixin, ABC):
                 f"Expected matrix to be of shape `{self.shape}`, found `{matrix.shape}`."
             )
 
-        def should_norm(mat: Union[np.ndarray, spmatrix]) -> bool:
+        def should_norm(mat: Tmat_t) -> bool:
             return not np.all(np.isclose(np.asarray(mat.sum(1)).squeeze(), 1.0, rtol=1e-12))
 
-        if issparse(matrix) and not isspmatrix_csr(matrix):
-            matrix = csr_matrix(matrix)
+        if sp.issparse(matrix) and not sp.isspmatrix_csr(matrix):
+            matrix = sp.csr_matrix(matrix)
         matrix = matrix.astype(np.float64, copy=False)
 
         force_normalize = (self._parent is None or self._normalize) and should_norm(matrix)
         if force_normalize:
-            if np.any((matrix.data if issparse(matrix) else matrix) < 0):
+            if np.any((matrix.data if sp.issparse(matrix) else matrix) < 0):
                 raise ValueError("Unable to normalize matrix with negative values.")
             matrix = _normalize(matrix)
             if should_norm(matrix):  # some rows are all 0s/contain invalid values
@@ -468,7 +462,7 @@ class KernelExpression(IOMixin, ABC):
         # fmt: on
 
 
-class Kernel(KernelExpression, ABC):
+class Kernel(KernelExpression, abc.ABC):
     """Base kernel class."""
 
     def __init__(self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any):
@@ -507,15 +501,14 @@ class Kernel(KernelExpression, ABC):
         key: str,
         copy: bool = False,
     ) -> "Kernel":
-        """
-        Read kernel object saved using :meth:`write_to_adata`.
+        """Read the kernel saved using :meth:`write_to_adata`.
 
         Parameters
         ----------
         %(adata)s
         key
-            Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
-            The parameters should be stored in :attr:`anndata.AnnData.uns` ``['{key}_params']``.
+            Key in :attr:`~anndata.AnnData.obsp` where the transition matrix is stored.
+            The parameters should be stored in :attr:`adata.uns['{key}_params'] <anndata.AnnData.uns>`.
         copy
             Whether to copy the transition matrix.
 
@@ -523,8 +516,8 @@ class Kernel(KernelExpression, ABC):
         -------
         The kernel with explicitly initialized properties:
 
-            - :attr:`transition_matrix` - the transition matrix.
-            - :attr:`params` - parameters used for computation.
+        - :attr:`transition_matrix` - the transition matrix.
+        - :attr:`params` - parameters used for computation.
         """
         transition_matrix = _read_graph_data(adata, key=key)
         try:
@@ -545,7 +538,7 @@ class Kernel(KernelExpression, ABC):
     def copy(self, *, deep: bool = False) -> "Kernel":
         """Return a copy of self."""
         with self._remove_adata:
-            k = deepcopy(self)
+            k = copy.deepcopy(self)
         k.adata = self.adata.copy() if deep else self.adata
         return k
 
@@ -571,7 +564,7 @@ class Kernel(KernelExpression, ABC):
         return f"n={n}, {params}" if params else f"n={n}"
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, csr_matrix]:
+    def transition_matrix(self) -> Union[np.ndarray, sp.csr_matrix]:
         """Row-normalized transition matrix."""
         return self._transition_matrix
 
@@ -607,11 +600,11 @@ class Kernel(KernelExpression, ABC):
         return f"{prefix}{self.__class__.__name__}[n={self.shape[0]}]"
 
 
-class UnidirectionalKernel(UnidirectionalMixin, Kernel, ABC):
+class UnidirectionalKernel(UnidirectionalMixin, Kernel, abc.ABC):
     """Kernel with no directionality."""
 
 
-class BidirectionalKernel(BidirectionalMixin, Kernel, ABC):
+class BidirectionalKernel(BidirectionalMixin, Kernel, abc.ABC):
     """Kernel with either forward or backward direction that can be inverted using :meth:`__invert__`."""
 
 
@@ -675,17 +668,17 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         super().__init__(parent=parent)
         self._validate(kexprs)
 
-    @abstractmethod
+    @abc.abstractmethod
     def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
         pass
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def _initial_value(self) -> Union[int, float, Tmat_t]:
         pass
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def _combiner(self) -> str:
         pass
 
@@ -819,9 +812,9 @@ class KernelAdd(NaryKernelExpression):
 
 class KernelMul(NaryKernelExpression):
     def _combine_transition_matrices(self, t1: Tmat_t, t2: Tmat_t) -> Tmat_t:
-        if issparse(t1):
+        if sp.issparse(t1):
             return t1.multiply(t2)
-        if issparse(t2):
+        if sp.issparse(t2):
             return t2.multiply(t1)
         return t1 * t2
 
