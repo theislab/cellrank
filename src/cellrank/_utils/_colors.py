@@ -2,8 +2,8 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
+import scipy.stats as st
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.stats import entropy
 
 from matplotlib import cm, colors
 
@@ -223,7 +223,7 @@ def _map_names_and_colors(
     # find the mapping which maximizes overlap
     names_query = association_df.T.idxmax()
     if en_cutoff is not None:
-        association_df["entropy"] = entropy(association_df.T)
+        association_df["entropy"] = st.entropy(association_df.T)
     association_df["name"] = names_query
 
     # assign query colors
@@ -293,9 +293,9 @@ def _colors_in_order(
     ----------
     %(adata)s
     clusters
-        Subset of the clusters we want the color for. Must be a subset of ``adata.obs[cluster_key].cat.categories``.
+        Subset of the clusters we want the color for. Must be a subset of ``adata.obs['{cluster_key}'].cat.categories``.
     cluster_key
-        Key from ``adata.obs``.
+        Key from :attr:~`anndata.AnnData.obs``.
 
     Returns
     -------

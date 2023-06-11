@@ -1,10 +1,10 @@
-from copy import copy as copy_
-from enum import auto
-from functools import wraps
-from inspect import signature
-from itertools import combinations
-from pathlib import Path
-from types import FunctionType, MappingProxyType
+import copy as copy_
+import enum
+import functools
+import inspect
+import itertools
+import pathlib
+import types
 from typing import (
     Any,
     Callable,
@@ -20,11 +20,11 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import scipy.stats as st
 from pandas.api.types import infer_dtype, is_categorical_dtype
-from scipy.stats import entropy
 
-import matplotlib.colors as c
 import matplotlib.pyplot as plt
+from matplotlib import colors
 
 from anndata import AnnData
 from anndata._io.specs.methods import H5Group, ZarrGroup, write_basic
@@ -40,6 +40,8 @@ from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._key import Key
 
+__all__ = ["Lineage", "LineageView"]
+
 ColorLike = TypeVar("ColorLike")
 _ERROR_NOT_ITERABLE = "Expected `{}` to be iterable, found type `{}`."
 _ERROR_WRONG_SIZE = "Expected `{}` to be of size `{{}}`, found `{{}}`."
@@ -49,37 +51,35 @@ _HTML_REPR_THRESH = 100
 _DUMMY_CELL = "<td style='text-align: right;'>...</td>"
 _ORDER = "C"
 
-__all__ = ["Lineage", "LineageView"]
-
 
 class PrimingDegree(ModeEnum):  # noqa: D101
-    KL_DIVERGENCE = auto()
-    ENTROPY = auto()
+    KL_DIVERGENCE = enum.auto()
+    ENTROPY = enum.auto()
 
 
 class DistanceMeasure(ModeEnum):  # noqa: D101
-    COSINE_SIM = auto()
-    WASSERSTEIN_DIST = auto()
-    KL_DIV = auto()
-    JS_DIV = auto()
-    MUTUAL_INFO = auto()
-    EQUAL = auto()
+    COSINE_SIM = enum.auto()
+    WASSERSTEIN_DIST = enum.auto()
+    KL_DIV = enum.auto()
+    JS_DIV = enum.auto()
+    MUTUAL_INFO = enum.auto()
+    EQUAL = enum.auto()
 
 
 class NormWeights(ModeEnum):  # noqa: D101
-    SCALE = auto()
-    SOFTMAX = auto()
+    SCALE = enum.auto()
+    SOFTMAX = enum.auto()
 
 
 class Reduction(ModeEnum):  # noqa: D101
-    DIST = auto()
-    SCALE = auto()
+    DIST = enum.auto()
+    SCALE = enum.auto()
 
 
 class LinKind(ModeEnum):  # noqa: D101
-    MACROSTATES = auto()
-    TERM_STATES = auto()
-    FATE_PROBS = auto()
+    MACROSTATES = enum.auto()
+    TERM_STATES = enum.auto()
+    FATE_PROBS = enum.auto()
 
 
 def _at_least_2d(array: np.ndarray, dim: int):
@@ -87,8 +87,7 @@ def _at_least_2d(array: np.ndarray, dim: int):
 
 
 def wrap(numpy_func: Callable) -> Callable:
-    """
-    Wrap an numpy function.
+    """Wrap a :mod:`numpy` function.
 
     Modifies functionality of some function (e.g. ignoring `.squeeze`, retaining dimensions).
 
@@ -102,7 +101,7 @@ def wrap(numpy_func: Callable) -> Callable:
     Wrapped function which takes a :class:`cellrank.Lineage` and return :class:`cellrank.Lineage`.
     """
 
-    @wraps(numpy_func)
+    @functools.wraps(numpy_func)
     def decorator(array, *args, **kwargs):
         if not isinstance(array, Lineage):
             raise TypeError(f"Expected array to be of type `Lineage`, found `{type(array).__name__}`.")
@@ -154,7 +153,7 @@ def wrap(numpy_func: Callable) -> Callable:
             f"Unable to interpret result of function `{fname}` called " f"with args `{args}`, kwargs: `{kwargs}`."
         )
 
-    params = signature(numpy_func).parameters
+    params = inspect.signature(numpy_func).parameters
     if "axis" in params:
         axis_ix = list(params.keys()).index("axis") - 1
         default_axis = params["axis"].default
@@ -176,9 +175,9 @@ def _register_handled_functions():
     handled_fns = {}
     for attrname in dir(np):
         fn = getattr(np, attrname)
-        if isinstance(fn, FunctionType):
+        if isinstance(fn, types.FunctionType):
             try:
-                sig = signature(fn)
+                sig = inspect.signature(fn)
                 if "axis" in sig.parameters:
                     handled_fns[fn] = wrap(fn)
             except ValueError:
@@ -188,7 +187,7 @@ def _register_handled_functions():
 
     handled_fns[np.allclose] = wrap(np.allclose)
     handled_fns[np.array_repr] = wrap(np.array_repr)
-    handled_fns[entropy] = wrap(entropy)  # qol change
+    handled_fns[st.entropy] = wrap(st.entropy)  # qol change
 
     return handled_fns
 
@@ -197,10 +196,9 @@ _HANDLED_FUNCTIONS = _register_handled_functions()
 
 
 class LineageMeta(type):
-    """
-    Metaclass for Lineage.
+    """Metaclass for Lineage.
 
-    Registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
+    It registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
     """
 
     __overloaded_functions__ = dict(  # noqa
@@ -214,7 +212,7 @@ class LineageMeta(type):
         var=np.var,
         sort=np.sort,
         squeeze=np.squeeze,
-        entropy=entropy,
+        entropy=st.entropy,
     )
 
     def __new__(cls, clsname, superclasses, attributedict):  # noqa
@@ -228,17 +226,16 @@ class LineageMeta(type):
 
 
 class Lineage(np.ndarray, metaclass=LineageMeta):
-    """
-    Lightweight :class:`numpy.ndarray` wrapper that adds names and colors.
+    """Lightweight :class:`~numpy.ndarray` wrapper that adds names and colors.
 
     Parameters
     ----------
     input_array
         Input array containing lineage probabilities, each lineage being stored in a column.
     names
-        Names of the lineages.
+        Lineage names.
     colors
-        Colors of the lineages.
+        Lineage colors.
     """
 
     def __new__(
@@ -325,7 +322,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         # check the `keys` are unique
         overlap = [set(ks) for ks in keys]
-        for c1, c2 in combinations(overlap, 2):
+        for c1, c2 in itertools.combinations(overlap, 2):
             overlap = c1 & c2
             if overlap:
                 raise ValueError(f"Found overlapping keys: `{self.names[list(overlap)]}`.")
@@ -448,7 +445,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def names(self) -> np.ndarray:
-        """Lineage names. Must be unique."""
+        """Lineage names."""
         return self._names
 
     @names.setter
@@ -480,14 +477,14 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         value = self._check_axis1_shape(value, _ERROR_WRONG_SIZE.format("colors"))
         self._colors = self._prepare_annotation(
             value,
-            checker=c.is_color_like,
-            transformer=c.to_hex,
+            checker=colors.is_color_like,
+            transformer=colors.to_hex,
             checker_msg="Value `{}` is not a valid color.",
         )
 
     @property
     def X(self) -> np.ndarray:
-        """Convert self to numpy array, losing names and colors."""
+        """Convert self to an array."""
         return np.array(self, copy=False)
 
     @property
@@ -499,7 +496,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @property
     def nlin(self) -> int:
-        """The number of lineages."""
+        """Number of lineages."""
         return self.shape[1]
 
     @d.get_full_description(base="lin_pd")
@@ -509,20 +506,19 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         method: Literal["kl_divergence", "entropy"] = "kl_divergence",
         early_cells: Optional[np.ndarray] = None,
     ) -> np.ndarray:
-        """
-        Compute the degree of lineage priming.
+        """Compute the degree of lineage priming.
 
-        It returns a score in `[0, 1]` where `0` stands for naive and `1` stands for committed.
+        It returns a score in :math:`[0, 1]` where :math:`0` stands for naive and :math:`1` stands for committed.
 
         Parameters
         ----------
         method
             The method used to compute the degree of lineage priming. Valid options are:
 
-                - `'kl_divergence'` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
-                  a cell and the average fate probabilities. Computation of average fate probabilities can be restricted
-                  to a set of user-defined ``early_cells``.
-                - `'entropy'` - as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
+            - ``'kl_divergence'`` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities of
+              a cell and the average fate probabilities. Computation of average fate probabilities can be restricted
+              to a set of user-defined ``early_cells``.
+            - ``'entropy'`` - as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
             Cell IDs or a mask marking early cells. If `None`, use all cells.
             Only used when ``method = 'kl_divergence'``.
@@ -549,7 +545,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     copy=False,
                 )
             elif method == PrimingDegree.ENTROPY:
-                probs = entropy(probs, axis=1)
+                probs = st.entropy(probs, axis=1)
                 probs = np.max(probs) - probs
             else:
                 raise NotImplementedError(f"Method `{method}` is not yet implemented")
@@ -563,14 +559,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         reduction: Callable,
         title: Optional[str] = None,
         legend_loc: Optional[str] = "on data",
-        legend_kwargs: Mapping = MappingProxyType({}),
+        legend_kwargs: Mapping = types.MappingProxyType({}),
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = None,
-        save: Optional[Union[Path, str]] = None,
-        **kwargs,
+        save: Optional[Union[pathlib.Path, str]] = None,
+        **kwargs: Any,
     ) -> None:
-        """
-        Plot a pie chart visualizing aggregated lineage probabilities.
+        """Plot a pie chart visualizing aggregated lineage probabilities.
 
         Parameters
         ----------
@@ -581,8 +576,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         legend_loc
             Location of the legend. If `None`, it is not shown.
         legend_kwargs
-            Keyword arguments for :func:`matplotlib.axes.Axes.legend`.
+            Keyword arguments for :meth:`~matplotlib.axes.Axes.legend`.
         %(plotting)s
+        kwargs
+            Keyword arguments for :meth:`~matplotlib.axes.Axes.pie`.
 
         Returns
         -------
@@ -654,8 +651,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         softmax_scale: float = 1,
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
-        """
-        Subset states and normalize them so that they again sum to 1.
+        """Subset states and normalize them so that they again sum to :math:`1`.
 
         Parameters
         ----------
@@ -665,28 +661,28 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         mode
             Reduction mode to use. Valid options are:
 
-                - `{m.DIST!r}` - use a distance measure ``dist_measure`` to compute weights.
-                - `{m.SCALE!r}` - just rescale the values.
+            - ``{m.DIST!r}`` - use a distance measure ``dist_measure`` to compute weights.
+            - ``{m.SCALE!r}`` - just rescale the values.
         dist_measure
             Used to quantify similarity between query and reference states. Valid options are:
 
-                - `{dm.COSINE_SIM!r}` - cosine similarity.
-                - `{dm.WASSERSTEIN_DIST!r}` - Wasserstein distance.
-                - `{dm.KL_DIV!r}` - Kullback–Leibler divergence.
-                - `{dm.JS_DIV!r}` - Jensen–Shannon divergence.
-                - `{dm.MUTUAL_INFO!r}` - mutual information.
-                - `{dm.EQUAL!r}` - equally redistribute the mass among the rest.
+            - ``{dm.COSINE_SIM!r}`` - cosine similarity.
+            - ``{dm.WASSERSTEIN_DIST!r}`` - Wasserstein distance.
+            - ``{dm.KL_DIV!r}`` - Kullback–Leibler divergence.
+            - ``{dm.JS_DIV!r}`` - Jensen–Shannon divergence.
+            - ``{dm.MUTUAL_INFO!r}`` - mutual information.
+            - ``{dm.EQUAL!r}`` - equally redistribute the mass among the rest.
 
             Only use when ``mode = {m.DIST!r}``.
         normalize_weights
             How to row-normalize the weights. Valid options are:
 
-                - `{nw.SCALE!r}` - divide by the sum.
-                - `{nw.SOFTMAX!r}`- use a softmax.
+            - ``{nw.SCALE!r}`` - divide by the sum.
+            - ``{nw.SOFTMAX!r}``- use a softmax.
 
             Only use when ``mode = {m.DIST!r}``.
         softmax_scale
-            Scaling factor in the softmax, used for normalizing the weights to sum to `1`.
+            Scaling factor in the softmax, used for normalizing the weights to sum to :math:`1`.
         return_weights
             If `True`, a :class:`pandas.DataFrame` of the weights used for the projection is also returned.
             If ``mode = {m.SCALE!r}``, the weights will be `None`.
@@ -707,7 +703,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             raise ValueError("Unable to perform the reduction, no keys specified.")
 
         # check the lineage object
-        if not np.allclose(np.sum(self, axis=1).X, 1.0):
+        if not np.allclose(np.sum(self.X, axis=1), 1.0):
             raise ValueError("Memberships do not sum to one row-wise.")
 
         if len(keys) == 1:
@@ -809,19 +805,20 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         kind: Literal["macrostates", "term_states", "fate_probs"] = LinKind.FATE_PROBS,
         copy: bool = False,
     ) -> "Lineage":
-        """
-        Reconstruct :class:`cellrank.Lineage` from :class:`anndata.AnnData`.
+        """Reconstruct the :class:`~cellrank.Lineage` object from :class:`~anndata.AnnData` object.
 
         Parameters
         ----------
         %(adata)s
         %(backward)s
+        estimator_backward
+            Key which helps to determine whether these states are initial or terminal.
         kind
             Which kind of object to reconstruct. Valid options are:
 
-                - `{lk.MACROSTATES!r}`- macrostates memberships from :class:`cellrank.estimators.GPCCA`.
-                - `{lk.TERM_STATES!r}`- terminal states memberships from :class:`cellrank.estimators.GPCCA`.
-                - `{lk.FATE_PROBS!r}`- fate probabilities.
+            - ``{lk.MACROSTATES!r}``- macrostates memberships from :class:`cellrank.estimators.GPCCA`.
+            - ``{lk.TERM_STATES!r}``- terminal states memberships from :class:`cellrank.estimators.GPCCA`.
+            - ``{lk.FATE_PROBS!r}``- fate probabilities.
         copy
             Whether to return a copy of the underlying array.
 
@@ -848,7 +845,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             raise KeyError(f"Unable to find lineage data in `adata.obsm[{key!r}]`.")
         data: Union[np.ndarray, Lineage] = adata.obsm[key]
         if copy:
-            data = copy_(data)
+            data = copy_.copy(data)
         if isinstance(data, Lineage):
             return data
         if data.ndim != 2:
@@ -880,7 +877,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         return Lineage(data, names=states, colors=colors)
 
-    def view(self, dtype=None, type=None) -> "LineageView":
+    def view(self, dtype=None, type=None, *_, **__) -> "LineageView":
         """Return a view of self."""
         return LineageView(self)
 
@@ -957,7 +954,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             return format_spec.format(self.X[0])
         return NotImplemented
 
-    def __setstate__(self, state):
+    def __setstate__(self, state, *_, **__):
         *state, names, colors, is_t = state
         names = names[-1]
         colors = colors[-1]
@@ -1056,7 +1053,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
 
 class LineageView(Lineage):
-    """View of :class:`cellrank.Lineage`."""
+    """View of :class:`~cellrank.Lineage`."""
 
     def __new__(cls, lineage: Lineage) -> "LineageView":
         """Create a LineageView."""
@@ -1096,12 +1093,12 @@ class LineageView(Lineage):
     def colors(self, _):
         raise RuntimeError(f"Unable to set colors of `{type(self).__name__}`.")
 
-    def view(self, dtype=None, type=None) -> "LineageView":
+    def view(self, dtype=None, type=None, *_, **__) -> "LineageView":
         """Return self."""
         return self
 
     def copy(self, _="C") -> Lineage:
-        """Return a copy of itself."""
+        """Return a copy of self."""
         was_trasposed = False
         if self._is_transposed:
             self = self.T
@@ -1146,10 +1143,8 @@ def _col_normalize(X, norm_ord=2):
 
 def _cosine_sim(reference, query):
     # the cosine similarity is symmetric
-
     # normalize these to have 2-norm 1
     reference_n, query_n = _col_normalize(reference, 2), _col_normalize(query, 2)
-
     return (reference_n.T @ query_n).T
 
 
@@ -1175,16 +1170,11 @@ def _point_wise_distance(reference, query, distance):
 
 def _wasserstein_dist(reference, query):
     # the wasserstein distance is symmetric
-    from scipy.stats import wasserstein_distance
-
-    return _point_wise_distance(reference, query, wasserstein_distance)
+    return _point_wise_distance(reference, query, st.wasserstein_distance)
 
 
 def _kl_div(reference, query):
-    # the KL divergence is not symmetric
-    from scipy.stats import entropy
-
-    return _point_wise_distance(reference, query, entropy)
+    return _point_wise_distance(reference, query, st.entropy)
 
 
 def _js_div(reference, query):
@@ -1216,6 +1206,6 @@ def _write_lineage(
     f: Any,
     k: str,
     elem: Union[Lineage, LineageView],
-    dataset_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    dataset_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
 ) -> None:
     write_basic(f, k, elem=elem.X, dataset_kwargs=dataset_kwargs)

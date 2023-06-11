@@ -1,5 +1,7 @@
 from typing import Any, Callable, Optional
 
+__all__ = ["Key"]
+
 
 class cprop:
     """Class property."""
