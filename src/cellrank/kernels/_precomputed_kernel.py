@@ -1,7 +1,7 @@
 from typing import Any, Optional, Union
 
 import numpy as np
-from scipy.sparse import csr_matrix, spmatrix
+import scipy.sparse as sp
 
 from anndata import AnnData
 
@@ -16,12 +16,11 @@ __all__ = ["PrecomputedKernel"]
 
 @d.dedent
 class PrecomputedKernel(UnidirectionalKernel):
-    """
-    Kernel which is initialized based on a precomputed transition matrix.
+    """Kernel which is initialized based on a precomputed transition matrix.
 
     This kernel serves as CellRank's interface with other methods that compute cell-cell transition matrices; you
     can use this kernel to input you own custom transition matrix and continue to use all CellRank functionality.
-    In particular, you can use a percomputed kernel, just like any other kernel, to initialize an estimator and
+    In particular, you can use a precomputed kernel, just like any other kernel, to initialize an estimator and
     compute initial and terminal states, fate probabilities, and driver genes.
 
     Parameters
@@ -29,27 +28,27 @@ class PrecomputedKernel(UnidirectionalKernel):
     object
         Can be one of the following types:
 
-            - :class:`anndata.AnnData` - annotated data object.
-            - :class:`scipy.sparse.spmatrix`, :class:`numpy.ndarray` - row-normalized transition matrix.
-            - :class:`cellrank.kernels.KernelExpression` - kernel expression.
-            - :class:`str` - key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
-              ``adata`` must be provided in this case.
-            - :class:`bool` - directionality of the transition matrix that will be used to infer its storage location.
-              If `None`, the directionality will be determined automatically. ``adata`` must be provided in this case.
+        - :class:`~anndata.AnnData` - annotated data object.
+        - :class:`~numpy.ndarray`, :class:`~scipy.sparse.spmatrix` - row-normalized transition matrix.
+        - :class:`~cellrank.kernels.Kernel` - kernel.
+        - :class:`str` - key in :attr:`~anndata.AnnData.obsp` where the transition matrix is stored.
+          ``adata`` must be provided in this case.
+        - :class:`bool` - directionality of the transition matrix that will be used to infer its storage location.
+          If :obj:`None`, the directionality will be determined automatically. ``adata`` must be provided in this case.
     %(adata)s
         Must be provided when ``object`` is :class:`str` or :class:`bool`.
     obsp_key
-        Key in :attr:`anndata.AnnData.obsp` where the transition matrix is stored.
-        If `None`, it will be determined automatically. Only used when ``object`` is :class:`anndata.AnnData`.
+        Key in :attr:`~anndata.AnnData.obsp` where the transition matrix is stored.
+        If :obj:`None`, it will be determined automatically. Only used when ``object`` is :class:`~anndata.AnnData`.
     copy
-        Whether or not to copy the stored transition matrix.
+        Whether to copy the stored transition matrix.
     backward
-        Hint whether this is a forward, backward or a unidirectional kernel. Only used when ``object`` is
-        :class:`anndata.AnnData`.
+        Hint whether this is a forward, backward or a unidirectional kernel.
+        Only used when ``object`` is :class:`~anndata.AnnData`.
 
     Notes
     -----
-    If ``object`` is :class:`anndata.AnnData` and neither ``obsp_key`` nor ``backward`` is specified,
+    If ``object`` is :class:`~anndata.AnnData` and neither ``obsp_key`` nor ``backward`` is specified,
     default forward and backward are tried and first one is used.
     """
 
@@ -57,7 +56,7 @@ class PrecomputedKernel(UnidirectionalKernel):
 
     def __init__(
         self,
-        object: Union[str, bool, np.ndarray, spmatrix, AnnData, KernelExpression],
+        object: Union[str, bool, np.ndarray, sp.spmatrix, AnnData, KernelExpression],
         adata: Optional[AnnData] = None,
         obsp_key: Optional[str] = None,
         **kwargs: Any,
@@ -66,7 +65,7 @@ class PrecomputedKernel(UnidirectionalKernel):
             self._from_adata(object, obsp_key=obsp_key, **kwargs)
         elif isinstance(object, KernelExpression):
             self._from_kernel(object, copy=kwargs.get("copy", False))
-        elif isinstance(object, (np.ndarray, spmatrix)):
+        elif isinstance(object, (np.ndarray, sp.spmatrix)):
             self._from_matrix(object, adata=adata, **kwargs)
         elif isinstance(adata, AnnData):
             if isinstance(object, str):
@@ -135,7 +134,7 @@ class PrecomputedKernel(UnidirectionalKernel):
 
     def _from_matrix(
         self,
-        matrix: Union[np.ndarray, spmatrix],
+        matrix: Union[np.ndarray, sp.spmatrix],
         adata: Optional[AnnData] = None,
         backward: Optional[bool] = None,
         copy: bool = False,
@@ -143,7 +142,7 @@ class PrecomputedKernel(UnidirectionalKernel):
         # fmt: off
         if adata is None:
             logg.warning(f"Creating empty `AnnData` object of shape `{matrix.shape[0], 1}`")
-            adata = AnnData(csr_matrix((matrix.shape[0], 1), dtype=np.float64))
+            adata = AnnData(sp.csr_matrix((matrix.shape[0], 1), dtype=np.float64))
         super().__init__(adata)
         self._backward: Optional[bool] = backward
         self.transition_matrix = matrix.copy() if copy else matrix
