@@ -242,8 +242,8 @@ skip_missing_interpreters = true
 # TODO(michalk8): remove after new scVelo version is up
 deps = git+https://github.com/theislab/scvelo
 conda_deps =
-    r-mgcv
-    rpy2
+    py: r-mgcv
+    py: rpy2
     slepc: mpi4py
     slepc: petsc4py
     slepc: slepc4py
