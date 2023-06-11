@@ -24,10 +24,10 @@ jobs:
         include:
         - os: macos-latest
           python: '3.9'
-          slepc: [noslepc]
+          slepc: noslepc
         - os: ubuntu-latest
           python: '3.9'
-          slepc: [slepc]
+          slepc: slepc
 
     steps:
     - uses: actions/checkout@v3
