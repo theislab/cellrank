@@ -1,16 +1,16 @@
-from multiprocessing import Manager, cpu_count
-from threading import Thread
+import multiprocessing
+import threading
 from typing import Any, Callable, Optional, Sequence, Union
 
 import joblib as jl
 
 import numpy as np
-from scipy.sparse import issparse, spmatrix
+import scipy.sparse as sp
 
 
 def parallelize(
     callback: Callable[[Any], Any],
-    collection: Union[spmatrix, Sequence[Any]],
+    collection: Union[sp.spmatrix, Sequence[Any]],
     n_jobs: Optional[int] = None,
     n_split: Optional[int] = None,
     unit: str = "",
@@ -20,15 +20,14 @@ def parallelize(
     extractor: Optional[Callable[[Any], Any]] = None,
     show_progress_bar: bool = True,
 ) -> Any:
-    """
-    Parallelize function call over a collection of elements.
+    """Parallelize function call over a collection of elements.
 
     Parameters
     ----------
     callback
         Function to parallelize.
     collection
-        Sequence of items which to chunkify or an already .
+        Sequence of items which to chunkify or an already chunked array.
     n_jobs
         Number of parallel jobs.
     n_split
@@ -86,8 +85,8 @@ def parallelize(
     def wrapper(*args, **kwargs):
         if pass_queue and show_progress_bar:
             pbar = None if tqdm is None else tqdm(total=col_len, unit=unit, mininterval=0.125)
-            queue = Manager().Queue()
-            thread = Thread(target=update, args=(pbar, queue, len(collections)))
+            queue = multiprocessing.Manager().Queue()
+            thread = threading.Thread(target=update, args=(pbar, queue, len(collections)))
             thread.start()
         else:
             pbar, queue, thread = None, None, None
@@ -108,12 +107,12 @@ def parallelize(
 
         return res if extractor is None else extractor(res)
 
-    col_len = collection.shape[0] if issparse(collection) else len(collection)
+    col_len = collection.shape[0] if sp.issparse(collection) else len(collection)
     n_jobs = _get_n_cores(n_jobs, col_len)
     if n_split is None:
         n_split = n_jobs
 
-    if issparse(collection):
+    if sp.issparse(collection):
         n_split = max(1, min(n_split, collection.shape[0]))
         if n_split == collection.shape[0]:
             collections = [collection[[ix], :] for ix in range(collection.shape[0])]
@@ -134,8 +133,7 @@ def parallelize(
 
 
 def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
-    """
-    Make number of cores a positive integer.
+    """Make number of cores a positive integer.
 
     Parameters
     ----------
@@ -154,6 +152,6 @@ def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
     if n_jobs == 1 or n_cores is None:
         return 1
     if n_cores < 0:
-        return cpu_count() + 1 + n_cores
+        return multiprocessing.cpu_count() + 1 + n_cores
 
     return n_cores
