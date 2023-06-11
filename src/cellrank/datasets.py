@@ -79,7 +79,7 @@ def _load_dataset_from_url(
 def pancreas(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5.h5ad",
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """
     Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
@@ -107,7 +107,7 @@ def pancreas(
 def pancreas_preprocessed(
     path: Union[str, Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
     TODO(michalk8): mention pre-processing
@@ -127,7 +127,7 @@ def pancreas_preprocessed(
 def lung(
     path: Union[str, Path] = "datasets/lung_regeneration.h5ad",
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """Regeneration of murine lung epithelial cells at 13 time points from :cite:`strunz:20`.
 
     sc-RNA-seq dataset comprising `24 051` cells recorded using Drop-seq :cite:`macosko:15` at 13 time points spanning
@@ -155,7 +155,7 @@ def reprogramming_morris(
     subset: Literal["full", "48k", "85k"] = ReprogrammingSubset.FULL,
     path: Union[str, Path] = "datasets/reprogramming_morris.h5ad",
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors from :cite:`morris:18`.
 
     sc-RNA-seq dataset comprising `104 887` cell recorded using 10X Chromium and Drop-seq :cite:`macosko:15`
@@ -205,7 +205,7 @@ def reprogramming_schiebinger(
     path: Union[str, Path] = "datasets/reprogramming_schiebinger.h5ad",
     subset_to_serum: bool = False,
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """Reprogramming of mouse embryonic fibroblasts to induced pluripotent stem cells from :cite:`schiebinger:19`.
 
     sc-RNA-seq dataset comprising `236 285` cell recorded using 10X Chromium
@@ -241,7 +241,7 @@ def reprogramming_schiebinger(
 def zebrafish(
     path: Union[str, Path] = "datasets/zebrafish.h5ad",
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """Zebrafish embryogenesis assayed using drop-seq from :cite:`farrell:18`.
 
     sc-RNA-seq time-series dataset, restricted to the axial mesoderm lineage, comprising of `2434` cells which
@@ -262,7 +262,7 @@ def zebrafish(
 def bone_marrow(
     path: Union[str, Path] = "datasets/bone_marrow.h5ad",
     **kwargs: Any,
-) -> AnnData:
+) -> AnnData:  # pragma: no cover
     """sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.
 
     This dataset contains raw spliced and unspliced counts estimated using *velocyto* :cite:`manno:18`.
