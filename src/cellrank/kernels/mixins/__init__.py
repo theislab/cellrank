@@ -5,3 +5,5 @@ from cellrank.kernels.mixins._kernel import (
     ConnectivityMixin,
     UnidirectionalMixin,
 )
+
+__all__ = ["AnnDataMixin", "IOMixin", "BidirectionalMixin", "ConnectivityMixin", "UnidirectionalMixin"]

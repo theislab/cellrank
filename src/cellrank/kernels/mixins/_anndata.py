@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+import abc
 from typing import Any, Optional
 
 from anndata import AnnData
@@ -8,14 +8,13 @@ from cellrank._utils._docs import d
 __all__ = ["AnnDataMixin"]
 
 
-class AnnDataMixin(ABC):
-    """Mixin that allows for serialization from/to :class:`anndata.AnnData`."""
+class AnnDataMixin(abc.ABC):
+    """Mixin that allows for serialization from/to :class:`~anndata.AnnData`."""
 
-    @abstractmethod
+    @abc.abstractmethod
     @d.dedent
     def _read_from_adata(self, adata: AnnData, **kwargs: Any) -> bool:
-        """
-        Populate attributes of self from :class:`anndata.AnnData`.
+        """Populate attributes from :class:`~anndata.AnnData`.
 
         Parameters
         ----------
@@ -25,42 +24,41 @@ class AnnDataMixin(ABC):
 
         Returns
         -------
-        `True` if the de-serialization was successful, otherwise `False`.
+        :obj:`True` if the de-serialization was successful, otherwise :obj:`False`.
         """
         return True
 
     @property
-    @abstractmethod
+    @abc.abstractmethod
     def adata(self) -> AnnData:
         """Annotated data object."""
 
     @adata.setter
-    @abstractmethod
+    @abc.abstractmethod
     def adata(self, adata: Optional[AnnData]) -> None:
         ...
 
-    @abstractmethod
+    @abc.abstractmethod
     def __len__(self) -> int:
         ...
 
-    @abstractmethod
+    @abc.abstractmethod
     @d.get_full_description(base="to_adata")
     def to_adata(self, **kwargs: Any) -> AnnData:
-        """Serialize self to :class:`anndata.Anndata`."""
+        """Serialize self to :class:`~anndata.Anndata`."""
 
     @classmethod
     @d.get_full_description(base="from_adata")
     @d.get_sections(base="from_adata", sections=["Returns"])
     @d.dedent
     def from_adata(cls, adata: AnnData, **kwargs: Any) -> "AnnDataMixin":
-        """
-        De-serialize self from :class:`anndata.AnnData`.
+        """De-serialize self from :class:`~anndata.AnnData`.
 
         Parameters
         ----------
         %(adata)s
         kwargs
-            Additional keyword arguments for :meth:`__init__`.
+            Additional keyword arguments for initialization.
 
         Returns
         -------
