@@ -1,6 +1,6 @@
-from enum import auto
-from pathlib import Path
-from types import MappingProxyType
+import enum
+import pathlib
+import types
 from typing import Any, Callable, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import scvelo as scv
@@ -29,13 +29,13 @@ __all__ = ["circular_projection"]
 
 
 class LineageOrder(ModeEnum):
-    DEFAULT = auto()
-    OPTIMAL = auto()
+    DEFAULT = enum.auto()
+    OPTIMAL = enum.auto()
 
 
 class LabelRot(ModeEnum):
-    DEFAULT = auto()
-    BEST = auto()
+    DEFAULT = enum.auto()
+    BEST = enum.auto()
 
 
 Metric_T = Union[str, Callable, np.ndarray, pd.DataFrame]
@@ -82,91 +82,85 @@ def circular_projection(
     ncols: int = 4,
     space: float = 0.25,
     use_raw: bool = False,
-    text_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    text_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
     label_distance: float = 1.25,
     label_rot: Union[Literal["default", "best"], float] = "best",
     show_edges: bool = True,
     key_added: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
+    save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,
 ) -> None:
-    r"""
-    Visualize fate probabilities in a circular embedding :cite:`velten:17,jaitin:14`.
+    r"""Visualize fate probabilities in a circular embedding :cite:`velten:17,jaitin:14`.
 
     We arrange all computed terminal states evenly spaced around the unit circle and place
     cells inside the unit circle in a way that reflects their fate probabilities. In other words,
     the more certain we are that a cell will transition towards a given terminal state, the closer
     we place it to that terminal state. Uncommitted cells thus reside in the middle of the circle.
 
-    Please refer to our manuscript :cite:`lange:22` to learn more.
-
     Parameters
     ----------
     %(adata)s
     keys
-        Keys in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
+        Keys in :attr:`~anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
 
-            - `'kl_divergence'` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities
-              of a cell and the average fate probabilities. See ``early_cells`` for more information.
-            - `'entropy'` - as in :cite:`setty:19`, computes entropy over a cells fate probabilities.
-
+        - ``'kl_divergence'`` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities
+          of a cell and the average fate probabilities. See ``early_cells`` for more information.
+        - ``'entropy'`` - as in :cite:`setty:19`, computes entropy over a cells fate probabilities.
     %(backward)s
     lineages
-        Lineages to plot. If `None`, plot all lineages.
+        Lineages to plot. If :obj:`None`, plot all lineages.
     early_cells
-        Cell ids or a mask marking early cells used to define the average fate probabilities. If `None`, use all cells.
-        Only used when `'kl_divergence'` is in ``keys``. If a :class:`dict`, key specifies a cluster key in
-        :attr:`anndata.AnnData.obs` and the values specify cluster labels containing early cells.
+        Cell ids or a mask marking early cells used to define the average fate probabilities. If :obj:`None`,
+        use all cells. Only used when ``'kl_divergence'`` is in the ``keys``. If a :class:`dict`, key specifies
+        a cluster key in :attr:`~anndata.AnnData.obs` and the values specify cluster labels containing early cells.
     lineage_order
         Can be one of the following:
 
-            - `None` - it will be determined automatically, based on the number of lineages.
-            - `'optimal'` - order lineages optimally by solving the Traveling salesman problem (TSP).
-              Recommended for <= `20` lineages.
-            - `'default'` - use the order as specified by ``lineages``.
-
+        - :obj:`None` - it will be determined automatically, based on the number of lineages.
+        - ``'optimal'`` - order lineages optimally by solving the Traveling salesman problem (TSP).
+          Recommended for <= :math:`20` lineages.
+        - ``'default'`` - use the order as specified by ``lineages``.
     metric
         Metric to use when constructing pairwise distance matrix when ``lineage_order = 'optimal'``. For available
-        options, see :func:`sklearn.metrics.pairwise_distances`.
+        options, see :func:`~sklearn.metrics.pairwise_distances`.
     normalize_by_mean
-        If `True`, normalize each lineage by its mean probability, as done in :cite:`velten:17`.
+        If :obj:`True`, normalize each lineage by its mean probability, as done in :cite:`velten:17`.
     ncols
         Number of columns when plotting multiple ``keys``.
     space
-        Horizontal and vertical space between for :func:`matplotlib.pyplot.subplots_adjust`.
+        Horizontal and vertical space between for :func:`~matplotlib.pyplot.subplots_adjust`.
     use_raw
-        Whether to access :attr:`anndata.AnnData.raw` when there are ``keys`` in :attr:`anndata.AnnData.var_names`.
+        Whether to access :attr:`~anndata.AnnData.raw` when there are ``keys`` in :attr:`~anndata.AnnData.var_names`.
     text_kwargs
-        Keyword arguments for :func:`matplotlib.pyplot.text`.
+        Keyword arguments for :meth:`~matplotlib.axes.Axes.text`.
     label_distance
         Distance at which the lineage labels will be drawn.
     label_rot
         How to rotate the labels. Valid options are:
 
-            - `'best'` - rotate labels so that they are easily readable.
-            - `'default'` - use :mod:`matplotlib`'s default.
-            - `None` - same as `'default'`.
+        - ``'best'`` - rotate labels so that they are easily readable.
+        - ``'default'`` - use :mod:`matplotlib`'s default.
+        - :obj:`None` - same as ``'default'``.
 
         If a :class:`float`, all labels will be rotated by this many degrees.
     show_edges
         Whether to show the edges surrounding the simplex.
     key_added
-        Key in :attr:`anndata.AnnData.obsm` where to add the circular embedding. If `None`, it will be set to
-        `'X_fate_simplex_{fwd,bwd}'`, based on ``backward``.
+        Key in :attr:`~anndata.AnnData.obsm` where to add the circular embedding. If :obj:`None`, it will be set to
+        `'X_fate_simplex_{fwd,bwd}'`, based on the ``backward``.
     %(plotting)s
     kwargs
-        Keyword arguments for :func:`scvelo.pl.scatter`.
+        Keyword arguments for :func:`~scvelo.pl.scatter`.
 
     Returns
     -------
-    %(just_plots)s
-    Also updates ``adata`` with the following fields:
+    %(just_plots)s Also updates ``adata`` with the following fields:
 
-        - :attr:`anndata.AnnData.obsm` ``['{key_added}']`` - the circular projection.
-        - :attr:`anndata.AnnData.obs` ``['to_{initial,terminal}_states_{method}']`` - the priming degree,
-          if a method is present in ``keys``.
+    - :attr:`adata.obsm['{key_added}'] <anndata.AnnData.obsm>` - the circular projection.
+    - :attr:`adata.bosm['to_{initial,terminal}_states_{method}'] <anndata.AnnData.obs>` - the priming degree,
+      if a method is present in the ``keys``.
     """
     if label_distance is not None and label_distance < 0:
         raise ValueError(f"Expected `label_distance` to be positive, found `{label_distance}`.")
