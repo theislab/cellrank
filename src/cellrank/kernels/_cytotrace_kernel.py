@@ -44,6 +44,7 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(adata)s
     %(backward)s
     kwargs
+        Keyword arguments for the parent class.
         Keyword arguments for the :class:`~cellrank.kernels.PseudotimeKernel`.
 
     Examples

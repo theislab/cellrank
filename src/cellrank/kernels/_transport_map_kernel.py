@@ -51,22 +51,23 @@ Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
 Coupling_t = Union[np.ndarray, sp.spmatrix, AnnData]
 
 
+# TODO(michalk8): subclass the `ExperimentalTimeKernel`
 @d.dedent
 class TransportMapKernel(UnidirectionalKernel):
     """Kernel which computes transition matrix using optimal transport couplings.
 
     This class should be constructed using either:
 
-        1. the :meth:`from_moscot` or :meth:`from_wot` method,
-        2. explicitly passing the pre-computed couplings, or
-        3. overriding the :meth:`compute_coupling` method.
+    1. the :meth:`from_moscot` or :meth:`from_wot` method,
+    2. explicitly passing the pre-computed couplings, or
+    3. overriding the :meth:`compute_coupling` method.
 
     Parameters
     ----------
     adata
         Annotated data object.
     time_key
-        Key in :attr:`anndata.AnnData.obs` containing the experimental time.
+        Key in :attr:`~anndata.AnnData.obs` containing the experimental time.
     couplings
         Pre-computed transport couplings. The keys should correspond to a :class:`tuple` of categories from
         the :attr:`time`. If :obj:`None`, the keys will be constructed using the ``policy``
@@ -74,10 +75,10 @@ class TransportMapKernel(UnidirectionalKernel):
     policy
         How to construct the keys from the :attr:`time` when ``couplings = None``:
 
-            - if ``policy = 'sequential'``, the keys will be set to ``[(t1, t2), (t2, t3), ...]``.
-            - if ``policy = 'triu'``, the keys will be set to ``[(t1, t2), (t1, t3), ..., (t2, t3), ...]``.
+        - ``policy = 'sequential'`` - the keys will be set to ``[(t1, t2), (t2, t3), ...]``.
+        - ``policy = 'triu'`` - the keys will be set to ``[(t1, t2), (t1, t3), ..., (t2, t3), ...]``.
     kwargs
-        Keyword arguments for the parent class.
+        Keyword arguments for the :class:`~cellrank.kernels.Kernel`.
     """
 
     def __init__(
@@ -153,29 +154,29 @@ class TransportMapKernel(UnidirectionalKernel):
         threshold
             How to remove small non-zero values from the transition matrix. Valid options are:
 
-                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
-                - `'auto_local'` - same as above, but done for each transport separately.
-                - :class:`float` - value in :math:`[0, 100]` corresponding to a percentage of non-zeros to remove in
-                  the couplings.
+            - ``'auto'`` - find the maximum threshold value which will not remove every non-zero value from any row.
+            - ``'auto_local'`` - same as above, but done for each transport separately.
+            - :class:`float` - value in :math:`[0, 100]` corresponding to a percentage of non-zeros to remove in
+              the couplings.
 
             Rows where all values are removed will have a uniform distribution and a warning will be issued.
         self_transitions
             How to define transitions within the blocks that correspond to transitions within the same key.
             Valid options are:
 
-                - `{st.UNIFORM!r}` - row-normalized matrix of 1s.
-                - `{st.DIAGONAL!r}` - identity matrix.
-                - `{st.CONNECTIVITIES!r}` - transition matrix from the :class:`~cellrank.kernels.ConnectivityKernel`.
-                - :class:`~typing.Sequence` - sequence of source keys defining which blocks should be weighted
-                  by the connectivities.
-                - `{st.ALL!r}` - same as above, but for all keys.
+            - ``{st.UNIFORM!r}`` - row-normalized matrix of :math:`1`.
+            - ``{st.DIAGONAL!r}`` - identity matrix.
+            - ``{st.CONNECTIVITIES!r}`` - transition matrix from the :class:`~cellrank.kernels.ConnectivityKernel`.
+            - :class:`~typing.Sequence`` - sequence of source keys defining which blocks should be weighted
+              by the connectivities.
+            - ``{st.ALL!r}`` - same as above, but for all keys.
 
             The first 3 options are applied to the block specified by the :attr:`reference`.
         conn_weight
             Weight of connectivities' self transitions. Only used when ``self_transitions = {st.ALL!r}`` or
             a sequence of source keys is passed.
         conn_kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors` or
+            Keyword arguments for :func:`~scanpy.pp.neighbors` or
             :meth:`~cellrank.kernels.ConnectivityKernel.compute_transition_matrix` when using
             ``self_transitions = 'connectivities'``.
         kwargs
@@ -183,10 +184,11 @@ class TransportMapKernel(UnidirectionalKernel):
 
         Returns
         -------
-        Self and updates the following attributes:
+        Returns self and updates the following fields:
 
-            - :attr:`transition_matrix` - transition matrix.
-            - :attr:`couplings` - transport maps.
+        - :attr:`transition_matrix` - transition matrix.
+        - :attr:`params` - parameters used in the computation.
+        - :attr:`couplings` - transport maps.
         """
         cache_params = dict(kwargs)
         cache_params["threshold"] = threshold
@@ -228,6 +230,23 @@ class TransportMapKernel(UnidirectionalKernel):
     ) -> "TransportMapKernel":
         """Construct the kernel from :mod:`moscot` :cite:`klein:23`.
 
+        Parameters
+        ----------
+        problem
+            :mod:`moscot` problem.
+        sparse_mode
+            Sparsification mode for :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
+            If :obj:`None`, do not sparsify the outputs. Note that :meth:`compute_transition_matrix`
+            can also sparsify the final :attr:`transition_matrix`.
+        sparsify_kwargs
+            Keyword arguments for the sparsification.
+        kwargs
+            Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
+
+        Returns
+        -------
+        The kernel.
+
         Examples
         --------
         .. code-block:: python
@@ -243,23 +262,6 @@ class TransportMapKernel(UnidirectionalKernel):
 
             tmk = cr.kernels.TransportMapKernel.from_moscot(problem)
             tmk = tmk.compute_transition_matrix()
-
-        Parameters
-        ----------
-        problem
-            A :mod:`moscot` problem.
-        sparse_mode
-            Sparsification mode for :meth:`~moscot.base.output.BaseSolverOutput.sparsify`.
-            If `None`, do not sparsify the outputs. Note that :meth:`compute_transition_matrix`
-            can also sparsify the final :attr:`transition_matrix`.
-        sparsify_kwargs
-            Keyword arguments for the sparsification.
-        kwargs
-            Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
-
-        Returns
-        -------
-        The kernel.
         """
         from moscot.utils.subset_policy import SequentialPolicy, TriangularPolicy
 
@@ -302,7 +304,22 @@ class TransportMapKernel(UnidirectionalKernel):
         time_key: str,
         **kwargs: Any,
     ) -> "TransportMapKernel":
-        """Construct the kernel from Waddington OT :cite:`schiebinger:19`.
+        """Construct the kernel from Waddington-OT :cite:`schiebinger:19`.
+
+        Parameters
+        ----------
+        adata
+            Annotated data object.
+        path
+            Directory where the couplings are stored.
+        time_key
+            Key in :attr:`~anndata.AnnData.obs` containing the experimental time.
+        kwargs
+            Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
+
+        Returns
+        -------
+        The kernel.
 
         Examples
         --------
@@ -319,21 +336,6 @@ class TransportMapKernel(UnidirectionalKernel):
 
             tmk = cr.kernels.TransportMapKernel.from_wot(adata, path="tmaps/", time_key="day")
             tmk = tmk.compute_transition_matrix()
-
-        Parameters
-        ----------
-        adata
-            Annotated data object.
-        path
-            Directory where the couplings are stored.
-        time_key
-            Key in :attr:`anndata.AnnData.obs` containing the experimental time.
-        kwargs
-            Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
-
-        Returns
-        -------
-        The kernel.
         """
         path = pathlib.Path(path)
         dtype = type(adata.obs[time_key].iloc[0])
@@ -366,7 +368,7 @@ class TransportMapKernel(UnidirectionalKernel):
             Weight of connectivities' self transitions. Only used when ``self_transitions = {st.ALL!r}`` or
             a sequence of source keys is passed.
         kwargs
-            Keyword arguments for :func:`scanpy.pp.neighbors` or
+            Keyword arguments for :func:`~scanpy.pp.neighbors` or
             :meth:`~cellrank.kernels.ConnectivityKernel.compute_transition_matrix` when using
             ``self_transitions = 'connectivities'``.
 
@@ -473,10 +475,10 @@ class TransportMapKernel(UnidirectionalKernel):
         threshold
             How to remove small non-zero values from the transition matrix. Valid options are:
 
-                - `'auto'` - find the maximum threshold value which will not remove every non-zero value from any row.
-                - `'auto_local'` - same as above, but done for each transport separately.
-                - :class:`float` - value in :math:`[0, 100]` corresponding to a percentage of non-zeros to remove in
-                  the couplings.
+            - ``'auto'`` - find the maximum threshold value which will not remove every non-zero value from any row.
+            - ``'auto_local'`` - same as above, but done for each transport separately.
+            - :class:`float` - value in :math:`[0, 100]` corresponding to a percentage of non-zeros to remove in
+              the couplings.
 
             Rows where all values are removed will have a uniform distribution and a warning will be issued.
         copy
@@ -530,8 +532,7 @@ class TransportMapKernel(UnidirectionalKernel):
         self,
         couplings: Mapping[Key_t, AnnData],
     ) -> None:
-        """
-        Validate that transport maps conform to various invariants.
+        """Validate that transport maps conform to various invariants.
 
         Parameters
         ----------

@@ -1,4 +1,4 @@
-from enum import auto
+import enum
 from typing import Any, Callable, Literal, Optional, Union
 
 import numpy as np
@@ -22,8 +22,8 @@ __all__ = ["PseudotimeKernel"]
 
 
 class ThresholdScheme(ModeEnum):
-    SOFT = auto()
-    HARD = auto()
+    SOFT = enum.auto()
+    HARD = enum.auto()
 
 
 @d.dedent
@@ -38,11 +38,11 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     ----------
     %(adata)s
     %(backward)s
-        If `True`, :attr:`pseudotime` will be set to ``max(pseudotime) - pseudotime``.
+        If :obj:`True`, :attr:`pseudotime` will be set to ``max(pseudotime) - pseudotime``.
     time_key
-        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
+        Key in :attr:`~anndata.AnnData.obs` where the pseudotime is stored.
     kwargs
-        Keyword arguments for the parent class.
+        Keyword arguments for the :class:`~cellrank.kernels.ConnectivityKernel`.
     """
 
     def __init__(
@@ -87,8 +87,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
-        """
-        Compute transition matrix based on kNN graph and pseudotemporal ordering.
+        """Compute transition matrix based on kNN graph and pseudotemporal ordering.
 
         Depending on the choice of the ``threshold_scheme``, it is based on ideas by either *Palantir*
         :cite:`setty:19` or *VIA* :cite:`stassen:21`.
@@ -98,20 +97,20 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         threshold_scheme
             Which method to use when biasing the graph. Valid options are:
 
-                - `'hard'` - based on *Palantir* :cite:`setty:19` which removes some edges that point against
-                  the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
-                  remove all edges that point against the direction of increasing pseudotime, but keeps the ones
-                  that point to cells inside a close radius. This radius is chosen according to the local cell density.
-                - `'soft'` - based on *VIA* :cite:`stassen:21` which down-weights edges that points against
-                  the direction of increasing pseudotime. Essentially, the further "behind"
-                  a query cell is in pseudotime with respect
-                  to the current reference cell, the more penalized will be its graph-connectivity.
-                - :class:`callable` - any function conforming to the signature of
-                  :func:`cellrank.kernels.utils.ThresholdSchemeABC.__call__`.
+            - ``'hard'`` - based on *Palantir* :cite:`setty:19` which removes some edges that point against
+              the direction of increasing pseudotime. To avoid disconnecting the graph, it does not
+              remove all edges that point against the direction of increasing pseudotime, but keeps the ones
+              that point to cells inside a close radius. This radius is chosen according to the local cell density.
+            - ``'soft'`` - based on *VIA* :cite:`stassen:21` which down-weights edges that points against
+              the direction of increasing pseudotime. Essentially, the further "behind"
+              a query cell is in pseudotime with respect
+              to the current reference cell, the more penalized will be its graph-connectivity.
+            - :class:`callable` - any function conforming to the signature of
+              :func:`cellrank.kernels.utils.ThresholdSchemeABC.__call__`.
         frac_to_keep
             Fraction of the closest neighbors (according to graph connectivities) are kept, no matter whether they lie
             in the pseudotemporal past or future. This is done to ensure that the graph remains connected.
-            Only used when ``threshold_scheme = 'hard'``. Needs to fall within the interval `[0, 1]`.
+            Only used when ``threshold_scheme = 'hard'``. Must be in :math:`[0, 1]`.
         %(soft_scheme_kernel)s
         check_irreducibility
             Optional check for irreducibility of the final transition matrix.
@@ -121,7 +120,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
 
         Returns
         -------
-        Self and updates :attr:`transition_matrix` and :attr:`params`.
+        Returns self and updates :attr:`transition_matrix` and :attr:`params`.
         """
         if self.pseudotime is None:
             raise ValueError("Compute pseudotime first.")  # CytoTraceKernel
@@ -176,8 +175,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     def pseudotime(self) -> Optional[np.array]:
         """Pseudotemporal ordering of cells.
 
-        If :attr:`backward = True <backward>`, it will be set to
-        ``max(pseudotime) - pseudotime``.
+        If :attr:`backward = True <backward>`, it will be set to ``max(pseudotime) - pseudotime``.
         """
         if self._pseudotime is None:
             return None
