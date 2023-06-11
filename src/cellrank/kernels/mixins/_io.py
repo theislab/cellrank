@@ -1,6 +1,6 @@
+import contextlib
+import pathlib
 import pickle
-from contextlib import contextmanager
-from pathlib import Path
 from typing import Any, Optional, Protocol, Tuple, Union
 
 from anndata import AnnData
@@ -27,11 +27,11 @@ class IOMixinProtocol(Protocol):
 class IOMixin:
     """Mixin that allows for serialization from/to files using :mod:`pickle`."""
 
-    def __init__(self, **kwargs: Any):
-        super().__init__(**kwargs)
+    def __init__(self, *args: Any, **kwargs: Any):
+        super().__init__(*args, **kwargs)
 
     @property
-    @contextmanager
+    @contextlib.contextmanager
     def _remove_adata(self) -> None:
         """Temporarily remove :attr:`adata`, if present."""
         adata = getattr(self, "adata", None)
@@ -46,12 +46,11 @@ class IOMixin:
 
     def write(
         self,
-        fname: Union[str, Path],
+        fname: Union[str, pathlib.Path],
         write_adata: bool = True,
         ext: Optional[str] = "pickle",
     ) -> None:
-        """
-        Serialize self to a file.
+        """Serialize self to a file using :mod:`pickle`.
 
         Parameters
         ----------
@@ -60,11 +59,11 @@ class IOMixin:
         write_adata
             Whether to save :attr:`adata` object or not, if present.
         ext
-            Filename extension to use. If `None`, don't append any extension.
+            Filename extension to use. If :obj:`None`, don't append any extension.
 
         Returns
         -------
-        Nothing, just writes itself to a file using :mod:`pickle`.
+        Nothing, just writes itself to a file.
         """
         fname = str(fname)
         if ext is not None:
@@ -84,19 +83,18 @@ class IOMixin:
             pickle.dump(self, fout)
 
     @staticmethod
-    def read(fname: Union[str, Path], adata: Optional[AnnData] = None, copy: bool = False) -> "IOMixin":
-        """
-        De-serialize self from a file.
+    def read(fname: Union[str, pathlib.Path], adata: Optional[AnnData] = None, copy: bool = False) -> "IOMixin":
+        """De-serialize self from a file.
 
         Parameters
         ----------
         fname
             Filename from which to read the object.
         adata
-            :class:`anndata.AnnData` object to assign to the saved object.
+            :class:`~anndata.AnnData` object to assign to the saved object.
             Only used when the saved object has :attr:`adata` and it was saved without it.
         copy
-            Whether to copy ``adata`` before assigning it or not. If ``adata`` is a view, it is always copied.
+            Whether to copy ``adata`` before assigning it. If ``adata`` is a view, it is always copied.
 
         Returns
         -------
