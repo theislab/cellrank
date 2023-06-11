@@ -1,5 +1,5 @@
+import copy
 import logging
-from copy import copy
 
 from scanpy import settings
 
@@ -24,7 +24,7 @@ def _set_log_file(settings):
     root.addHandler(h)
 
 
-settings = copy(settings)
+settings = copy.copy(settings)
 settings._root_logger = _RootLogger(settings.verbosity)
 # these 2 lines are necessary to get it working (otherwise no logger is found)
 # this is a hacky way of modifying the logging, in the future, use our own
