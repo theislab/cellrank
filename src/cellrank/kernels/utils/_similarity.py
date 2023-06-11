@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
-from enum import auto
-from functools import partial
+import abc
+import enum
+import functools
 from typing import Any, Tuple
 
-from numba import njit
+import numba as nb
 
 import numpy as np
 
@@ -15,9 +15,9 @@ __all__ = ["DotProduct", "Cosine", "Correlation"]
 
 
 class Similarity(ModeEnum):
-    DOT_PRODUCT = auto()
-    COSINE = auto()
-    CORRELATION = auto()
+    DOT_PRODUCT = enum.auto()
+    COSINE = enum.auto()
+    CORRELATION = enum.auto()
 
 
 try:
@@ -38,7 +38,7 @@ try:
 
         return numerator / jnp.nansum(numerator)
 
-    @partial(jit, static_argnums=(3, 4))
+    @functools.partial(jit, static_argnums=(3, 4))
     def _predict_transition_probabilities_jax(
         X: np.ndarray,
         W: np.ndarray,
@@ -73,14 +73,14 @@ except ImportError:
     _predict_transition_probabilities_jax_H = _predict_transition_probabilities_jax
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def _softmax(x: np.ndarray, softmax_scale: float) -> Tuple[np.ndarray, np.ndarray]:
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.max(numerator))
     return numerator / np.sum(numerator), x
 
 
-@njit(**jit_kwargs)
+@nb.njit(**jit_kwargs)
 def _softmax_masked(x: np.ndarray, mask: np.ndarray, softmax_scale: float) -> Tuple[np.ndarray, np.ndarray]:
     numerator = x * softmax_scale
     numerator = np.exp(numerator - np.nanmax(numerator))
@@ -89,7 +89,7 @@ def _softmax_masked(x: np.ndarray, mask: np.ndarray, softmax_scale: float) -> Tu
     return numerator / np.nansum(numerator), x
 
 
-@njit(parallel=False, **jit_kwargs)
+@nb.njit(parallel=False, **jit_kwargs)
 def _predict_transition_probabilities_numpy(
     X: np.ndarray,
     W: np.ndarray,
@@ -133,13 +133,12 @@ def _predict_transition_probabilities_numpy(
     return _softmax(np.array([np.dot(X[i], W[i]) for i in range(X.shape[0])]), softmax_scale)
 
 
-class Hessian(ABC):
+class Hessian(abc.ABC):
     @d.get_full_description(base="hessian")
     @d.get_sections(base="hessian", sections=["Parameters", "Returns"])
-    @abstractmethod
+    @abc.abstractmethod
     def hessian(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> np.ndarray:
-        """
-        Compute the Hessian.
+        """Compute the Hessian.
 
         Parameters
         ----------
@@ -160,21 +159,20 @@ class Hessian(ABC):
         ---------------
         This class should be used in conjunction with any class that implements the ``__call__`` method and should
         compute the Hessian of such function. This it does not need to handle the case of a backward process,
-        i.e. when the velocity vector `v` is of shape ``(n_genes, n_neighbors)``.
+        i.e., when the velocity vector :math:`v` is of shape ``(n_genes, n_neighbors)``.
 
-        If using :mod:`jax` to compute the Hessian, please specify a class attribute ``__use_jax__ = True``.
+        If using :mod:`jax` to compute the Hessian, please specify the class attribute ``__use_jax__ = True``.
         """
 
 
-class SimilarityABC(ABC):
+class SimilarityABC(abc.ABC):
     """Base class for all similarity schemes."""
 
     @d.get_full_description(base="sim_scheme")
     @d.get_sections(base="sim_scheme", sections=["Parameters", "Returns"])
-    @abstractmethod
+    @abc.abstractmethod
     def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Compute transition probability of a cell to its nearest neighbors using RNA velocity.
+        """Compute transition probability of a cell to its nearest neighbors using RNA velocity.
 
         Parameters
         ----------
@@ -210,15 +208,14 @@ class SimilarityABC(ABC):
 
 
 class SimilarityHessian(SimilarityABC, Hessian):
-    """
-    Base class for all similarity schemes as defined in :cite:`li:20`.
+    """Base class for all similarity schemes as defined in :cite:`li:20`.
 
     Parameters
     ----------
     center_mean
-        Whether to center the velocity vector(s) and the transcriptomic displacement matrix.
+        Whether to center the velocity vectors and the transcriptomic displacement matrix.
     scale_by_norm
-        Whether to scale the velocity vector(s) and the transcriptomic displacement matrix by their norms.
+        Whether to scale the velocity vectors) and the transcriptomic displacement matrix by their norms.
     """
 
     __use_jax__: bool = True
@@ -229,8 +226,7 @@ class SimilarityHessian(SimilarityABC, Hessian):
 
     @d.dedent
     def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        %(sim_scheme.full_desc)s
+        """%(sim_scheme.full_desc)s
 
         Parameters
         ----------
@@ -244,8 +240,7 @@ class SimilarityHessian(SimilarityABC, Hessian):
 
     @d.dedent
     def hessian(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> np.ndarray:
-        """
-        %(hessian.full_desc)s
+        """%(hessian.full_desc)s
 
         Parameters
         ----------
@@ -264,10 +259,10 @@ class SimilarityHessian(SimilarityABC, Hessian):
 
 
 class DotProduct(SimilarityHessian):
-    r"""
-    Dot product scheme as defined in eq. (4.9) :cite:`li:20`.
+    r"""Dot product scheme as defined in eq. (4.9) :cite:`li:20`.
 
-        :math:`v(s_i, s_j) = g(\delta_{i, j}^T v_i)`
+    .. math::
+        v(s_i, s_j) := g(\delta_{i, j}^T v_i)
 
     where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
     displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
@@ -278,10 +273,10 @@ class DotProduct(SimilarityHessian):
 
 
 class Cosine(SimilarityHessian):
-    r"""
-    Cosine similarity scheme as defined in eq. (4.7) :cite:`li:20`.
+    r"""Cosine similarity scheme as defined in eq. (4.7) :cite:`li:20`.
 
-        :math:`v(s_i, s_j) = g(cos(\delta_{i, j}, v_i))`
+    .. math::
+        v(s_i, s_j) := g(cos(\delta_{i, j}, v_i))
 
     where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
     displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.
@@ -292,10 +287,10 @@ class Cosine(SimilarityHessian):
 
 
 class Correlation(SimilarityHessian):
-    r"""
-    Pearson correlation scheme as defined in eq. (4.8) :cite:`li:20`.
+    r"""Pearson correlation scheme as defined in eq. (4.8) :cite:`li:20`.
 
-        :math:`v(s_i, s_j) = g(corr(\delta_{i, j}, v_i))`
+    .. math::
+        v(s_i, s_j) := g(corr(\delta_{i, j}, v_i))
 
     where :math:`v_i` is the velocity vector of cell :math:`i`, :math:`\delta_{i, j}` corresponds to the transcriptional
     displacement between cells :math:`i` and :math:`j` and :math:`g` is a softmax function with some scaling parameter.

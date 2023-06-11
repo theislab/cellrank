@@ -5,14 +5,7 @@ from cellrank.kernels.utils._pseudotime_scheme import (
     SoftThresholdScheme,
 )
 from cellrank.kernels.utils._random_walk import RandomWalk
-from cellrank.kernels.utils._similarity import (
-    Correlation,
-    Cosine,
-    DotProduct,
-    Similarity,
-    SimilarityABC,
-    SimilarityHessian,
-)
+from cellrank.kernels.utils._similarity import Correlation, Cosine, DotProduct
 from cellrank.kernels.utils._tmat_flow import FlowPlotter
 from cellrank.kernels.utils._velocity_model import Deterministic, MonteCarlo, Stochastic
 
@@ -25,9 +18,6 @@ __all__ = [
     "Cosine",
     "Correlation",
     "DotProduct",
-    "Similarity",
-    "SimilarityABC",
-    "SimilarityHessian",
     "FlowPlotter",
     "Deterministic",
     "MonteCarlo",
