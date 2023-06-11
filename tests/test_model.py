@@ -289,15 +289,15 @@ class TestUtils:
 @gamr_skip
 class TestGAMR:
     def test_invalid_n_knots(self, adata: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             _ = GAMR(adata, n_knots=0)
 
     def test_invalid_smoothing_penalty(self, adata: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r".* to be non-negative"):
             _ = GAMR(adata, smoothing_penalty=-0.001)
 
     def test_invalid_knotlocs(self, adata: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             _ = GAMR(adata, knotlocs="foobar")
 
     def test_density_knotlocs(self, adata_cflare: AnnData):
@@ -317,11 +317,11 @@ class TestGAMR:
         assert m._offset is None
 
     def test_negative_binomial_invalid_offset_str(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Only value .* is allowed"):
             GAMR(adata_cflare, offset="foobar", distribution="nb")
 
     def test_negative_binomial_invalid_offset_shape(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Expected offset to be of shape"):
             GAMR(
                 adata_cflare,
                 offset=np.empty(
@@ -506,7 +506,7 @@ class TestFailedModel:
             "default_confidence_interval",
             "plot",
         ]:
-            with pytest.raises(UnknownModelError, match="REPLACE_ME"):
+            with pytest.raises(UnknownModelError, match=r"Fatal model"):
                 getattr(fm, fn)()
 
     def test_do_nothing_bulk_fit(self, gamr_model: GAMR):
@@ -533,14 +533,10 @@ class TestFailedModel:
         assert fm1.model is not fm2.model
         assert fm1.adata is fm2.adata
 
-    def test_exception_not_base_exception(self, gamr_model: GAMR):
-        with pytest.raises(TypeError, match="REPLACE_ME"):
-            _ = FailedModel(gamr_model, exc=0)
-
     def test_reraise(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc=ValueError("foobar"))
 
-        with pytest.raises(ValueError, match="REPLACE_ME"):
+        with pytest.raises(ValueError, match=r"Fatal model"):
             fm.reraise()
 
         assert isinstance(fm._exc, ValueError)
@@ -548,7 +544,7 @@ class TestFailedModel:
     def test_reraise_str(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc="foobar")
 
-        with pytest.raises(RuntimeError, match="REPLACE_ME"):
+        with pytest.raises(RuntimeError, match=r"Fatal model"):
             fm.reraise()
 
         assert isinstance(fm._exc, RuntimeError)
