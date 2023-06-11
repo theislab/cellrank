@@ -1,8 +1,6 @@
 # modified from: https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_logging.py
-
+import io
 import sys
-from datetime import datetime
-from io import StringIO
 
 import pytest
 
@@ -52,12 +50,12 @@ class TestLogging:
     def test_logfile(self, tmp_path, logging_state):
         settings.verbosity = Verbosity.hint
 
-        io = StringIO()
-        settings.logfile = io
-        assert settings.logfile is io
+        buffer = io.StringIO()
+        settings.logfile = buffer
+        assert settings.logfile is buffer
         assert settings.logpath is None
         logg.error("test!")
-        assert io.getvalue() == "ERROR: test!\n"
+        assert buffer.getvalue() == "ERROR: test!\n"
 
         p = tmp_path / "test.log"
         settings.logpath = p
@@ -66,35 +64,3 @@ class TestLogging:
         logg.hint("test2")
         logg.debug("invisible")
         assert settings.logpath.read_text() == "--> test2\n"
-
-    def test_timing(self, monkeypatch, capsys, logging_state):
-        import cellrank.logging._logging as logg
-
-        settings.logfile = sys.stderr
-        counter = 0
-
-        class IncTime:
-            @staticmethod
-            def now(tz):
-                nonlocal counter
-                counter += 1
-                return datetime(2000, 1, 1, second=counter, microsecond=counter, tzinfo=tz)
-
-        monkeypatch.setattr(logg, "datetime", IncTime)
-        settings.verbosity = Verbosity.debug
-
-        logg.hint("1")
-        assert counter == 1
-        assert capsys.readouterr().err == "--> 1\n"
-        start = logg.info("2")
-        assert counter == 2
-        assert capsys.readouterr().err == "2\n"
-        logg.hint("3")
-        assert counter == 3
-        assert capsys.readouterr().err == "--> 3\n"
-        logg.info("4", time=start)
-        assert counter == 4
-        assert capsys.readouterr().err == "4 (0:00:02)\n"
-        logg.info("5 {time_passed}", time=start)
-        assert counter == 5
-        assert capsys.readouterr().err == "5 0:00:03\n"

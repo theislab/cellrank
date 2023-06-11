@@ -1,9 +1,8 @@
+import collections
+import enum
+import math
 import os
-from collections import defaultdict
-from collections.abc import Iterable
-from enum import auto
-from math import fabs
-from pathlib import Path
+import pathlib
 from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -11,12 +10,11 @@ import pandas as pd
 from scipy.ndimage.filters import convolve
 
 import matplotlib as mpl
-import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from matplotlib import cm
+import seaborn as sns
+from matplotlib import cm, colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from seaborn import clustermap
 
 from anndata import AnnData
 
@@ -51,8 +49,8 @@ _N_XTICKS = 10
 
 
 class HeatmapMode(ModeEnum):
-    GENES = auto()
-    LINEAGES = auto()
+    GENES = enum.auto()
+    LINEAGES = enum.auto()
 
 
 @d.dedent
@@ -79,7 +77,7 @@ def heatmap(
     lineage_height: float = 0.33,
     fontsize: Optional[float] = None,
     xlabel: Optional[str] = None,
-    cmap: mcolors.ListedColormap = cm.viridis,
+    cmap: colors.ListedColormap = cm.viridis,
     dendrogram: bool = True,
     return_genes: bool = False,
     return_models: bool = False,
@@ -89,11 +87,10 @@ def heatmap(
     show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
+    save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,
 ) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
-    """
-    Plot a heatmap of smoothed gene expression along specified lineages.
+    """Plot a heatmap of smoothed gene expression along specified lineages.
 
     This requires a pseudotemporal ordering of cellular dynamics, computed using a method like
     DPT :cite:`haghverdi:16` or Palantir :cite:`setty:19`. The function combines the pseudotemporal
@@ -107,33 +104,32 @@ def heatmap(
     %(model)s
     %(genes)s
     time_key
-        Key in attr:`anndata.AnnData.obs` where the pseudotime is stored.
+        Key in :attr:`~anndata.AnnData.obs` where the pseudotime is stored.
     lineages
-        Names of the lineages for which to plot. If `None`, plot all lineages.
+        Names of the lineages for which to plot. If :obj:`None`, plot all lineages.
     %(backward)s
     mode
         Valid options are:
 
-            - `{m.LINEAGES!r}` - group by ``genes`` for each lineage in ``lineages``.
-            - `{m.GENES!r}` - group by ``lineages`` for each gene in ``genes``.
+        - ``{m.LINEAGES!r}`` - group by ``genes`` for each lineage in ``lineages``.
+        - ``{m.GENES!r}`` - group by ``lineages`` for each gene in ``genes``.
     %(time_range)s
-
         This can also be specified on per-lineage basis.
     %(gene_symbols)s
     %(model_callback)s
     cluster_key
-        Key(s) in :attr:`anndata.AnnData.obs` containing categorical observations to be plotted on the top of heatmap.
+        Key in :attr:`~anndata.AnnData.obs` containing categorical observations to be plotted on the top of heatmap.
         Only available when ``mode = {m.LINEAGES!r}``.
     show_fate_probabilities
         Whether to also plot fate probabilities alongside the smoothed expression.
         Only available when ``mode = {m.LINEAGES!r}``.
     cluster_genes
-        Whether to cluster genes using :func:`seaborn.clustermap` when ``mode = 'lineages'``.
+        Whether to cluster genes using :func:`~seaborn.clustermap` when ``mode = 'lineages'``.
     keep_gene_order
         Whether to keep the gene order for later lineages after the first was sorted.
         Only available when ``cluster_genes = False`` and ``mode = {m.LINEAGES!r}``.
     scale
-        Whether to normalize the gene expression `[0, 1]` range.
+        Whether to normalize the gene expression to :math:`[0, 1]`.
     n_convolve
         Size of the convolution window when smoothing fate probabilities.
     show_all_genes
@@ -145,7 +141,7 @@ def heatmap(
     fontsize
         Size of the title's font.
     xlabel
-        Label on the x-axis. If `None`, it is determined based on ``time_key``.
+        Label on the x-axis. If :obj:`None`, it is determined based on ``time_key``.
     cmap
         Colormap to use when visualizing the smoothed expression.
     dendrogram
@@ -158,22 +154,21 @@ def heatmap(
     %(parallel)s
     %(plotting)s
     kwargs
-        Keyword arguments for :meth:`cellrank.models.BaseModel.prepare`.
+        Keyword arguments for :meth:`~cellrank.models.BaseModel.prepare`.
 
     Returns
     -------
     %(plots_or_returns_models)s
 
-    If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns :class:`pandas.DataFrame`
+    - If ``return_genes = True`` and ``mode = {m.LINEAGES!r}``, returns a :class:`~pandas.DataFrame`
     containing the clustered or sorted genes.
-
-    If ``return_figure = True``, returns a tuple containing the figure and genes.
+    - If ``return_figure = True``, returns a tuple containing the figure and genes.
     """
 
     def find_indices(series: pd.Series, values) -> List[int]:
         def find_nearest(array: np.ndarray, value: float) -> int:
             ix = np.searchsorted(array, value, side="left")
-            if ix > 0 and (ix == len(array) or fabs(value - array[ix - 1]) < fabs(value - array[ix])):
+            if ix > 0 and (ix == len(array) or math.fabs(value - array[ix - 1]) < math.fabs(value - array[ix])):
                 return int(ix - 1)
             return int(ix)
 
@@ -189,34 +184,34 @@ def heatmap(
             return lin.copy()
         return convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
 
-    def create_col_colors(lname: str, rng: np.ndarray) -> Tuple[np.ndarray, mcolors.Colormap, mcolors.Normalize]:
+    def create_col_colors(lname: str, rng: np.ndarray) -> Tuple[np.ndarray, colors.Colormap, colors.Normalize]:
         color = probs[lname].colors[0]
         lin = subset_lineage(lname, rng)
 
-        h, _, v = mcolors.rgb_to_hsv(mcolors.to_rgb(color))
-        end_color = mcolors.hsv_to_rgb([h, 1, v])
+        h, _, v = colors.rgb_to_hsv(colors.to_rgb(color))
+        end_color = colors.hsv_to_rgb([h, 1, v])
 
-        lineage_cmap = mcolors.LinearSegmentedColormap.from_list("lineage_cmap", ["#ffffff", end_color], N=len(rng))
-        norm = mcolors.Normalize(vmin=np.min(lin), vmax=np.max(lin))
+        lineage_cmap = colors.LinearSegmentedColormap.from_list("lineage_cmap", ["#ffffff", end_color], N=len(rng))
+        norm = colors.Normalize(vmin=np.min(lin), vmax=np.max(lin))
         scalar_map = cm.ScalarMappable(cmap=lineage_cmap, norm=norm)
 
         return (
-            np.array([mcolors.to_hex(c) for c in scalar_map.to_rgba(lin)]),
+            np.array([colors.to_hex(c) for c in scalar_map.to_rgba(lin)]),
             lineage_cmap,
             norm,
         )
 
     def create_col_categorical_color(cluster_key: str, rng: np.ndarray) -> np.ndarray:
-        colors, mapper = _get_categorical_colors(adata, cluster_key)
+        cols, mapper = _get_categorical_colors(adata, cluster_key)
         ixs = find_indices(adata.obs[time_key], rng)
 
-        return np.array([mcolors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values])
+        return np.array([colors.to_hex(mapper[v]) for v in adata[ixs, :].obs[cluster_key].values])
 
     def create_cbar(
         ax,
         x_delta: float,
-        cmap: mcolors.Colormap,
-        norm: mcolors.Normalize,
+        cmap: colors.Colormap,
+        norm: colors.Normalize,
         label: Optional[str] = None,
     ) -> plt.Axes:
         cax = inset_axes(
@@ -260,10 +255,7 @@ def heatmap(
             dpi=dpi,
             constrained_layout=True,
         )
-
-        if not isinstance(axes, Iterable):
-            axes = [axes]
-        axes = np.ravel(axes)
+        axes = np.ravel([axes])
 
         if show_fate_probabilities:
             data["fate probability"] = data[next(iter(data.keys()))]
@@ -275,13 +267,13 @@ def heatmap(
                 c = np.array([m.y_test for m in models.values()])
                 vmin, vmax = np.nanmin(c), np.nanmax(c)
 
-            norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+            norm = colors.Normalize(vmin=vmin, vmax=vmax)
 
             ix = 0
             ys = [ix]
 
             if gene == "fate probability":
-                norm = mcolors.Normalize(vmin=0, vmax=1)
+                norm = colors.Normalize(vmin=0, vmax=1)
                 for ln, x in ((ln, m.x_test) for ln, m in models.items()):
                     y = np.ones_like(x)
                     c = subset_lineage(ln, x.squeeze())
@@ -348,7 +340,7 @@ def heatmap(
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
     def _() -> Tuple[List[plt.Figure], pd.DataFrame]:
-        data_t = defaultdict(dict)  # transpose
+        data_t = collections.defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():
                 data_t[ln][gene] = y
@@ -390,7 +382,7 @@ def heatmap(
             row_cluster = cluster_genes and df.shape[0] > 1
             show_clust = row_cluster and dendrogram
 
-            g = clustermap(
+            g = sns.clustermap(
                 data=df,
                 cmap=cmap,
                 figsize=(10, min(len(genes) / 8 + 1, 10)) if figsize is None else figsize,
@@ -409,7 +401,7 @@ def heatmap(
                     g.ax_heatmap,
                     0.1,
                     cmap=cmap,
-                    norm=mcolors.Normalize(
+                    norm=colors.Normalize(
                         vmin=0 if scale else np.min(df.values),
                         vmax=1 if scale else np.max(df.values),
                     ),
@@ -440,29 +432,23 @@ def heatmap(
                 g.ax_heatmap.set_title(lname, fontdict={"fontsize": fontsize})
 
             g.ax_col_dendrogram.set_visible(False)  # gets rid of top free space
-
             g.ax_heatmap.yaxis.tick_left()
             g.ax_heatmap.yaxis.set_label_position("right")
-
             # fmt: off
             g.ax_heatmap.set_xlabel(xlabel)
             g.ax_heatmap.set_xticks(np.linspace(0, len(df.columns), _N_XTICKS))
             g.ax_heatmap.set_xticklabels([round(n, 3) for n in np.linspace(x_min, x_max, _N_XTICKS)])
             # fmt: on
-
             if show_clust:
                 # robustly show dendrogram, because gene names can be long
                 g.ax_row_dendrogram.set_visible(True)
                 dendro_box = g.ax_row_dendrogram.get_position()
-
                 pad = 0.005
                 bb = g.ax_heatmap.yaxis.get_tightbbox(g.fig.canvas.get_renderer()).transformed(
                     g.fig.transFigure.inverted()
                 )
-
                 dendro_box.x0 = bb.x0 - dendro_box.width - pad
                 dendro_box.x1 = bb.x0 - pad
-
                 g.ax_row_dendrogram.set_position(dendro_box)
             else:
                 g.ax_row_dendrogram.set_visible(False)
@@ -523,10 +509,10 @@ def heatmap(
     fig, genes = _plot_heatmap(mode)
 
     if return_figure:
-        return (fig, genes)
+        return fig, genes
 
     if save is not None and fig is not None:
-        if not isinstance(fig, Iterable):
+        if isinstance(fig, plt.Figure):
             save_fig(fig, save)
         elif len(fig) == 1:
             save_fig(fig[0], save)
