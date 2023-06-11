@@ -1,15 +1,15 @@
-from copy import copy
-from pathlib import Path
+import copy
+import pathlib
 from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 from matplotlib.axes import Axes
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, to_hex
-from seaborn import stripplot
 
 from anndata import AnnData
 
@@ -45,16 +45,15 @@ def log_odds(
     seed: Optional[int] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
+    save: Optional[Union[str, pathlib.Path]] = None,
     show: bool = True,
     **kwargs: Any,
 ) -> Optional[Union[Axes, Sequence[Axes]]]:
-    """
-    Plot log-odds ratio between trajectories.
+    """Plot log-odds ratio between trajectories.
 
     This plotting function is geared towards time-series datasets that have been analyzed
     using the :class:`cellrank.external.kernels.WOTKernel`. It visualizes log-odd ratios
-    between between different trajectories per cell, with the option to color in certain
+    between different trajectories per cell, with the option to color in certain
     molecular features, like genes. This can be useful to detect and visualize fate-decisive genes.
 
     Parameters
@@ -63,21 +62,21 @@ def log_odds(
     lineage_1
         The first lineage for which to compute the log-odds.
     lineage_2
-        The second lineage for which to compute the log-odds. If `None`, use the rest of the lineages.
+        The second lineage for which to compute the log-odds. If :obj:`None`, use the rest of the lineages.
     time_key
-        Key in :attr:`anndata.AnnData.obs` containing the experimental time.
+        Key in :attr:`~anndata.AnnData.obs` containing the experimental time.
     %(backward)s
     keys
-        Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`.
+        Key in :attr:`~anndata.AnnData.obs` or :attr:`~anndata.AnnData.var_names`.
     threshold
         Visualize whether total expression per cell is greater than ``threshold``.
-        If a :class:`typing.Sequence`, it should be the same length as ``keys``.
+        If a :class:`~typing.Sequence`, it should be the same length as ``keys``.
     threshold_color
         Color to use when plotting thresholded expression values.
     layer
-        Which layer to use to get expression values. If `None` or `'X'`, use :attr:`anndata.AnnData.X`.
+        Which layer to use to get expression values. If :obj:`None` or ``'X'``, use :attr:`~anndata.AnnData.X`.
     use_raw
-        Whether to access :attr:`anndata.AnnData.raw`. If `True`, ``layer`` is ignored.
+        Whether to access :attr:`~anndata.AnnData.raw`. If :obj:`True`, ``layer`` is ignored.
     size
         Size of the dots.
     cmap
@@ -89,23 +88,23 @@ def log_odds(
     fontsize
         Size of the font for the title, x- and y-label.
     xticks_step_size
-        Show only every other *n-th* tick on the x-axis. If `None`, don't show any ticks.
+        Show only every other *n-th* tick on the x-axis. If :obj:`None`, don't show any ticks.
     legend_loc
-        Position of the legend. If `None`, do not show the legend.
+        Position of the legend. If :obj:`None`, do not show the legend.
     jitter
         Amount of jitter to apply along x-axis.
     seed
         Seed for ``jitter`` to ensure reproducibility.
     %(plotting)s
     show
-        If `False`, return :class:`matplotlib.pyplot.Axes` or a sequence of them.
+        If `False`, return :class:`~matplotlib.axes.Axes` or a sequence of them.
     kwargs
-        Keyword arguments for :func:`seaborn.stripplot`.
+        Keyword arguments for :func:`~seaborn.stripplot`.
 
     Returns
     -------
-    The axes object(s), if ``show = False``.
     %(just_plots)s
+    If ``show = False``, returns the axes object.
     """
     from cellrank.kernels._utils import _ensure_numeric_ordered
 
@@ -122,7 +121,7 @@ def log_odds(
             ax.set_xticklabels(df[time_key].cat.categories[::step])
 
     def cont_palette(values: np.ndarray) -> Tuple[List[str], ScalarMappable]:
-        cm = copy(plt.get_cmap(cmap))
+        cm = copy.copy(plt.get_cmap(cmap))
         cm.set_bad("grey")
         sm = ScalarMappable(cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values)))
         return [to_hex(v) for v in (sm.to_rgba(values))], sm
@@ -210,7 +209,7 @@ def log_odds(
             figsize = np.array([n_cats, n_cats * 4 / 6]) / 2
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
-        ax = stripplot(
+        ax = sns.stripplot(
             x=time_key,
             y="log_odds",
             data=df,
@@ -257,7 +256,7 @@ def log_odds(
         hue, palette, thresh_mask, sm = get_data(key, thresh)
         show_ylabel = i % ncols == 0
 
-        ax = stripplot(
+        ax = sns.stripplot(
             x=time_key,
             y="log_odds",
             data=df if thresh_mask is None else df[~thresh_mask],
@@ -272,7 +271,7 @@ def log_odds(
             **kwargs,
         )
         if thresh_mask is not None:
-            stripplot(
+            sns.stripplot(
                 x=time_key,
                 y="log_odds",
                 data=df if thresh_mask is None else df[thresh_mask],
