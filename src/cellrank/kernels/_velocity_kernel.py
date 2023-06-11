@@ -3,7 +3,7 @@ from typing import Any, Callable, Literal, Optional, Sequence, Tuple, Union
 from scvelo.preprocessing.moments import get_moments
 
 import numpy as np
-from scipy.sparse import issparse
+import scipy.sparse as sp
 
 from anndata import AnnData
 
@@ -21,10 +21,9 @@ __all__ = ["VelocityKernel"]
 
 @d.dedent
 class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
-    """
-    Kernel which computes a transition matrix based on RNA velocity.
+    """Kernel which computes a transition matrix based on RNA velocity.
 
-    This borrows ideas from both :cite:`manno:18` and :cite:`bergen:20`. In short, for each cell *i*, we compute
+    This borrows ideas from both :cite:`manno:18` and :cite:`bergen:20`. In short, for each cell :math:`i`, we compute
     transition probabilities :math:`T_{i, j}` to each cell :math:`j` in the neighborhood of :math:`i`. We quantify
     how much the velocity vector :math:`v_i` of cell :math:`i` points towards each of its nearst neighbors. For
     this comparison, we support various schemes including cosine similarity and pearson correlation.
@@ -36,16 +35,16 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     attr
         Attribute of :class:`~anndata.AnnData` to read from.
     xkey
-        Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where expected gene expression counts are
-        stored.
+        Key in :attr:`~anndata.AnnData.layers` or :attr:`~anndata.AnnData.obsm`
+        where expected gene expression counts are stored.
     vkey
-        Key in :attr:`anndata.AnnData.layers` or :attr:`anndata.AnnData.obsm` where velocities are stored.
+        Key in :attr:`~anndata.AnnData.layers` or :attr:`~anndata.AnnData.obsm` where velocities are stored.
     gene_subset
         List of genes to be used to compute transition probabilities.
-        If not specified, genes from :attr:`anndata.AnnData.var` ``['{vkey}_genes']`` are used.
+        If not specified, genes from :attr:`adata.var['{vkey}_genes'] <anndata.AnnData.var>` are used.
         This feature is only available when reading from :attr:`anndata.AnnData.layers` and will be ignored otherwise.
     kwargs
-        Keyword arguments for the parent class.
+        Keyword arguments for the :class:`~cellrank.kernels.Kernel`.
     """
 
     def __init__(
@@ -118,8 +117,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         seed: Optional[int] = None,
         **kwargs: Any,
     ) -> "VelocityKernel":
-        """
-        Compute transition matrix based on velocity directions on the local manifold.
+        """Compute transition matrix based on velocity directions on the local manifold.
 
         For each cell, infer transition probabilities based on the cell's velocity-extrapolated cell state and the
         cell states of its *K* nearest neighbors.
@@ -140,7 +138,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
 
         Returns
         -------
-        Self and updates :attr:`transition_matrix`, :attr:`logits` and :attr:`params`.
+        Returns self and updates :attr:`transition_matrix`, :attr:`logits` and :attr:`params`.
         """
         start = logg.info(f"Computing transition matrix using `{model!r}` model")
 
@@ -205,7 +203,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             logg.warning(
                 f"Unable to detect a method for Hessian computation. If using one of the "
                 f"predefined similarity functions, consider installing `jax` as "
-                f"`pip install jax jaxlib`. Using `mode={model!r}` and `n_samples={n_samples}`"
+                f"`pip install jax`. Using `mode={model!r}` and `n_samples={n_samples}`"
             )
 
         if model == VelocityModel.DETERMINISTIC:
@@ -278,11 +276,11 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
                 data = data[:, np.isin(self.adata.var_names, subset)]
 
         data = data.astype(dtype, copy=False)
-        return data.toarray() if issparse(data) else data
+        return data.toarray() if sp.issparse(data) else data
 
     @property
     def logits(self) -> Optional[np.ndarray]:
-        """Array of shape ``(n_cells, n_cells)`` containing not row-normalized transition matrix."""
+        """Array of shape ``(n_cells, n_cells)`` containing the unnormalized transition matrix."""
         return self._logits
 
     def __invert__(self) -> "VelocityKernel":

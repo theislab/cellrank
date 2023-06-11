@@ -184,11 +184,7 @@ class TransportMapKernel(UnidirectionalKernel):
 
         Returns
         -------
-        Returns self and updates the following fields:
-
-        - :attr:`transition_matrix` - transition matrix.
-        - :attr:`params` - parameters used in the computation.
-        - :attr:`couplings` - transport maps.
+        Returns self and updates :attr:`transition_matrix`, :attr:`couplings` and :attr:`params`.
         """
         cache_params = dict(kwargs)
         cache_params["threshold"] = threshold
