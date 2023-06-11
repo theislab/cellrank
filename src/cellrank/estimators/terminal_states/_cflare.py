@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
-from scipy.stats import zscore
+import scipy.stats as st
 
 from anndata import AnnData
 
@@ -25,8 +25,7 @@ __all__ = ["CFLARE"]
 
 @d.dedent
 class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
-    """
-    Clustering and filtering of left and right eigenvectors (CFLARE).
+    """Clustering and filtering of left and right eigenvectors (CFLARE).
 
     This estimator computes initial and terminal states, as well as fate probabilities.
     It uses the left eigenvectors of the transition matrix to filter to a set of (approximately)
@@ -41,8 +40,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
     @d.dedent
     def fit(self, k: int = 20, **kwargs: Any) -> "TermStatesEstimator":
-        """
-        Prepare self for terminal states prediction.
+        """Prepare self for terminal states prediction.
 
         Parameters
         ----------
@@ -53,9 +51,9 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         Returns
         -------
-        Returns self and modifies the following field:
+        Returns self and updates the following fields:
 
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+        - :attr:`eigendecomposition` - %(eigen.summary)s
         """
         return self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
 
@@ -75,8 +73,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         n_comps: int = 5,
         scale: Optional[bool] = None,
     ) -> "CFLARE":
-        """
-        Find approximate recurrent classes of the Markov chain.
+        """Find approximate recurrent classes of the Markov chain.
 
         Filter to obtain recurrent states from left eigenvectors.
         Cluster to obtain approximate recurrent classes from right eigenvectors.
@@ -85,44 +82,44 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         ----------
         use
             Which or how many first eigenvectors to use as features for filtering and clustering.
-            If `None`, use the *eigengap* statistic.
+            If :obj:`None`, use the *eigengap* statistic.
         percentile
             Threshold used for filtering out cells which are most likely transient states. Cells which are in the
             lower ``percentile`` percent of each eigenvector will be removed from the data matrix.
         method
             Method to be used for clustering. Valid option are:
 
-                - `'kmeans'` - :class:`sklearn.cluster.KMeans`.
-                - `'leiden'` - :func:`scanpy.tl.leiden`.
+            - ``'kmeans'`` - :class:`~sklearn.cluster.KMeans`.
+            - ``'leiden'`` - :func:`~scanpy.tl.leiden`.
         cluster_key
-            Key in :attr:`anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
+            Key in :attr:`~anndata.AnnData.obs` in order to associate names and colors with :attr:`terminal_states`.
         n_clusters_kmeans
-            If `None`, this is set to ``use + 1``.
+            Number of clusters when ``method = 'kmeans'``. If :obj:`None`, this is set to ``use + 1``.
         n_neighbors
             Number of neighbors in a kNN graph. This is the :math:`K` parameter for that,
             the number of neighbors for each cell. Only used when ``method = 'leiden'``.
         resolution
-            Resolution parameter for :func:`scanpy.tl.leiden`. Should be chosen relatively small.
+            Resolution parameter for :func:`~scanpy.tl.leiden`. Should be chosen relatively small.
         n_matches_min
             Filters out cells which don't have at least ``n_matches_min`` neighbors from the same category.
             This filters out some cells which are transient but have been misassigned.
         n_neighbors_filtering
             Parameter for filtering cells. Cells are filtered out if they don't have at least ``n_matches_min``
-            neighbors among their ``n_neighbors_filtering`` nearest cells.
+            neighbors among the ``n_neighbors_filtering`` nearest cells.
         basis
-            Key from :attr:`anndata.AnnData.obsm` as additional features for clustering.
+            Key from :attr:`~anndata.AnnData.obsm` as additional features for clustering.
             If `None`, use only the right eigenvectors.
         n_comps
-            Number of embedding components to be use when ``basis != None``.
+            Number of embedding components to be used when ``basis != None``.
         scale
-            Scale the values to z-scores. If `None`, scale the values if ``basis != None``.
+            Scale the values to z-scores. If :obj:`None`, scale the values if ``basis != None``.
 
         Returns
         -------
         Returns self and just updates the following fields:
 
-            - :attr:`terminal_states` - %(tse_term_states.summary)s
-            - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
+        - :attr:`terminal_states` - %(tse_term_states.summary)s
+        - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
 
         def convert_use(use: Optional[Union[int, Sequence[int], np.ndarray]]) -> List[int]:
@@ -179,7 +176,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         if scale is None:
             scale = basis is not None
         if scale:
-            X = zscore(X, axis=0)
+            X = st.zscore(X, axis=0)
 
         # cluster X
         if method == "kmeans" and n_clusters_kmeans is None:
