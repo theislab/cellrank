@@ -96,7 +96,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
 
     @abc.abstractmethod
     def predict(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
-        """Run a prediction.
+        """Run the prediction.
 
         Parameters
         ----------

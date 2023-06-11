@@ -1,25 +1,21 @@
+import abc
+import collections
+import copy
+import enum
 import re
 import warnings
-from abc import ABC, ABCMeta, abstractmethod
-from collections import defaultdict
-from copy import copy as _copy
-from copy import deepcopy
-from enum import auto
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import wrapt
 
 import numpy as np
-from pandas.api.types import infer_dtype
-from pandas.core.dtypes.common import is_categorical_dtype, is_numeric_dtype
+import scipy.sparse as sp
+from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 from scipy.ndimage import convolve
-from scipy.sparse import spmatrix
 
 import matplotlib as mpl
-from matplotlib import cm
-from matplotlib import colors as mcolors
-from matplotlib import pyplot as plt
-from matplotlib.colors import is_color_like, to_rgb
+import matplotlib.pyplot as plt
+from matplotlib import cm, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from anndata import AnnData
@@ -35,7 +31,7 @@ from cellrank.kernels.mixins import IOMixin
 __all__ = ["BaseModel"]
 
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
-ArrayLike = Union[np.ndarray, spmatrix, List, Tuple]
+ArrayLike = Union[np.ndarray, sp.spmatrix, List, Tuple]
 
 
 class UnknownModelError(RuntimeError):
@@ -43,18 +39,18 @@ class UnknownModelError(RuntimeError):
 
 
 class FailedReturnType(ModeEnum):
-    PREPARE = auto()
-    FIT = auto()
-    PREDICT = auto()
-    CONFIDENCE_INTERVAL = auto()
-    DEFAULT_CONFIDENCE_INTERVAL = auto()
-    PLOT = auto()
+    PREPARE = enum.auto()
+    FIT = enum.auto()
+    PREDICT = enum.auto()
+    CONFIDENCE_INTERVAL = enum.auto()
+    DEFAULT_CONFIDENCE_INTERVAL = enum.auto()
+    PLOT = enum.auto()
 
 
 class ColorType(ModeEnum):
-    CONT = auto()
-    CAT = auto()
-    STR = auto()
+    CONT = enum.auto()
+    CAT = enum.auto()
+    STR = enum.auto()
 
 
 def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable:
@@ -126,12 +122,11 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
     return wrapper(return_type, func)
 
 
-class BaseModelMeta(ABCMeta):
+class BaseModelMeta(abc.ABCMeta):
     """Metaclass for all base models."""
 
     def __new__(cls, clsname: str, superclasses: Tuple[type, ...], attributedict: Dict[str, Any]):
-        """
-        Create a new instance.
+        """Create a new instance.
 
         Parameters
         ----------
@@ -155,9 +150,8 @@ class BaseModelMeta(ABCMeta):
 
 @d.get_sections(base="base_model", sections=["Parameters"])
 @d.dedent
-class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
-    """
-    Base class for all model classes.
+class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
+    """Base class for all model classes.
 
     Parameters
     ----------
@@ -214,13 +208,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @property
     @d.dedent
     def adata(self) -> AnnData:
-        """
-        Annotated data object.
-
-        Returns
-        -------
-        %(adata)s
-        """
+        """Annotated data object."""
         return self._adata
 
     @adata.setter
@@ -240,67 +228,67 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
     @property
     @d.get_summary(base="base_model_x_all")
     def x_all(self) -> np.ndarray:
-        """Unfiltered independent variables of shape `(n_cells, 1)`."""
+        """Unfiltered independent variables of shape ``(n_cells, 1)``."""
         return self._x_all
 
     @property
     @d.get_summary(base="base_model_y_all")
     def y_all(self) -> np.ndarray:
-        """Unfiltered dependent variables of shape `(n_cells, 1)`."""
+        """Unfiltered dependent variables of shape ``(n_cells, 1)``."""
         return self._y_all
 
     @property
     @d.get_summary(base="base_model_w_all")
     def w_all(self) -> np.ndarray:
-        """Unfiltered weights of shape `(n_cells,)`."""
+        """Unfiltered weights of shape ``(n_cells,)``."""
         return self._w_all
 
     @property
     @d.get_summary(base="base_model_x")
     def x(self) -> np.ndarray:
-        """Filtered independent variables of shape `(n_filtered_cells, 1)` used for fitting."""
+        """Filtered independent variables of shape ``(n_filtered_cells, 1)`` used for fitting."""
         return self._x
 
     @property
     @d.get_summary(base="base_model_y")
     def y(self) -> np.ndarray:
-        """Filtered dependent variables of shape `(n_filtered_cells, 1)` used for fitting."""
+        """Filtered dependent variables of shape ``(n_filtered_cells, 1)`` used for fitting."""
         return self._y
 
     @property
     @d.get_summary(base="base_model_w")
     def w(self) -> np.ndarray:
-        """Filtered weights of shape `(n_filtered_cells,)` used for fitting."""
+        """Filtered weights of shape ``(n_filtered_cells,)`` used for fitting."""
         return self._w
 
     @property
     @d.get_summary(base="base_model_x_test")
     def x_test(self) -> np.ndarray:
-        """Independent variables of shape `(n_samples, 1)` used for prediction."""
+        """Independent variables of shape ``(n_samples, 1)`` used for prediction."""
         return self._x_test
 
     @property
     @d.get_summary(base="base_model_y_test")
     def y_test(self) -> np.ndarray:
-        """Prediction values of shape `(n_samples,)` for :attr:`x_test`."""
+        """Prediction values of shape ``(n_samples,)`` for :attr:`x_test`."""
         return self._y_test
 
     @property
     @d.get_summary(base="base_model_x_hat")
     def x_hat(self) -> np.ndarray:
-        """Filtered independent variables used when calculating default confidence interval, usually same as :attr:`x`."""  # noqa
+        """Filtered independent variables used when calculating default confidence interval, usually same as :attr:`x`."""  # noqa: E501
         return self._x_hat
 
     @property
     @d.get_summary(base="base_model_y_hat")
     def y_hat(self) -> np.ndarray:
-        """Filtered dependent variables used when calculating default confidence interval, usually same as :attr:`y`."""  # noqa
+        """Filtered dependent variables used when calculating default confidence interval, usually same as :attr:`y`."""
         return self._y_hat
 
     @property
     @d.get_summary(base="base_model_conf_int")
     def conf_int(self) -> np.ndarray:
-        """Array of shape `(n_samples, 2)` containing the lower and upper bounds of the confidence interval."""
+        """Array of shape ``(n_samples, 2)`` containing the lower and upper bound of the confidence interval."""
         return self._conf_int
 
     @d.get_sections(base="base_model_prepare", sections=["Parameters", "Returns"])
@@ -320,50 +308,46 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         filter_cells: Optional[float] = None,
         n_test_points: int = 200,
     ) -> "BaseModel":
-        """
-        Prepare the model to be ready for fitting.
+        """Prepare the model to be ready for fitting.
 
         Parameters
         ----------
         gene
-            Gene in :attr:`anndata.AnnData.var_names`.
+            Gene in :attr:`~anndata.AnnData.var_names`.
         lineage
-            Name of the lineage. If `None`, all weights will be set to `1`.
+            Name of the lineage. If :obj:`None`, all weights will be set to :math:`1`.
         time_key
-            Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
+            Key in :attr:`~anndata.AnnData.obs` where the pseudotime is stored.
         %(backward)s
         %(time_range)s
         data_key
-            Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X`.
-            If ``use_raw = True``, it's always set to `'X'`.
+            Key in :attr:`~anndata.AnnData.layers` or ``'X'`` for :attr:`~anndata.AnnData.X`.
+            If ``use_raw = True``, it's always set to ``'X'``.
         use_raw
-            Whether to access :attr:`anndata.AnnData.raw`.
+            Whether to access :attr:`~anndata.AnnData.raw`.
         threshold
             Consider only cells with weights > ``threshold`` when estimating the test endpoint.
-            If `None`, use the median of the weights.
+            If :obj:`None`, use the median of the weights.
         weight_threshold
             Set all weights below ``weight_threshold`` to ``weight_threshold`` if a :class:`float`,
             or to the second value, if a :class:`tuple`.
         filter_cells
             Filter out all cells with expression values lower than this threshold.
         n_test_points
-            Number of test points. If `None`, use the original points based on ``threshold``.
+            Number of test points. If :obj:`None`, use the original points based on ``threshold``.
 
         Returns
         -------
         Nothing, just updates the following fields:
 
-            - :attr:`x` - %(base_model_x.summary)s
-            - :attr:`y` - %(base_model_y.summary)s
-            - :attr:`w` - %(base_model_w.summary)s
-
-            - :attr:`x_all` - %(base_model_x_all.summary)s
-            - :attr:`y_all` - %(base_model_y_all.summary)s
-            - :attr:`w_all` - %(base_model_w_all.summary)s
-
-            - :attr:`x_test` - %(base_model_x_test.summary)s
-
-            - :attr:`prepared` - %(base_model_prepared.summary)s
+        - :attr:`x` - %(base_model_x.summary)s
+        - :attr:`y` - %(base_model_y.summary)s
+        - :attr:`w` - %(base_model_w.summary)s
+        - :attr:`x_all` - %(base_model_x_all.summary)s
+        - :attr:`y_all` - %(base_model_y_all.summary)s
+        - :attr:`w_all` - %(base_model_w_all.summary)s
+        - :attr:`x_test` - %(base_model_x_test.summary)s
+        - :attr:`prepared` - %(base_model_prepared.summary)s
         """
         if use_raw:
             if self.adata.raw is None:
@@ -538,7 +522,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         return self
 
-    @abstractmethod
+    @abc.abstractmethod
     @d.get_sections(base="base_model_fit", sections=["Parameters"])
     @d.get_full_description(base="base_model_fit")
     def fit(
@@ -546,19 +530,18 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "BaseModel":
-        """
-        Fit the model.
+        """Fit the model.
 
         Parameters
         ----------
         x
-            Independent variables, array of shape `(n_samples, 1)`. If `None`, use :attr:`x`.
+            Independent variables, array of shape ``(n_samples, 1)``. If :obj:`None`, use :attr:`x`.
         y
-            Dependent variables, array of shape `(n_samples, 1)`. If `None`, use :attr:`y`.
+            Dependent variables, array of shape ``(n_samples, 1)``. If :obj:`None`, use :attr:`y`.
         w
-            Optional weights of :attr:`x`, array of shape `(n_samples,)`. If `None`, use :attr:`w`.
+            Optional weights of :attr:`x`, array of shape ``(n_samples,)``. If :obj:`None`, use :attr:`w`.
         kwargs
             Keyword arguments for underlying :attr:`model`'s fitting function.
 
@@ -580,7 +563,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         return self
 
-    @abstractmethod
+    @abc.abstractmethod
     @d.get_sections(base="base_model_predict", sections=["Parameters", "Returns"])
     @d.get_full_description(base="base_model_predict")
     @d.dedent
@@ -588,62 +571,60 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         self,
         x_test: Optional[np.ndarray] = None,
         key_added: Optional[str] = "_x_test",
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
-        """
-        Run the prediction.
+        """Run the prediction.
 
         Parameters
         ----------
         x_test
-            Array of shape `(n_samples,)` used for prediction. If `None`, use :attr:`x_test`.
+            Array of shape ``(n_samples,)`` used for prediction. If :obj:`None`, use :attr:`x_test`.
         key_added
-            Attribute name where to save the :attr:`x_test` for later use. If `None`, don't save it.
+            Attribute name where to save the :attr:`x_test` for later use. If :obj:`None`, don't save it.
         kwargs
             Keyword arguments for underlying :attr:`model`'s prediction method.
 
         Returns
         -------
-        Updates and returns the following field:
+        Returns and updates the following fields:
 
-            - :attr:`y_test` - %(base_model_y_test.summary)s
+        - :attr:`y_test` - %(base_model_y_test.summary)s
         """
 
-    @abstractmethod
+    @abc.abstractmethod
     @d.get_sections(base="base_model_ci", sections=["Parameters", "Returns"])
     @d.get_summary(base="base_model_ci")
     @d.get_full_description(base="base_model_ci")
     @d.dedent
     def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
-        """
-        Calculate the confidence interval.
+        """Calculate the confidence interval.
 
-        Use :meth:`default_confidence_interval` function if underlying :attr:`model` has not method
+        Use :meth:`default_confidence_interval` function if underlying :attr:`model` has no method
         for confidence interval calculation.
 
         Parameters
         ----------
         x_test
-            Array of shape `(n_samples,)` used for confidence interval calculation. If `None`, use :attr:`x_test`.
+            Array of shape ``(n_samples,)`` used for confidence interval calculation.
+            If :obj:`None`, use :attr:`x_test`.
         kwargs
             Keyword arguments for underlying :attr:`model`'s confidence method
             or for :meth:`default_confidence_interval`.
 
         Returns
         -------
-        Updates and returns the following field:
+        Returns self and updates the following fields:
 
-            - :attr:`conf_int` - %(base_model_conf_int.summary)s
+        - :attr:`conf_int` - %(base_model_conf_int.summary)s
         """
 
     @d.dedent
     def default_confidence_interval(
         self,
         x_test: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
-        """
-        Calculate the confidence interval, if the underlying :attr:`model` has no method for it.
+        """Calculate the confidence interval, if the underlying :attr:`model` has no method for it.
 
         This formula is taken from :cite:`desalvo:70`, eq. 5.
 
@@ -655,10 +636,10 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         -------
         %(base_model_ci.returns)s
 
-        Also update the following fields:
+        Also updates the following fields:
 
-                - :attr:`x_hat` - %(base_model_x_hat.summary)s
-                - :attr:`y_hat` - %(base_model_y_hat.summary)s
+        - :attr:`x_hat` - %(base_model_x_hat.summary)s
+        - :attr:`y_hat` - %(base_model_y_hat.summary)s
         """
         use_ixs = self.w > 0
         x_hat = self.x[use_ixs]
@@ -690,7 +671,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         same_plot: bool = False,
         hide_cells: bool = False,
         perc: Tuple[float, float] = None,
-        fate_prob_cmap: mcolors.ListedColormap = cm.viridis,
+        fate_prob_cmap: colors.ListedColormap = cm.viridis,
         cell_color: Optional[str] = None,
         lineage_color: str = "black",
         alpha: float = 0.8,
@@ -712,10 +693,9 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         ax: mpl.axes.Axes = None,
         return_fig: bool = False,
         save: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Optional[mpl.figure.Figure]:
-        """
-        Plot the smoothed gene expression.
+        """Plot the smoothed gene expression.
 
         Parameters
         ----------
@@ -730,13 +710,13 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         fate_prob_cmap
             Colormap to use when coloring in the fate probabilities.
         cell_color
-            Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
+            Key in :attr:`anndata.AnnData.obs` or :attr:`~anndata.AnnData.var_names` used for coloring the cells.
         lineage_color
             Color for the lineage.
         alpha
-            Alpha channel for cells.
+            Alpha value in :math:`[0, 1]` for the transparency of cells.
         lineage_alpha
-            Alpha channel for lineage confidence intervals.
+            Alpha value in :math:`[0, 1]` for the transparency lineage confidence intervals.
         title
             Title of the plot.
         size
@@ -744,7 +724,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         lw
             Line width for the smoothed values.
         cbar
-            Whether to show colorbar.
+            Whether to show the colorbar.
         margins
             Margins around the plot.
         xlabel
@@ -758,26 +738,23 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             Note that this will require 1 additional model fit.
         lineage_probability_conf_int
             Whether to compute and show smoothed lineage probability confidence interval.
-            If :attr:`self` is :class:`cellrank.models.GAMR`, it can also specify the confidence level,
-            the default is `0.95`. Only used when ``show_lineage_probability=True``.
         lineage_probability_color
             Color to use when plotting the smoothed ``lineage_probability``.
-            If `None`, it's the same as ``lineage_color``. Only used when ``show_lineage_probability=True``.
+            If :obj:`None`, it's the same as ``lineage_color``. Only used when ``show_lineage_probability=True``.
         obs_legend_loc
             Location of the legend when ``cell_color`` corresponds to a categorical variable.
         dpi
             Dots per inch.
         fig
-            Figure to use, if `None`, create a new one.
-        ax: :class:`matplotlib.axes.Axes`
-            Ax to use, if `None`, create a new one.
+            Figure to use. If :obj:`None`, create a new one.
+        ax
+            Ax to use. If :obj:`None`, create a new one.
         return_fig
-            If `True`, return the figure object.
+            If :obj:`True`, return the figure object.
         save
-            Filename where to save the plot. If `None`, just shows the plots.
+            Filename where to save the plot. If :obj:`None`, just shows the plots.
         kwargs
-            Keyword arguments for :meth:`matplotlib.axes.Axes.legend`, e.g. to disable the legend, specify ``loc=None``.
-            Only available when ``show_lineage_probability=True``.
+            Keyword arguments for :meth:`~matplotlib.axes.Axes.legend`.
 
         Returns
         -------
@@ -854,7 +831,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         if lineage_probability and not isinstance(self, FittedModel) and not np.allclose(self.w, 1.0):
             from cellrank.pl._utils import _is_any_gam_mgcv
 
-            model = deepcopy(self)
+            model = copy.deepcopy(self)
             model._y = self._reshape_and_retype(self.w).copy()
             model = model.fit()
 
@@ -890,7 +867,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             self._maybe_add_legend(fig, ax, mapper=handle, title=None, **kwargs)
 
         if cbar and not hide_cells and not same_plot and not np.allclose(self.w_all, 1.0):
-            norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+            norm = colors.Normalize(vmin=vmin, vmax=vmax)
             divider = make_axes_locatable(ax)
             cax = divider.append_axes("right", size="2%", pad=0.1)
             _ = mpl.colorbar.ColorbarBase(
@@ -942,8 +919,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         fig.add_artist(legend)
 
     def _reshape_and_retype(self, arr: np.ndarray) -> np.ndarray:
-        """
-        Convert 1D or 2D array to 2D array of shape `(n, 1)` and set the data type.
+        """Convert 1D or 2D array to 2D array of shape ``(n, 1)`` and set the data type.
 
         Parameters
         ----------
@@ -952,7 +928,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
         Returns
         -------
-        Array of shape `(n, 1)` with dtype set to :attr:`_dtype`.
+        Array of shape ``(n, 1)`` with dtype set to :attr:`_dtype`.
         """
         if arr.ndim not in (1, 2):
             raise ValueError(f"Expected array to be 1 or 2 dimensional, found `{arr.ndim}` dimension(s).")
@@ -962,15 +938,14 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         return np.reshape(arr, (-1, 1)).astype(self._dtype)
 
     def _check(self, attr_name: Optional[str], arr: Optional[np.ndarray], ndim: int = 2) -> Optional[np.ndarray]:
-        """
-        Check if the attribute exists with the correct dimension and optionally set it.
+        """Check if the attribute exists with the correct dimension and optionally set it.
 
         Parameters
         ----------
         attr_name
             Attribute name to check.
         arr
-            Value to set. If `None`, just perform the checking.
+            Value to set. If :obj:`None`, just perform the checking.
         ndim
             Expected number of dimensions of the ``arr``.
 
@@ -1026,17 +1001,17 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
             "_conf_int",
             "_prepared",
         ]:
-            setattr(dst, attr, _copy(getattr(self, attr)))
+            setattr(dst, attr, copy.copy(getattr(self, attr)))
 
     def _shallowcopy_attributes(self, dst: "BaseModel") -> None:
         for attr in ["_gene", "_lineage", "_use_raw", "_data_key", "_is_bulk"]:
-            setattr(dst, attr, _copy(getattr(self, attr)))
+            setattr(dst, attr, copy.copy(getattr(self, attr)))
         # user is not exposed to this
         dst._obs_names = self._obs_names
         # always deepcopy the model (we're manipulating it in multiple threads/processed)
-        dst._model = deepcopy(self.model)
+        dst._model = copy.deepcopy(self.model)
 
-    @abstractmethod
+    @abc.abstractmethod
     @d.dedent
     def copy(self) -> "BaseModel":
         """%(copy)s"""  # noqa
@@ -1084,20 +1059,20 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
         Parameters
         ----------
         key
-            Key in :attr:`anndata.obs`, :attr:`anndata.var_names`, :attr:`anndata.raw.var)names`.
-            Search first starts in `.obs`, then `.raw.var_names` and lastly `.layers`, using
-            :meth:`anndata.obs_vector`.
+            Key in :attr:`~anndata.AnnData.obs`, :attr:`~anndata.AnnData.var_names` or
+            :attr:`~anndata.AnnData.raw.var_names`. Search first starts in `.obs`, then `.raw.var_names` and lastly
+            `.layers`, using :meth:`~anndata.AnnData.obs_vector`.
 
         Returns
         -------
         Triple of the following:
 
-            - name of the colorbar label.
-            - array of values to map.
-            - type of the color.
-            - color mapper for categorical colors.
+        - name of the colorbar label.
+        - array of values to map.
+        - type of the color.
+        - color mapper for categorical colors.
         """
-        if is_color_like(key):
+        if colors.is_color_like(key):
             return None, key, ColorType.STR, None
 
         if key in self.adata.obs:
@@ -1108,11 +1083,11 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
                     force_update_colors=False,
                     palette=None,
                 )
-                col_dict = defaultdict(
-                    lambda: to_rgb("grey"),
+                col_dict = collections.defaultdict(
+                    lambda: colors.to_rgb("grey"),
                     zip(
                         self.adata.obs[key].cat.categories,
-                        [to_rgb(i) for i in self.adata.uns[f"{key}_colors"]],
+                        [colors.to_rgb(i) for i in self.adata.uns[f"{key}_colors"]],
                     ),
                 )
                 return (
@@ -1180,8 +1155,7 @@ class BaseModel(IOMixin, ABC, metaclass=BaseModelMeta):
 
 
 class FailedModel(BaseModel):
-    """
-    Model representing a failure of the original :attr:`model`.
+    """Model representing a failure of the original :attr:`model`.
 
     Parameters
     ----------
@@ -1189,8 +1163,8 @@ class FailedModel(BaseModel):
         The original model which has failed.
     exc
         The exception that caused the :attr:`model` to fail or a :class:`str` containing the message.
-        In the latter case, :meth:`cellrank.models.FailedModel.reraise` a :class:`RuntimeError` with that message.
-        If `None`, :class`UnknownModelError` will eventually be raised.
+        In the latter case, :meth:`~cellrank.models.FailedModel.reraise` a :class:`RuntimeError` with that message.
+        If :obj:`None`, :class`UnknownModelError` will eventually be raised.
     """
 
     # in a functional programming language like Haskell essentially BaseModel would be a Maybe monad and this Nothing
@@ -1229,7 +1203,7 @@ class FailedModel(BaseModel):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "FailedModel":
         """Do nothing and return self."""
         return self
@@ -1238,7 +1212,7 @@ class FailedModel(BaseModel):
         self,
         x_test: Optional[np.ndarray] = None,
         key_added: Optional[str] = "_x_test",
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Do nothing."""
 
@@ -1248,7 +1222,7 @@ class FailedModel(BaseModel):
     def default_confidence_interval(
         self,
         x_test: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Do nothing."""
 
@@ -1285,8 +1259,7 @@ class FailedModel(BaseModel):
 
 @d.dedent
 class FittedModel(BaseModel):
-    """
-    Class representing an already fitted model. Useful when the smoothed gene expression was computed externally.
+    """Class representing an already fitted model. Useful when the smoothed gene expression was computed externally.
 
     Parameters
     ----------
@@ -1296,16 +1269,16 @@ class FittedModel(BaseModel):
         %(base_model_y_test.summary)s
     conf_int
         %(base_model_conf_int.summary)s
-        If `None`, always set ``conf_int=False`` in :meth:`cellrank.models.BaseModel.plot`.
+        If :obj:`None`, always set ``conf_int=False`` in :meth:`~cellrank.models.BaseModel.plot`.
     x_all
         %(base_model_x_all.summary)s
-        If `None`, always sets ``hide_cells=True`` in :meth:`cellrank.models.BaseModel.plot`.
+        If :obj:`None`, always sets ``hide_cells=True`` in :meth:`~cellrank.models.BaseModel.plot`.
     y_all
         %(base_model_y_all.summary)s
-        If `None`, always sets `hide_cells=True`` in :meth:`cellrank.models.BaseModel.plot`.
+        If :obj:`None`, always sets `hide_cells=True`` in :meth:`~cellrank.models.BaseModel.plot`.
     w_all
         %(base_model_w_all.summary)s
-        If `None` and :attr:`x_all` and :attr:`y_all` are present, it will be set an array of `1`.
+        If :obj:`None` and :attr:`x_all` and :attr:`y_all` are present, it will be set an array of :math:`1`.
     """
 
     def __init__(
@@ -1385,7 +1358,7 @@ class FittedModel(BaseModel):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "FittedModel":
         """Do nothing and return self."""
         return self
@@ -1395,9 +1368,9 @@ class FittedModel(BaseModel):
         self,
         x_test: Optional[np.ndarray] = None,
         key_added: Optional[str] = "_x_test",
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
-        """%(base_model_y_test.summary)s"""  # noqa
+        """%(base_model_y_test.summary)s."""
         return self._y_test
 
     @d.dedent
@@ -1413,7 +1386,7 @@ class FittedModel(BaseModel):
     def default_confidence_interval(
         self,
         x_test: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> np.ndarray:
         """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""
         return self.confidence_interval()
@@ -1426,7 +1399,7 @@ class FittedModel(BaseModel):
 
     @staticmethod
     def from_model(model: BaseModel) -> "FittedModel":
-        """Create a :class:`cellrank.models.FittedModel` instance from :class:`cellrank.models.BaseModel`."""
+        """Create a :class:`~cellrank.models.FittedModel` from a :class:`~cellrank.models.BaseModel`."""
         if not isinstance(model, BaseModel):
             raise TypeError(f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`.")
 
