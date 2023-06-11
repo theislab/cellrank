@@ -233,7 +233,8 @@ ignore-path = "docs/release/**.rst"
 legacy_tox_ini = """
 [tox]
 requires = tox-conda
-env_list = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
+isolated_build = true
+envlist = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
@@ -246,10 +247,10 @@ conda_deps =
 conda_channels=
     conda-forge
 extras = test
-pass_env = PYTEST_*,CI
+passenv = PYTEST_* CI
 commands =
     python -m pytest {tty:--color=yes} {posargs: \
-        --cov={env_site_packages_dir}{/}cellrank --cov-config={tox_root}{/}pyproject.toml \
+        --cov={envsitepackagesdir}{/}cellrank --cov-config={toxinidir}{/}pyproject.toml \
         --no-cov-on-fail --cov-report=xml --cov-report=term-missing:skip-covered}
 
 [testenv:lint-code]
@@ -265,9 +266,9 @@ deps =
 extras = docs
 ignore_errors = true
 allowlist_externals = make
-pass_env = PYENCHANT_LIBRARY_PATH
-set_env = SPHINXOPTS = -W -q --keep-going
-changedir = {tox_root}{/}docs
+passenv = PYENCHANT_LIBRARY_PATH
+setenv = SPHINXOPTS = -W -q --keep-going
+changedir = {toxinidir}{/}docs
 commands =
     make linkcheck {posargs}
     make spelling {posargs}
@@ -276,7 +277,7 @@ commands =
 description = Remove the documentation.
 deps =
 skip_install = true
-changedir = {tox_root}{/}docs
+changedir = {toxinidir}{/}docs
 allowlist_externals = make
 commands =
     make clean
@@ -286,11 +287,11 @@ description = Build the documentation.
 deps =
 extras = docs
 allowlist_externals = make
-changedir = {tox_root}{/}docs
+changedir = {toxinidir}{/}docs
 commands =
     make html {posargs}
 commands_post =
-    python -c 'import pathlib; print("Documentation is under:", pathlib.Path("{tox_root}") / "docs" / "_build" / "html" / "index.html")'
+    python -c 'import pathlib; print("Documentation is under:", pathlib.Path("{toxinidir}") / "docs" / "_build" / "html" / "index.html")'
 
 [testenv:build-package]
 description = Build the package.
@@ -299,19 +300,19 @@ deps =
     twine
 allowlist_externals = rm
 commands =
-    rm -rf {tox_root}{/}dist
-    python -m build --sdist --wheel --outdir {tox_root}{/}dist{/} {posargs:}
-    python -m twine check {tox_root}{/}dist{/}*
+    rm -rf {toxinidir}{/}dist
+    python -m build --sdist --wheel --outdir {toxinidir}{/}dist{/} {posargs:}
+    python -m twine check {toxinidir}{/}dist{/}*
 commands_post =
-    python -c 'import pathlib; print(f"Package is under:", pathlib.Path("{tox_root}") / "dist")'
+    python -c 'import pathlib; print(f"Package is under:", pathlib.Path("{toxinidir}") / "dist")'
 
 [testenv:format-references]
 description = Format references.bib.
 deps =
 skip_install = true
 allowlist_externals = biber
-commands = biber --tool --output_file={tox_root}{/}docs{/}references.bib --nolog \
+commands = biber --tool --output_file={toxinidir}{/}docs{/}references.bib --nolog \
     --output_align --output_indent=2 --output_fieldcase=lower \
     --output_legacy_dates --output-field-replace=journaltitle:journal,thesis:phdthesis,institution:school \
-    {tox_root}{/}docs{/}references.bib
+    {toxinidir}{/}docs{/}references.bib
 """
