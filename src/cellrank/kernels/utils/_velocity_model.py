@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
-from enum import auto
-from math import fsum
+import abc
+import enum
+import math
 from typing import Any, Callable, Optional, Tuple, Union
 
 import numpy as np
-from scipy.sparse import csr_matrix, spmatrix
+import scipy.sparse as sp
 
 from cellrank._utils._enum import DEFAULT_BACKEND, Backend_t, ModeEnum
 from cellrank._utils._parallelize import parallelize
@@ -15,20 +15,22 @@ __all__ = ["Deterministic", "Stochastic", "MonteCarlo"]
 
 
 class VelocityModel(ModeEnum):
-    DETERMINISTIC = auto()
-    STOCHASTIC = auto()
-    MONTE_CARLO = auto()
+    DETERMINISTIC = enum.auto()
+    STOCHASTIC = enum.auto()
+    MONTE_CARLO = enum.auto()
 
 
 class BackwardMode(ModeEnum):
-    TRANSPOSE = auto()
-    NEGATE = auto()
+    TRANSPOSE = enum.auto()
+    NEGATE = enum.auto()
 
 
-class ModelABC(ABC):
+class ModelABC(abc.ABC):
+    """Base class for all velocity models."""
+
     def __init__(
         self,
-        conn: spmatrix,
+        conn: sp.spmatrix,
         x: np.ndarray,
         v: np.ndarray,
         similarity: Union[
@@ -47,7 +49,7 @@ class ModelABC(ABC):
         self._softmax_scale = softmax_scale
         self._dtype = dtype
 
-    @abstractmethod
+    @abc.abstractmethod
     def _compute(self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]:
         pass
 
@@ -98,9 +100,8 @@ class ModelABC(ABC):
         self,
         data: np.ndarray,
         ixs: Optional[np.ndarray] = None,
-    ) -> csr_matrix:
-        """
-        Transform :class:`numpy.ndarray` into :class:`scipy.sparse.csr_matrix`.
+    ) -> sp.csr_matrix:
+        """Transform :class:`~numpy.ndarray` into :class:`~scipy.sparse.csr_matrix`.
 
         Parameters
         ----------
@@ -114,8 +115,8 @@ class ModelABC(ABC):
         The reconstructed CSR matrix.
         """
 
-        def reconstruct(data: np.ndarray) -> Tuple[csr_matrix, csr_matrix]:
-            data = csr_matrix(
+        def reconstruct(data: np.ndarray) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
+            data = sp.csr_matrix(
                 (
                     np.array(data, copy=True),
                     np.array(conn.indices, copy=True),
@@ -181,8 +182,7 @@ class Deterministic(ModelABC):
 
 
 class Stochastic(ModelABC):
-    """
-    Stochastic model.
+    """Stochastic model.
 
     Parameters
     ----------
@@ -202,7 +202,7 @@ class Stochastic(ModelABC):
 
     def __init__(
         self,
-        conn: spmatrix,
+        conn: sp.spmatrix,
         x: np.ndarray,
         vmean: np.ndarray,
         vvar: np.ndarray,
@@ -255,7 +255,7 @@ class Stochastic(ModelABC):
         if np.all(p == 0):
             return self._uniform(n_neigh)
 
-        sum_ = fsum(p)
+        sum_ = math.fsum(p)
         if not np.isclose(sum_, 1.0, rtol=1e-12):
             p[~nan_mask] = p[~nan_mask] / sum_
 
@@ -268,8 +268,7 @@ class Stochastic(ModelABC):
 
 
 class MonteCarlo(ModelABC):
-    """
-    Stochastic model.
+    """Stochastic model.
 
     Parameters
     ----------
@@ -291,7 +290,7 @@ class MonteCarlo(ModelABC):
 
     def __init__(
         self,
-        conn: spmatrix,
+        conn: sp.spmatrix,
         x: np.ndarray,
         vmean: np.ndarray,
         vvar: np.ndarray,
