@@ -1,16 +1,15 @@
-from functools import singledispatch
+import functools
 from typing import List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
+import scipy.sparse as sp
 from scipy.linalg import solve
-from scipy.sparse import csc_matrix, csr_matrix
-from scipy.sparse import eye as speye
-from scipy.sparse import issparse, isspmatrix_csc, isspmatrix_csr, spmatrix
-from scipy.sparse.linalg import bicgstab, gcrotmk, gmres, lgmres
 
 from cellrank import logging as logg
 from cellrank._utils._enum import DEFAULT_BACKEND
 from cellrank._utils._parallelize import _get_n_cores, parallelize
+
+__all__ = ["_solve_lin_system", "_is_petsc_slepc_available"]
 
 _DEFAULT_SOLVER = "gmres"
 _PETSC_ERROR_MSG_SHOWN = False
@@ -20,10 +19,10 @@ _PETSC_ERROR_MSG = (
     "Defaulting to `{!r}` solver."
 )
 _AVAIL_ITER_SOLVERS = {
-    "gmres": gmres,
-    "lgmres": lgmres,
-    "bicgstab": bicgstab,
-    "gcrotmk": gcrotmk,
+    "gmres": sp.linalg.gmres,
+    "lgmres": sp.linalg.lgmres,
+    "bicgstab": sp.linalg.bicgstab,
+    "gcrotmk": sp.linalg.gcrotmk,
 }
 
 LinSolver = TypeVar("LinSolver")
@@ -31,9 +30,8 @@ PETScMat = TypeVar("PETScMat")
 Queue = TypeVar("Queue")
 
 
-def _create_petsc_matrix(mat: Union[np.ndarray, spmatrix], as_dense: bool = False) -> PETScMat:
-    """
-    Create a PETSc matrix from :mod:`numpy` or :mod:`scipy.sparse` matrix.
+def _create_petsc_matrix(mat: Union[np.ndarray, sp.spmatrix], as_dense: bool = False) -> PETScMat:
+    """Create a PETSc matrix from :mod:`numpy` or :mod:`scipy.sparse` matrix.
 
     Parameters
     ----------
@@ -52,13 +50,13 @@ def _create_petsc_matrix(mat: Union[np.ndarray, spmatrix], as_dense: bool = Fals
 
     from petsc4py import PETSc
 
-    if issparse(mat) and as_dense:
+    if sp.issparse(mat) and as_dense:
         mat = mat.toarray()
 
     A = PETSc.Mat().create()
-    if issparse(mat):
-        if not isspmatrix_csr(mat):
-            mat = csr_matrix(mat)
+    if sp.issparse(mat):
+        if not sp.isspmatrix_csr(mat):
+            mat = sp.csr_matrix(mat)
         A.createAIJ(size=mat.shape, csr=(mat.indptr, mat.indices, mat.data))
     else:
         A.createDense(mat.shape, array=mat)
@@ -70,7 +68,7 @@ def _create_petsc_matrix(mat: Union[np.ndarray, spmatrix], as_dense: bool = Fals
 
 
 def _create_solver(
-    mat_a: Union[np.ndarray, spmatrix],
+    mat_a: Union[np.ndarray, sp.spmatrix],
     solver: Optional[str],
     preconditioner: Optional[str],
     tol: float,
@@ -120,10 +118,10 @@ def _create_solver(
     return ksp, x, b
 
 
-@singledispatch
+@functools.singledispatch
 def _solve_many_sparse_problems_petsc(
-    mat_b: csc_matrix,
-    _mat_a: Union[np.ndarray, spmatrix],
+    mat_b: sp.csc_matrix,
+    _mat_a: Union[np.ndarray, sp.spmatrix],
     _solver: Optional[str] = None,
     _preconditioner: Optional[str] = None,
     _tol: float = 1e-5,
@@ -135,7 +133,7 @@ def _solve_many_sparse_problems_petsc(
 @_solve_many_sparse_problems_petsc.register(np.ndarray)
 def _(
     mat_b: np.ndarray,
-    mat_a: Union[np.ndarray, spmatrix],
+    mat_a: Union[np.ndarray, sp.spmatrix],
     solver: Optional[str] = None,
     preconditioner: Optional[str] = None,
     tol: float = 1e-5,
@@ -155,10 +153,10 @@ def _(
     return np.atleast_1d(x.getArray().copy().squeeze()), int(ksp.converged)
 
 
-@_solve_many_sparse_problems_petsc.register(csc_matrix)
+@_solve_many_sparse_problems_petsc.register(sp.csc_matrix)
 def _(
-    mat_b: csc_matrix,
-    mat_a: Union[np.ndarray, spmatrix],
+    mat_b: sp.csc_matrix,
+    mat_a: Union[np.ndarray, sp.spmatrix],
     solver: Optional[str],
     preconditioner: Optional[str],
     tol: float,
@@ -188,14 +186,13 @@ def _(
 
 
 def _solve_many_sparse_problems(
-    mat_b: spmatrix,
-    mat_a: spmatrix,
+    mat_b: sp.spmatrix,
+    mat_a: sp.spmatrix,
     solver: LinSolver,
     tol: float,
     queue: Queue,
 ) -> Tuple[np.ndarray, int]:
-    """
-    Solve ``mat_a * x = mat_b`` efficiently using an iterative solver.
+    """Solve ``mat_a * x = mat_b`` efficiently using an iterative solver.
 
     This is a utility function which is optimized for the case of ``mat_a`` and ``mat_b`` being sparse,
     and columns in ``mat_b`` being related. In that case, we can treat each column of ``mat_b`` as a
@@ -223,7 +220,7 @@ def _solve_many_sparse_problems(
     """
     # initialise solution list and info list
     x_list, n_converged = [], 0
-    kwargs = {} if solver is not gmres else {"atol": "legacy"}  # get rid of the warning
+    kwargs = {} if solver is not sp.linalg.gmres else {"atol": "legacy"}  # get rid of the warning
 
     for b in mat_b:
         # actually call the solver for the current sub-problem
@@ -243,8 +240,8 @@ def _solve_many_sparse_problems(
 
 
 def _petsc_direct_solve(
-    mat_a: Union[np.ndarray, spmatrix],
-    mat_b: Optional[Union[spmatrix, np.ndarray]] = None,
+    mat_a: Union[np.ndarray, sp.spmatrix],
+    mat_b: Optional[Union[sp.spmatrix, np.ndarray]] = None,
     tol: float = 1e-5,
     **kwargs,
 ) -> np.ndarray:
@@ -266,7 +263,7 @@ def _petsc_direct_solve(
         B.assemble()
     else:
         if mat_b.ndim == 1 or (mat_b.ndim == 2 and mat_b.shape[1] == 1):
-            if issparse(mat_b):
+            if sp.issparse(mat_b):
                 mat_b = mat_b.toarray()
 
             res, converged = _solve_many_sparse_problems_petsc(mat_b, mat_a=mat_a, tol=tol, **kwargs)
@@ -321,8 +318,8 @@ def _petsc_direct_solve(
 
 
 def _solve_lin_system(
-    mat_a: Union[np.ndarray, spmatrix],
-    mat_b: Union[np.ndarray, spmatrix],
+    mat_a: Union[np.ndarray, sp.spmatrix],
+    mat_b: Union[np.ndarray, sp.spmatrix],
     solver: str = _DEFAULT_SOLVER,
     use_petsc: bool = False,
     preconditioner: Optional[str] = None,
@@ -332,8 +329,7 @@ def _solve_lin_system(
     use_eye: bool = False,
     show_progress_bar: bool = True,
 ) -> np.ndarray:
-    """
-    Solve ``mat_a * x = mat_b`` efficiently using either iterative or direct methods.
+    """Solve ``mat_a * x = mat_b`` efficiently using either iterative or direct methods.
 
     This is a utility function which is optimized for the case of ``mat_a`` and ``mat_b`` being sparse,
     and columns in ``mat_b`` being related. In that case, we can treat each column of ``mat_b`` as a
@@ -396,17 +392,17 @@ def _solve_lin_system(
         use_petsc = False
 
     if use_eye:
-        mat_a = (speye(mat_a.shape[0]) if issparse(mat_a) else np.eye(mat_a.shape[0])) - mat_a
+        mat_a = (sp.eye(mat_a.shape[0]) if sp.issparse(mat_a) else np.eye(mat_a.shape[0])) - mat_a
 
     if solver == "direct":
         if use_petsc:
             logg.debug("Solving the linear system directly using `PETSc`")
             return _petsc_direct_solve(mat_a, mat_b, solver=solver, preconditioner=preconditioner, tol=tol)
 
-        if issparse(mat_a):
+        if sp.issparse(mat_a):
             logg.debug("Densifying `A` for `scipy` direct solver")
             mat_a = mat_a.toarray()
-        if issparse(mat_b):
+        if sp.issparse(mat_b):
             logg.debug("Densifying `B` for `scipy` direct solver")
             mat_b = mat_b.toarray()
 
@@ -415,12 +411,12 @@ def _solve_lin_system(
         return solve(mat_a, mat_b)
 
     if use_petsc:
-        if not isspmatrix_csr(mat_a):
-            mat_a = csr_matrix(mat_a)
+        if not sp.isspmatrix_csr(mat_a):
+            mat_a = sp.csr_matrix(mat_a)
 
         mat_b = mat_b.T
-        if not isspmatrix_csc(mat_b):
-            mat_b = csc_matrix(mat_b)
+        if not sp.isspmatrix_csc(mat_b):
+            mat_b = sp.csc_matrix(mat_b)
 
         # as_array causes an issue, because it's called like this np.array([(NxM), (NxK), ....]
         # in the end, we want array of shape Nx(M + K + ...) - this is ensured by the extractor
@@ -440,14 +436,14 @@ def _solve_lin_system(
             show_progress_bar=show_progress_bar,
         )(mat_a, solver=solver, preconditioner=preconditioner, tol=tol)
     elif solver in _AVAIL_ITER_SOLVERS:
-        if not issparse(mat_a):
+        if not sp.issparse(mat_a):
             logg.debug("Sparsifying `A` for iterative solver")
-            mat_a = csr_matrix(mat_a)
+            mat_a = sp.csr_matrix(mat_a)
 
         mat_b = mat_b.T
-        if not issparse(mat_b):
+        if not sp.issparse(mat_b):
             logg.debug("Sparsifying `B` for iterative solver")
-            mat_b = csr_matrix(mat_b)
+            mat_b = sp.csr_matrix(mat_b)
 
         logg.debug(
             f"Solving the linear system using `scipy` solver `{solver!r}` on `{n_jobs} cores(s)` with `tol={tol}`"
