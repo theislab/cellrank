@@ -159,7 +159,7 @@ def circular_projection(
     %(just_plots)s Also updates ``adata`` with the following fields:
 
     - :attr:`adata.obsm['{key_added}'] <anndata.AnnData.obsm>` - the circular projection.
-    - :attr:`adata.bosm['to_{initial,terminal}_states_{method}'] <anndata.AnnData.obs>` - the priming degree,
+    - :attr:`adata.obs['to_{initial,terminal}_states_{method}'] <anndata.AnnData.obs>` - the priming degree,
       if a method is present in the ``keys``.
     """
     if label_distance is not None and label_distance < 0:

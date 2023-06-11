@@ -1,5 +1,5 @@
-from pathlib import Path
-from types import MappingProxyType
+import pathlib
+import types
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -65,15 +65,14 @@ def cluster_trends(
     backend: Backend_t = DEFAULT_BACKEND,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
-    pca_kwargs: Dict = MappingProxyType({"svd_solver": "arpack"}),
-    neighbors_kwargs: Dict = MappingProxyType({"use_rep": "X"}),
-    clustering_kwargs: Dict = MappingProxyType({}),
+    save: Optional[Union[str, pathlib.Path]] = None,
+    pca_kwargs: Dict = types.MappingProxyType({"svd_solver": "arpack"}),
+    neighbors_kwargs: Dict = types.MappingProxyType({"use_rep": "X"}),
+    clustering_kwargs: Dict = types.MappingProxyType({}),
     return_models: bool = False,
     **kwargs: Any,
 ) -> Optional[_return_model_type]:
-    """
-    Cluster and plot gene expression trends within a lineage.
+    """Cluster and plot gene expression trends within a lineage.
 
     This function is based on *Palantir* :cite:`setty:19`. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential
@@ -87,16 +86,16 @@ def cluster_trends(
     lineage
         Name of the lineage for which to cluster the genes.
     time_key
-        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
+        Key in :attr:`~anndata.AnnData.obs` where the pseudotime is stored.
     %(backward)s
     %(time_range)s
     clusters
-        Cluster identifiers to plot. If `None`, all clusters will be considered. Useful when
+        Cluster identifiers to plot. If :obj:`None`, all clusters will be considered. Useful when
         plotting previously computed clusters.
     n_points
         Number of points used for prediction.
     covariate_key
-        Key(s) in :attr:`anndata.AnnData.obs` containing observations to be plotted at the bottom of each plot.
+        Keys in :attr:`~anndata.AnnData.obs` containing observations to be plotted at the bottom of each plot.
     %(gene_symbols)s
     ratio
         Height ratio of each covariate in ``covariate_key``.
@@ -105,37 +104,35 @@ def cluster_trends(
     norm
         Whether to z-normalize each trend to have zero mean, unit variance.
     recompute
-        If `True`, recompute the clustering, otherwise try to find already existing one.
+        If :obj:`True`, recompute the clustering, otherwise try to find already existing one.
     %(model_callback)s
     ncols
         Number of columns for the plot.
     sharey
         Whether to share y-axis across multiple plots.
     key
-        Key in :attr:`anndata.AnnData.uns` where to save the results.
-        If `None`, it will be saved as ``'lineage_{lineage}_trend'`` .
+        Key in :attr:`~anndata.AnnData.uns` where to save the results.
+        If :obj:`None`, it will be saved as ``'lineage_{lineage}_trend'`` .
     random_state
         Random seed for reproducibility.
     %(parallel)s
     %(plotting)s
     pca_kwargs
-        Keyword arguments for :func:`scanpy.pp.pca`.
+        Keyword arguments for :func:`~scanpy.pp.pca`.
     neighbors_kwargs
-        Keyword arguments for :func:`scanpy.pp.neighbors`.
+        Keyword arguments for :func:`~scanpy.pp.neighbors`.
     clustering_kwargs
-        Keyword arguments for :func:`scanpy.tl.leiden`.
+        Keyword arguments for :func:`~scanpy.tl.leiden`.
     %(return_models)s
-    kwargs:
-        Keyword arguments for :meth:`cellrank.models.BaseModel.prepare`.
+    kwargs
+        Keyword arguments for :meth:`~cellrank.models.BaseModel.prepare`.
 
     Returns
     -------
-    %(plots_or_returns_models)s
+    %(plots_or_returns_models)s Also updates :attr:`adata.uns <anndata.AnnData.uns>` with the following:
 
-    Also updates ``adata.uns`` with the following:
-
-        - ``key`` or ``lineage_{lineage}_trend`` - an :class:`anndata.AnnData` object of
-          shape `(n_genes, n_points)` containing the clustered genes.
+    - ``key`` or ``'lineage_{lineage}_trend'`` - :class:`~anndata.AnnData` object of
+      shape ``(n_genes, n_points)`` containing the clustered genes.
     """
 
     def plot_cluster(row: int, col: int, cluster: str, sharey_ax: Optional[str] = None) -> Optional[plt.Axes]:
