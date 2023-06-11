@@ -1,10 +1,10 @@
-from copy import copy, deepcopy
-from enum import auto
+import copy
+import enum
 from typing import Any, Literal, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
+import scipy.stats as st
 
 from anndata import AnnData
 
@@ -15,21 +15,20 @@ from cellrank.models._utils import _OFFSET_KEY, _get_knotlocs, _get_offset
 
 __all__ = ["GAMR"]
 
+# cache so we don't have to re-load
 _r_lib = None
 _r_lib_name = None
 
 
 class KnotLocs(ModeEnum):
-    AUTO = auto()
-    DENSITY = auto()
+    AUTO = enum.auto()
+    DENSITY = enum.auto()
 
 
 @inject_docs(key=_OFFSET_KEY, kloc=KnotLocs)
 @d.dedent
 class GAMR(BaseModel):
-    """
-    Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`__ package for fitting
-    Generalized Additive Models (GAMs).
+    """Wrapper around R's `mgcv <https://cran.r-project.org/web/packages/mgcv/>`__ package for fitting GAMs.
 
     Parameters
     ----------
@@ -37,26 +36,26 @@ class GAMR(BaseModel):
     n_knots
         Number of knots.
     distribution
-        Distribution family in `rpy2.robjects.r`, such as `'gaussian'` or `'nb'` for negative binomial.
-        If `'nb'`, raw count data in :attr:`adata` ``.raw`` is always used.
+        Distribution family in `rpy2.robjects.r`, such as ``'gaussian'`` or ``'nb'`` for negative binomial.
+        If ``'nb'``, raw count data in :attr:`adata` ``.raw`` is always used.
     basis
         Basis for the smoothing term.
         See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
     knotlocs
         Position of the knots. Can be one of the following:
 
-            - `{kloc.AUTO!r}` - let `mgcv` handle the knot positions.
-            - `{kloc.DENSITY!r}` - position the knots based on the density of the pseudotime.
+        - ``{kloc.AUTO!r}`` - let `mgcv` handle the knot positions.
+        - ``{kloc.DENSITY!r}`` - position the knots based on the density of the pseudotime.
     offset
         Offset term for the GAM. Only available when ``distribution='nb'``. If `'default'`, it is calculated
-        according to :cite:`robinson:10`. The values are saved in :attr:`adata` ``.obs[{key!r}]``.
-        If `None`, no offset is used.
+        according to :cite:`robinson:10`. The values are saved in :attr:`adata.obs['{key}'] <anndata.AnnData.obs>`.
+        If :obj:`None`, no offset is used.
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
     kwargs
         Keyword arguments for ``gam.control``.
         See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/gam.control>`__ for reference.
-    """  # noqa
+    """
 
     def __init__(
         self,
@@ -67,7 +66,7 @@ class GAMR(BaseModel):
         knotlocs: Literal["auto", "density"] = KnotLocs.AUTO,
         offset: Optional[Union[np.ndarray, Literal["default"]]] = "default",
         smoothing_penalty: float = 1.0,
-        **kwargs,
+        **kwargs: Any,
     ):
         if n_knots <= 0:
             raise ValueError(f"Expected `n_splines` to be positive, found `{n_knots}`.")
@@ -83,7 +82,7 @@ class GAMR(BaseModel):
         self._offset = None
         self._knotslocs = KnotLocs(knotlocs)
 
-        self._control_kwargs = copy(kwargs)
+        self._control_kwargs = copy.copy(kwargs)
 
         self._lib = None
         self._lib_name = None
@@ -115,11 +114,11 @@ class GAMR(BaseModel):
     @d.dedent
     def prepare(
         self,
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> "GAMR":
-        """
-        %(base_model_prepare.full_desc)s
+        """%(base_model_prepare.full_desc)s
+
         This also removes the zero and negative weights and prepares the design matrix.
 
         Parameters
@@ -159,10 +158,9 @@ class GAMR(BaseModel):
         x: Optional[np.ndarray] = None,
         y: Optional[np.ndarray] = None,
         w: Optional[np.ndarray] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> "GAMR":
-        """
-        %(base_model_fit.full_desc)s
+        """%(base_model_fit.full_desc)s
 
         Parameters
         ----------
@@ -170,11 +168,11 @@ class GAMR(BaseModel):
 
         Returns
         -------
-        Fits the model and returns self. Updates the following fields by filtering out `0` weights :attr:`w`:
+        Fits the model and returns self. Updates the following fields by filtering out :math:`0` weights :attr:`w`:
 
-            - :attr:`x` - %(base_model_x.summary)s
-            - :attr:`y` - %(base_model_y.summary)s
-            - :attr:`w` - %(base_model_w.summary)s
+        - :attr:`x` - %(base_model_x.summary)s
+        - :attr:`y` - %(base_model_y.summary)s
+        - :attr:`w` - %(base_model_w.summary)s
         """  # noqa
 
         import rpy2.robjects as ro
@@ -225,16 +223,16 @@ class GAMR(BaseModel):
         level: Optional[float] = None,
         **kwargs,
     ) -> np.ndarray:
-        """
-        %(base_model_predict.full_desc)s
+        """%(base_model_predict.full_desc)s
+
         This method can also compute the confidence interval.
 
         Parameters
         ----------
         %(base_model_predict.parameters)s
         level
-            Confidence level for confidence interval calculation. If `None`, don't compute the confidence interval.
-            Must be in the interval `[0, 1]`.
+            Confidence level for confidence interval calculation.
+            If :obj:`None`, don't compute the confidence interval. Must be in :math:`[0, 1]`.
 
         Returns
         -------
@@ -268,17 +266,17 @@ class GAMR(BaseModel):
             self._y_test = np.array(res.rx2("fit")).squeeze().astype(self._dtype)
             se = np.array(res.rx2("se.fit")).squeeze().astype(self._dtype)
 
-            level = norm.ppf(level + (1 - level) / 2)
+            level = st.norm.ppf(level + (1 - level) / 2)
             self._conf_int = np.c_[self.y_test - level * se, self.y_test + level * se]
 
         return self.y_test
 
     @d.dedent
     def confidence_interval(self, x_test: Optional[np.ndarray] = None, level: float = 0.95, **kwargs) -> np.ndarray:
-        """
-        %(base_model_ci.summary)s
-        Internally, this method calls :meth:`cellrank.models.GAMR.predict` to extract
-        the confidence interval, if needed.
+        """%(base_model_ci.summary)s
+
+        Internally, this method calls :meth:`~cellrank.models.GAMR.predict` to extract the confidence interval,
+        if needed.
 
         Parameters
         ----------
@@ -304,8 +302,8 @@ class GAMR(BaseModel):
 
     def _deepcopy_attributes(self, dst: "GAMR") -> None:
         super()._deepcopy_attributes(dst)
-        dst._offset = deepcopy(self._offset)
-        dst._design_mat = deepcopy(self._design_mat)
+        dst._offset = copy.deepcopy(self._offset)
+        dst._design_mat = copy.deepcopy(self._design_mat)
 
     @d.dedent
     def copy(self) -> "GAMR":
