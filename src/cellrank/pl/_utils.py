@@ -1,13 +1,14 @@
-from collections import defaultdict, namedtuple
-from copy import copy
-from itertools import combinations
-from pathlib import Path
+import collections
+import copy
+import itertools
+import pathlib
 from typing import (
     Any,
     Callable,
     Dict,
     List,
     Mapping,
+    NamedTuple,
     Optional,
     Sequence,
     Tuple,
@@ -20,9 +21,8 @@ import pandas as pd
 from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 
 import matplotlib as mpl
-import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-from matplotlib import cm
+from matplotlib import cm, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 from anndata import AnnData
@@ -48,21 +48,23 @@ _return_model_type = Mapping[str, Mapping[str, BaseModel]]
 _input_model_type = Union[BaseModel, _return_model_type]
 _callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
 
-BulkRes = namedtuple("BulkRes", ["x_test", "y_test"])
+
+class BulkRes(NamedTuple):
+    x_test: np.ndarray
+    y_test: np.ndarray
 
 
 def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
-    """
-    Return whether any models to be fit are from R's `mgcv` package.
+    """Return whether any models to be fit are from R's `mgcv` package.
 
     Parameters
     ----------
     models
-        Model(s) used for fitting.
+        Model used for fitting.
 
     Returns
     -------
-    `True` if any of the models is from R's mgcv package, else `False`.
+    :obj:`True` if any of the models is from R's mgcv package, else :obj:`False`.
     """
     return isinstance(models, GAMR) or (
         isinstance(models, dict) and any(isinstance(m, GAMR) for ms in models.values() for m in ms.values())
@@ -72,8 +74,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) 
 def _create_models(
     model: _input_model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
 ) -> _return_model_type:
-    """
-    Create models for each gene and lineage.
+    """Create models for each gene and lineage.
 
     Parameters
     ----------
@@ -91,7 +92,7 @@ def _create_models(
         if isinstance(lin_names, BaseModel):
             # sharing the same models for all lineages
             for lin_name in lineages:
-                models[obs_name][lin_name] = copy(lin_names)
+                models[obs_name][lin_name] = copy.copy(lin_names)
             return
         if not isinstance(lin_names, dict):
             raise TypeError(
@@ -114,14 +115,14 @@ def _create_models(
                     f"Expected the model for gene `{obs_name!r}` and lineage `{lin_name!r}` "
                     f"to be of type `BaseModel`, found `{type(mod).__name__!r}`."
                 )
-            models[obs_name][lin_name] = copy(mod)
+            models[obs_name][lin_name] = copy.copy(mod)
 
         if set(models[obs_name].keys()) & lineages == lineages:
             return
 
         if lin_rest_model is not None:
             for lin_name in lineages - set(models[obs_name].keys()):
-                models[obs_name][lin_name] = copy(lin_rest_model)
+                models[obs_name][lin_name] = copy.copy(lin_rest_model)
         else:
             raise ValueError(_ERROR_INCOMPLETE_SPEC.format(f"all lineages for gene `{obs_name!r}`"))
 
@@ -133,14 +134,15 @@ def _create_models(
 
     if isinstance(model, BaseModel):
         return {
-            o: {lin: copy(model) for lin in _unique_order_preserving(lineages)} for o in _unique_order_preserving(obs)
+            o: {lin: copy.copy(model) for lin in _unique_order_preserving(lineages)}
+            for o in _unique_order_preserving(obs)
         }
 
     lineages, obs = (
         set(_unique_order_preserving(lineages)),
         set(_unique_order_preserving(obs)),
     )
-    models = defaultdict(dict)
+    models = collections.defaultdict(dict)
 
     if isinstance(model, dict):
         obs_rest_model = model.pop("*", None)
@@ -184,8 +186,7 @@ def _fit_bulk_helper(
     queue: Optional[Queue] = None,
     **kwargs,
 ) -> Dict[str, Dict[str, BaseModel]]:
-    """
-    Fit model for given genes and lineages.
+    """Fit model for given genes and lineages.
 
     Parameters
     ----------
@@ -204,13 +205,13 @@ def _fit_bulk_helper(
     queue
         Signalling queue in the parent process/thread used to update the progress bar.
     kwargs
-        Keyword arguments for :func:`cellrank.models.BaseModel.prepare`.
+        Keyword arguments for :func:`~cellrank.models.BaseModel.prepare`.
 
     Returns
     -------
     The fitted models, optionally containing the confidence interval in the form of
-    `{'gene1': {'lineage1': <model11>, ...}, ...}`.
-    If any step has failed, the model will be of type :class:`cellrank.models.FailedModel`.
+    ``{'gene1': {'lineage1': <model11>, ...}, ...}``.
+    If any step has failed, the model will be of type :class:`~cellrank.models.FailedModel`.
     """
     if len(lineages) != len(time_range):
         raise ValueError(
@@ -262,15 +263,14 @@ def _fit_bulk(
     filter_all_failed: bool = True,
     **kwargs,
 ) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
-    """
-    Fit models for given genes and lineages.
+    """Fit models for given genes and lineages.
 
     Parameters
     ----------
     models
         Gene and lineage specific estimators.
     callbacks
-        Functions which are called to prepare the ``models`.
+        Functions which are called to prepare the ``models``.
     genes
         Genes for which to fit the ``models``.
     lineages
@@ -278,10 +278,10 @@ def _fit_bulk(
     time_range
         Possibly ``lineages`` specific start- and endtimes.
     parallel_kwargs
-        Keyword arguments for :func:`cellrank._utils._parallelize.parallelize`.
+        Keyword arguments for :func:`~cellrank._utils._parallelize.parallelize`.
     return_models
-        Whether to return the full models or just a dictionary of dictionaries of :class:`collections.namedtuple`,
-        `(x_test, y_test)`. This is highly discouraged because no meaningful error messages will be produced.
+        Whether to return the full models or just a dictionary of dictionaries of :class:`~typing.NamedTuple`,
+        ``(x_test, y_test)``. This is highly discouraged because no meaningful error messages will be produced.
     filter_all_failed
         Whether to filter out all models which have failed.
 
@@ -301,7 +301,6 @@ def _fit_bulk(
     """
     if isinstance(genes, str):
         genes = [genes]
-
     if isinstance(lineages, str):
         lineages = [lineages]
 
@@ -400,17 +399,16 @@ def _trends_helper(
     axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
     **kwargs: Any,
 ) -> None:
-    """
-    Plot an expression gene for some lineages.
+    """Plot an expression gene for some lineages.
 
     Parameters
     ----------
     %(adata)s
     %(model)s
     gene
-        Name of the gene in `adata.var_names``.
+        Name of the gene in :attr:`~anndata.AnnData.var_names`.
     ln_key
-        Key in ``adata.obsm`` where to find the lineages.
+        Key in :attr:`~anndata.AnnData.bosm` where to find the lineages.
     lineage_names
         Names of lineages to plot.
     same_plot
@@ -424,22 +422,22 @@ def _trends_helper(
     show_xticks_and_label
         Whether to show x-ticks and x-label. Usually, only the last row will show this.
     lineage_cmap
-        Colormap to use when coloring the the lineage. When ``transpose``, this corresponds to the color of genes.
+        Colormap to use when coloring the lineage. When ``transpose = True``, this corresponds to the color of genes.
     lineage_probability_color
-        Actual color of 1 ``lineage``. Only used when ``same_plot=True`` and ``transpose=True`` and
-        ``lineage_probability=True``.
+        Actual color of one ``lineage``. Only used when ``same_plot = True`` and ``transpose = True`` and
+        ``lineage_probability = True``.
     fate_prob_cmap:
         Colormap to use when coloring in the fate probabilities, if they are being plotted.
     gene_as_title
         Whether to use the gene names as titles (with lineage names as well) or on the y-axis.
     legend_loc
-        Location of the legend. If `None`, don't show any legend.
+        Location of the legend. If :obj:`None`, don't show any legend.
     fig
         Figure to use.
     ax
         Ax to use.
     kwargs
-        Keyword arguments for :meth:`cellrank.models.BaseModel.plot`.
+        Keyword arguments for :meth:`~cellrank.models.BaseModel.plot`.
 
     Returns
     -------
@@ -484,7 +482,7 @@ def _trends_helper(
             else:
                 lineage_colors = _create_categorical_colors(n_lineages)
     else:
-        lineage_colors = (("black" if not mcolors.is_color_like(lineage_cmap) else lineage_cmap),) * n_lineages
+        lineage_colors = (("black" if not colors.is_color_like(lineage_cmap) else lineage_cmap),) * n_lineages
 
     if n_lineages > len(lineage_colors):
         raise ValueError(f"Expected at least `{n_lineages}` colors, found `{len(lineage_colors)}`.")
@@ -591,7 +589,7 @@ def _trends_helper(
         else:
             vmin = np.min([model.w_all for model in successful_models.values()])
             vmax = np.max([model.w_all for model in successful_models.values()])
-        norm = mcolors.Normalize(vmin=vmin, vmax=vmax)
+        norm = colors.Normalize(vmin=vmin, vmax=vmax)
 
         for ax in axes:
             children = [c for c in ax.get_children() if isinstance(c, mpl.collections.PathCollection)]
@@ -618,8 +616,7 @@ def _trends_helper(
 
 
 def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend.Legend:
-    """
-    Position legend in- or outside the figure.
+    """Position legend inside or outside the figure.
 
     Parameters
     ----------
@@ -628,7 +625,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
     legend_loc
         Position of legend.
     kwargs
-        Keyword arguments for :func:`matplotlib.pyplot.legend`.
+        Keyword arguments for :meth:`matplotlib.axes.Axes.legend`.
 
     Returns
     -------
@@ -703,8 +700,7 @@ def _create_callbacks(
     perform_sanity_check: Optional[bool] = None,
     **kwargs,
 ) -> Dict[str, Dict[str, Callable]]:
-    """
-    Create models for each gene and lineage.
+    """Create models for each gene and lineage.
 
     Parameters
     ----------
@@ -718,8 +714,7 @@ def _create_callbacks(
     perform_sanity_check
         Whether to check if all callbacks have the correct signature. This is done by instantiating
         dummy model and running the function. We're assuming that the callback isn't really a pricey operation.
-
-        If `None`, it is only performed for non-default callbacks.
+        If :obj:`None`, it is only performed for non-default callbacks.
     kwargs
         Keyword arguments for ``callback`` when performing the sanity check.
 
@@ -828,7 +823,7 @@ def _create_callbacks(
         set(_unique_order_preserving(lineages)),
         set(_unique_order_preserving(obs)),
     )
-    callbacks = defaultdict(dict)
+    callbacks = collections.defaultdict(dict)
 
     if isinstance(callback, dict):
         # can be specified as None
@@ -875,22 +870,21 @@ def composition(
     fontsize: Optional[str] = None,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[float] = None,
-    save: Optional[Union[str, Path]] = None,
+    save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,
 ) -> None:
-    """
-    Plot a pie chart for categorical annotation.
+    """Plot a pie chart for categorical annotation.
 
     Parameters
     ----------
     %(adata)s
     key
-        Key in :attr:`anndata.AnnData.obs` containing categorical observation.
+        Key in :attr:`~anndata.AnnData.obs` containing categorical observation.
     fontsize
         Font size for the pie chart labels.
     %(plotting)s
     kwargs
-        Keyword arguments for :func:`matplotlib.pyplot.pie`.
+        Keyword arguments for :meth:`~matplotlib.axes.Axes.pie`.
 
     Returns
     -------
@@ -899,9 +893,7 @@ def composition(
     if key not in adata.obs:
         raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
     if not is_categorical_dtype(adata.obs[key]):
-        raise TypeError(
-            f"Expected `adata.obs[{key!r}]` is not `categorical`, " f"found `{infer_dtype(adata.obs[key])}`."
-        )
+        raise TypeError(f"Expected `adata.obs[{key!r}]` is not `categorical`, found `{infer_dtype(adata.obs[key])}`.")
 
     colors = adata.uns.get(f"{key}_colors", None)
     x = adata.obs[key].value_counts()
@@ -924,8 +916,7 @@ def composition(
 
 # modified from: https://github.com/CarlEkerot/held-karp
 def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
-    """
-    Held-Karp algorithm solves the Traveling Salesman Problem.
+    """Held-Karp algorithm solves the Traveling Salesman Problem.
 
     This algorithm uses dynamic programming with memoization.
 
@@ -952,7 +943,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
     # Iterate subsets of increasing length and store intermediate results
     # in classic dynamic programming manner
     for subset_size in range(2, n):
-        for subset in combinations(range(1, n), subset_size):
+        for subset in itertools.combinations(range(1, n), subset_size):
             # Set bits for all nodes in this subset
             bits = 0
             for bit in subset:
@@ -1036,8 +1027,8 @@ def _get_sorted_colors(
     res = []
     for ck in cluster_key:
         try:
-            colors, mapper = _get_categorical_colors(adata, ck)
-            res.append(np.array([mcolors.to_hex(mapper[v]) for v in adata.obs[ck].values[order]]))
+            cols, mapper = _get_categorical_colors(adata, ck)
+            res.append(np.array([colors.to_hex(mapper[v]) for v in adata.obs[ck].values[order]]))
         except TypeError:
             if not is_numeric_dtype(adata.obs[ck]):
                 raise TypeError(
