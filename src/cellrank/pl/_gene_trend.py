@@ -1,5 +1,5 @@
-from pathlib import Path
-from types import MappingProxyType
+import pathlib
+import types
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -76,16 +76,15 @@ def gene_trends(
     show_progress_bar: bool = True,
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
+    save: Optional[Union[str, pathlib.Path]] = None,
     return_figure: bool = False,
-    plot_kwargs: Mapping[str, Any] = MappingProxyType({}),
+    plot_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
     **kwargs: Any,
 ) -> Optional[_return_model_type]:
-    """
-    Plot gene expression trends along lineages.
+    """Plot gene expression trends along lineages.
 
-    Each lineage is defined via it's lineage weights. This function accepts any model based off
-    :class:`cellrank.models.BaseModel` to fit gene expression, where we take the lineage weights
+    Each lineage is defined via its lineage weights. This function accepts any model based off
+    :class:`~cellrank.models.BaseModel` to fit gene expression, where we take the lineage weights
     into account in the loss function.
 
     Parameters
@@ -94,14 +93,13 @@ def gene_trends(
     %(model)s
     %(genes)s
     time_key
-        Key in :attr:`anndata.AnnData.obs` where the pseudotime is stored.
+        Key in :attr:`~anndata.AnnData.obs` where the pseudotime is stored.
     lineages
-        Names of the lineages to plot. If `None`, plot all lineages.
+        Names of the lineages to plot. If :obj:`None`, plot all lineages.
     %(backward)s
     data_key
-        Key in :attr:`anndata.AnnData.layers` or `'X'` for :attr:`anndata.AnnData.X` where the data is stored.
+        Key in :attr:`~anndata.AnnData.layers` or ``'X'`` for :attr:`~anndata.AnnData.X` where the data is stored.
     %(time_range)s
-
         This can also be specified on per-lineage basis.
     %(gene_symbols)s
     transpose
@@ -110,23 +108,23 @@ def gene_trends(
         If ``same_plot = False``, show ``lineages`` in rows and ``genes`` in columns.
     %(model_callback)s
     conf_int
-        Whether to compute and show confidence interval. If the ``model`` is :class:`cellrank.models.GAMR`,
-        it can also specify the confidence level, the default is `0.95`.
+        Whether to compute and show confidence interval. If the ``model`` is :class:`~cellrank.models.GAMR`,
+        it can also specify the confidence level, the default is :math:`0.95`.
     same_plot
         Whether to plot all lineages for each gene in the same plot.
     hide_cells
-        If `True`, hide all cells.
+        If :obj:`True`, hide all cells.
     perc
-        Percentile for colors. Valid values are in interval `[0, 100]`.
+        Percentile for colors. Valid values are in :math:`[0, 100]`.
         This can improve visualization. Can be specified individually for each lineage.
     lineage_cmap
-        Categorical colormap to use when coloring in the lineages. If `None` and ``same_plot``,
-        use the corresponding colors in :attr:`anndata.AnnData.uns`, otherwise use `'black'`.
+        Categorical colormap to use when coloring in the lineages. If :obj:`None` and ``same_plot = True``,
+        use the corresponding colors in :attr:`~anndata.AnnData.uns`, otherwise use ``'black'``.
     fate_prob_cmap
         Continuous colormap to use when visualizing the fate probabilities for each lineage.
         Only used when ``same_plot = False``.
     cell_color
-        Key in :attr:`anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names` used for coloring the cells.
+        Key in :attr:`~anndata.AnnData.obs` or :attr:`~anndata.AnnData.var_names` used for coloring the cells.
     cell_alpha
         Alpha channel for cells.
     lineage_alpha
@@ -141,13 +139,13 @@ def gene_trends(
     margins
         Margins around the plot.
     sharex
-        Whether to share x-axis. Valid options are `'row'`, `'col'` or `'none'`.
+        Whether to share x-axis. Valid options are ``'row'``, ``'col'`` or ``'none'``.
     sharey
-        Whether to share y-axis. Valid options are `'row'`, `'col'` or `'none'`.
+        Whether to share y-axis. Valid options are ``'row'`, ``'col'`` or ``'none'``.
     gene_as_title
         Whether to show gene names as titles instead on y-axis.
     legend_loc
-        Location of the legend displaying lineages. Only used when `same_plot = True`.
+        Location of the legend displaying lineages. Only used when ``same_plot = True``.
     obs_legend_loc
         Location of the legend when ``cell_color`` corresponds to a categorical variable.
     ncols
@@ -160,9 +158,9 @@ def gene_trends(
     %(parallel)s
     %(plotting)s
     plot_kwargs
-        Keyword arguments for :meth:`cellrank.models.BaseModel.plot`.
+        Keyword arguments for :meth:`~cellrank.models.BaseModel.plot`.
     kwargs
-        Keyword arguments for :meth:`cellrank.models.BaseModel.prepare`.
+        Keyword arguments for :meth:`~cellrank.models.BaseModel.prepare`.
 
     Returns
     -------

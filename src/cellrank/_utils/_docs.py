@@ -105,7 +105,7 @@ callback
     Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
 _genes = """\
 genes
-    Genes in :attr:`anndata.AnnData.var_names` or in :attr:`anndata.AnnData.raw.var_names`, if ``use_raw = True``."""
+    Genes in :attr:`~anndata.AnnData.var_names`."""
 _softmax_scale = """\
 softmax_scale
     Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
@@ -163,7 +163,7 @@ Can be specified as:
 """
 _gene_symbols = """\
 gene_symbols
-    Key in :attr:`anndata.AnnData.var` to use instead of :attr:`anndata.AnnData.var_names`."""
+    Key in :attr:`~anndata.AnnData.var` to use instead of :attr:`~anndata.AnnData.var_names`."""
 _absorption_utils = """\
 solver
     Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
