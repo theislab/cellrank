@@ -1,21 +1,20 @@
+import collections
+import enum
 import math
-from collections import OrderedDict as odict
-from enum import auto
-from pathlib import Path
-from types import MappingProxyType
+import pathlib
+import types
 from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 from scvelo.plotting import paga
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
+import scipy.sparse as sp
 
 import matplotlib as mpl
-import matplotlib.colors
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from seaborn import clustermap, heatmap
+import seaborn as sns
+from matplotlib import cm, colors
 
 from anndata import AnnData
 from scanpy.plotting import violin
@@ -37,12 +36,12 @@ __all__ = ["aggregate_fate_probabilities"]
 
 
 class AggregationMode(ModeEnum):
-    BAR = auto()
-    PAGA = auto()
-    PAGA_PIE = auto()
-    VIOLIN = auto()
-    HEATMAP = auto()
-    CLUSTERMAP = auto()
+    BAR = enum.auto()
+    PAGA = enum.auto()
+    PAGA_PIE = enum.auto()
+    VIOLIN = enum.auto()
+    HEATMAP = enum.auto()
+    CLUSTERMAP = enum.auto()
 
 
 @d.dedent
@@ -60,14 +59,13 @@ def aggregate_fate_probabilities(
     sharey: bool = False,
     fmt: str = "0.2f",
     xrot: float = 90,
-    legend_kwargs: Mapping[str, Any] = MappingProxyType({"loc": "best"}),
+    legend_kwargs: Mapping[str, Any] = types.MappingProxyType({"loc": "best"}),
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
-    save: Optional[Union[str, Path]] = None,
+    save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,
 ) -> None:
-    """
-    Plot aggregate lineage probabilities at a cluster level.
+    """Plot aggregate lineage probabilities at a cluster level.
 
     This can be used to investigate how likely a certain cluster is to go to the %(terminal)s states,
     or in turn to have descended from the %(initial)s states.
@@ -79,21 +77,21 @@ def aggregate_fate_probabilities(
     mode
         Type of plot to show. Valid options are:
 
-            - `{m.BAR!r}` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
-            - `{m.PAGA!r}` - scanpy's PAGA, one per %(initial_or_terminal)s state, colored in by fate.
-            - `{m.PAGA_PIE!r}` - scanpy's PAGA with pie charts indicating aggregated fates.
-            - `{m.VIOLIN!r}` - violin plots, one per %(initial_or_terminal)s state.
-            - `{m.HEATMAP!r}` - a heatmap, showing average fates per cluster.
-            - `{m.CLUSTERMAP!r}` - same as a heatmap, but with a dendrogram.
+        - ``{m.BAR!r}`` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
+        - ``{m.PAGA!r}`` - :func:`~scanpy.plotting.paga`, one per %(initial_or_terminal)s state, colored in by fate.
+        - ``{m.PAGA_PIE!r}`` - :func:`~scanpy.plotting.paga` with pie charts indicating aggregated fates.
+        - ``{m.VIOLIN!r}`` - violin plots, one per %(initial_or_terminal)s state.
+        - ``{m.HEATMAP!r}`` - a heatmap, showing average fates per cluster.
+        - ``{m.CLUSTERMAP!r}`` - same as a heatmap, but with a dendrogram.
     %(backward)s
     lineages
-        Lineages for which to visualize fate probabilities. If `None`, use all lineages.
+        Lineages for which to visualize the fate probabilities. If :obj:`None`, use all lineages.
     cluster_key
-        Key in :attr:`anndata.AnnData.obs` containing the clusters.
+        Key in :attr:`~anndata.AnnData.obs` containing the clusters.
     clusters
-        Clusters to visualize. If `None`, all clusters will be plotted.
+        Clusters to visualize. If :obj:`None`, all clusters will be plotted.
     basis
-        Basis for scatterplot to use when ``mode = {m.PAGA_PIE!r}``. If `None`, don't show the scatterplot.
+        Basis for scatterplot to use when ``mode = {m.PAGA_PIE!r}``. If :obj:`None`, don't show the scatterplot.
     cbar
         Whether to show colorbar when ``mode = {m.PAGA_PIE!r}``.
     ncols
@@ -107,13 +105,13 @@ def aggregate_fate_probabilities(
     figsize
         Size of the figure.
     legend_kwargs
-        Keyword arguments for :func:`matplotlib.axes.Axes.legend`, such as `'loc'` for legend position.
+        Keyword arguments for :func:`~matplotlib.axes.Axes.legend`.
         For ``mode = {m.PAGA_PIE!r}`` and ``basis = '...'``, this controls the placement of the
         fate probabilities legend.
     %(plotting)s
     kwargs
-        Keyword arguments for :func:`scvelo.pl.paga`, :func:`scanpy.pl.violin` or :func:`matplotlib.pyplot.bar`,
-        depending on the ``mode``.
+        Keyword arguments for :func:`~scvelo.plotting.paga`, :func:`~scanpy.pl.violin` or
+        :func:`~matplotlib.pyplot.bar`, depending on the ``mode``.
 
     Returns
     -------
@@ -187,18 +185,18 @@ def aggregate_fate_probabilities(
             kwargs["color"] = cluster_key
 
         for i, (ax, lineage_name) in enumerate(zip(axes, probs.names)):
-            colors = [v[0][i] for v in d.values()]
+            cols = [v[0][i] for v in d.values()]
             kwargs["ax"] = ax
-            kwargs["colors"] = tuple(colors)
+            kwargs["colors"] = tuple(cols)
             kwargs["title"] = f"{direction} {lineage_name}"
 
-            vmin = np.min(colors + [vmin])
-            vmax = np.max(colors + [vmax])
+            vmin = np.min(cols + [vmin])
+            vmax = np.max(cols + [vmax])
 
             paga(adata, **kwargs)
 
         if cbar:
-            norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
+            norm = colors.Normalize(vmin=vmin, vmax=vmax)
             cax, _ = mpl.colorbar.make_axes(ax, aspect=60)
             _ = mpl.colorbar.ColorbarBase(
                 cax,
@@ -215,7 +213,7 @@ def aggregate_fate_probabilities(
 
     @plot.register(AggregationMode.PAGA_PIE)
     def _():
-        colors = {i: odict(zip(probs.colors, mean)) for i, (mean, _) in enumerate(d.values())}
+        colors = {i: collections.OrderedDict(zip(probs.colors, mean)) for i, (mean, _) in enumerate(d.values())}
 
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
         fig.tight_layout()
@@ -330,7 +328,7 @@ def aggregate_fate_probabilities(
         kwargs["rotation"] = xrot
 
         data = np.ravel(probs.X.T)[..., None]
-        tmp = AnnData(csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
+        tmp = AnnData(sp.csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
         tmp.obs["fate probability"] = data
         tmp.obs[term_states] = (
             pd.Series(np.concatenate([[f"{direction.lower()} {n}"] * adata.n_obs for n in probs.names]))
@@ -366,7 +364,7 @@ def aggregate_fate_probabilities(
             kwargs["cbar_pos"] = (0, 0.9, 0.025, 0.15) if cbar else None
             max_size = float(max(data.shape))
 
-            g = clustermap(
+            g = sns.clustermap(
                 data=data,
                 annot=True,
                 vmin=vmin,
@@ -389,7 +387,7 @@ def aggregate_fate_probabilities(
             g = g.ax_heatmap
         else:
             fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-            g = heatmap(
+            g = sns.heatmap(
                 data=data,
                 vmin=vmin,
                 vmax=vmax,
@@ -455,7 +453,7 @@ def aggregate_fate_probabilities(
         adata = adata[mask].copy()
         probs = probs[mask]
 
-    d = odict()
+    d = collections.OrderedDict()
     for name in clusters:
         data = probs.X if is_all else probs.X[(adata.obs[cluster_key] == name).to_numpy()]
         mean = np.nanmean(data, axis=0)
