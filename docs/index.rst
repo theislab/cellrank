@@ -58,7 +58,7 @@ We actively encourage any contribution! To get started, please check out the :do
     :alt: PyPI
 
 .. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/cellrank
-    :target: https://bioconda.github.io/recipes/cellrank/README.html
+    :target: https://anaconda.org/bioconda/cellrank
     :alt: Bioconda
 
 .. |Downloads| image:: https://pepy.tech/badge/cellrank

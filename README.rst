@@ -63,10 +63,6 @@ Install CellRank by running::
 or via PyPI::
 
     pip install cellrank
-    # or with extra libraries, useful for large datasets
-    pip install 'cellrank[krylov]'
-    # or with external modules, see External API
-    pip install 'cellrank[external]'
 
 Why is it called "CellRank"?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -96,7 +92,7 @@ CellRank was developed in collaboration between the `Theislab`_ and the `Peerlab
     :alt: PyPI
 
 .. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/cellrank
-    :target: https://bioconda.github.io/recipes/cellrank/README.html
+    :target: https://anaconda.org/bioconda/cellrank
     :alt: Bioconda
 
 .. |Downloads| image:: https://pepy.tech/badge/cellrank

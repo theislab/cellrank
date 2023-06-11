@@ -111,7 +111,15 @@ spelling_filters = [
     "enchant.tokenize.MentionFilter",
 ]
 
-linkcheck_ignore = [r"https://twitter\.com/.*", r"https://mobile\.twitter\.com/.*"]
+linkcheck_ignore = [
+    # 403 Client Error: Forbidden for url
+    r"https://doi.org/10.1021/acs.jctc.8b00079",
+    r"https://doi.org/10.1073/pnas.0500334102",
+    r"https://doi.org/10.1063/1.5064530",
+    r"https://doi.org/10.1126/science.aar3131",
+    r"https://doi.org/10.1126/science.aax0249",
+    r"https://doi.org/10.1242/dev.173849",
+]
 
 exclude_patterns = [
     "_build",
