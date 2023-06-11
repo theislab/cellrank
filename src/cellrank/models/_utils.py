@@ -15,6 +15,8 @@ from cellrank._utils._enum import ModeEnum
 from cellrank._utils._parallelize import parallelize
 from cellrank._utils._utils import valuedispatch
 
+__all__ = ["_get_offset"]
+
 _OFFSET_KEY = "cellrank_offset"
 
 
