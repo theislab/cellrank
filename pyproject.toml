@@ -232,7 +232,6 @@ ignore-path = "docs/release/**.rst"
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-min_version = 4.0
 requires = tox-conda
 env_list = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
 skip_missing_interpreters = true
