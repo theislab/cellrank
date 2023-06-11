@@ -46,8 +46,8 @@ _eigen = """\
 which
     How to sort the eigenvalues. Valid option are:
 
-        - `'LR'` - the largest real part.
-        - `'LM'` - the largest magnitude.
+    - ``'LR'`` - the largest real part.
+    - ``'LM'`` - the largest magnitude.
 alpha
     Used to compute the *eigengap*. ``alpha`` is the weight given to the deviation of an eigenvalue from one."""
 _n_cells = """\
@@ -72,29 +72,29 @@ _time_range = """\
 time_range
     Specify start and end times:
 
-        - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
-          in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
-        - If a :class:`float`, it specifies the maximum pseudotime."""
+    - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
+      in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
+    - If a :class:`float`, it specifies the maximum pseudotime."""
 
 _velocity_mode = """\
 mode
     How to compute transition probabilities. Valid options are:
 
-        - `{m.DETERMINISTIC!r}` - deterministic computation that doesn't propagate uncertainty.
-        - `{m.MONTE_CARLO!r}` - Monte Carlo average of randomly sampled velocity vectors.
-        - `{m.STOCHASTIC!r}` - second order approximation, only available when :mod:`jax` is installed."""
+    - ``{m.DETERMINISTIC!r}`` - deterministic computation that doesn't propagate uncertainty.
+    - ``{m.MONTE_CARLO!r}`` - Monte Carlo average of randomly sampled velocity vectors.
+    - ``{m.STOCHASTIC!r}`` - second order approximation, only available when :mod:`jax` is installed."""
 _velocity_backward_mode = """\
 backward_mode
     Only matters if initialized as :attr:`backward` ``= True``.  Valid options are:
 
-        - `{b.TRANSPOSE!r}` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
-        - `{b.NEGATE!r}` - negate the velocity vector."""
+    - ``{b.TRANSPOSE!r}`` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
+    - ``{b.NEGATE!r}`` - negate the velocity vector."""
 _velocity_backward_mode_high_lvl = """\
 backward_mode
     How to compute the backward transitions. Valid options are:
 
-        - `{b.TRANSPOSE!r}` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
-        - `{b.NEGATE!r}` - negate the velocity vector."""
+    - ``{b.TRANSPOSE!r}`` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
+    - ``{b.NEGATE!r}`` - negate the velocity vector."""
 _copy = """Return a copy of self."""
 _initial = "initial"
 _terminal = "terminal"
@@ -114,13 +114,13 @@ _time_mode = """\
 mode
     Valid options are:
 
-        - `'embedding'` - plot the embedding while coloring in continuous or categorical observations.
-        - `'time'` - plot the pseudotime on x-axis and the probabilities/memberships on y-axis."""
+    - ``'embedding'`` - plot the embedding while coloring in continuous or categorical observations.
+    - ``'time'`` - plot the pseudotime on x-axis and the probabilities/memberships on y-axis."""
 _write_to_adata = """\
 Updates the :attr:`adata` with the following fields:
 
-        - ``.obsp['{{key}}']`` - the transition matrix.
-        - ``.uns['{{key}}_params']`` - parameters used for the calculation."""
+    - ``.obsp['{{key}}']`` - the transition matrix.
+    - ``.uns['{{key}}_params']`` - parameters used for the calculation."""
 _en_cutoff_p_thresh = """\
 en_cutoff
     If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
@@ -138,9 +138,9 @@ _velocity_scheme = """\
 scheme
     Similarity measure between cells as described in :cite:`li:20`. Can be one of the following:
 
-        - `{s.CORRELATION!r}` - :class:`cellrank.kernels.utils.Correlation`.
-        - `{s.COSINE!r}` - :class:`cellrank.kernels.utils.Cosine`.
-        - `{s.DOT_PRODUCT!r}` - :class:`cellrank.kernels.utils.DotProduct`.
+    - ``{s.CORRELATION!r}`` - :class:`cellrank.kernels.utils.Correlation`.
+    - ``{s.COSINE!r}`` - :class:`cellrank.kernels.utils.Cosine`.
+    - ``{s.DOT_PRODUCT!r}`` - :class:`cellrank.kernels.utils.DotProduct`.
 
     Alternatively, any function can be passed as long as it follows the signature of
     :meth:`cellrank.kernels.utils.SimilarityABC.__call__`."""
@@ -156,10 +156,10 @@ nu
 _rw_ixs = """\
 Can be specified as:
 
-        - :class:`dict` - dictionary with 1 key in :attr:`anndata.AnnData.obs` with values corresponding
-          to either 1 or more clusters (if the column is categorical) or a :class:`tuple` specifying
-          `[min, max]` interval from which to select the indices.
-        - :class:`typing.Sequence` - sequence of cell ids in :attr:`anndata.AnnData.obs_names`.
+    - :class:`dict` - dictionary with 1 key in :attr:`anndata.AnnData.obs` with values corresponding
+      to either 1 or more clusters (if the column is categorical) or a :class:`tuple` specifying
+      `[min, max]` interval from which to select the indices.
+    - :class:`typing.Sequence` - sequence of cell ids in :attr:`anndata.AnnData.obs_names`.
 """
 _gene_symbols = """\
 gene_symbols
@@ -173,7 +173,7 @@ solver
     :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
 use_petsc
     Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
-    If no installation is found, defaults to :func:`scipy.sparse.linalg.gmres`.
+    If no installation is found, defaults to :func:`~scipy.sparse.linalg.gmres`.
 n_jobs
     Number of parallel jobs to use when using an iterative solver.
 backend

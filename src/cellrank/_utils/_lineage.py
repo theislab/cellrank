@@ -231,7 +231,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     Parameters
     ----------
     input_array
-        Input array containing lineage probabilities, each lineage being stored in a column.
+        Input array containing lineage probabilities stored in columns.
     names
         Lineage names.
     colors
@@ -520,7 +520,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
               to a set of user-defined ``early_cells``.
             - ``'entropy'`` - as in :cite:`setty:19`, computes entropy over a cell's fate probabilities.
         early_cells
-            Cell IDs or a mask marking early cells. If `None`, use all cells.
+            Cell IDs or a mask marking early cells. If :obj:`None`, use all cells.
             Only used when ``method = 'kl_divergence'``.
 
         Returns
@@ -574,7 +574,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         title
             Title of the figure.
         legend_loc
-            Location of the legend. If `None`, it is not shown.
+            Location of the legend. If :obj:`None`, it is not shown.
         legend_kwargs
             Keyword arguments for :meth:`~matplotlib.axes.Axes.legend`.
         %(plotting)s

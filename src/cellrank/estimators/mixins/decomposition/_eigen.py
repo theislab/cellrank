@@ -1,10 +1,9 @@
-from pathlib import Path
-from types import MappingProxyType
+import pathlib
+import types
 from typing import Any, Dict, Literal, Mapping, Optional, Tuple, Union
 
 import numpy as np
-from scipy.sparse import issparse, spmatrix
-from scipy.sparse.linalg import eigs
+import scipy.sparse as sp
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter, MultipleLocator
@@ -24,11 +23,11 @@ EPS = np.finfo(np.float64).eps
 
 class EigenProtocol(BaseProtocol):
     @property
-    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
         ...
 
     def _write_eigendecomposition(
-        self, decomp: Dict[str, Any], params: Mapping[str, Any] = MappingProxyType({})
+        self, decomp: Dict[str, Any], params: Mapping[str, Any] = types.MappingProxyType({})
     ) -> str:
         ...
 
@@ -38,13 +37,12 @@ class EigenMixin:
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-
         self._eigendecomposition = None
 
     @property
     @d.get_summary(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """Eigendecomposition of :attr:`transition_matrix`.
+        """Eigendecomposition of the :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
         compute both left and right eigenvectors.
@@ -53,12 +51,12 @@ class EigenMixin:
         -------
         A dictionary with the following keys:
 
-            - `'D'` - the eigenvalues.
-            - `'eigengap'` - the eigengap.
-            - `'params'` - parameters used for the computation.
-            - `'V_l'` - left eigenvectors (optional).
-            - `'V_r'` - right eigenvectors (optional).
-            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix`, if present.
+        - ``'D'`` - the eigenvalues.
+        - ``'eigengap'`` - the eigengap.
+        - ``'params'`` - parameters used for the computation.
+        - ``'V_l'`` - left eigenvectors (optional).
+        - ``'V_r'`` - right eigenvectors (optional).
+        - ``'stationary_dist'`` - stationary distribution of the :attr:`transition_matrix`, if present.
         """
         return self._eigendecomposition
 
@@ -71,8 +69,7 @@ class EigenMixin:
         only_evals: bool = False,
         ncv: Optional[int] = None,
     ) -> "EigenMixin":
-        """
-        Compute eigendecomposition of :attr:`transition_matrix`.
+        """Compute eigendecomposition of the :attr:`transition_matrix`.
 
         Uses a sparse implementation, if possible, and only computes the top :math:`k` eigenvectors
         to speed up the computation. Computes both left and right eigenvectors.
@@ -89,9 +86,9 @@ class EigenMixin:
 
         Returns
         -------
-        Self and updates the following field:
+        Self and updates the following fields:
 
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+        - :attr:`eigendecomposition` - %(eigen.summary)s
         """
 
         def get_top_k_evals() -> np.ndarray:
@@ -99,9 +96,9 @@ class EigenMixin:
 
         start = logg.info("Computing eigendecomposition of the transition matrix")
 
-        if issparse(self.transition_matrix):
+        if sp.issparse(self.transition_matrix):
             logg.debug(f"Computing top `{k}` eigenvalues of a sparse matrix")
-            D, V_l = eigs(self.transition_matrix.T, k=k, which=which, ncv=ncv)
+            D, V_l = sp.linalg.eigs(self.transition_matrix.T, k=k, which=which, ncv=ncv)
             if only_evals:
                 self._write_eigendecomposition(
                     {
@@ -112,7 +109,7 @@ class EigenMixin:
                     time=start,
                 )
                 return
-            _, V_r = eigs(self.transition_matrix, k=k, which=which, ncv=ncv)
+            _, V_r = sp.linalg.eigs(self.transition_matrix, k=k, which=which, ncv=ncv)
         else:
             logg.warning("This transition matrix is not sparse, computing full eigendecomposition")
             D, V_l = np.linalg.eig(self.transition_matrix.T)
@@ -162,19 +159,18 @@ class EigenMixin:
         marker: str = ".",
         figsize: Optional[Tuple[float, float]] = (5, 5),
         dpi: int = 100,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
     ) -> None:
-        """
-        Plot the top eigenvalues in real or complex plane.
+        """Plot the top eigenvalues in a real or a complex plane.
 
         Parameters
         ----------
         n
-            Number of eigenvalues to show. If `None`, show all that have been computed.
+            Number of eigenvalues to show. If :obj:`None`, show all that have been computed.
         real_only
             Whether to plot only the real part of the spectrum.
-            If `None`, plot real spectrum if no complex eigenvalues are present.
+            If :obj:`None`, plot real spectrum if no complex eigenvalues are present.
         show_eigengap
             When ``real_only = True``, this determines whether to show the inferred eigengap as a dotted line.
         show_all_xticks
@@ -184,10 +180,10 @@ class EigenMixin:
         title
             Title of the figure.
         marker
-            Marker symbol used, valid options can be found in :mod:`matplotlib.markers`.
+            Marker symbol used, valid options can be found in :mod:`~matplotlib.markers`.
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`matplotlib.pyplot.scatter`.
+            Keyword arguments for :func:`~matplotlib.axes.Axes.scatter`.
 
         Returns
         -------
@@ -353,7 +349,7 @@ class EigenMixin:
     def _write_eigendecomposition(
         self: EigenProtocol,
         decomp: Dict[str, Any],
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         key = Key.uns.eigen(self.backward)
         self._set("_eigendecomposition", self.adata.uns, key=key, value=decomp)

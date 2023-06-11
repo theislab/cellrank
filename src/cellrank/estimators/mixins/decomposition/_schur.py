@@ -1,18 +1,18 @@
 import contextlib
 import io
-from pathlib import Path
-from types import MappingProxyType
+import pathlib
+import types
 from typing import Any, Dict, Literal, Mapping, Optional, Tuple, Union
 
 from pygpcca import GPCCA
 from pygpcca._sorted_schur import _check_conj_split
 
 import numpy as np
-from scipy.sparse import issparse, spmatrix
+import scipy.sparse as sp
 
 import matplotlib.pyplot as plt
+import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from seaborn import heatmap
 
 from anndata import AnnData
 
@@ -28,7 +28,14 @@ EPS = np.finfo(np.float64).eps
 
 
 class SchurProtocol(BaseProtocol):
-    def transition_matrix(self) -> Union[np.ndarray, spmatrix]:
+    _gpcca: Optional[GPCCA] = None
+    _invalid_n_states: Optional[np.ndarray] = None
+
+    schur_vectors: Optional[np.ndarray] = None
+    _schur_matrix: Optional[np.ndarray] = None
+    _eigendecomposition: Optional[Dict[str, Any]] = None
+
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
         ...
 
     def _write_schur_decomposition(
@@ -36,7 +43,7 @@ class SchurProtocol(BaseProtocol):
         decomp: Dict[str, Any],
         vectors: np.ndarray,
         matrix: np.ndarray,
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         ...
 
@@ -46,7 +53,6 @@ class SchurMixin:
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-
         self._gpcca: Optional[GPCCA] = None
         self._invalid_n_states: Optional[np.ndarray] = None
 
@@ -82,7 +88,7 @@ class SchurMixin:
     @property
     @d.get_summary(base="eigen")
     def eigendecomposition(self) -> Optional[Dict[str, Any]]:
-        """Eigendecomposition of :attr:`transition_matrix`.
+        """Eigendecomposition of the :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex.
         We compute both left and right eigenvectors.
@@ -91,12 +97,12 @@ class SchurMixin:
         -------
         A dictionary with the following keys:
 
-            - `'D'` - the eigenvalues.
-            - `'eigengap'` - the eigengap.
-            - `'params'` - parameters used for the computation.
-            - `'V_l'` - left eigenvectors (optional).
-            - `'V_r'` - right eigenvectors (optional).
-            - `'stationary_dist'` - stationary distribution of :attr:`transition_matrix`, if present.
+        - ``'D'`` - the eigenvalues.
+        - ``'eigengap'`` - the eigengap.
+        - ``'params'`` - parameters used for the computation.
+        - ``'V_l'`` - left eigenvectors (optional).
+        - ``'V_r'`` - right eigenvectors (optional).
+        - ``'stationary_dist'`` - stationary distribution of the :attr:`transition_matrix`, if present.
         """
         return self._eigendecomposition
 
@@ -110,23 +116,22 @@ class SchurMixin:
         alpha: float = 1.0,
         verbose: Optional[bool] = None,
     ) -> "SchurMixin":
-        """
-        Compute Schur decomposition.
+        """Compute the Schur decomposition.
 
         Parameters
         ----------
         n_components
             Number of Schur vectors to compute.
         initial_distribution
-            Input distribution over all cells. If `None`, uniform distribution is used.
+            Input distribution over all cells. If :obj:`None`, uniform distribution is used.
         method
             Method for calculating the Schur vectors. Valid options are:
 
-                - `'krylov'` - an iterative procedure that computes a partial, sorted Schur decomposition for
-                  large, sparse matrices.
-                - `'brandts'` - full sorted Schur decomposition of a dense matrix.
+            - ``'krylov'`` - an iterative procedure that computes a partial, sorted Schur decomposition for
+              large, sparse matrices.
+            - ``'brandts'`` - full sorted Schur decomposition of a dense matrix.
 
-            For benefits of each method, see :class:`pygpcca.GPCCA`.
+            For benefits of each method, see :class:`~pygpcca.GPCCA`.
         %(eigen)s
         verbose
             Whether to print extra information when computing the Schur decomposition.
@@ -136,9 +141,9 @@ class SchurMixin:
         -------
         Self and just updates the following fields:
 
-            - :attr:`schur_vectors` - %(schur_vectors.summary)s
-            - :attr:`schur_matrix` -  %(schur_matrix.summary)s
-            - :attr:`eigendecomposition` - %(eigen.summary)s
+        - :attr:`schur_vectors` - %(schur_vectors.summary)s
+        - :attr:`schur_matrix` -  %(schur_matrix.summary)s
+        - :attr:`eigendecomposition` - %(eigen.summary)s
         """
         from cellrank._utils._linear_solver import _is_petsc_slepc_available
 
@@ -158,7 +163,7 @@ class SchurMixin:
             verbose = method == "brandts"
 
         tmat = self.transition_matrix
-        if method == "brandts" and issparse(self.transition_matrix):
+        if method == "brandts" and sp.issparse(self.transition_matrix):
             logg.warning("For `method='brandts'`, dense matrix is required. Densifying")
             tmat = tmat.A
 
@@ -207,11 +212,10 @@ class SchurMixin:
         cmap: str = "viridis",
         figsize: Optional[Tuple[float, float]] = None,
         dpi: Optional[float] = 80,
-        save: Optional[Union[str, Path]] = None,
+        save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
-    ):
-        """
-        Plot the Schur matrix.
+    ) -> None:
+        """Plot the Schur matrix.
 
         Parameters
         ----------
@@ -221,7 +225,7 @@ class SchurMixin:
             Colormap to use.
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`seaborn.heatmap`.
+            Keyword arguments for :func:`~seaborn.heatmap`.
 
         Returns
         -------
@@ -246,7 +250,7 @@ class SchurMixin:
         )
 
         kwargs["fmt"] = kwargs.get("fmt", "0.2f")
-        heatmap(
+        sns.heatmap(
             data=schur_matrix,
             cmap=cmap,
             square=True,
@@ -273,7 +277,7 @@ class SchurMixin:
         decomp: Dict[str, Any],
         vectors: np.ndarray,
         matrix: np.ndarray,
-        params: Mapping[str, Any] = MappingProxyType({}),
+        params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         key = Key.uns.schur_matrix(self.backward)
         self._set("_schur_matrix", self.adata.uns, key=key, value=matrix)

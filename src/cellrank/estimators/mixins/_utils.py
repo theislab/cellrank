@@ -77,14 +77,14 @@ class BaseProtocol(Protocol):  # noqa: D101
 
     def _get(
         self,
-        attr: str,
+        *,
         obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
-        where: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
+        shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
-    ) -> None:
+    ) -> Any:
         ...
 
     def _create_params(
