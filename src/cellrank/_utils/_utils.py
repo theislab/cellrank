@@ -1,10 +1,10 @@
+import contextlib
+import functools
+import inspect
+import itertools
 import os
+import types
 import warnings
-from contextlib import contextmanager, suppress
-from functools import update_wrapper, wraps
-from inspect import signature
-from itertools import combinations, product, tee
-from types import MappingProxyType
 from typing import (
     Any,
     Callable,
@@ -24,18 +24,13 @@ import wrapt
 
 import numpy as np
 import pandas as pd
-from numpy.linalg import norm as d_norm
-from pandas import Series
+import scipy.sparse as sp
+import scipy.stats as st
 from pandas.api.types import infer_dtype, is_bool_dtype, is_categorical_dtype
-from scipy.sparse import csr_matrix, diags
-from scipy.sparse import eye as speye
-from scipy.sparse import issparse, isspmatrix_csr, spmatrix
-from scipy.sparse.linalg import norm as sparse_norm
-from scipy.stats import norm
 from sklearn.cluster import KMeans
 from statsmodels.stats.multitest import multipletests
 
-import matplotlib.colors as mcolors
+from matplotlib import colors
 
 import scanpy as sc
 from anndata import AnnData
@@ -59,14 +54,13 @@ DiGraph = TypeVar("DiGraph")
 EPS = np.finfo(np.float64).eps
 
 
-class TestMethod(ModeEnum):  # noqa
+class TestMethod(ModeEnum):
     FISHER = "fisher"
     PERM_TEST = "perm_test"
 
 
 class RandomKeys:
-    """
-    Create random keys inside an :class:`anndata.AnnData` object.
+    """Create random keys inside an :class:`~anndata.AnnData` object.
 
     Parameters
     ----------
@@ -106,17 +100,16 @@ class RandomKeys:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for key in self._keys:
-            with suppress(KeyError):
+            with contextlib.suppress(KeyError):
                 getattr(self._adata, self._where).drop(key, axis="columns", inplace=True)
 
             if self._where == "obs":
-                with suppress(KeyError):
+                with contextlib.suppress(KeyError):
                     del self._adata.uns[f"{key}_colors"]
 
 
-def _filter_kwargs(_fn: Callable, **kwargs) -> dict:
-    """
-    Filter keyword arguments.
+def _filter_kwargs(_fn: Callable, **kwargs: Any) -> dict:
+    """Filter keyword arguments.
 
     Parameters
     ----------
@@ -130,20 +123,19 @@ def _filter_kwargs(_fn: Callable, **kwargs) -> dict:
     dict
         Filtered keyword arguments for the given function.
     """
-    sig = signature(_fn).parameters
+    sig = inspect.signature(_fn).parameters
     return {k: v for k, v in kwargs.items() if k in sig}
 
 
 def _pairwise(iterable: Iterable) -> zip:
     """Return pairs of elements from an iterable."""
-    a, b = tee(iterable)
+    a, b = itertools.tee(iterable)
     next(b, None)
     return zip(a, b)
 
 
 def _min_max_scale(x: np.ndarray) -> np.ndarray:
-    """
-    Scale a 1D array to 0-1 range.
+    """Scale a 1D array to 0-1 range.
 
     Parameters
     ----------
@@ -152,7 +144,7 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-        The scaled array.
+    The scaled array.
     """
     minn, maxx = np.nanmin(x), np.nanmax(x)
     with warnings.catch_warnings():
@@ -161,10 +153,9 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
 
 
 def _process_series(
-    series: pd.Series, keys: Optional[List[str]], colors: Optional[np.array] = None
+    series: pd.Series, keys: Optional[List[str]], cols: Optional[np.array] = None
 ) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:
-    """
-    Process :class:`pandas.Series` categorical objects.
+    """Process :class:`~pandas.Series` of categorical objects.
 
     Categories in ``series`` are combined/removed according to ``keys``,
     the same transformation is applied to the corresponding colors.
@@ -172,26 +163,24 @@ def _process_series(
     Parameters
     ----------
     series
-        Input data, must be a pd.series of categorical type.
+        Input categorical data.
     keys
         Keys could be e.g. `['cat_1, cat_2', 'cat_4']`. If originally,
         there were 4 categories in `series`, then this would combine the first
         and the second and remove the third. The same would be done to `colors`,
         i.e. the first and second color would be merged (average color), while
         the third would be removed.
-    colors
+    cols
         List of colors which aligns with the order of the categories.
 
     Returns
     -------
-    :class:`pandas.Series`
-        Categorical updated annotation. Each cell is assigned to either
-        `NaN` or one of updated approximate recurrent classes.
-    list
-        Color list processed according to keys.
+    - Categorical updated annotation. Each cell is assigned to either
+      `NaN` or one of updated approximate recurrent classes.
+    - Color list processed according to keys.
     """
     # determine whether we want to process colors as well
-    process_colors = colors is not None
+    process_colors = cols is not None
 
     # assert dtype of the series
     if not is_categorical_dtype(series):
@@ -200,19 +189,19 @@ def _process_series(
     # if keys is None, just return
     if keys is None:
         if process_colors:
-            return series, colors
+            return series, cols
         return series
 
     # initialize a copy of the series object
     series_in = series.copy()
     if process_colors:
-        colors_in = np.array(colors.copy())
+        colors_in = np.array(cols.copy())
         if len(colors_in) != len(series_in.cat.categories):
             raise ValueError(
                 f"Length of colors ({len(colors_in)}) does not match length of "
                 f"categories ({len(series_in.cat.categories)})."
             )
-        if not all(mcolors.is_color_like(c) for c in colors_in):
+        if not all(colors.is_color_like(c) for c in colors_in):
             raise ValueError("Not all colors are color-like.")
 
     # define a set of keys
@@ -220,7 +209,7 @@ def _process_series(
 
     # check that the keys are unique
     overlap = [set(ks) for ks in keys_]
-    for c1, c2 in combinations(overlap, 2):
+    for c1, c2 in itertools.combinations(overlap, 2):
         overlap = c1 & c2
         if overlap:
             raise ValueError(f"Found overlapping keys: `{list(overlap)}`.")
@@ -274,8 +263,7 @@ def _process_series(
 
 
 def _complex_warning(X: np.array, use: Union[list, int, tuple, range], use_imag: bool = False) -> np.ndarray:
-    """
-    Check for imaginary components in columns of X specified by ``use``.
+    """Check for imaginary components in columns of X specified by ``use``.
 
     Parameters
     ----------
@@ -288,8 +276,7 @@ def _complex_warning(X: np.array, use: Union[list, int, tuple, range], use_imag:
 
     Returns
     -------
-    class:`numpy.ndarray`
-        An array containing either only real eigenvectors or also complex ones.
+    An array containing either only real eigenvectors or also complex ones.
     """
     complex_mask = np.sum(X.imag != 0, axis=0) > 0
     complex_ixs = np.array(use)[np.where(complex_mask)[0]]
@@ -307,7 +294,7 @@ def _complex_warning(X: np.array, use: Union[list, int, tuple, range], use_imag:
 
 
 def _mat_mat_corr_sparse(
-    X: csr_matrix,
+    X: sp.csr_matrix,
     Y: np.ndarray,
 ) -> np.ndarray:
     n = X.shape[1]
@@ -342,7 +329,7 @@ def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 def _perm_test(
     ixs: np.ndarray,
     corr: np.ndarray,
-    X: Union[np.ndarray, spmatrix],
+    X: Union[np.ndarray, sp.spmatrix],
     Y: np.ndarray,
     seed: Optional[int] = None,
     queue=None,
@@ -352,7 +339,7 @@ def _perm_test(
     pvals = np.zeros_like(corr, dtype=np.float64)
     corr_bs = np.zeros((len(ixs), X.shape[0], Y.shape[1]))  # perms x genes x lineages
 
-    mmc = _mat_mat_corr_sparse if issparse(X) else _mat_mat_corr_dense
+    mmc = _mat_mat_corr_sparse if sp.issparse(X) else _mat_mat_corr_dense
 
     for i, _ in enumerate(ixs):
         rs.shuffle(cell_ixs)
@@ -374,7 +361,7 @@ def _perm_test(
 @d.get_sections(base="correlation_test", sections=["Returns"])
 @d.dedent
 def _correlation_test(
-    X: Union[np.ndarray, spmatrix],
+    X: Union[np.ndarray, sp.spmatrix],
     Y: "Lineage",  # noqa: F821
     gene_names: Sequence[str],
     method: TestMethod = TestMethod.FISHER,
@@ -383,8 +370,7 @@ def _correlation_test(
     seed: Optional[int] = None,
     **kwargs: Any,
 ) -> pd.DataFrame:
-    """
-    Perform a statistical test.
+    """Perform a statistical test.
 
     Return NaN for genes which don't vary across cells.
 
@@ -399,7 +385,7 @@ def _correlation_test(
     method
         Method for p-value calculation.
     confidence_level
-        Confidence level for the confidence interval calculation. Must be in `[0, 1]`.
+        Confidence level for the confidence interval calculation. Must be in :math:`[0, 1]`.
     n_perms
         Number of permutations if ``method = 'perm_test'``.
     seed
@@ -410,11 +396,11 @@ def _correlation_test(
     -------
     Dataframe of shape ``(n_genes, n_lineages * 5)`` containing the following columns, one for each lineage:
 
-        - ``{lineage}_corr`` - correlation between the gene expression and fate probabilities.
-        - ``{lineage}_pval`` - calculated p-values for double-sided test.
-        - ``{lineage}_qval`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
-        - ``{lineage}_ci_low`` - lower bound of the ``confidence_level`` correlation confidence interval.
-        - ``{lineage}_ci_high`` - upper bound of the ``confidence_level`` correlation confidence interval.
+    - ``'{lineage}_corr'`` - correlation between the gene expression and fate probabilities.
+    - ``'{lineage}_pval'`` - calculated p-values for double-sided test.
+    - ``'{lineage}_qval'`` - corrected p-values using Benjamini-Hochberg method at level `0.05`.
+    - ``'{lineage}_ci_low'`` - lower bound of the ``confidence_level`` correlation confidence interval.
+    - ``'{lineage}_ci_high'`` - upper bound of the ``confidence_level`` correlation confidence interval.
     """
     corr, pvals, ci_low, ci_high = _correlation_test_helper(
         X.T,
@@ -456,16 +442,15 @@ def _correlation_test(
 
 
 def _correlation_test_helper(
-    X: Union[np.ndarray, spmatrix],
+    X: Union[np.ndarray, sp.spmatrix],
     Y: np.ndarray,
     method: TestMethod = TestMethod.FISHER,
     n_perms: Optional[int] = None,
     seed: Optional[int] = None,
     confidence_level: float = 0.95,
-    **kwargs,
+    **kwargs: Any,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute the correlation between rows in matrix ``X`` columns of matrix ``Y``.
+    """Compute the correlation between rows in matrix ``X`` columns of matrix ``Y``.
 
     Parameters
     ----------
@@ -507,20 +492,20 @@ def _correlation_test_helper(
     ql = 1 - confidence_level - (1 - confidence_level) / 2.0
     qh = confidence_level + (1 - confidence_level) / 2.0
 
-    if issparse(X) and not isspmatrix_csr(X):
-        X = csr_matrix(X)
+    if sp.issparse(X) and not sp.isspmatrix_csr(X):
+        X = sp.csr_matrix(X)
 
-    corr = _mat_mat_corr_sparse(X, Y) if issparse(X) else _mat_mat_corr_dense(X, Y)
+    corr = _mat_mat_corr_sparse(X, Y) if sp.issparse(X) else _mat_mat_corr_dense(X, Y)
 
     if method == TestMethod.FISHER:
         # see: https://en.wikipedia.org/wiki/Pearson_correlation_coefficient#Using_the_Fisher_transformation
         mean, se = np.arctanh(corr), 1.0 / np.sqrt(n - 3)
         z_score = (np.arctanh(corr) - np.arctanh(0)) * np.sqrt(n - 3)
 
-        z = norm.ppf(qh)
+        z = st.norm.ppf(qh)
         corr_ci_low = np.tanh(mean - z * se)
         corr_ci_high = np.tanh(mean + z * se)
-        pvals = 2 * norm.cdf(-np.abs(z_score))
+        pvals = 2 * st.norm.cdf(-np.abs(z_score))
 
     elif method == TestMethod.PERM_TEST:
         if not isinstance(n_perms, int):
@@ -543,18 +528,18 @@ def _correlation_test_helper(
     return corr, pvals, corr_ci_low, corr_ci_high
 
 
-def _make_cat(labels: List[List[Any]], n_states: int, state_names: Sequence[str]) -> Series:
+def _make_cat(labels: List[List[Any]], n_states: int, state_names: Sequence[str]) -> pd.Series:
     """Get categorical from list of lists."""
     labels_new = np.repeat(np.nan, n_states)
     for i, c in enumerate(labels):
         labels_new[c] = i
-    labels_new = Series(labels_new, index=state_names, dtype="category")
+    labels_new = pd.Series(labels_new, index=state_names, dtype="category")
     labels_new.cat.categories = labels_new.cat.categories.astype("int")
 
     return labels_new
 
 
-def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) -> Series:
+def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: int) -> pd.Series:
     """Filter out some cells that look like transient states based on their neighbors."""
     if not is_categorical_dtype(rc_labels):
         raise TypeError(f"Expected `categories` be `categorical`, found `{infer_dtype(rc_labels)}`.")
@@ -587,14 +572,13 @@ def _filter_cells(distances: spmatrix, rc_labels: Series, n_matches_min: int) ->
 
 
 def _cluster_X(
-    X: Union[np.ndarray, spmatrix],
+    X: Union[np.ndarray, sp.spmatrix],
     n_clusters: int,
     method: Literal["leiden", "kmeans"] = "leiden",
     n_neighbors: int = 20,
     resolution: float = 1.0,
 ) -> List[Any]:
-    """
-    Cluster the rows of the matrix X.
+    """Cluster the rows of ``X``.
 
     Parameters
     ----------
@@ -611,8 +595,7 @@ def _cluster_X(
 
     Returns
     -------
-    :class:`list`
-        List of cluster labels of length `n_samples`.
+    List of cluster labels of length `n_samples`.
     """
     if X.shape[0] == 1:
         # leiden issue
@@ -633,8 +616,7 @@ def _cluster_X(
 
 
 def _eigengap(evals: np.ndarray, alpha: float) -> int:
-    """
-    Compute the eigengap among the top eigenvalues of a matrix.
+    """Compute the eigengap among the top eigenvalues of a matrix.
 
     Parameters
     ----------
@@ -645,8 +627,7 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
 
     Returns
     -------
-    int
-        Number of eigenvectors to be used.
+    Number of eigenvectors to be used.
     """
     if np.iscomplexobj(evals):
         evals = evals.real
@@ -659,10 +640,9 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
 
 
 def _partition(
-    conn: Union[DiGraph, np.ndarray, spmatrix], sort: bool = True
+    conn: Union[DiGraph, np.ndarray, sp.spmatrix], sort: bool = True
 ) -> Tuple[List[List[Any]], List[List[Any]]]:
-    """
-    Partition a directed graph into its transient and recurrent classes.
+    """Partition a directed graph into its transient and recurrent classes.
 
     In a directed graph *G*, node *j* is accessible from node *i* if there exists a path from *i* to *j*.
     If *i* is accessible from *j* and the converse holds as well, then *i* and *j* communicate.
@@ -676,12 +656,11 @@ def _partition(
     Parameters
     ----------
     conn
-        Directed graph to _partition.
+        Directed graph to partition.
 
     Returns
     -------
-    :class:`list`, :class:`list`
-        Recurrent and transient classes, respectively.
+    Recurrent and transient classes, respectively.
     """
     import networkx as nx
 
@@ -691,7 +670,7 @@ def _partition(
         yield from (
             (
                 (sorted(scc) if sort else scc),
-                all((not nx.has_path(g, s, t) for s, t in product(scc, g.nodes - scc))),
+                all((not nx.has_path(g, s, t) for s, t in itertools.product(scc, g.nodes - scc))),
             )
             for scc in nx.strongly_connected_components(g)
         )
@@ -699,7 +678,9 @@ def _partition(
     def maybe_sort(iterable):
         return sorted(iterable, key=lambda x: (-len(x), x[0])) if sort else list(map(list, iterable))
 
-    rec_classes, trans_classes = tee(partition(nx.DiGraph(conn) if not isinstance(conn, nx.DiGraph) else conn), 2)
+    rec_classes, trans_classes = itertools.tee(
+        partition(nx.DiGraph(conn) if not isinstance(conn, nx.DiGraph) else conn), 2
+    )
 
     rec_classes = (node for node, is_rec in rec_classes if is_rec)
     trans_classes = (node for node, is_rec in trans_classes if not is_rec)
@@ -709,11 +690,11 @@ def _partition(
     return maybe_sort(rec_classes), maybe_sort(trans_classes)
 
 
-def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
-    """Check whether the undirected graph encoded by c is connected."""
+def _connected(c: Union[sp.spmatrix, np.ndarray]) -> bool:
+    """Check whether the undirected graph is connected."""
     import networkx as nx
 
-    if issparse(c):
+    if sp.issparse(c):
         try:
             G = nx.from_scipy_sparse_array(c)
         except AttributeError:
@@ -725,7 +706,7 @@ def _connected(c: Union[spmatrix, np.ndarray]) -> bool:
     return nx.is_connected(G)
 
 
-def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
+def _irreducible(d: Union[sp.spmatrix, np.ndarray]) -> bool:
     """Check whether the undirected graph encoded by d is irreducible."""
     import networkx as nx
 
@@ -740,27 +721,26 @@ def _irreducible(d: Union[spmatrix, np.ndarray]) -> bool:
 
 
 def _symmetric(
-    matrix: Union[spmatrix, np.ndarray],
+    matrix: Union[sp.spmatrix, np.ndarray],
     ord: str = "fro",
     eps: float = 1e-4,
     only_check_sparsity_pattern: bool = False,
 ) -> bool:
     """Check whether the graph encoded by `matrix` is symmetric."""
     if only_check_sparsity_pattern:
-        if issparse(matrix):
+        if sp.issparse(matrix):
             return len(((matrix != 0) - (matrix != 0).T).data) == 0
         return ((matrix != 0) == (matrix != 0).T).all()
 
-    if issparse(matrix):
-        return sparse_norm((matrix - matrix.T), ord=ord) < eps
-    return d_norm((matrix - matrix.T), ord=ord) < eps
+    if sp.issparse(matrix):
+        return sp.linalg.norm((matrix - matrix.T), ord=ord) < eps
+    return np.linalg.norm((matrix - matrix.T), ord=ord) < eps
 
 
 def _normalize(
-    X: Union[np.ndarray, spmatrix],
-) -> Union[np.ndarray, spmatrix]:
-    """
-    Row-normalizes an array to sum to 1.
+    X: Union[np.ndarray, sp.spmatrix],
+) -> Union[np.ndarray, sp.spmatrix]:
+    """Row-normalizes an array to sum to :math:`1`.
 
     Parameters
     ----------
@@ -773,15 +753,15 @@ def _normalize(
         The normalized array.
     """
     with np.errstate(divide="ignore"):
-        if issparse(X):
-            return X.multiply(csr_matrix(1.0 / np.abs(X).sum(1)))
+        if sp.issparse(X):
+            return X.multiply(sp.csr_matrix(1.0 / np.abs(X).sum(1)))
         X = np.array(X)
         return X / (X.sum(1)[:, None])
 
 
 def _get_connectivities(
     adata: AnnData, mode: str = "connectivities", n_neighbors: Optional[int] = None
-) -> Optional[spmatrix]:
+) -> Optional[sp.spmatrix]:
     # utility function, copied from scvelo
     if _has_neighs(adata):
         C = _get_neighs(adata, mode)
@@ -795,10 +775,10 @@ def _get_connectivities(
         return C.tocsr().astype(np.float32)
 
 
-def _select_connectivities(connectivities: spmatrix, n_neighbors: Optional[int] = None) -> spmatrix:
+def _select_connectivities(connectivities: sp.spmatrix, n_neighbors: Optional[int] = None) -> sp.spmatrix:
     # utility function, copied from scvelo
     C = connectivities.copy()
-    n_counts = (C > 0).sum(1).A1 if issparse(C) else (C > 0).sum(1)
+    n_counts = (C > 0).sum(1).A1 if sp.issparse(C) else (C > 0).sum(1)
     n_neighbors = n_counts.min() if n_neighbors is None else min(n_counts.min(), n_neighbors)
     rows = np.where(n_counts > n_neighbors)[0]
     cumsum_neighs = np.insert(n_counts.cumsum(), 0, 0)
@@ -813,10 +793,10 @@ def _select_connectivities(connectivities: spmatrix, n_neighbors: Optional[int] 
     return C
 
 
-def _select_distances(dist, n_neighbors: Optional[int] = None) -> spmatrix:
-    # utility funtion, copied from scvelo
+def _select_distances(dist, n_neighbors: Optional[int] = None) -> sp.spmatrix:
+    # utility function, copied from scvelo
     D = dist.copy()
-    n_counts = (D > 0).sum(1).A1 if issparse(D) else (D > 0).sum(1)
+    n_counts = (D > 0).sum(1).A1 if sp.issparse(D) else (D > 0).sum(1)
     n_neighbors = n_counts.min() if n_neighbors is None else min(n_counts.min(), n_neighbors)
     rows = np.where(n_counts > n_neighbors)[0]
     cumsum_neighs = np.insert(n_counts.cumsum(), 0, 0)
@@ -832,8 +812,7 @@ def _select_distances(dist, n_neighbors: Optional[int] = None) -> spmatrix:
 
 
 def _maybe_create_dir(dirpath: Union[str, os.PathLike]) -> None:
-    """
-    Try creating a directory if it does not already exist.
+    """Try creating a directory if it does not already exist.
 
     Parameters
     ----------
@@ -842,33 +821,30 @@ def _maybe_create_dir(dirpath: Union[str, os.PathLike]) -> None:
 
     Returns
     -------
-    None
-        Nothing, just creates a directory if it doesn't exist.
+    Nothing, just creates a directory if it doesn't exist.
     """
     if not os.path.exists(dirpath) or not os.path.isdir(dirpath):
-        with suppress(OSError):
+        with contextlib.suppress(OSError):
             os.makedirs(dirpath, exist_ok=True)
 
 
 def save_fig(fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str = "png") -> None:
-    """
-    Save a plot.
+    """Save a plot.
 
     Parameters
     ----------
-    fig: :class:`matplotlib.figure.Figure`
+    fig
         Figure to save.
-    path:
+    path
         Path where to save the figure. If path is relative, save it under ``cellrank.settings.figdir``.
-    make_dir:
+    make_dir
         Whether to try making the directory if it does not exist.
-    ext:
+    ext
         Extension to use.
 
     Returns
     -------
-    None
-        Just saves the plot.
+    Just saves the plot.
     """
     from cellrank import settings
 
@@ -888,21 +864,19 @@ def save_fig(fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str
 
 def _convert_to_categorical_series(
     term_states: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
-) -> Series:
-    """
-    Convert a mapping of terminal states to cells to a :class:`pandas.Series`.
+) -> pd.Series:
+    """Convert a mapping of terminal states to cells to a :class:`~pandas.Series`.
 
     Parameters
     ----------
     term_states
         Terminal states in the following format: `{'state_0': ['cell_0', 'cell_1', ...], ...}`.
     cell_names
-        List of valid cell names, usually taken from ``adata.obs_names``.
+        List of valid cell names, usually taken from :attr:`~anndata.AnnData.obs_names`.
 
     Returns
     -------
-    :class:`pandas.Series`
-        Categorical series where `NaN` mark cells which do not belong to any recurrent class.
+    Categorical series where `NaN` mark cells which do not belong to any recurrent class.
     """
     cnames = set(cell_names)
     mapper, expected_size = {}, 0
@@ -923,7 +897,7 @@ def _convert_to_categorical_series(
             "that there are no conflicting keys, such as `0` and `'0'`."
         )
 
-    term_states = Series([np.nan] * len(cell_names), index=cell_names)
+    term_states = pd.Series([np.nan] * len(cell_names), index=cell_names)
     for ts, cells in mapper.items():
         term_states[cells] = ts
 
@@ -941,8 +915,7 @@ def _merge_categorical_series(
     colors_new: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
     color_overwrite: bool = False,
 ) -> Optional[Union[pd.Series, Tuple[pd.Series, np.ndarray]]]:
-    """
-    Update categorical :class:`pandas.Series.` with new information.
+    """Update categorical :class:`~pandas.Series` with new information.
 
     It **can never remove** old categories, only add to the existing ones.
     Optionally, new colors can be created or merged.
@@ -962,30 +935,28 @@ def _merge_categorical_series(
 
     Returns
     -------
-    :class:`pandas.Series`
-        Returns the modified approximate recurrent classes and if ``colors_old`` and ``colors_new`` are both `None`.
-    :class:`pandas.Series`, :class:`numpy.ndarray`
-        If any of ``colors_old``, ``colors_new`` contain the new colors.
+    - Returns the modified approximate recurrent classes and if ``colors_old`` and ``colors_new`` are both `None`.
+    - If any of ``colors_old``, ``colors_new`` contain the new colors.
     """
 
     def get_color_mapper(
         series: pd.Series,
-        colors: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]],
+        cols: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]],
     ):
-        if len(series.cat.categories) != len(colors):
+        if len(series.cat.categories) != len(cols):
             raise ValueError(f"Series ({len(series.cat.categories)}) and colors ({len(colors_new)}) differ in length.")
 
-        if isinstance(colors, dict):
-            if set(series.cat.categories) != set(colors.keys()):
+        if isinstance(cols, dict):
+            if set(series.cat.categories) != set(cols.keys()):
                 raise ValueError("Color mapper and series' categories don't share the keys.")
         else:
-            colors = dict(zip(series.cat.categories, colors))
+            cols = dict(zip(series.cat.categories, cols))
 
-        for color in colors.values():
-            if not mcolors.is_color_like(color):
+        for color in cols.values():
+            if not colors.is_color_like(color):
                 raise ValueError(f"Color `{color}` is not color-like.")
 
-        return colors
+        return cols
 
     if not is_categorical_dtype(old):
         raise TypeError(f"Expected old approx. recurrent classes to be categorical, found " f"`{infer_dtype(old)}`.")
@@ -1073,8 +1044,7 @@ def _fuzzy_to_discrete(
     raise_threshold: Optional[float] = 0.2,
     check_row_sums: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Map fuzzy clustering to discrete clustering.
+    """Map fuzzy clustering to discrete clustering.
 
     Given a fuzzy clustering of `n_samples` samples represented by a matrix ``a_fuzzy`` of shape
     `(n_samples x n_clusters)` where rows sum to one and indicate cluster membership to each of
@@ -1110,9 +1080,8 @@ def _fuzzy_to_discrete(
 
     Returns
     -------
-    :class:`numpy.ndarray`m :class:`numpy.ndarray`
-        Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters and
-        an array of clusters with less than `n_most_likely` samples assigned, respectively.
+    Boolean matrix of the same shape as `a_fuzzy`, assigning a subset of the samples to clusters and
+    an array of clusters with less than `n_most_likely` samples assigned, respectively.
     """
     # check the inputs
     n_samples, n_clusters = a_fuzzy.shape
@@ -1172,8 +1141,7 @@ def _series_from_one_hot_matrix(
     index: Optional[Iterable] = None,
     names: Optional[Iterable] = None,
 ) -> pd.Series:
-    """
-    Create a pandas Series based on a one-hot encoded matrix.
+    """Create a pandas Series based on a one-hot encoded matrix.
 
     Parameters
     ----------
@@ -1185,9 +1153,8 @@ def _series_from_one_hot_matrix(
 
     Returns
     -------
-    :class:`pandas.Series`
-        Series, indicating cluster membership for each sample. The data type of the categories is :class:`str`
-        and samples that belong to no cluster are assigned `NaN`.
+    Series, indicating cluster membership for each sample. The data type of the categories is :class:`str`
+    and samples that belong to no cluster are assigned `NaN`.
     """
     n_samples, n_clusters = membership.shape
     if not isinstance(membership, np.ndarray):
@@ -1218,10 +1185,9 @@ def _series_from_one_hot_matrix(
 
 
 def _get_cat_and_null_indices(
-    cat_series: Series,
+    cat_series: pd.Series,
 ) -> Tuple[np.ndarray, np.ndarray, Dict[Any, np.ndarray]]:
-    """
-    Given a categorical :class:`pandas.Series`, get the indices corresponding to categories and `NaNs`.
+    """Given a categorical :class:`~pandas.Series`, get the indices corresponding to categories and `NaNs`.
 
     Parameters
     ----------
@@ -1230,12 +1196,9 @@ def _get_cat_and_null_indices(
 
     Returns
     -------
-    :class: `numpy.ndarray`
-        Array containing the indices of elements corresponding to categories in ``cat_series``.
-    :class: `numpy.ndarray`
-        Array containing the indices of elements corresponding to NaNs in ``cat_series``.
-    :class:`dict`
-        Dict containing categories of ``cat_series`` as keys and an array of corresponding indices as values.
+    - Array containing the indices of elements corresponding to categories in ``cat_series``.
+    - Array containing the indices of elements corresponding to NaNs in ``cat_series``.
+    - Dict containing categories of ``cat_series`` as keys and an array of corresponding indices as values.
     """
     # check the dtype
     if cat_series.dtype != "category":
@@ -1265,14 +1228,13 @@ def _get_cat_and_null_indices(
 
 
 def _calculate_absorption_time_moments(
-    Q: Union[np.ndarray, spmatrix],
+    Q: Union[np.ndarray, sp.spmatrix],
     trans_indices: np.ndarray,
     n: int,
     calculate_variance: bool = False,
-    **kwargs,
+    **kwargs: Any,
 ) -> Tuple[np.ndarray, Optional[np.ndarray]]:
-    """
-    Calculate the mean time until absorption and optionally its variance.
+    """Calculate the mean time until absorption and optionally its variance.
 
     Parameters
     ----------
@@ -1309,7 +1271,7 @@ def _calculate_absorption_time_moments(
     if calculate_variance:
         logg.debug("Calculating variance of mean time to absorption to any absorbing state")
 
-        I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape[0])  # noqa
+        I = sp.eye(Q.shape[0]) if sp.issparse(Q) else np.eye(Q.shape[0])
         A_t = (I + Q).T
         B_t = (I - Q).T
 
@@ -1328,8 +1290,8 @@ def _calculate_absorption_time_moments(
 
 
 def _calculate_lineage_absorption_time_means(
-    Q: csr_matrix,
-    R: csr_matrix,
+    Q: sp.csr_matrix,
+    R: sp.csr_matrix,
     trans_indices: np.ndarray,
     ixs: Dict[str, np.ndarray],
     index: pd.Index,
@@ -1379,7 +1341,7 @@ def _calculate_lineage_absorption_time_means(
 
         return res
 
-    I = speye(Q.shape[0]) if issparse(Q) else np.eye(Q.shape)  # noqa: E741
+    I = sp.eye(Q.shape[0]) if sp.issparse(Q) else np.eye(Q.shape)
     N_inv = I - Q
 
     logg.debug("Solving equation for `B`")
@@ -1389,7 +1351,7 @@ def _calculate_lineage_absorption_time_means(
     _ = no_jobs_kwargs.pop("n_jobs", None)
 
     for i, (lineage, indices) in enumerate(ixs.items()):
-        D_j = diags(B[:, i])  # use `i`, since `B` is already aggregated
+        D_j = sp.diags(B[:, i])  # use `i`, since `B` is already aggregated
         D_j_inv = D_j.copy()
         D_j_inv.data = 1.0 / D_j.data
 
@@ -1449,12 +1411,11 @@ def _check_collection(
     use_raw: bool = False,
     raise_exc: bool = True,
 ) -> List[str]:
-    """
-    Check if given collection contains all the keys.
+    """Check if given collection contains all the keys.
 
     Parameters
     ----------
-    adata: :class:`anndata.AnnData`
+    adata
         Annotated data object.
     needles
         Keys to check.
@@ -1463,7 +1424,7 @@ def _check_collection(
     key_name
         Pretty name of the key which will be displayed when error is found.
     use_raw
-        Whether to access ``adata.raw`` or just ``adata``.
+        Whether to access :attr:`anndata.AnnData.raw` or just ``adata``.
 
     Returns
     -------
@@ -1490,8 +1451,7 @@ def _check_collection(
 
 
 def _minmax(data: np.ndarray, perc: Optional[Tuple[float, float]] = None) -> Tuple[float, float]:
-    """
-    Return minimum and maximum value of the data.
+    """Return minimum and maximum value of the data.
 
     Parameters
     ----------
@@ -1522,17 +1482,17 @@ def _modify_neigh_key(key: Optional[str]) -> str:
     return key
 
 
-def _get_neighs(adata: AnnData, mode: str = "distances", key: Optional[str] = None) -> Union[np.ndarray, spmatrix]:
+def _get_neighs(adata: AnnData, mode: str = "distances", key: Optional[str] = None) -> Union[np.ndarray, sp.spmatrix]:
     if key is None:
         res = _read_graph_data(adata, mode)  # legacy behavior
     else:
         try:
             res = _read_graph_data(adata, key)
-            assert isinstance(res, (np.ndarray, spmatrix))
+            assert isinstance(res, (np.ndarray, sp.spmatrix))
         except (KeyError, AssertionError):
             res = _read_graph_data(adata, f"{_modify_neigh_key(key)}_{mode}")
 
-    if not isinstance(res, (np.ndarray, spmatrix)):
+    if not isinstance(res, (np.ndarray, sp.spmatrix)):
         raise TypeError(f"Expected to find `numpy.ndarray` or `scipy.sparse.spmatrix`, found `{type(res)}`.")
 
     return res
@@ -1546,16 +1506,15 @@ def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> Dict[str, Any]
     return adata.uns.get(key, {}).get("params", {})
 
 
-def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, spmatrix]:
-    """
-    Read graph data from :mod:`anndata`.
+def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, sp.spmatrix]:
+    """Read graph data from :class:`~anndata.AnnData`.
 
     Parameters
     ----------
     adata
         Annotated data object.
     key
-        Key in :attr:`anndata.AnnData.obsp`.
+        Key in :attr:`~anndata.AnnData.obsp`.
 
     Returns
     -------
@@ -1580,21 +1539,21 @@ def valuedispatch(func):
         registry[value] = func
         return func
 
-    @wraps(func)
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return dispatch(args[0])(*args[1:], **kwargs)
 
     wrapper.register = register
     wrapper.dispatch = dispatch
-    wrapper.registry = MappingProxyType(registry)
+    wrapper.registry = types.MappingProxyType(registry)
 
-    update_wrapper(wrapper, func)
+    functools.update_wrapper(wrapper, func)
 
     return wrapper
 
 
-def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
-    if issparse(x):
+def _densify_squeeze(x: Union[sp.spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
+    if sp.issparse(x):
         x = x.toarray()
     # use np.array instead of asarray to create a copy
     x = np.array(x, dtype=dtype)
@@ -1604,7 +1563,7 @@ def _densify_squeeze(x: Union[spmatrix, np.ndarray], dtype=np.float32) -> np.nda
     return x
 
 
-@contextmanager
+@contextlib.contextmanager
 @d.dedent
 def _gene_symbols_ctx(
     adata: AnnData,
@@ -1613,22 +1572,21 @@ def _gene_symbols_ctx(
     use_raw: bool = False,
     make_unique: bool = False,
 ) -> AnnData:
-    """
-    Set gene names from a column in :attr:`anndata.AnnData.var`.
+    """Set gene names from a column in :attr:`~anndata.AnnData.var`.
 
     Parameters
     ----------
     %(adata)s
     key
-        Key in :attr:`anndata.AnnData.var` where the gene symbols are stored. If `None`, this operation is a no-op.
+        Key in :attr:`~anndata.AnnData.var` where the gene symbols are stored. If `None`, this operation is a no-op.
     use_raw
-        Whether to change the gene names in :attr:`anndata.AnnData.raw`.
+        Whether to change the gene names in :attr:`~anndata.AnnData.raw`.
     make_unique
         Whether to make the newly assigned gene names unique.
 
     Yields
     ------
-    The same ``adata`` with modified :attr:`anndata.AnnData.var_names`, depending on ``use_raw``.
+    The same ``adata`` with modified :attr:`~anndata.AnnData.var_names`, depending on the ``use_raw``.
     """
 
     def key_present() -> bool:

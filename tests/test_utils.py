@@ -192,13 +192,13 @@ class TestProcessSeries:
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
         with pytest.raises(ValueError, match=r".* does not match"):
-            _ = _process_series(x, ["foo"], colors=["red"])
+            _ = _process_series(x, ["foo"], cols=["red"])
 
     def test_colors_not_colorlike(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
 
         with pytest.raises(ValueError, match=r".* are color-like"):
-            _ = _process_series(x, ["a", "b"], colors=["bar", "baz"])
+            _ = _process_series(x, ["a", "b"], cols=["bar", "baz"])
 
     def test_keys_are_not_proper_categories(self):
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
@@ -247,7 +247,7 @@ class TestProcessSeries:
         x = pd.Series(["a", "b", np.nan, "b", np.nan]).astype("category")
         colors = ["foo"]
 
-        res, res_colors = _process_series(x, keys=None, colors=colors)
+        res, res_colors = _process_series(x, keys=None, cols=colors)
 
         assert x is res
         assert colors is res_colors
@@ -264,7 +264,7 @@ class TestProcessSeries:
         x = pd.Series(["b", "c", "a", "d", "a"]).astype("category")
         expected = pd.Series(["a, b", "c, d", "a, b", "c, d", "a, b"]).astype("category")
 
-        res, colors = _process_series(x, keys=["b, a", "d, c"], colors=["red", "green", "blue", "white"])
+        res, colors = _process_series(x, keys=["b, a", "d, c"], cols=["red", "green", "blue", "white"])
 
         assert isinstance(res, pd.Series)
         assert is_categorical_dtype(res)

@@ -461,7 +461,7 @@ class FateProbsMixin:
             logg.warning("Attempting to solve a potentially large linear system with dense transition matrix")
 
         # process the current annotations according to `keys`
-        term_states, colors = _process_series(series=self.terminal_states, keys=keys, colors=self._term_states.colors)
+        term_states, colors = _process_series(series=self.terminal_states, keys=keys, cols=self._term_states.colors)
         # warn in case only one state is left
         keys = list(term_states.cat.categories)
         if ctx == "fate_probs" and len(keys) == 1:
