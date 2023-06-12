@@ -101,7 +101,7 @@ def _random_normal(
 
     if n_samples == 1:
         return np.expand_dims(
-            np.array([np.random.normal(m[i], v[i]) for i in np.prange(m.shape[0])]), 0  # noqa: NPY002
+            np.array([np.random.normal(m[i], v[i]) for i in nb.prange(m.shape[0])]), 0  # noqa: NPY002
         )
 
     return np.array(
