@@ -48,7 +48,7 @@ from cellrank.kernels.utils._velocity_model import VelocityModel
 _rtol = 1e-6
 
 
-class CustomFunc(cr.kernels.utils._similarity.SimilarityABC):
+class CustomFunc(cr.kernels.utils.SimilarityABC):
     def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
         probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
         probs[0] = 1.0

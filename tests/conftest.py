@@ -4,9 +4,9 @@ from typing import Optional, Tuple
 
 import pytest
 from _helpers import create_model
-from numba.core.errors import NumbaPerformanceWarning
 
 import numpy as np
+from numba.core.errors import NumbaPerformanceWarning
 
 import matplotlib
 

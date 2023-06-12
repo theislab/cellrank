@@ -1,12 +1,12 @@
 from typing import Any, Callable, Optional, Tuple
 
-import numba as nb
-
 import wrapt
 
+import numba as nb
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
+from numba import prange
 from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 
 from anndata import AnnData
@@ -100,12 +100,10 @@ def _random_normal(
     assert m.shape == v.shape, "Means and variances have different shape."
 
     if n_samples == 1:
-        return np.expand_dims(
-            np.array([np.random.normal(m[i], v[i]) for i in nb.prange(m.shape[0])]), 0  # noqa: NPY002
-        )
+        return np.expand_dims(np.array([np.random.normal(m[i], v[i]) for i in prange(m.shape[0])]), 0)  # noqa: NPY002
 
     return np.array(
-        [[np.random.normal(m[i], v[i]) for _ in nb.prange(n_samples)] for i in nb.prange(m.shape[0])]  # noqa: NPY002
+        [[np.random.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]  # noqa: NPY002
     ).T
 
 

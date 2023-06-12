@@ -2,10 +2,10 @@ from typing import Any, Optional
 
 import pytest
 from _helpers import assert_array_nan_equal, create_model, jax_not_installed_skip
-from numba import njit
 
 import numpy as np
 import pandas as pd
+from numba import njit
 from pandas.api.types import is_categorical_dtype
 from scipy.sparse import csr_matrix, diags
 from scipy.sparse import rand as srand

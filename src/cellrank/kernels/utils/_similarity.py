@@ -4,14 +4,13 @@ import functools
 from typing import Any, Tuple
 
 import numba as nb
-
 import numpy as np
 
 from cellrank._utils._docs import d
 from cellrank._utils._enum import ModeEnum
 from cellrank.kernels._utils import jit_kwargs, norm, np_mean
 
-__all__ = ["DotProduct", "Cosine", "Correlation"]
+__all__ = ["DotProduct", "Cosine", "Correlation", "SimilarityABC"]
 
 
 class Similarity(ModeEnum):

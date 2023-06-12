@@ -2,9 +2,9 @@ import enum
 from typing import Any, Optional, Sequence, Union
 
 import numba as nb
-
 import numpy as np
 import scipy.sparse as sp
+from numba import prange
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from anndata import AnnData
@@ -265,7 +265,7 @@ def _calc_factor_quant_sparse_helper(
     out = np.empty(n)
 
     # maybe disable parallel
-    for ix in nb.prange(n):
+    for ix in prange(n):
         d = data[indptr[ix] : indptr[ix + 1]]
         tmp = np.zeros(shape=(n_cols,))
         tmp[: len(d)] = d

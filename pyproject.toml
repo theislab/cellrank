@@ -175,8 +175,8 @@ include_trailing_comma = true
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GENERIC", "NUMERIC", "PLOTTING", "BIO", "FIRSTPARTY", "LOCALFOLDER"]
 # also contains what we import in notebooks
 known_generic = ["wrapt", "joblib"]
-known_numeric = ["numpy", "scipy", "jax", "pandas", "sklearn", "networkx", "statsmodels"]
-known_bio = ["anndata", "scanpy", "squidpy"]
+known_numeric = ["numpy", "numba", "scipy", "jax", "pandas", "sklearn", "networkx", "statsmodels"]
+known_bio = ["anndata", "scanpy"]
 known_plotting = ["IPython", "matplotlib", "mpl_toolkits", "seaborn"]
 
 [tool.pytest.ini_options]
