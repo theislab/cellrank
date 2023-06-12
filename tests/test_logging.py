@@ -1,17 +1,18 @@
 # modified from: https://github.com/theislab/scanpy/blob/master/scanpy/tests/test_logging.py
-
+import datetime
+import io
 import sys
+
 import pytest
-from io import StringIO
-from datetime import datetime
 
 from scanpy import Verbosity
+
 from cellrank import logging as logg
 from cellrank import settings
 
 
-@pytest.fixture
-def logging_state():
+@pytest.fixture()
+def logging_state():  # noqa: PT004
     verbosity_orig = settings.verbosity
     yield
     settings.logfile = sys.stderr
@@ -50,12 +51,12 @@ class TestLogging:
     def test_logfile(self, tmp_path, logging_state):
         settings.verbosity = Verbosity.hint
 
-        io = StringIO()
-        settings.logfile = io
-        assert settings.logfile is io
+        buffer = io.StringIO()
+        settings.logfile = buffer
+        assert settings.logfile is buffer
         assert settings.logpath is None
         logg.error("test!")
-        assert io.getvalue() == "ERROR: test!\n"
+        assert buffer.getvalue() == "ERROR: test!\n"
 
         p = tmp_path / "test.log"
         settings.logpath = p
@@ -68,28 +69,39 @@ class TestLogging:
     def test_timing(self, monkeypatch, capsys, logging_state):
         import cellrank.logging._logging as logg
 
-        settings.logfile = sys.stderr
-        counter = 0
-
         class IncTime:
-            @staticmethod
-            def now(tz):
-                nonlocal counter
-                counter += 1
-                return datetime(
-                    2000, 1, 1, second=counter, microsecond=counter, tzinfo=tz
-                )
+            def __init__(self):
+                self.counter = 0
 
-        monkeypatch.setattr(logg, "datetime", IncTime)
+            def now(self, tz):
+                self.counter += 1
+                return datetime.datetime(2000, 1, 1, second=self.counter, microsecond=self.counter, tzinfo=tz)
+
+            @property
+            def datetime(self) -> "IncTime":
+                return self
+
+            @property
+            def timezone(self):
+                return datetime.timezone
+
+        settings.logfile = sys.stderr
+        t = IncTime()
+        monkeypatch.setattr(logg, "datetime", t)
         settings.verbosity = Verbosity.debug
 
         logg.hint("1")
-        assert counter == 1 and capsys.readouterr().err == "--> 1\n"
+        assert t.counter == 1
+        assert capsys.readouterr().err == "--> 1\n"
         start = logg.info("2")
-        assert counter == 2 and capsys.readouterr().err == "2\n"
+        assert t.counter == 2
+        assert capsys.readouterr().err == "2\n"
         logg.hint("3")
-        assert counter == 3 and capsys.readouterr().err == "--> 3\n"
+        assert t.counter == 3
+        assert capsys.readouterr().err == "--> 3\n"
         logg.info("4", time=start)
-        assert counter == 4 and capsys.readouterr().err == "4 (0:00:02)\n"
+        assert t.counter == 4
+        assert capsys.readouterr().err == "4 (0:00:02)\n"
         logg.info("5 {time_passed}", time=start)
-        assert counter == 5 and capsys.readouterr().err == "5 0:00:03\n"
+        assert t.counter == 5
+        assert capsys.readouterr().err == "5 0:00:03\n"

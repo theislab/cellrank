@@ -1,141 +1,58 @@
 name: Test
 
 on:
-    schedule:
-    -   cron: 00 00 * * 1  # every Monday at 00:00
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
-    workflow_dispatch:
-        inputs:
-            reason:
-                description: Reason for the workflow dispatch. Only "release" is valid.
-                required: true
-                default: release
+  schedule:
+  - cron: 00 00 * * 1
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    lint:
-        runs-on: ubuntu-latest
-        steps:
-        -   uses: actions/checkout@v2
-        -   name: Set up Python 3.9
-            uses: actions/setup-python@v2
-            with:
-                python-version: 3.9
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ['3.8', '3.10']  # , '3.11']
+        slepc: [noslepc]
+        include:
+        - os: macos-latest
+          python: '3.9'
+          slepc: noslepc
+        - os: ubuntu-latest
+          python: '3.9'
+          slepc: slepc
 
-        -   uses: actions/cache@v2
-            with:
-                path: ~/.cache/pre-commit
-                key: precommit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python }}
 
-        -   name: Install pip dependencies
-            run: |
-                python -m pip install --upgrade pip
-                pip install tox
+    - name: Install pip dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install tox
 
-        -   name: Lint
-            run: |
-                tox -e lint
+    - name: Test
+      run: |
+        tox -e py${{ matrix.python }}-${{ matrix.slepc }}
+      env:
+        PYTEST_ADDOPTS: -vv -n 2
 
-    test:
-        runs-on: ${{ matrix.os }}
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-latest, macos-latest]
-                python: [3.9]
-                use_slepc: [false]
-                include:
-                -   os: ubuntu-latest
-                    python: 3.8
-                    use_slepc: true
-        env:
-            # make sure to pin this in tox.ini as well
-            PC_VERSION: 3.18.0  # PETSc version
-            SC_VERSION: 3.18.0 # SLEPc version
-
-        steps:
-        -   uses: actions/checkout@v2
-        -   name: Set up Python ${{ matrix.python }}
-            uses: actions/setup-python@v2
-            with:
-                python-version: ${{ matrix.python }}
-
-        -   name: Install Linux dependencies
-            if: runner.os == 'Linux'
-            run: |
-                ./.scripts/ci/install_dependencies.sh
-
-        -   name: Export PETSc/SLEPc environment variables
-            if: ${{ runner.os == 'Linux' && matrix.use_slepc == true }}
-            run: |
-                echo "PETSC_DIR=$HOME/petsc-$PC_VERSION" >> $GITHUB_ENV
-                echo "SLEPC_DIR=$HOME/slepc-$SC_VERSION" >> $GITHUB_ENV
-                echo "PETSC_ARCH=arch-$RUNNER_OS-c-opt" >> $GITHUB_ENV
-
-        -   name: Install PETSc/SLEPc dependencies
-            if: ${{ runner.os == 'Linux' && matrix.use_slepc == true }}
-            run: |
-                ./.scripts/ci/install_petsc_linux.sh
-
-        -   name: Get pip cache dir
-            id: pip-cache
-            run: |
-                echo "::set-output name=dir::$(pip cache dir)"
-
-        -   name: Restore pip cache
-            uses: actions/cache@v2
-            with:
-                path: ${{ steps.pip-cache.outputs.dir }}
-                key: pip-${{ runner.os }}-${{ env.pythonLocation }}
-
-        -   name: Install pip dependencies
-            run: |
-                python -m pip install --upgrade pip
-                pip install tox tox-gh-actions codecov
-
-        -   name: Restore tox cache
-            uses: actions/cache@v2
-            with:
-                path: .tox
-                key: tox-${{ runner.os }}-${{ env.pythonLocation }}-${{ hashFiles('**/requirements.txt', '**/setup.py', '**/tox.ini') }}
-
-        -   name: Test
-            timeout-minutes: 60
-            env:
-                PLATFORM: ${{ matrix.os }}
-                USE_SLEPC: ${{ matrix.use_slepc }}
-            run: |
-                tox -vv
-
-        -   name: Upload coverage
-            env:
-                CODECOV_NAME: ${{ matrix.os }}-${{ matrix.python }}-{{ matrix.use_slepc }}
-            run: |
-                codecov --no-color --required --flags unittest
-
-    regenerate-notebooks:
-        if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.reason == 'release') }}
-        needs: [lint, test]
-        runs-on: ubuntu-latest
-        steps:
-        -   name: Request notebooks regeneration
-            uses: peter-evans/repository-dispatch@v1
-            with:
-                token: ${{ secrets.ACCESS_TOKEN }}
-                repository: theislab/cellrank_notebooks
-                event-type: rebuild
-                client-payload: '{"ref": "${{ github.ref }}", "sha": "${{ github.sha }}"}'
-
-    release:
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reason == 'release' }}
-        needs: [lint, test]
-        runs-on: ubuntu-latest
-        steps:
-        -   name: Invoke deployment workflow
-            uses: benc-uk/workflow-dispatch@v1
-            with:
-                workflow: Deployment
-                token: ${{ secrets.RELEASE_DISPATCH_TOKEN }}
-                inputs: '{ "reason": "release" }'
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml
+        flags: tests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.slepc }}
+        name: unittests
+        env_vars: OS,PYTHON
+        fail_ci_if_error: false
+        verbose: true

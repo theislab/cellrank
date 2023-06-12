@@ -1,27 +1,19 @@
-from typing import Tuple, Union, Literal, Callable
-
 import os
+import pathlib
+from typing import Callable, Literal, Tuple, Union
+
 import pytest
-from pathlib import Path
+import scvelo as scv
 from _helpers import (
-    gamr_skip,
-    create_model,
     create_failed_model,
+    create_model,
+    gamr_skip,
     resize_images_to_same_sizes,
 )
 
-import scvelo as scv
-import cellrank as cr
-from anndata import AnnData
-from cellrank._utils import Lineage
-from cellrank.models import GAMR
-from cellrank.kernels import VelocityKernel, PseudotimeKernel, ConnectivityKernel
-from cellrank.estimators import GPCCA, CFLARE
-from cellrank._utils._key import Key
-
 import numpy as np
 import pandas as pd
-from scipy.sparse import issparse
+import scipy.sparse as sp
 from pandas.api.types import is_categorical_dtype
 
 import matplotlib.cm as cm
@@ -29,9 +21,18 @@ import matplotlib.pyplot as plt
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
 
+from anndata import AnnData
+
+import cellrank as cr
+from cellrank._utils import Lineage
+from cellrank._utils._key import Key
+from cellrank.estimators import CFLARE, GPCCA
+from cellrank.kernels import ConnectivityKernel, PseudotimeKernel, VelocityKernel
+from cellrank.models import GAMR
+
 setup()
 
-HERE: str = Path(__file__).parent
+HERE: str = pathlib.Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
@@ -71,15 +72,11 @@ scv.set_figure_params(transparent=True)
 
 def compare(
     *,
-    kind: Literal[
-        "adata", "gpcca", "bwd", "gpcca_bwd", "cflare", "lineage", "gamr"
-    ] = "adata",
-    dirname: Union[str, Path] = None,
+    kind: Literal["adata", "gpcca", "bwd", "gpcca_bwd", "cflare", "lineage", "gamr"] = "adata",
+    dirname: Union[str, pathlib.Path] = None,
     tol: int = TOL,
 ) -> Callable:
-    def _compare_images(
-        expected_path: Union[str, Path], actual_path: Union[str, Path]
-    ) -> None:
+    def _compare_images(expected_path: Union[str, pathlib.Path], actual_path: Union[str, pathlib.Path]) -> None:
         resize_images_to_same_sizes(expected_path, actual_path)
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
@@ -103,9 +100,7 @@ def compare(
 
     def compare_cflare_fwd(
         func: Callable,
-    ) -> (
-        Callable
-    ):  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
+    ) -> Callable:  # mustn't use functools.wraps - it think's the fact that `adata` is fixture
         def decorator(self, adata_cflare_fwd) -> None:
             adata, mc = adata_cflare_fwd
             fpath, path = _prepare_fname(func)
@@ -146,9 +141,7 @@ def compare(
 
             _assert_equal(fpath)
 
-        assert (
-            kind == "lineage"
-        ), "Function `compare_lineage` only supports `kind='lineage'`."
+        assert kind == "lineage", "Function `compare_lineage` only supports `kind='lineage'`."
 
         return decorator
 
@@ -182,9 +175,7 @@ def compare(
 class TestAggregateAbsorptionProbabilities:
     @compare()
     def test_bar(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="bar", dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="bar", dpi=DPI, save=fpath)
 
     @compare(kind="bwd")
     def test_bar_bwd(self, adata: AnnData, fpath: str):
@@ -210,7 +201,6 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare(tol=50)
     def test_bar_cluster_subset_violin(self, adata: AnnData, fpath: str):
-        print(adata.obs["clusters"].cat.categories)
         cr.pl.aggregate_fate_probabilities(
             adata,
             cluster_key="clusters",
@@ -233,9 +223,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare(tol=250)
     def test_paga_pie(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="paga_pie", dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="paga_pie", dpi=DPI, save=fpath)
 
     @compare(tol=250)
     def test_paga_pie_title(self, adata: AnnData, fpath: str):
@@ -261,9 +249,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_paga(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="paga", dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="paga", dpi=DPI, save=fpath)
 
     @compare()
     def test_paga_lineage_subset(self, adata: AnnData, fpath: str):
@@ -278,32 +264,15 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_violin(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath)
 
     @compare()
     def test_violin_no_cluster_key(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, mode="violin", cluster_key=None, dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, mode="violin", cluster_key=None, dpi=DPI, save=fpath)
 
     @compare()
     def test_violin_cluster_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath
-        )
-
-    @compare()
-    def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata,
-            cluster_key="clusters",
-            mode="violin",
-            lineages=["1"],
-            dpi=DPI,
-            save=fpath,
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="violin", dpi=DPI, save=fpath)
 
     @compare()
     def test_violin_lineage_subset(self, adata: AnnData, fpath: str):
@@ -324,7 +293,7 @@ class TestAggregateAbsorptionProbabilities:
             mode="paga_pie",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="top")),
+            legend_kwargs={"loc": "top"},
         )
 
     @compare()
@@ -336,7 +305,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="lower")),
+            legend_kwargs={"loc": "lower"},
             legend_loc="upper",
         )
 
@@ -349,7 +318,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc=None)),
+            legend_kwargs={"loc": None},
             legend_loc=None,
         )
 
@@ -362,7 +331,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="center")),
+            legend_kwargs={"loc": "center"},
             legend_loc=None,
         )
 
@@ -375,7 +344,7 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc=None)),
+            legend_kwargs={"loc": None},
             legend_loc="on data",
         )
 
@@ -388,13 +357,13 @@ class TestAggregateAbsorptionProbabilities:
             basis="umap",
             save=fpath,
             dpi=DPI,
-            legend_kwargs=(dict(loc="lower left out")),
+            legend_kwargs={"loc": "lower left out"},
             legend_loc="center right out",
         )
 
     def test_invalid_mode(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
@@ -403,49 +372,47 @@ class TestAggregateAbsorptionProbabilities:
 
     def test_paga_pie_wrong_legend_kind_1(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid legend position"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="foo")),
+                legend_kwargs={"loc": "foo"},
             )
 
     def test_paga_pie_wrong_legend_kind_2(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid legend position"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="lower foo")),
+                legend_kwargs={"loc": "lower foo"},
             )
 
     def test_paga_pie_wrong_legend_kind_3(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid modifier"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="lower left bar")),
+                legend_kwargs={"loc": "lower left bar"},
             )
 
     def test_paga_pie_wrong_legend_kind_4(self, adata_cflare_fwd):
         adata, _ = adata_cflare_fwd
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Expected only 1 additional"):
             cr.pl.aggregate_fate_probabilities(
                 adata,
                 cluster_key="clusters",
                 mode="paga_pie",
-                legend_kwargs=(dict(loc="lower left foo bar")),
+                legend_kwargs={"loc": "lower left foo bar"},
             )
 
     @compare()
     def test_mode_heatmap(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="heatmap", dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="heatmap", dpi=DPI, save=fpath)
 
     @compare()
     def test_mode_heatmap_format(self, adata: AnnData, fpath: str):
@@ -515,9 +482,7 @@ class TestAggregateAbsorptionProbabilities:
 
     @compare()
     def test_mode_clustermap(self, adata: AnnData, fpath: str):
-        cr.pl.aggregate_fate_probabilities(
-            adata, cluster_key="clusters", mode="clustermap", dpi=DPI, save=fpath
-        )
+        cr.pl.aggregate_fate_probabilities(adata, cluster_key="clusters", mode="clustermap", dpi=DPI, save=fpath)
 
     @compare()
     def test_mode_clustermap_format(self, adata: AnnData, fpath: str):
@@ -698,9 +663,7 @@ class TestClusterTrends:
             key="bar",
         )
 
-        np.allclose(
-            adata_cflare.uns["foo"].obsm["X_pca"], adata_cflare.uns["bar"].obsm["X_pca"]
-        )
+        np.allclose(adata_cflare.uns["foo"].obsm["X_pca"], adata_cflare.uns["bar"].obsm["X_pca"])
 
     def test_cluster_lineage_writes(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
@@ -1096,9 +1059,7 @@ class TestHeatmap:
         )
 
     @compare(dirname="heatmap_multiple_cluster_keys_show_all_genes")
-    def test_heatmap_multiple_cluster_keys_show_all_genes(
-        self, adata: AnnData, fpath: str
-    ):
+    def test_heatmap_multiple_cluster_keys_show_all_genes(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.heatmap(
             adata,
@@ -1230,9 +1191,7 @@ class TestHeatmapReturns:
         )
 
         assert isinstance(df, pd.DataFrame)
-        np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
-        )
+        np.testing.assert_array_equal(df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names)
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
 
@@ -1250,9 +1209,7 @@ class TestHeatmapReturns:
 
         models = pd.DataFrame(models).T
         np.testing.assert_array_equal(models.index, GENES[:10])
-        np.testing.assert_array_equal(
-            models.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
-        )
+        np.testing.assert_array_equal(models.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names)
         assert np.all(models.astype(bool))
 
     def test_heatmap_lineages_return_models_and_genes(self, adata_cflare: AnnData):
@@ -1294,9 +1251,7 @@ class TestHeatmapReturns:
         )
 
         assert isinstance(df, pd.DataFrame)
-        np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
-        )
+        np.testing.assert_array_equal(df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names)
         assert len(df) == len(genes)
         assert set(df.iloc[:, 0].values) == set(genes)
 
@@ -1314,9 +1269,7 @@ class TestHeatmapReturns:
         )
 
         assert isinstance(df, pd.DataFrame)
-        np.testing.assert_array_equal(
-            df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names
-        )
+        np.testing.assert_array_equal(df.columns, adata_cflare.obsm[Key.obsm.fate_probs(False)].names)
         assert len(df) == 10
         assert set(df.iloc[:, 0].values) == set(GENES[:10])
 
@@ -1593,9 +1546,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_trends_lineage_cell_color_clusters_obs_legend_loc(
-        self, adata: AnnData, fpath: str
-    ):
+    def test_trends_lineage_cell_color_clusters_obs_legend_loc(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -1770,7 +1721,7 @@ class TestGeneTrend:
             transpose=False,
             data_key="Ms",
             same_plot=True,
-            plot_kwargs=dict(lineage_probability=True),
+            plot_kwargs={"lineage_probability": True},
             dpi=DPI,
             save=fpath,
         )
@@ -1786,7 +1737,7 @@ class TestGeneTrend:
             transpose=True,
             data_key="Ms",
             same_plot=True,
-            plot_kwargs=dict(lineage_probability=True),
+            plot_kwargs={"lineage_probability": True},
             dpi=DPI,
             save=fpath,
         )
@@ -1802,7 +1753,7 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=False,
             transpose=True,
-            plot_kwargs=dict(lineage_probability=True),
+            plot_kwargs={"lineage_probability": True},
             figsize=(5, 5),
             dpi=DPI,
             save=fpath,
@@ -1819,9 +1770,7 @@ class TestGeneTrend:
             data_key="Ms",
             same_plot=True,
             transpose=True,
-            plot_kwargs=dict(
-                lineage_probability=True, lineage_probability_conf_int=True
-            ),
+            plot_kwargs={"lineage_probability": True, "lineage_probability_conf_int": True},
             dpi=DPI,
             save=fpath,
         )
@@ -1846,7 +1795,7 @@ class TestGeneTrend:
 
     def test_invalid_time_key(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             cr.pl.gene_trends(
                 adata_cflare,
                 model,
@@ -1858,7 +1807,7 @@ class TestGeneTrend:
 
     def test_all_models_failed(self, adata_cflare: AnnData):
         fm = create_failed_model(adata_cflare)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r"Fatal model"):
             cr.pl.gene_trends(
                 adata_cflare,
                 fm,
@@ -1971,10 +1920,7 @@ class TestGeneTrend:
         fm = create_failed_model(adata)
         cr.pl.gene_trends(
             adata,
-            {
-                g: {str(ln): fm.model, "*": fm}
-                for ln, g in zip(range(3)[::-1], GENES[:3])
-            },
+            {g: {str(ln): fm.model, "*": fm} for ln, g in zip(range(3)[::-1], GENES[:3])},
             GENES[:3],
             data_key="Ms",
             time_key="latent_time",
@@ -2025,9 +1971,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_transpose_all_models_for_1_lineage_failed(
-        self, adata: AnnData, fpath: str
-    ):
+    def test_transpose_all_models_for_1_lineage_failed(self, adata: AnnData, fpath: str):
         fm = create_failed_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -2045,10 +1989,7 @@ class TestGeneTrend:
         fm = create_failed_model(adata)
         cr.pl.gene_trends(
             adata,
-            {
-                g: {str(ln): fm.model, "*": fm}
-                for ln, g in zip(range(3)[::-1], GENES[:3])
-            },
+            {g: {str(ln): fm.model, "*": fm} for ln, g in zip(range(3)[::-1], GENES[:3])},
             GENES[:3],
             transpose=True,
             data_key="Ms",
@@ -2058,9 +1999,7 @@ class TestGeneTrend:
         )
 
     @compare()
-    def test_transpose_all_models_for_1_lineage_failed_same_plot(
-        self, adata: AnnData, fpath: str
-    ):
+    def test_transpose_all_models_for_1_lineage_failed_same_plot(self, adata: AnnData, fpath: str):
         fm = create_failed_model(adata)
         cr.pl.gene_trends(
             adata,
@@ -2156,9 +2095,7 @@ class TestCFLARE:
 
     @compare(kind="cflare")
     def test_scvelo_lin_probs_time(self, mc: CFLARE, fpath: str):
-        mc.plot_fate_probabilities(
-            mode="time", time_key="latent_time", dpi=DPI, save=fpath
-        )
+        mc.plot_fate_probabilities(mode="time", time_key="latent_time", dpi=DPI, save=fpath)
 
 
 class TestGPCCA:
@@ -2200,27 +2137,19 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T(self, mc: GPCCA, fpath: str):
-        mc.plot_coarse_T(
-            show_initial_dist=False, show_stationary_dist=False, dpi=DPI, save=fpath
-        )
+        mc.plot_coarse_T(show_initial_dist=False, show_stationary_dist=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T_stat_dist(self, mc: GPCCA, fpath: str):
-        mc.plot_coarse_T(
-            show_initial_dist=False, show_stationary_dist=True, dpi=DPI, save=fpath
-        )
+        mc.plot_coarse_T(show_initial_dist=False, show_stationary_dist=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T_init_dist(self, mc: GPCCA, fpath: str):
-        mc.plot_coarse_T(
-            show_initial_dist=True, show_stationary_dist=False, dpi=DPI, save=fpath
-        )
+        mc.plot_coarse_T(show_initial_dist=True, show_stationary_dist=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T_stat_init_dist(self, mc: GPCCA, fpath: str):
-        mc.plot_coarse_T(
-            show_initial_dist=True, show_stationary_dist=True, dpi=DPI, save=fpath
-        )
+        mc.plot_coarse_T(show_initial_dist=True, show_stationary_dist=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_gpcca_coarse_T_no_cbar(self, mc: GPCCA, fpath: str):
@@ -2264,9 +2193,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(
-            which="all", cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath
-        )
+        mc.plot_macrostates(which="all", cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_meta_states_title(self, mc: GPCCA, fpath: str):
@@ -2298,9 +2225,7 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostates(
-            which="terminal", cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath
-        )
+        mc.plot_macrostates(which="terminal", cmap=cm.inferno, same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_final_states_title(self, mc: GPCCA, fpath: str):
@@ -2316,15 +2241,11 @@ class TestGPCCA:
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_fate_probs_cont_same_clusters(self, mc: GPCCA, fpath: str):
-        mc.plot_fate_probabilities(
-            color="clusters", same_plot=True, dpi=DPI, save=fpath
-        )
+        mc.plot_fate_probabilities(color="clusters", same_plot=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_gpcca_fate_probs_cont_not_same(self, mc: GPCCA, fpath: str):
-        mc.plot_fate_probabilities(
-            color="clusters", same_plot=False, dpi=DPI, save=fpath
-        )
+        mc.plot_fate_probabilities(color="clusters", same_plot=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_scvelo_transition_matrix_projection(self, mc: GPCCA, fpath: str):
@@ -2339,10 +2260,6 @@ class TestGPCCA:
 
 
 class TestLineage:
-    def test_pie(self, lineage: cr.Lineage):
-        with pytest.raises(ValueError):
-            lineage[:, 0].plot_pie(dpi=DPI)
-
     @compare(kind="lineage")
     def test_pie(self, lineage: cr.Lineage, fpath: str):
         lineage.plot_pie(np.mean, dpi=DPI, save=fpath)
@@ -2431,7 +2348,7 @@ class TestModel:
     def test_model_obs_data_key(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         gene = adata.X[:, 0]
-        adata.obs["foo"] = gene.A if issparse(gene) else gene
+        adata.obs["foo"] = gene.A if sp.issparse(gene) else gene
 
         model.prepare("foo", "1", "latent_time", data_key="obs")
         model.fit().predict()
@@ -2493,13 +2410,9 @@ class TestModel:
 
     @compare()
     def test_model_1_lineage(self, adata: AnnData, fpath: str):
-        adata.obsm[Key.obsm.fate_probs(False)] = Lineage(
-            np.ones((adata.n_obs, 1)), names=["foo"]
-        )
+        adata.obsm[Key.obsm.fate_probs(False)] = Lineage(np.ones((adata.n_obs, 1)), names=["foo"])
         model = create_model(adata)
-        model = model.prepare(
-            adata.var_names[0], "foo", "latent_time", n_test_points=100
-        ).fit()
+        model = model.prepare(adata.var_names[0], "foo", "latent_time", n_test_points=100).fit()
         model.fit().predict()
         model.confidence_interval()
         model.plot(save=fpath, dpi=DPI, conf_int=True)
@@ -2593,77 +2506,71 @@ class TestComposition:
 
     @compare()
     def test_composition_kwargs_autopct(self, adata: AnnData, fpath: str):
-        cr.pl._utils.composition(
-            adata, "clusters", dpi=DPI, save=fpath, autopct="%1.0f%%"
-        )
+        cr.pl._utils.composition(adata, "clusters", dpi=DPI, save=fpath, autopct="%1.0f%%")
 
 
 class TestFittedModel:
     @compare()
-    def test_fitted_empty_model(self, _adata: AnnData, fpath: str):
-        np.random.seed(42)
-        fm = cr.models.FittedModel(np.arange(100), np.random.normal(size=100))
+    def test_fitted_empty_model(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(42)
+        fm = cr.models.FittedModel(np.arange(100), rng.normal(size=100))
         fm.plot(dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_conf_int(self, _adata: AnnData, fpath: str):
-        np.random.seed(43)
-        y_test = np.random.normal(size=100)
+    def test_fitted_model_conf_int(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(43)
+        y_test = rng.normal(size=100)
+
+        fm = cr.models.FittedModel(np.arange(100), y_test, conf_int=np.c_[y_test - 1, y_test + 1])
+        fm.plot(conf_int=True, dpi=DPI, save=fpath)
+
+    @compare()
+    def test_fitted_model_conf_int_no_conf_int_computed(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(44)
 
         fm = cr.models.FittedModel(
-            np.arange(100), y_test, conf_int=np.c_[y_test - 1, y_test + 1]
+            np.arange(100),
+            rng.normal(size=100),
         )
         fm.plot(conf_int=True, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_conf_int_no_conf_int_computed(
-        self, _adata: AnnData, fpath: str
-    ):
-        np.random.seed(44)
+    def test_fitted_model_cells_with_weights(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(45)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-        )
-        fm.plot(conf_int=True, dpi=DPI, save=fpath)
-
-    @compare()
-    def test_fitted_model_cells_with_weights(self, _adata: AnnData, fpath: str):
-        np.random.seed(45)
-
-        fm = cr.models.FittedModel(
-            np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
         )
 
         fm.plot(hide_cells=False, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_model_weights(self, _adata: AnnData, fpath: str):
-        np.random.seed(46)
+    def test_fitted_model_weights(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(46)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
 
         fm.plot(hide_cells=False, dpi=DPI, save=fpath)
 
     @compare()
-    def test_fitted_ignore_plot_smoothed_lineage(self, _adata: AnnData, fpath: str):
-        np.random.seed(47)
+    def test_fitted_ignore_plot_smoothed_lineage(self, adata: AnnData, fpath: str):
+        rng = np.random.default_rng(47)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
 
         fm.plot(
@@ -2675,21 +2582,21 @@ class TestFittedModel:
 
     @compare()
     def test_fitted_gene_trends(self, adata: AnnData, fpath: str):
-        np.random.seed(48)
+        rng = np.random.default_rng(48)
 
         fm1 = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
         fm2 = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
-            x_all=np.random.normal(size=200),
-            y_all=np.random.normal(size=200),
-            w_all=np.random.normal(size=200),
+            rng.normal(size=100),
+            x_all=rng.normal(size=200),
+            y_all=rng.normal(size=200),
+            w_all=rng.normal(size=200),
         )
         cr.pl.gene_trends(
             adata,
@@ -2703,11 +2610,11 @@ class TestFittedModel:
 
     @compare(tol=250)
     def test_fitted_cluster_fates(self, adata: AnnData, fpath: str):
-        np.random.seed(49)
+        rng = np.random.default_rng(49)
 
         model = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
+            rng.normal(size=100),
         )
         cr.pl.cluster_trends(
             adata,
@@ -2723,11 +2630,11 @@ class TestFittedModel:
 
     @compare(dirname="fitted_heatmap")
     def test_fitted_heatmap(self, adata: AnnData, fpath: str):
-        np.random.seed(49)
+        rng = np.random.default_rng(49)
 
         fm = cr.models.FittedModel(
             np.arange(100),
-            np.random.normal(size=100),
+            rng.normal(size=100),
         )
         cr.pl.heatmap(
             adata,
@@ -2746,15 +2653,11 @@ class TestCircularProjection:
         lineages = adata.obsm[Key.obsm.fate_probs(False)].names[:2]
 
         with pytest.raises(ValueError, match=r"Expected at least `3` lineages"):
-            cr.pl.circular_projection(
-                adata, keys=["clusters", "clusters"], lineages=lineages
-            )
+            cr.pl.circular_projection(adata, keys=["clusters", "clusters"], lineages=lineages)
 
     @compare()
     def test_proj_duplicate_keys(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys=["clusters", "clusters"], dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys=["clusters", "clusters"], dpi=DPI, save=fpath)
 
         key = "X_fate_simplex_fwd"
         assert key in adata.obsm
@@ -2764,9 +2667,7 @@ class TestCircularProjection:
     @compare()
     def test_proj_key_added(self, adata: AnnData, fpath: str):
         key = "foo"
-        cr.pl.circular_projection(
-            adata, keys=adata.var_names[0], key_added=key, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys=adata.var_names[0], key_added=key, dpi=DPI, save=fpath)
 
         assert key in adata.obsm
         assert isinstance(adata.obsm[key], np.ndarray)
@@ -2774,57 +2675,39 @@ class TestCircularProjection:
 
     @compare()
     def test_proj_hide_edges(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="dpt_pseudotime", show_edges=False, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="dpt_pseudotime", show_edges=False, dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_dont_normalize_by_mean(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="clusters", normalize_by_mean=False, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="clusters", normalize_by_mean=False, dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_use_raw(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys=adata.raw.var_names[0], use_raw=True, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys=adata.raw.var_names[0], use_raw=True, dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_ncols(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys=adata.var_names[:2], ncols=1, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys=adata.var_names[:2], ncols=1, dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_labelrot(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="clusters", label_rot="default", dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="clusters", label_rot="default", dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_labeldistance(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="clusters", label_distance=1.5, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="clusters", label_distance=1.5, dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_text_kwargs(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="clusters", text_kwargs={"size": 20}, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="clusters", text_kwargs={"size": 20}, dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_default_ordering(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="clusters", lineage_order="default", dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="clusters", lineage_order="default", dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_extra_keys(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys=["kl_divergence", "entropy"], dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys=["kl_divergence", "entropy"], dpi=DPI, save=fpath)
 
         apk = Key.obsm.fate_probs(False)
         assert f"{apk}_kl_divergence" in adata.obs
@@ -2832,15 +2715,11 @@ class TestCircularProjection:
 
     @compare()
     def test_proj_scvelo_kwargs(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys="clusters", legend_loc="upper right", dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys="clusters", legend_loc="upper right", dpi=DPI, save=fpath)
 
     @compare()
     def test_proj_no_cbar(self, adata: AnnData, fpath: str):
-        cr.pl.circular_projection(
-            adata, keys=adata.var_names[0], colorbar=False, dpi=DPI, save=fpath
-        )
+        cr.pl.circular_projection(adata, keys=adata.var_names[0], colorbar=False, dpi=DPI, save=fpath)
 
 
 class TestPlotRandomWalk:
@@ -2869,33 +2748,23 @@ class TestPlotRandomWalk:
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_basis(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walks(
-            n_sims=10, max_iter=100, seed=42, basis="pca", dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_random_walks(n_sims=10, max_iter=100, seed=42, basis="pca", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_cmap(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walks(
-            n_sims=10, max_iter=100, seed=42, cmap="viridis", dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_random_walks(n_sims=10, max_iter=100, seed=42, cmap="viridis", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_line_width(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walks(
-            n_sims=10, max_iter=100, seed=42, linewidth=2, dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_random_walks(n_sims=10, max_iter=100, seed=42, linewidth=2, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_line_alpha(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walks(
-            n_sims=10, max_iter=100, seed=42, linealpha=1, dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_random_walks(n_sims=10, max_iter=100, seed=42, linealpha=1, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_kwargs(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_random_walks(
-            n_sims=10, max_iter=100, seed=42, color="none", dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_random_walks(n_sims=10, max_iter=100, seed=42, color="none", dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_kernel_random_walk_ixs_legend_loc(self, mc: GPCCA, fpath: str):
@@ -2959,15 +2828,11 @@ class TestPlotSingleFlow:
 
     @compare(kind="gpcca")
     def test_flow_cluster_ascending(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_single_flow(
-            "Astrocytes", "clusters", "age(days)", ascending=True, dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", ascending=True, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_flow_cluster_descending(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_single_flow(
-            "Astrocytes", "clusters", "age(days)", ascending=False, dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", ascending=False, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_flow_explicit_cluster_order(self, mc: GPCCA, fpath: str):
@@ -2994,9 +2859,7 @@ class TestPlotSingleFlow:
 
     @compare(kind="gpcca")
     def test_flow_alpha(self, mc: GPCCA, fpath: str):
-        mc.kernel.plot_single_flow(
-            "Astrocytes", "clusters", "age(days)", alpha=0.3, dpi=DPI, save=fpath
-        )
+        mc.kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", alpha=0.3, dpi=DPI, save=fpath)
 
     @compare(kind="gpcca")
     def test_flow_no_xticks(self, mc: GPCCA, fpath: str):
@@ -3025,30 +2888,22 @@ class TestPlotSingleFlow:
 
     @compare(kind="gpcca")
     def test_flow_return_ax(self, mc: GPCCA, fpath: str):
-        ax = mc.kernel.plot_single_flow(
-            "Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath
-        )
+        ax = mc.kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", show=False, dpi=DPI, save=fpath)
         assert isinstance(ax, plt.Axes)
 
 
 class TestPlotDriverCorrelation:
     @compare(kind="gpcca")
     def test_driver_corr(self, mc: GPCCA, fpath: str):
-        mc.plot_lineage_drivers_correlation(
-            "1", "2", dpi=DPI, save=fpath, title="bar", size=100
-        )
+        mc.plot_lineage_drivers_correlation("1", "2", dpi=DPI, save=fpath, title="bar", size=100)
 
     @compare(kind="gpcca")
     def test_driver_corr_color(self, mc: GPCCA, fpath: str):
-        mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, color="2_corr"
-        )
+        mc.plot_lineage_drivers_correlation("0", "1", dpi=DPI, save=fpath, color="2_corr")
 
     @compare(kind="gpcca")
     def test_driver_corr_gene_sets(self, mc: GPCCA, fpath: str):
-        mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, gene_sets={"0": mc.adata.var_names[:3]}
-        )
+        mc.plot_lineage_drivers_correlation("0", "1", dpi=DPI, save=fpath, gene_sets={"0": mc.adata.var_names[:3]})
 
     @compare(kind="gpcca")
     def test_driver_corr_gene_sets_colors(self, mc: GPCCA, fpath: str):
@@ -3075,15 +2930,11 @@ class TestPlotDriverCorrelation:
     @compare(kind="gpcca")
     def test_driver_corr_use_raw(self, mc: GPCCA, fpath: str):
         mc.compute_lineage_drivers(cluster_key="clusters", use_raw=True)
-        mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, use_raw=True, color="1_qval"
-        )
+        mc.plot_lineage_drivers_correlation("0", "1", dpi=DPI, save=fpath, use_raw=True, color="1_qval")
 
     @compare(kind="gpcca")
     def test_driver_corr_cmap(self, mc: GPCCA, fpath: str):
-        mc.plot_lineage_drivers_correlation(
-            "0", "1", dpi=DPI, save=fpath, color="1_qval", cmap="inferno"
-        )
+        mc.plot_lineage_drivers_correlation("0", "1", dpi=DPI, save=fpath, color="1_qval", cmap="inferno")
 
     @compare(kind="gpcca")
     def test_driver_corr_fontsize(self, mc: GPCCA, fpath: str):
@@ -3109,9 +2960,7 @@ class TestPlotDriverCorrelation:
 
     @compare(kind="gpcca")
     def test_driver_corr_return_ax(self, mc: GPCCA, fpath: str):
-        ax = mc.plot_lineage_drivers_correlation(
-            "2", "0", dpi=DPI, save=fpath, show=False
-        )
+        ax = mc.plot_lineage_drivers_correlation("2", "0", dpi=DPI, save=fpath, show=False)
         assert isinstance(ax, plt.Axes)
 
 
@@ -3464,9 +3313,7 @@ class TestMacrostateComposition:
 
     @compare(kind="gpcca")
     def test_msc_legend_loc(self, mc: GPCCA, fpath: str):
-        mc.plot_macrostate_composition(
-            "clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out"
-        )
+        mc.plot_macrostate_composition("clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out")
 
 
 class TestProjectionEmbedding:
@@ -3477,17 +3324,13 @@ class TestProjectionEmbedding:
         ck.plot_projection(dpi=DPI, save=fpath)
 
     @compare()
-    def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(
-        self, adata: AnnData, fpath: str
-    ):
+    def test_scvelo_pseudotime_kernel_hard_threshold_emb_stream(self, adata: AnnData, fpath: str):
         ptk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         ptk.compute_transition_matrix(threshold_scheme="hard", frac_to_keep=0.3)
         ptk.plot_projection(dpi=DPI, save=fpath)
 
     @compare()
-    def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(
-        self, adata: AnnData, fpath: str
-    ):
+    def test_scvelo_pseudotime_kernel_soft_threshold_emb_stream(self, adata: AnnData, fpath: str):
         ptk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         ptk.compute_transition_matrix(threshold_scheme="soft", frac_to_keep=0.3)
         ptk.plot_projection(dpi=DPI, save=fpath)

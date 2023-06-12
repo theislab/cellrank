@@ -1,10 +1,10 @@
 import pytest
 
-from cellrank.estimators import GPCCA
-from cellrank._utils._key import Key
-
 import numpy as np
 import pandas as pd
+
+from cellrank._utils._key import Key
+from cellrank.estimators import GPCCA
 
 
 class TestLineageDrivers:

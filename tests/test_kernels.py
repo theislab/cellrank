@@ -1,10 +1,10 @@
-from typing import Type, Tuple, Literal, Callable, Optional
-
-import pickle
-import pytest
+import copy
 import itertools
-from copy import copy
-from pathlib import Path
+import pathlib
+import pickle
+from typing import Callable, Literal, Optional, Tuple, Type
+
+import pytest
 from _helpers import (
     bias_knn,
     create_kernels,
@@ -12,99 +12,79 @@ from _helpers import (
     random_transition_matrix,
 )
 
+import numpy as np
+import pandas as pd
+import scipy.sparse as sp
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
+
 import scanpy as sc
-import cellrank as cr
-from scanpy import Neighbors
 from anndata import AnnData
-from cellrank.kernels import (
-    VelocityKernel,
-    CytoTRACEKernel,
-    PseudotimeKernel,
-    PrecomputedKernel,
-    ConnectivityKernel,
-    TransportMapKernel,
-)
-from cellrank._utils._key import Key
+from scanpy import Neighbors
+
+import cellrank as cr
 from cellrank._utils._enum import ModeEnum
-from cellrank._utils._utils import _normalize, _get_neighs, _get_neighs_params
+from cellrank._utils._key import Key
+from cellrank._utils._utils import _get_neighs, _get_neighs_params, _normalize
+from cellrank.kernels import (
+    ConnectivityKernel,
+    CytoTRACEKernel,
+    PrecomputedKernel,
+    PseudotimeKernel,
+    TransportMapKernel,
+    VelocityKernel,
+)
 from cellrank.kernels._base_kernel import (
-    Kernel,
     Constant,
+    Kernel,
     KernelAdd,
     KernelMul,
     UnidirectionalKernel,
 )
-from cellrank.kernels.mixins._kernel import ConnectivityMixin
 from cellrank.kernels._cytotrace_kernel import CytoTRACEAggregation
+from cellrank.kernels.mixins._kernel import ConnectivityMixin
 from cellrank.kernels.utils._velocity_model import VelocityModel
-
-import numpy as np
-import pandas as pd
-from scipy.sparse import eye as speye
-from scipy.sparse import random as sprandom
-from scipy.sparse import issparse, spmatrix, isspmatrix_csr
-from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 _rtol = 1e-6
 
 
 class CustomFunc(cr.kernels.utils.SimilarityABC):
-    def __call__(
-        self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros(
-            (D.shape[0],), dtype=np.float64
-        )
+    def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+        probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
         probs[0] = 1.0
 
         return probs, logits
 
 
 class CustomFuncHessian(CustomFunc):
-    def hessian(
-        self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
-    ) -> np.ndarray:
+    def hessian(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> np.ndarray:
         # should be either (n, g, g) or (n, g), will be (g, g)
         return np.zeros((D.shape[0], v.shape[0], v.shape[0]))
 
 
 class CustomKernel(UnidirectionalKernel):
     def compute_transition_matrix(self, sparse: bool = False) -> "CustomKernel":
-        if sparse:
-            tmat = speye(self.adata.n_obs, dtype=np.float32)
-        else:
-            tmat = np.eye(self.adata.n_obs, dtype=np.float32)
+        tmat = sp.eye(self.adata.n_obs, dtype=np.float32) if sparse else np.eye(self.adata.n_obs, dtype=np.float32)
 
         self.transition_matrix = tmat
         return self
 
     def copy(self, deep: bool = False) -> "CustomKernel":
-        return copy(self)
+        return copy.copy(self)
 
 
 class InvalidFuncProbs(cr.kernels.utils.SimilarityABC):
-    def __call__(
-        self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        return np.ones((D.shape[0],), dtype=np.float64), np.zeros(
-            (D.shape[0],), dtype=np.float64
-        )
+    def __call__(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+        return np.ones((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
 
 
 class InvalidFuncHessianShape(CustomFunc):
-    def __call__(
-        self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros(
-            (D.shape[0],), dtype=np.float64
-        )
+    def __call__(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+        probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
         probs[-1] = 1.0
 
         return probs, logits
 
-    def hessian(
-        self, v: np.ndarray, _D: np.ndarray, _softmax_scale: float = 1.0
-    ) -> np.ndarray:
+    def hessian(self, v: np.ndarray, _D: np.ndarray, _softmax_scale: float = 1.0) -> np.ndarray:
         # should be either (n, g, g) or (n, g), will be (g, g)
         return np.zeros((v.shape[0], v.shape[0]))
 
@@ -159,7 +139,7 @@ class TestInitializeKernel:
     def test_accessor_out_of_range(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with pytest.raises(IndexError):
+        with pytest.raises(IndexError, match="tuple index out of range"):
             _ = k[2]
 
     def test_parent(self, adata: AnnData):
@@ -180,16 +160,13 @@ class TestInitializeKernel:
     def test_uninitialized_both(self, adata: AnnData):
         k = VelocityKernel(adata) + ConnectivityKernel(adata)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r".* is uninitialized"):
             k.compute_transition_matrix()
 
     def test_uninitialized_one(self, adata: AnnData):
-        k = (
-            VelocityKernel(adata)
-            + ConnectivityKernel(adata).compute_transition_matrix()
-        )
+        k = VelocityKernel(adata) + ConnectivityKernel(adata).compute_transition_matrix()
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r".* is uninitialized"):
             k.compute_transition_matrix()
 
     def test_initialized(self, adata: AnnData):
@@ -201,16 +178,12 @@ class TestInitializeKernel:
 
         assert k.transition_matrix is not None
 
-    def test_invalida_type(self, adata: AnnData):
-        with pytest.raises(TypeError):
-            _ = None * VelocityKernel(adata)
-
     def test_negative_constant(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             _ = -1 * VelocityKernel(adata)
 
     def test_invalid_constant(self, adata: AnnData):
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match=r"Value must be"):
             _ = Constant(adata, None)
 
     def test_inversion(self, adata: AnnData):
@@ -250,7 +223,7 @@ class TestInitializeKernel:
         z = ~(v + c)
 
         assert z._transition_matrix is None
-        with pytest.raises(RuntimeError, match=rf"is uninitialized"):
+        with pytest.raises(RuntimeError, match=r"is uninitialized"):
             # not allowed because VK is reset
             assert z.transition_matrix is not None
 
@@ -380,9 +353,7 @@ class TestInitializeKernel:
             similarity="cosine",
         ) + (
             ConnectivityKernel(adata).compute_transition_matrix(density_normalize=False)
-            + ConnectivityKernel(adata).compute_transition_matrix(
-                density_normalize=True
-            )
+            + ConnectivityKernel(adata).compute_transition_matrix(density_normalize=True)
         )
         k.compute_transition_matrix()
 
@@ -408,9 +379,7 @@ class TestKernel:
         ],
     )
     @pytest.mark.parametrize("key_added", [None, "foo"])
-    def test_kernel_reads_correct_connectivities(
-        self, adata: AnnData, key_added: Optional[str], clazz: type
-    ):
+    def test_kernel_reads_correct_connectivities(self, adata: AnnData, key_added: Optional[str], clazz: type):
         if clazz is VelocityKernel and key_added == "foo":
             pytest.skip("`get_moments` in scVelo doesn't support specifying key")
         del adata.uns["neighbors"]
@@ -425,11 +394,7 @@ class TestKernel:
         elif clazz is PrecomputedKernel:
             adata.obsp["foo"] = np.eye(adata.n_obs)
             kwargs["transition_matrix"] = "foo"
-        conn = (
-            adata.obsp["connectivities"]
-            if key_added is None
-            else adata.obsp[f"{key_added}_connectivities"]
-        )
+        conn = adata.obsp["connectivities"] if key_added is None else adata.obsp[f"{key_added}_connectivities"]
 
         k = clazz(**kwargs)
 
@@ -443,7 +408,7 @@ class TestKernel:
         c = CustomKernel(adata).compute_transition_matrix(sparse=sparse)
 
         if sparse:
-            assert isspmatrix_csr(c.transition_matrix)
+            assert sp.isspmatrix_csr(c.transition_matrix)
         else:
             assert isinstance(c.transition_matrix, np.ndarray)
 
@@ -454,20 +419,16 @@ class TestKernel:
         vk.write_to_adata()
 
         assert adata is vk.adata
-        assert "T_fwd_params" in adata.uns.keys()
-        np.testing.assert_array_equal(
-            adata.obsp["T_fwd"].toarray(), vk.transition_matrix.toarray()
-        )
+        assert "T_fwd_params" in adata.uns
+        np.testing.assert_array_equal(adata.obsp["T_fwd"].toarray(), vk.transition_matrix.toarray())
 
     def test_write_adata_key(self, adata: AnnData):
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk.write_to_adata(key="foo")
 
         assert adata is vk.adata
-        assert "foo_params" in adata.uns.keys()
-        np.testing.assert_array_equal(
-            adata.obsp["foo"].toarray(), vk.transition_matrix.toarray()
-        )
+        assert "foo_params" in adata.uns
+        np.testing.assert_array_equal(adata.obsp["foo"].toarray(), vk.transition_matrix.toarray())
 
     @pytest.mark.parametrize("model", ["deterministic", "stochastic"])
     def test_vk_row_normalized(self, adata: AnnData, model: str):
@@ -489,9 +450,7 @@ class TestKernel:
         k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
         frac_to_keep = k_thresh / float(n_neighbors)
 
-        conn_biased = bias_knn(
-            conn.copy(), pseudotime, n_neighbors, k=k, frac_to_keep=frac_to_keep
-        )
+        conn_biased = bias_knn(conn.copy(), pseudotime, n_neighbors, k=k, frac_to_keep=frac_to_keep)
         T_1 = _normalize(conn_biased)
 
         pk = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
@@ -503,16 +462,10 @@ class TestKernel:
         np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
 
     def test_pseudotime_parallelize(self, adata: AnnData):
-        pk1 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            n_jobs=None
-        )
-        pk2 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(
-            n_jobs=2
-        )
+        pk1 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(n_jobs=None)
+        pk2 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(n_jobs=2)
 
-        np.testing.assert_allclose(
-            pk1.transition_matrix.A, pk2.transition_matrix.A, rtol=_rtol
-        )
+        np.testing.assert_allclose(pk1.transition_matrix.A, pk2.transition_matrix.A, rtol=_rtol)
 
     def test_pseudotime_inverse(self, adata: AnnData):
         pk = PseudotimeKernel(adata, time_key="latent_time")
@@ -538,9 +491,7 @@ class TestKernel:
 
     def test_set_adata_wrong_shape(self, adata: AnnData):
         ck = ConnectivityKernel(adata)
-        with pytest.raises(
-            ValueError, match="Expected new `AnnData` .* to have same shape"
-        ):
+        with pytest.raises(ValueError, match="Expected new `AnnData` .* to have same shape"):
             ck.adata = adata[:2].copy()
 
     def test_forward_backward_combination(self, adata: AnnData):
@@ -561,9 +512,7 @@ class TestKernel:
         if model == "stochastic":
             pytest.importorskip("jax")
             pytest.importorskip("jaxlib")
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model=model, softmax_scale=4, n_samples=1
-        )
+        vk = VelocityKernel(adata).compute_transition_matrix(model=model, softmax_scale=4, n_samples=1)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
 
         T_vk = vk.transition_matrix
@@ -579,18 +528,14 @@ class TestKernel:
         density_normalize = False
 
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata).compute_transition_matrix(
-            density_normalize=density_normalize
-        )
+        ck = ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize)
 
         T_vk = vk.transition_matrix
         T_ck = ck.transition_matrix
         T_comb_manual = 0.8 * T_vk + 0.2 * T_ck
 
         vk = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
-        ck = ConnectivityKernel(adata).compute_transition_matrix(
-            density_normalize=density_normalize
-        )
+        ck = ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize)
         comb_kernel = 0.8 * vk + 0.2 * ck
         comb_kernel.compute_transition_matrix()
         T_comb_kernel = comb_kernel.transition_matrix
@@ -600,13 +545,9 @@ class TestKernel:
     @pytest.mark.parametrize("density_normalize", [False, True])
     def test_manual_combination_backward(self, adata: AnnData, density_normalize):
         backward = True
-        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(
-            softmax_scale=4
-        )
+        vk = VelocityKernel(adata, backward=backward).compute_transition_matrix(softmax_scale=4)
 
-        ck = ConnectivityKernel(adata).compute_transition_matrix(
-            density_normalize=density_normalize
-        )
+        ck = ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize)
 
         T_vk = vk.transition_matrix
         T_ck = ck.transition_matrix
@@ -620,9 +561,7 @@ class TestKernel:
     @pytest.mark.parametrize("density_normalize", [False, True])
     def test_dnorm_scanpy(self, adata: AnnData, density_normalize: bool):
         density_normalize = True
-        ck = ConnectivityKernel(adata).compute_transition_matrix(
-            density_normalize=density_normalize
-        )
+        ck = ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize)
         T_cr = ck.transition_matrix
 
         neigh = Neighbors(adata)
@@ -678,16 +617,9 @@ class TestVelocityKernelReadData:
             gene_subset=gene_subset,
         )
         if attr == "layers":
-            if use_gene_subset:
-                _subset = np.asarray(gene_subset)
-            else:
-                _subset = np.asarray(adata.var[f"{vkey}_genes"])
-            np.testing.assert_array_equal(
-                x=vk._xdata, y=adata.layers[xkey][:, _subset & ~nans_v]
-            )
-            np.testing.assert_array_equal(
-                x=vk._vdata, y=adata.layers[vkey][:, _subset & ~nans_v]
-            )
+            _subset = np.asarray(gene_subset) if use_gene_subset else np.asarray(adata.var[f"{vkey}_genes"])
+            np.testing.assert_array_equal(x=vk._xdata, y=adata.layers[xkey][:, _subset & ~nans_v])
+            np.testing.assert_array_equal(x=vk._vdata, y=adata.layers[vkey][:, _subset & ~nans_v])
         else:
             np.testing.assert_array_equal(x=vk._xdata, y=adata.obsm[xkey][:, ~nans_v])
             np.testing.assert_array_equal(x=vk._vdata, y=adata.obsm[vkey][:, ~nans_v])
@@ -721,9 +653,7 @@ class TestKernelAddition:
         vk1 = VelocityKernel(adata)
         vk1._transition_matrix = np.eye(adata.n_obs, k=-1) / 2 + np.eye(adata.n_obs) / 2
         vk1._transition_matrix[0, 0] = 1
-        np.testing.assert_allclose(
-            np.sum(ck._transition_matrix, axis=1), 1
-        )  # sanity check
+        np.testing.assert_allclose(np.sum(ck._transition_matrix, axis=1), 1)  # sanity check
 
         k = (vk + ck + vk1).compute_transition_matrix()
         expected = (
@@ -782,9 +712,7 @@ class TestKernelCopy:
         assert ck1.backward == ck2.backward
 
     def test_copy_palantir_kernel(self, adata: AnnData):
-        pk1 = PseudotimeKernel(
-            adata, time_key="dpt_pseudotime"
-        ).compute_transition_matrix()
+        pk1 = PseudotimeKernel(adata, time_key="dpt_pseudotime").compute_transition_matrix()
         pk2 = pk1.copy()
 
         np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)
@@ -799,9 +727,7 @@ class TestKernelCopy:
         assert ck1.transition_matrix is not None
         assert ck2.transition_matrix is None
 
-    @pytest.mark.parametrize(
-        "ignored", (("_transition_matrix",), ("_params", "foobar"))
-    )
+    @pytest.mark.parametrize("ignored", [("_transition_matrix",), ("_params", "foobar")])
     def test_copy_ignore(self, adata: AnnData, ignored: Tuple[str, ...]):
         ck1 = ConnectivityKernel(adata).compute_transition_matrix()
         ck2 = ck1._copy_ignore(*ignored)
@@ -865,9 +791,7 @@ class TestMonteCarlo:
             softmax_scale=4,
         )
 
-        val = np.mean(
-            np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
-        )
+        val = np.mean(np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data))
         assert val < 1e-5, val
 
     def test_monte_carlo_5k(self, adata: AnnData):
@@ -891,9 +815,7 @@ class TestMonteCarlo:
             seed=43,
         )
 
-        val = np.mean(
-            np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
-        )
+        val = np.mean(np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data))
         assert val < 1e-5, val
 
     @jax_not_installed_skip
@@ -908,27 +830,21 @@ class TestMonteCarlo:
         )
 
         vk_s = VelocityKernel(adata, backward=False)
-        vk_s.compute_transition_matrix(
-            model="stochastic", show_progress_bar=False, n_jobs=4, softmax_scale=4
-        )
+        vk_s.compute_transition_matrix(model="stochastic", show_progress_bar=False, n_jobs=4, softmax_scale=4)
 
-        val = np.mean(
-            np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data)
-        )
+        val = np.mean(np.abs(vk_mc.transition_matrix.data - vk_s.transition_matrix.data))
         assert val < 1e-3, val
 
 
 class TestVelocityScheme:
     def test_invalid_string_key(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             vk.compute_transition_matrix(similarity="foobar")
 
     def test_not_callable(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        with pytest.raises(
-            TypeError, match="Expected `scheme` to be a function, found"
-        ):
+        with pytest.raises(TypeError, match="Expected `scheme` to be a function, found"):
             vk.compute_transition_matrix(similarity=1311)
 
     def test_custom_function_not_sum_to_1(self, adata: AnnData):
@@ -948,17 +864,11 @@ class TestVelocityScheme:
     @pytest.mark.parametrize("backward", [True, False])
     def test_implementations_differ(self, adata: AnnData, backward: bool):
         vk_dot = VelocityKernel(adata, backward=backward)
-        vk_dot.compute_transition_matrix(
-            model="deterministic", softmax_scale=4, similarity="dot_product"
-        )
+        vk_dot.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity="dot_product")
         vk_cos = VelocityKernel(adata, backward=backward)
-        vk_cos.compute_transition_matrix(
-            model="deterministic", softmax_scale=4, similarity="cosine"
-        )
+        vk_cos.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity="cosine")
         vk_cor = VelocityKernel(adata, backward=backward)
-        vk_cor.compute_transition_matrix(
-            model="deterministic", softmax_scale=4, similarity="correlation"
-        )
+        vk_cor.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity="correlation")
 
         np.testing.assert_allclose(vk_dot.transition_matrix.sum(1), 1.0)
         np.testing.assert_allclose(vk_cor.transition_matrix.sum(1), 1.0)
@@ -969,7 +879,7 @@ class TestVelocityScheme:
         assert not np.allclose(vk_cor.transition_matrix.A, vk_dot.transition_matrix.A)
 
     @pytest.mark.parametrize(
-        "key,fn",
+        ("key", "fn"),
         zip(
             ["dot_product", "cosine", "correlation"],
             [
@@ -983,40 +893,30 @@ class TestVelocityScheme:
         vk_k = VelocityKernel(adata)
         vk_fn = VelocityKernel(adata)
 
-        vk_k.compute_transition_matrix(
-            model="deterministic", softmax_scale=4, similarity=key
-        )
-        vk_fn.compute_transition_matrix(
-            model="deterministic", softmax_scale=4, similarity=fn
-        )
+        vk_k.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity=key)
+        vk_fn.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity=fn)
 
         np.testing.assert_allclose(vk_k.transition_matrix.A, vk_fn.transition_matrix.A)
 
     @pytest.mark.parametrize("backward", [True, False])
     def test_custom_function(self, adata: AnnData, backward: bool):
         vk = VelocityKernel(adata, backward=backward)
-        vk.compute_transition_matrix(
-            model="deterministic", softmax_scale=4, similarity=CustomFuncHessian()
-        )
+        vk.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity=CustomFuncHessian())
 
         assert vk.params["similarity"] == str(CustomFuncHessian())
 
     def test_custom_function_stochastic_no_hessian(self, adata: AnnData):
         vk = VelocityKernel(adata)
-        vk.compute_transition_matrix(
-            model="stochastic", similarity=CustomFunc(), softmax_scale=4, n_samples=10
-        )
+        vk.compute_transition_matrix(model="stochastic", similarity=CustomFunc(), softmax_scale=4, n_samples=10)
 
         assert vk.params["model"] == "stochastic"
         assert vk.params["similarity"] == str(CustomFunc())
 
     def test_save_to_anndata(self, adata: AnnData, tmpdir):
-        path = Path(tmpdir) / "adata.h5ad"
+        path = pathlib.Path(tmpdir) / "adata.h5ad"
         key = "vk"
 
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model=VelocityModel.DETERMINISTIC
-        )
+        vk = VelocityKernel(adata).compute_transition_matrix(model=VelocityModel.DETERMINISTIC)
         vk.write_to_adata(key=key)
 
         assert isinstance(vk.params["model"], str)
@@ -1088,17 +988,13 @@ class TestPseudotimeKernelScheme:
         pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         with pytest.raises(ValueError, match="Expected row of shape"):
             pk.compute_transition_matrix(
-                threshold_scheme=lambda cpt, npt, ndist: np.ones(
-                    (len(ndist) - 1), dtype=np.float64
-                ),
+                threshold_scheme=lambda cpt, npt, ndist: np.ones((len(ndist) - 1), dtype=np.float64),
             )
 
     def test_custom_scheme(self, adata: AnnData):
         pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
         pk.compute_transition_matrix(
-            threshold_scheme=lambda cpt, npt, ndist: np.ones(
-                (len(ndist)), dtype=np.float64
-            ),
+            threshold_scheme=lambda cpt, npt, ndist: np.ones((len(ndist)), dtype=np.float64),
         )
 
         np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
@@ -1108,9 +1004,7 @@ class TestPseudotimeKernelScheme:
     @pytest.mark.parametrize("scheme", ["hard", "soft"])
     def test_scheme(self, adata: AnnData, scheme: str):
         pk = PseudotimeKernel(adata, time_key="dpt_pseudotime")
-        pk.compute_transition_matrix(
-            threshold_scheme=scheme, frac_to_keep=0.3, b=10, nu=0.5
-        )
+        pk.compute_transition_matrix(threshold_scheme=scheme, frac_to_keep=0.3, b=10, nu=0.5)
 
         np.testing.assert_allclose(pk.transition_matrix.sum(1), 1.0)
         assert pk.params["scheme"] == scheme
@@ -1155,9 +1049,7 @@ class TestCytoTRACEKernel:
         assert k.pseudotime is None
 
     def test_writes_params(self, adata: AnnData):
-        k = CytoTRACEKernel(adata).compute_cytotrace(
-            use_raw=False, layer="X", aggregation="mean"
-        )
+        k = CytoTRACEKernel(adata).compute_cytotrace(use_raw=False, layer="X", aggregation="mean")
 
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "X",
@@ -1167,7 +1059,7 @@ class TestCytoTRACEKernel:
         }
 
         assert np.all(adata.var[Key.cytotrace("gene_corr")] <= 1.0)
-        assert np.all(-1 <= adata.var[Key.cytotrace("gene_corr")])
+        assert np.all(adata.var[Key.cytotrace("gene_corr")] >= -1)
         assert is_bool_dtype(adata.var[Key.cytotrace("correlates")])
         assert adata.var[Key.cytotrace("correlates")].sum() == min(200, adata.n_vars)
 
@@ -1175,9 +1067,7 @@ class TestCytoTRACEKernel:
         assert Key.cytotrace("pseudotime") in adata.obs
         assert Key.cytotrace("num_exp_genes") in adata.obs
         assert is_integer_dtype(adata.obs[Key.cytotrace("num_exp_genes")])
-        np.testing.assert_array_equal(
-            k.pseudotime, adata.obs[Key.cytotrace("pseudotime")].values
-        )
+        np.testing.assert_array_equal(k.pseudotime, adata.obs[Key.cytotrace("pseudotime")].values)
         np.testing.assert_array_equal(k.pseudotime.min(), 0.0)
         np.testing.assert_array_equal(k.pseudotime.max(), 1.0)
 
@@ -1197,20 +1087,14 @@ class TestCytoTRACEKernel:
         n_genes = min(adata.raw.n_vars if use_raw else adata.n_vars, n_genes)
         if n_genes <= 0:
             with pytest.raises(ValueError, match=r"Expected .* genes to be positive"):
-                _ = CytoTRACEKernel(adata).compute_cytotrace(
-                    use_raw=use_raw, n_genes=n_genes
-                )
+                _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, n_genes=n_genes)
         else:
-            _ = CytoTRACEKernel(adata).compute_cytotrace(
-                use_raw=use_raw, n_genes=n_genes
-            )
+            _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, n_genes=n_genes)
             assert adata.var[Key.cytotrace("correlates")].sum() == n_genes
             assert adata.uns[Key.cytotrace("params")]["n_genes"] == n_genes
 
     def test_rereads_pseudotime(self, adata: AnnData):
-        k1 = CytoTRACEKernel(adata).compute_cytotrace(
-            use_raw=False, layer="X", aggregation="mean"
-        )
+        k1 = CytoTRACEKernel(adata).compute_cytotrace(use_raw=False, layer="X", aggregation="mean")
         k2 = CytoTRACEKernel(adata)
 
         assert k1.pseudotime is not k2.pseudotime
@@ -1222,25 +1106,19 @@ class TestCytoTRACEKernel:
             k.compute_transition_matrix()
 
     def test_compute_transition_matrix(self, adata: AnnData):
-        k = CytoTRACEKernel(adata).compute_cytotrace(
-            use_raw=False, layer="X", aggregation="mean"
-        )
+        k = CytoTRACEKernel(adata).compute_cytotrace(use_raw=False, layer="X", aggregation="mean")
         k.compute_transition_matrix()
 
         np.testing.assert_allclose(k.transition_matrix.sum(1), 1.0)
 
     def test_inversion(self, adata: AnnData):
-        k = ~CytoTRACEKernel(adata).compute_cytotrace(
-            use_raw=False, layer="X", aggregation="mean"
-        )
+        k = ~CytoTRACEKernel(adata).compute_cytotrace(use_raw=False, layer="X", aggregation="mean")
 
         pt = adata.obs[Key.cytotrace("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
 
     def test_inversion_bwd(self, adata: AnnData):
-        k = CytoTRACEKernel(adata, backward=True).compute_cytotrace(
-            use_raw=False, layer="X", aggregation="mean"
-        )
+        k = CytoTRACEKernel(adata, backward=True).compute_cytotrace(use_raw=False, layer="X", aggregation="mean")
 
         pt = adata.obs[Key.cytotrace("pseudotime")].values
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
@@ -1258,26 +1136,23 @@ class TestTransportMapKernel:
         if policy == "sequential":
             assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
         else:
-            assert tmk.couplings == {
-                (src, tgt): None
-                for (src, tgt) in itertools.product(cats, cats)
-                if src < tgt
-            }
+            assert tmk.couplings == {(src, tgt): None for (src, tgt) in itertools.product(cats, cats) if src < tgt}
 
     @pytest.mark.parametrize("correct_shape", [False, True])
     def test_explicit_initialization(self, adata: AnnData, correct_shape: bool):
+        rng = np.random.default_rng()
         adata.obs["exp_time"] = col = pd.cut(adata.obs["dpt_pseudotime"], 3)
         cats = col.cat.categories
 
         couplings = {}
         for src, tgt in zip(cats[:-1], cats[1:]):
             n, m = np.sum(col == src), np.sum(col == tgt)
-            val = np.abs(np.random.normal(size=(n, m)))
+            n += not correct_shape
+            val = np.abs(rng.normal(size=(n, m)))
             if not correct_shape:
-                n += 1
                 val = AnnData(val)
-                val.obs_names == adata.obs_names[col == src]
-                val.var_names == adata.obs_names[col == tgt]
+                val.obs_names = list(adata.obs_names[col == src]) + [adata.obs_names[-1]]
+                val.var_names = adata.obs_names[col == tgt]
             couplings[src, tgt] = val
 
         tmk = TransportMapKernel(adata, couplings=couplings, time_key="exp_time")
@@ -1285,9 +1160,7 @@ class TestTransportMapKernel:
 
         if correct_shape:
             tmk = tmk.compute_transition_matrix()
-            np.testing.assert_allclose(
-                tmk.transition_matrix.sum(1), 1.0, rtol=1e-5, atol=1e-5
-            )
+            np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0, rtol=1e-5, atol=1e-5)
         else:
             with pytest.raises(IndexError, match=r"Source observations"):
                 _ = tmk.compute_transition_matrix()
@@ -1313,12 +1186,10 @@ class TestTransportMapKernel:
 
         for src, tgt in zip(cats[:-1], cats[1:]):
             src_mask, tgt_mask = tmk.time == src, tmk.time == tgt
-            np.testing.assert_allclose(
-                tmat[src_mask, :][:, tgt_mask].A, expected[src, tgt]
-            )
+            np.testing.assert_allclose(tmat[src_mask, :][:, tgt_mask].A, expected[src, tgt])
 
     @pytest.mark.parametrize(
-        "problem,sparse_mode,policy",
+        ("problem", "sparse_mode", "policy"),
         [
             ("temporal", None, "sequential"),
             ("temporal", "min_row", "triu"),
@@ -1336,9 +1207,7 @@ class TestTransportMapKernel:
 
         col = pd.cut(adata_large.obs["dpt_pseudotime"], 3)
         cats = col.cat.categories
-        adata_large.obs["exp_time"] = col.cat.rename_categories(
-            dict(zip(cats, range(len(cats))))
-        )
+        adata_large.obs["exp_time"] = col.cat.rename_categories(dict(zip(cats, range(len(cats)))))
 
         if problem == "temporal":
             problem = moscot.problems.TemporalProblem(adata_large)
@@ -1349,9 +1218,7 @@ class TestTransportMapKernel:
         else:
             raise ValueError(problem)
 
-        problem = problem.prepare(
-            policy=policy, time_key="exp_time", xy_callback_kwargs={"n_comps": 5}
-        ).solve()
+        problem = problem.prepare(policy=policy, time_key="exp_time", xy_callback_kwargs={"n_comps": 5}).solve()
 
         tmk = TransportMapKernel.from_moscot(
             problem,
@@ -1359,15 +1226,13 @@ class TestTransportMapKernel:
         )
         for k, v in tmk.couplings.items():
             if sparse_mode is not None:
-                assert issparse(v.X), k
+                assert sp.issparse(v.X), k
             else:
                 assert isinstance(v.X, np.ndarray), k
 
         tmk = tmk.compute_transition_matrix()
 
-        np.testing.assert_allclose(
-            tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6
-        )
+        np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6)
 
     def test_from_wot(self, adata: AnnData, tmpdir):
         wot = pytest.importorskip("wot")
@@ -1375,9 +1240,7 @@ class TestTransportMapKernel:
         gr_iters = 3
         col = pd.cut(adata.obs["dpt_pseudotime"], 4)
         cats = col.cat.categories
-        adata.obs["exp_time"] = col.cat.rename_categories(
-            dict(zip(cats, range(len(cats))))
-        )
+        adata.obs["exp_time"] = col.cat.rename_categories(dict(zip(cats, range(len(cats)))))
 
         ot_model = wot.ot.OTModel(adata, day_field="exp_time", growth_iters=gr_iters)
         ot_model.compute_all_transport_maps(tmap_out=f"{tmpdir}/")
@@ -1386,39 +1249,31 @@ class TestTransportMapKernel:
         obs = pd.read_csv(tmpdir / "tmaps_g.txt", index_col=0, sep="\t")
         tmk = tmk.compute_transition_matrix()
 
-        np.testing.assert_allclose(
-            tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6
-        )
+        np.testing.assert_allclose(tmk.transition_matrix.sum(1), 1.0, rtol=1e-6, atol=1e-6)
         # last time point has no growth rates
         pd.testing.assert_frame_equal(obs, tmk.obs.loc[obs.index])
         assert tmk.obs.shape == (adata.n_obs, gr_iters + 1)
 
     def test_from_moscot_set_solution(self, adata_large: AnnData):
+        rng = np.random.default_rng()
         moscot = pytest.importorskip("moscot")
 
         col = pd.cut(adata_large.obs["dpt_pseudotime"], 4)
         cats = col.cat.categories
-        adata_large.obs["exp_time"] = col.cat.rename_categories(
-            dict(zip(cats, range(len(cats))))
-        )
+        adata_large.obs["exp_time"] = col.cat.rename_categories(dict(zip(cats, range(len(cats)))))
 
         problem = moscot.problems.TemporalProblem(adata_large)
-        problem = problem.prepare(
-            policy="sequential", time_key="exp_time", xy_callback_kwargs={"n_comps": 6}
-        )
+        problem = problem.prepare(policy="sequential", time_key="exp_time", xy_callback_kwargs={"n_comps": 6})
 
         expected = {}
-        for src, tgt in problem.problems:
-            subprob = problem[src, tgt]
-            tmp = np.abs(np.random.normal(size=subprob.shape)) + 1.0
+        for (src, tgt), subprob in problem.problems.items():
+            tmp = np.abs(rng.normal(size=subprob.shape)) + 1.0
             expected[src, tgt] = tmp = tmp / np.sum(tmp, axis=-1, keepdims=True)
             subprob.set_solution(tmp)
 
         tmk = TransportMapKernel.from_moscot(problem)
         for (src, tgt), actual in tmk.couplings.items():
-            np.testing.assert_allclose(
-                actual.X, expected[src, tgt], rtol=1e-6, atol=1e-6
-            )
+            np.testing.assert_allclose(actual.X, expected[src, tgt], rtol=1e-6, atol=1e-6)
 
 
 class TestSingleFlow:
@@ -1438,33 +1293,23 @@ class TestSingleFlow:
 
     def test_too_few_invalid_clusters(self, kernel: Kernel):
         with pytest.raises(ValueError, match=r"Expected at least `2` clusters"):
-            kernel.plot_single_flow(
-                "Astrocytes", "clusters", "age(days)", clusters=["foo", "bar", "baz"]
-            )
+            kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", clusters=["foo", "bar", "baz"])
 
     def test_all_invalid_clusters(self, kernel: Kernel):
         with pytest.raises(ValueError, match=r"No valid clusters have been selected."):
-            kernel.plot_single_flow(
-                "quux", "clusters", "age(days)", clusters=["foo", "bar", "baz"]
-            )
+            kernel.plot_single_flow("quux", "clusters", "age(days)", clusters=["foo", "bar", "baz"])
 
     def test_invalid_time_key(self, kernel: Kernel):
-        with pytest.raises(
-            KeyError, match=r"Unable to find data in `adata.obs\['foo'\]`."
-        ):
+        with pytest.raises(KeyError, match=r"Unable to find data in `adata.obs\['foo'\]`."):
             kernel.plot_single_flow("Astrocytes", "clusters", "foo")
 
     def test_too_few_valid_timepoints(self, kernel: Kernel):
         with pytest.raises(ValueError, match=r"Expected at least `2` time points"):
-            kernel.plot_single_flow(
-                "Astrocytes", "clusters", "age(days)", time_points=["35"]
-            )
+            kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", time_points=["35"])
 
     def test_all_invalid_times(self, kernel: Kernel):
         with pytest.raises(ValueError, match=r"No valid time points"):
-            kernel.plot_single_flow(
-                "Astrocytes", "clusters", "age(days)", time_points=[0, 1, 2]
-            )
+            kernel.plot_single_flow("Astrocytes", "clusters", "age(days)", time_points=[0, 1, 2])
 
     def test_time_key_cannot_be_coerced_to_numeric(self, kernel: Kernel):
         with pytest.raises(TypeError, match=r"Unable to convert .* to `float`."):
@@ -1487,17 +1332,13 @@ class TestPrecomputedKernel:
             _ = PrecomputedKernel([[1, 0], [0, 1]])
 
     def test_precomputed_not_square(self):
-        with pytest.raises(
-            ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"
-        ):
-            _ = PrecomputedKernel(np.random.normal(size=(10, 9)))
+        with pytest.raises(ValueError, match=r"Expected matrix to be of shape `\(10, 10\)`"):
+            _ = PrecomputedKernel(np.ones((10, 9)))
 
     def test_precomputed_not_a_transition_matrix(self):
         mat = random_transition_matrix(100)
         mat[0, 0] = -1e-3
-        with pytest.raises(
-            ValueError, match=r"Unable to normalize matrix with negative values."
-        ):
+        with pytest.raises(ValueError, match=r"Unable to normalize matrix with negative values."):
             _ = PrecomputedKernel(mat)
 
     def test_precomputed_from_kernel_no_transition(self, adata: AnnData):
@@ -1530,14 +1371,12 @@ class TestPrecomputedKernel:
         assert pk.adata.shape == (50, 1)
         assert pk.adata.obs.shape == (50, 0)
         assert pk.adata.var.shape == (1, 0)
-        assert "T_fwd_params" in pk.adata.uns.keys()
+        assert "T_fwd_params" in pk.adata.uns
         assert pk.adata.uns["T_fwd_params"] == {"init": {}, "params": pk.params}
         np.testing.assert_array_equal(pk.adata.obsp["T_fwd"], pk.transition_matrix)
 
     def test_precomputed_different_adata(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model="deterministic", softmax_scale=4
-        )
+        vk = VelocityKernel(adata).compute_transition_matrix(model="deterministic", softmax_scale=4)
         bdata = adata.copy()
 
         pk = PrecomputedKernel(vk, adata=bdata)
@@ -1547,9 +1386,7 @@ class TestPrecomputedKernel:
         assert pk.adata is not bdata
 
     def test_precomputed_adata_origin(self, adata: AnnData):
-        vk = VelocityKernel(adata).compute_transition_matrix(
-            model="deterministic", softmax_scale=4
-        )
+        vk = VelocityKernel(adata).compute_transition_matrix(model="deterministic", softmax_scale=4)
         vk.write_to_adata("foo")
 
         pk = PrecomputedKernel("foo", adata=adata)
@@ -1571,9 +1408,7 @@ class TestPrecomputedKernel:
 
     @pytest.mark.parametrize("backward", [False, True, None])
     def test_precomputed_bool(self, adata: AnnData, backward: bool):
-        adata.obsp[Key.uns.kernel(backward)] = mat = random_transition_matrix(
-            adata.n_obs
-        )
+        adata.obsp[Key.uns.kernel(backward)] = mat = random_transition_matrix(adata.n_obs)
         pk = PrecomputedKernel(backward, adata=adata)
 
         np.testing.assert_array_equal(mat, pk.transition_matrix)
@@ -1629,7 +1464,7 @@ class TestKernelIO:
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("write_adata", [False, True])
     def test_read_write(self, kernel: Kernel, tmpdir, write_adata: bool, copy: bool):
-        path = Path(tmpdir) / "kernel.pickle"
+        path = pathlib.Path(tmpdir) / "kernel.pickle"
         kernel.write(path, write_adata=write_adata)
 
         if write_adata:
@@ -1677,9 +1512,7 @@ class TestKernelIO:
 
         assert k1.backward == k2.backward
         assert k1.params == k2.params
-        if issparse(k1.transition_matrix):
-            np.testing.assert_almost_equal(
-                k1.transition_matrix.A, k2.transition_matrix.A
-            )
+        if sp.issparse(k1.transition_matrix):
+            np.testing.assert_almost_equal(k1.transition_matrix.A, k2.transition_matrix.A)
         else:
             np.testing.assert_almost_equal(k1.transition_matrix, k2.transition_matrix)

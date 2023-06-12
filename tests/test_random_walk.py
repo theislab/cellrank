@@ -1,16 +1,15 @@
 import pytest
 
-from anndata import AnnData
-from cellrank.kernels.utils import RandomWalk
-
 import numpy as np
+
+from anndata import AnnData
+
+from cellrank.kernels.utils import RandomWalk
 
 
 class TestRandomWalk:
     def test_matrix_not_row_stochastic(self, test_matrix_4: np.ndarray):
-        with pytest.raises(
-            ValueError, match=r"Transition matrix is not row-stochastic."
-        ):
+        with pytest.raises(ValueError, match=r"Transition matrix is not row-stochastic."):
             _ = RandomWalk(AnnData(test_matrix_4), test_matrix_4)
 
     def test_starting_dist_does_not_sum_to_1(self, test_matrix_1: np.ndarray):
@@ -21,7 +20,7 @@ class TestRandomWalk:
     @pytest.mark.parametrize("kind", ["simulations", "iterations", "hits"])
     def test_invalid_numbers(self, test_matrix_1: np.ndarray, kind: str):
         rw = RandomWalk(AnnData(test_matrix_1), test_matrix_1)
-        with pytest.raises(ValueError, match=kind):
+        with pytest.raises(ValueError, match=kind):  # noqa: PT012
             if kind == "simulations":
                 rw.simulate_many(n_sims=0)
             elif kind == "iterations":
@@ -44,9 +43,7 @@ class TestRandomWalk:
         np.testing.assert_array_equal(r1, r2)
 
     def test_simulate_one(self, test_matrix_1: np.ndarray):
-        res = RandomWalk(AnnData(test_matrix_1), test_matrix_1).simulate_one(
-            max_iter=10
-        )
+        res = RandomWalk(AnnData(test_matrix_1), test_matrix_1).simulate_one(max_iter=10)
 
         assert isinstance(res, np.ndarray)
         assert np.issubdtype(res.dtype, np.integer)
@@ -60,9 +57,7 @@ class TestRandomWalk:
 
     def test_stop_ixs(self, test_matrix_1: np.ndarray):
         adata = AnnData(test_matrix_1)
-        res = RandomWalk(adata, test_matrix_1, stop_ixs=[1]).simulate_one(
-            max_iter=1000, seed=42
-        )
+        res = RandomWalk(adata, test_matrix_1, stop_ixs=[1]).simulate_one(max_iter=1000, seed=42)
 
         assert len(res) <= 1001
         assert res[-1] == 1
@@ -72,9 +67,7 @@ class TestRandomWalk:
         adata = AnnData(test_matrix_1)
         test_matrix_1[0, 0] = 0.2
         test_matrix_1[0, 2] = 0.0
-        res = RandomWalk(adata, test_matrix_1, stop_ixs=[0]).simulate_one(
-            max_iter=1000, seed=42, successive_hits=1
-        )
+        res = RandomWalk(adata, test_matrix_1, stop_ixs=[0]).simulate_one(max_iter=1000, seed=42, successive_hits=1)
 
         assert len(res) <= 1001
         assert res[-1] == 0

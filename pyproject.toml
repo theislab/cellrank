@@ -1,81 +1,321 @@
 [build-system]
-requires = ['setuptools', 'setuptools_scm', 'wheel']
-build-backend = 'setuptools.build_meta'
+requires = ["setuptools>=61", "setuptools-scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cellrank"
+dynamic = ["version"]
+description = "CellRank: dynamics from multi-view single-cell data"
+readme = "README.rst"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Typing :: Typed",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+keywords = [
+    "single-cell",
+    "bio-informatics",
+    "RNA velocity",
+    "Markov chain",
+    "GPCCA",
+]
+authors = [
+    {name = "Marius Lange"},
+    {name = "Michal Klein"},
+    {name = "Philipp Weiler"},
+]
+maintainers = [
+    {name = "Michal Klein", email = "info@cellrank.org"}
+]
+
+
+dependencies = [
+    "anndata>=0.8",
+    "docrep>=0.3.0",
+    "joblib>=0.13.1",
+    "matplotlib>=3.5.0",
+    "networkx>=2.2",
+    "numba>=0.51.0,!=0.57.0",
+    "numpy>=1.17.0",
+    "pandas>=1.5.0",
+    "pygam>=0.8.0",
+    "pygpcca>=1.0.4",
+    "scanpy>=1.7.2",
+    "scikit-learn>=0.24.0",
+    "scipy>=1.2.0",
+    "scvelo>=0.2.5",
+    "seaborn>=0.10.0",
+    "wrapt>=1.12.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3.0.0",
+    "tox>=4",
+]
+test = [
+    "pytest>=7",
+    "pytest-xdist>=3",
+    "pytest-mock>=3.5.0",
+    "pytest-cov>=4",
+    "coverage[toml]>=7",
+    "igraph",
+    "leidenalg",
+    "Pillow",
+    "jax",
+]
+docs = [
+    "furo>=2022.09.29",
+    "myst-nb>=0.17.1",
+    "sphinx>=5.1.1",
+    "sphinx-autodoc-typehints>=1.10.3",
+    "sphinx_copybutton>=0.5.0",
+    "sphinx_design>=0.3.0",
+    "sphinxcontrib-bibtex>=2.3.0",
+    "sphinxcontrib-spelling>=7.6.2",
+]
+
+[project.urls]
+Homepage = "https://github.com/theislab/cellrank"
+Download = "https://cellrank.readthedocs.io/en/latest/installation.html"
+"Bug Tracker" = "https://github.com/theislab/cellrank/issues"
+Documentation = "https://cellrank.readthedocs.io"
+"Source Code" = "https://github.com/theislab/cellrank"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools_scm]
+
+[tool.ruff]
+target-version = "py38"
+exclude = [
+    ".eggs",
+    ".git",
+    ".ruff_cache",
+    ".tox",
+    "__pypackages__",
+    "_build",
+    "build",
+    "dist",
+]
+ignore = [
+    "PT011",  # TODO/
+    # Do not implicitly `return None` in function able to return non-`None` value
+    "RET502",
+    # Missing explicit `return` at the end of function able to return non-`None` value
+    "RET503",
+    # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
+    "E731",
+    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
+    "E741",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in __init__
+    "D107",
+    # Missing docstring in magic method
+    "D105",
+]
+line-length = 120
+select = [
+    "D", # flake8-docstrings
+    "E", # pycodestyle
+    "F", # pyflakes
+    "W", # pycodestyle
+    "Q", # flake8-quotes
+    "SIM", # flake8-simplify
+    "NPY",  # NumPy-specific rules
+    "PT",  # flake8-pytest-style
+    "TID",  # flake8-tidy-imports
+    "B", # flake8-bugbear
+    "UP", # pyupgrade
+    "C4", # flake8-comprehensions
+    "BLE", # flake8-blind-except
+    "T20",  # flake8-print
+    "RET", # flake8-raise
+]
+unfixable = ["B", "UP", "C4", "BLE", "T20", "RET"]
+[tool.ruff.per-file-ignores]
+"tests/*" = ["D"]
+"*/__init__.py" = ["F401"]
+"docs/*" = ["D"]
+[tool.ruff.pydocstyle]
+convention = "numpy"
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+[tool.ruff.flake8-quotes]
+inline-quotes = "double"
 
 [tool.black]
-line-length = 88
-target-version = ['py37', 'py38', 'py39']
+line-length = 120
+target-version = ['py38']
 include = '\.pyi?$'
-exclude = '''
-
-(
-  /(
-      \.eggs
-    | \.git
-    | \.hg
-    | \.mypy_cache
-    | \.tox
-    | \.venv
-    | _build
-    | buck-out
-    | build
-    | dist
-
-    | tests/_ground_truth_figures
-  )/
-
-)
-'''
 
 [tool.isort]
 profile = "black"
-line_length = 88
-multi_line_output = 3
 include_trailing_comma = true
-use_parentheses = true
-known_stdlib = "typing"
-known_bio = "scanpy,cellrank,scvelo,anndata"
-known_plot = "mpl_toolkits,matplotlib,seaborn"
-known_num = "numpy,numba,pandas,scipy,sklearn,statmodels,networkx,pygam"
-sections = "FUTURE,STDLIB,THIRDPARTY,BIO,NUM,PLOT,FIRSTPARTY,LOCALFOLDER"
-no_lines_before = "LOCALFOLDER"
-balanced_wrapping = true
-force_grid_wrap = 0
-length_sort = "1"
-indent = "    "
-skip_glob = "examples/*.py"
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GENERIC", "NUMERIC", "PLOTTING", "BIO", "FIRSTPARTY", "LOCALFOLDER"]
+# also contains what we import in notebooks
+known_generic = ["wrapt", "joblib"]
+known_numeric = ["numpy", "numba", "scipy", "jax", "pandas", "sklearn", "networkx", "statsmodels"]
+known_bio = ["anndata", "scanpy"]
+known_plotting = ["IPython", "matplotlib", "mpl_toolkits", "seaborn"]
 
-[tool.towncrier]
-package = "cellrank"
-single_file = false
-filename = "docs/source/release/notes-{version}.rst"
-directory = "docs/source/release/changelog"
-issue_format = "`#{issue} <https://github.com/theislab/cellrank/pull/{issue}>`__"
-template = "docs/source/release/changelog/template.rst"
-underlines = ["~", "-"]
-all_bullets = true
+[tool.pytest.ini_options]
+testpaths = "tests"
+xfail_strict = true
 
-[[tool.towncrier.type]]
-directory = "feature"
-name = "Features"
-showcontent = true
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ["src/"]
+omit = [
+    "*/__init__.py",
+]
 
-[[tool.towncrier.type]]
-directory = "bugfix"
-name = "Bugfixes"
-showcontent = true
+[tool.coverage.report]
+exclude_lines = [
+    '\#.*pragma:\s*no.?cover',
+    "^if __name__ == .__main__.:$",
+    '^\s*raise AssertionError\b',
+    '^\s*raise NotImplementedError\b',
+    '^\s*return NotImplemented\b',
+]
+precision = 2
+show_missing = true
+skip_empty = true
+sort = "Miss"
 
-[[tool.towncrier.type]]
-directory = "deprecation"
-name = "Deprecations (in next major release)"
-showcontent = true
+[tool.rstcheck]
+ignore_directives = [
+    "toctree",
+    "currentmodule",
+    "autosummary",
+    "module",
+    "automodule",
+    "autoclass",
+    "bibliography",
+    "grid",
+]
+ignore_roles = [
+    "mod",
+    "class",
+    "attr",
+    "func",
+    "meth",
+    "doc",
+    "cite",
+]
 
-[[tool.towncrier.type]]
-directory = "misc"
-name = "Miscellaneous"
-showcontent = true
+[tool.doc8]
+max_line_length = 120
+ignore-path = "docs/release/**.rst"
 
-[[tool.towncrier.type]]
-directory = "doc"
-name = "Documentation"
-showcontent = true
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+# TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
+requires = tox-conda
+isolated_build = true
+envlist = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
+skip_missing_interpreters = true
+
+[testenv]
+# TODO(michalk8): remove after new scVelo version is up
+deps = git+https://github.com/theislab/scvelo
+conda_deps =
+    py: r-mgcv
+    py: rpy2
+    slepc: mpi4py
+    slepc: petsc4py
+    slepc: slepc4py
+conda_channels=
+    conda-forge
+extras = test
+passenv = PYTEST_* CI
+commands =
+    python -m pytest {tty:--color=yes} {posargs: \
+        --cov={envsitepackagesdir}{/}cellrank --cov-config={toxinidir}{/}pyproject.toml \
+        --no-cov-on-fail --cov-report=xml --cov-report=term-missing:skip-covered}
+
+[testenv:lint-code]
+description = Lint the code.
+deps = pre-commit>=3.0.0
+skip_install = true
+commands =
+    pre-commit run --all-files --show-diff-on-failure
+
+[testenv:lint-docs]
+description = Lint the documentation.
+deps =
+extras = docs
+ignore_errors = true
+allowlist_externals = make
+passenv = PYENCHANT_LIBRARY_PATH
+setenv = SPHINXOPTS = -W -q --keep-going
+changedir = {toxinidir}{/}docs
+commands =
+    make linkcheck {posargs}
+    # make spelling {posargs}
+
+[testenv:clean-docs]
+description = Remove the documentation.
+deps =
+skip_install = true
+changedir = {toxinidir}{/}docs
+allowlist_externals = make
+commands =
+    make clean
+
+[testenv:build-docs]
+description = Build the documentation.
+deps =
+extras = docs
+allowlist_externals = make
+changedir = {toxinidir}{/}docs
+commands =
+    make html {posargs}
+commands_post =
+    python -c 'import pathlib; print("Documentation is under:", pathlib.Path("{toxinidir}") / "docs" / "_build" / "html" / "index.html")'
+
+[testenv:build-package]
+description = Build the package.
+deps =
+    build
+    twine
+allowlist_externals = rm
+commands =
+    rm -rf {toxinidir}{/}dist
+    python -m build --sdist --wheel --outdir {toxinidir}{/}dist{/} {posargs:}
+    python -m twine check {toxinidir}{/}dist{/}*
+commands_post =
+    python -c 'import pathlib; print(f"Package is under:", pathlib.Path("{toxinidir}") / "dist")'
+
+[testenv:format-references]
+description = Format references.bib.
+deps =
+skip_install = true
+allowlist_externals = biber
+commands = biber --tool --output_file={toxinidir}{/}docs{/}references.bib --nolog \
+    --output_align --output_indent=2 --output_fieldcase=lower \
+    --output_legacy_dates --output-field-replace=journaltitle:journal,thesis:phdthesis,institution:school \
+    {toxinidir}{/}docs{/}references.bib
+"""

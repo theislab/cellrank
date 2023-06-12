@@ -1,11 +1,12 @@
-import cellrank as cr
-from anndata import AnnData
-from cellrank.kernels import VelocityKernel, ConnectivityKernel
-from cellrank._utils._key import Key
-
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_categorical_dtype
+
+from anndata import AnnData
+
+import cellrank as cr
+from cellrank._utils._key import Key
+from cellrank.kernels import ConnectivityKernel, VelocityKernel
 
 
 def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
@@ -51,9 +52,7 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata)
 
     def test_bwd_pipeline_cflare(self, adata: AnnData):
-        vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
-            softmax_scale=4
-        )
+        vk = VelocityKernel(adata, backward=True).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 
@@ -113,9 +112,7 @@ class TestLowLevelPipeline:
         _assert_has_all_keys(adata)
 
     def test_bwd_pipeline_gpcca(self, adata: AnnData):
-        vk = VelocityKernel(adata, backward=True).compute_transition_matrix(
-            softmax_scale=4
-        )
+        vk = VelocityKernel(adata, backward=True).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata).compute_transition_matrix()
         final_kernel = 0.8 * vk + 0.2 * ck
 

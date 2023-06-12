@@ -1,37 +1,35 @@
+import copy
+import io
+import itertools
+import pathlib
 import pickle
+
 import pytest
-from io import BytesIO
-from copy import copy, deepcopy
-from pathlib import Path
-from _helpers import gamr_skip, create_model, assert_models_equal
-from itertools import product
+from _helpers import assert_models_equal, create_model, gamr_skip
+from pygam import ExpectileGAM
+
+import numpy as np
+import scipy.stats as st
+from sklearn.svm import SVR
 
 from anndata import AnnData
+
 from cellrank._utils import Lineage
-from cellrank.models import GAM, GAMR, FittedModel, SKLearnModel
 from cellrank._utils._key import Key
+from cellrank.models import GAM, GAMR, FittedModel, SKLearnModel
+from cellrank.models._base_model import FailedModel, UnknownModelError
+from cellrank.models._pygam_model import GamDistribution, GamLinkFunction, _gams
 from cellrank.models._utils import (
     _OFFSET_KEY,
     NormMode,
-    _rankdata,
-    _get_offset,
     _extract_data,
     _get_knotlocs,
+    _get_offset,
+    _rankdata,
 )
-from cellrank.models._base_model import FailedModel, UnknownModelError
-from cellrank.models._pygam_model import GamDistribution, GamLinkFunction, _gams
-
-import numpy as np
-from pygam import ExpectileGAM
-from scipy.stats import rankdata
-from sklearn.svm import SVR
 
 
 class TestModel:
-    def test_wrong_type(self):
-        with pytest.raises(TypeError):
-            SKLearnModel(0, SVR())
-
     def test_initialize(self, adata: AnnData):
         model = create_model(adata)
 
@@ -39,30 +37,28 @@ class TestModel:
 
     def test_prepare_invalid_gene(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare("foo", "0", "latent_time")
 
     def test_prepare_invalid_lineage(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "foo", "latent_time")
 
     def test_prepare_invalid_data_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "latent_time", data_key="foo")
 
     def test_prepare_invalid_time_key(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match=r"Fatal model"):
             model.prepare(adata_cflare.var_names[0], "0", "foo")
 
     def test_prepare_invalid_time_range(self, adata_cflare):
         model = create_model(adata_cflare)
-        with pytest.raises(ValueError):
-            model.prepare(
-                adata_cflare.var_names[0], "0", "latent_time", time_range=(0, 1, 2)
-            )
+        with pytest.raises(ValueError, match=r"Fatal model"):
+            model.prepare(adata_cflare.var_names[0], "0", "latent_time", time_range=(0, 1, 2))
 
     def test_prepare_normal_run(self, adata_cflare):
         model = create_model(adata_cflare)
@@ -78,9 +74,7 @@ class TestModel:
 
     def test_prepare_n_test_points(self, adata_cflare):
         model = create_model(adata_cflare)
-        model = model.prepare(
-            adata_cflare.var_names[0], "0", "latent_time", n_test_points=300
-        )
+        model = model.prepare(adata_cflare.var_names[0], "0", "latent_time", n_test_points=300)
 
         assert len(model.x_test) == 300
 
@@ -106,20 +100,14 @@ class TestModel:
         assert ci is model.conf_int
 
     def test_model_1_lineage(self, adata_cflare):
-        adata_cflare.obsm[Key.obsm.fate_probs(False)] = Lineage(
-            np.ones((adata_cflare.n_obs, 1)), names=["foo"]
-        )
+        adata_cflare.obsm[Key.obsm.fate_probs(False)] = Lineage(np.ones((adata_cflare.n_obs, 1)), names=["foo"])
         model = create_model(adata_cflare)
-        model = model.prepare(
-            adata_cflare.var_names[0], "foo", "latent_time", n_test_points=100
-        ).fit()
+        model = model.prepare(adata_cflare.var_names[0], "foo", "latent_time", n_test_points=100).fit()
         _ = model.predict()
 
         assert model.x_test.shape == (100, 1)
         xtest, xall = model.x_test, model.x_all
-        np.testing.assert_allclose(
-            np.r_[xtest[0], xtest[-1]], np.r_[np.min(xall), np.max(xall)]
-        )
+        np.testing.assert_allclose(np.r_[xtest[0], xtest[-1]], np.r_[np.min(xall), np.max(xall)])
 
     def test_prepare_resets_fields(self, adata_cflare: AnnData):
         g = GAM(adata_cflare)
@@ -137,17 +125,13 @@ class TestModel:
 
 
 class TestUtils:
-    def test_extract_data_wrong_type(self):
-        with pytest.raises(TypeError):
-            _ = _extract_data(None)
-
-    def test_extract_data_raw_None(self, adata: AnnData):
+    def test_extract_data_raw_none(self, adata: AnnData):
         adata = AnnData(adata.X, raw=None)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* is None"):
             _ = _extract_data(adata, use_raw=True)
 
     def test_extract_data_invalid_layer(self, adata: AnnData):
-        with pytest.raises(KeyError):
+        with pytest.raises(KeyError, match=r"Layer .* not found"):
             _extract_data(adata, layer="foo", use_raw=False)
 
     def test_extract_data_normal_run(self, adata: AnnData):
@@ -168,43 +152,44 @@ class TestUtils:
     def test_rank_data_dummy_array(self):
         x = np.ones((100,))
 
-        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+        np.testing.assert_array_equal(_rankdata(x), st.rankdata(x))
 
     def test_rank_data_empty(self):
         x = np.empty(shape=(0,))
 
-        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+        np.testing.assert_array_equal(_rankdata(x), st.rankdata(x))
 
     @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
     def test_rank_data(self, method: str):
-        x = np.random.normal(size=(10,))
+        rng = np.random.default_rng(42)
+        x = rng.normal(size=(10,))
 
-        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+        np.testing.assert_array_equal(_rankdata(x), st.rankdata(x))
 
     def test_rank_data_invalid_method(self):
-        with pytest.raises(AssertionError):
-            _rankdata(np.random.normal(size=(10,)), method="foobar")
+        with pytest.raises(AssertionError, match=r"Invalid ranking method"):
+            _rankdata(np.empty((10,)), method="foobar")
 
     def test_get_knots_invalid_n_knots(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             _get_knotlocs([0, 1, 2], 0)
 
     def test_get_knots_non_finite_values(self):
         x = np.array([0, 1, 2, 3], dtype=np.float64)
         x[-1] = np.inf
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* are finite"):
             _get_knotlocs(x, 1)
 
     def test_get_knots_wrong_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=".* dimension"):
             _get_knotlocs(np.array([0, 1, 2, 3]).reshape((2, 2)), 1)
 
     def test_get_knots_only_same_value(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* are the same"):
             _get_knotlocs(np.array([42] * 10), 1)
 
     def test_get_knots_empty_pseudotime(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* are the same"):
             _get_knotlocs(np.array([]), 2)
 
     def test_get_knots_uniform(self):
@@ -230,10 +215,10 @@ class TestUtils:
         assert actual.ndim == 1
         np.testing.assert_array_equal(actual, expected)
 
-    @pytest.mark.parametrize("seed,n_knots", zip(range(10), range(2, 11)))
+    @pytest.mark.parametrize(("seed", "n_knots"), zip(range(10), range(2, 11)))
     def test_get_knots_unique(self, seed: int, n_knots: int):
-        np.random.seed(seed)
-        x = np.random.normal(size=(100,))
+        rng = np.random.default_rng(seed)
+        x = rng.normal(size=(100,))
         actual = _get_knotlocs(x, n_knots=n_knots)
 
         assert actual.shape == (n_knots,)
@@ -262,12 +247,10 @@ class TestUtils:
 
         np.testing.assert_almost_equal(actual, expected)
 
-    @pytest.mark.parametrize(
-        "method,seed", zip(list(NormMode), range(len(list(NormMode))))
-    )
+    @pytest.mark.parametrize(("method", "seed"), zip(list(NormMode), range(len(list(NormMode)))))
     def test_get_offset(self, method: str, seed: int):
-        np.random.seed(seed)
-        x = np.random.normal(size=(100, 50))
+        rng = np.random.default_rng(seed)
+        x = rng.normal(size=(100, 50))
 
         offset = _get_offset(x, method=method, ref_ix=0)
 
@@ -306,22 +289,20 @@ class TestUtils:
 @gamr_skip
 class TestGAMR:
     def test_invalid_n_knots(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be positive"):
             _ = GAMR(adata, n_knots=0)
 
     def test_invalid_smoothing_penalty(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be non-negative"):
             _ = GAMR(adata, smoothing_penalty=-0.001)
 
     def test_invalid_knotlocs(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             _ = GAMR(adata, knotlocs="foobar")
 
     def test_density_knotlocs(self, adata_cflare: AnnData):
         g = GAMR(adata_cflare, knotlocs="density")
-        g.prepare(
-            adata_cflare.var_names[0], "0", "latent_time", n_test_points=300
-        ).fit()
+        g.prepare(adata_cflare.var_names[0], "0", "latent_time", n_test_points=300).fit()
         g.predict(level=0.95)
 
         assert g.y_test.shape == (300,)
@@ -336,11 +317,11 @@ class TestGAMR:
         assert m._offset is None
 
     def test_negative_binomial_invalid_offset_str(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Only value .* is allowed"):
             GAMR(adata_cflare, offset="foobar", distribution="nb")
 
     def test_negative_binomial_invalid_offset_shape(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Expected offset to be of shape"):
             GAMR(
                 adata_cflare,
                 offset=np.empty(
@@ -365,11 +346,7 @@ class TestGAMR:
         assert g._offset is None
 
     def test_manually_call_conf_int_not_in_predict(self, adata_cflare: AnnData):
-        g = (
-            GAMR(adata_cflare)
-            .prepare(adata_cflare.var_names[0], "1", "latent_time")
-            .fit()
-        )
+        g = GAMR(adata_cflare).prepare(adata_cflare.var_names[0], "1", "latent_time").fit()
         g.predict(level=None)
         assert g.conf_int is None
 
@@ -388,13 +365,13 @@ class TestGAMR:
         assert actual._lib is gamr_model._lib
 
     def test_shallow_copy(self, gamr_model: GAMR):
-        assert_models_equal(gamr_model, copy(gamr_model), deepcopy=False)
+        assert_models_equal(gamr_model, copy.copy(gamr_model), deepcopy=False)
 
     def test_deep_copy(self, gamr_model: GAMR):
-        assert_models_equal(gamr_model, deepcopy(gamr_model), deepcopy=True)
+        assert_models_equal(gamr_model, copy.deepcopy(gamr_model), deepcopy=True)
 
     def test_pickling(self, gamr_model: GAMR):
-        fp = BytesIO()
+        fp = io.BytesIO()
 
         pickle.dump(gamr_model, fp)
         fp.flush()
@@ -407,7 +384,7 @@ class TestGAMR:
 class TestSKLearnModel:
     def test_wrong_model_type(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match=r"Expected model to be of type"):
             SKLearnModel(adata_cflare, model)
 
     def test_svr_correct_no_weights(self, adata_cflare: AnnData):
@@ -416,11 +393,7 @@ class TestSKLearnModel:
             .prepare(adata_cflare.var_names[0], "0", "latent_time")
             .fit()
         )
-        model_w = (
-            SKLearnModel(adata_cflare, SVR())
-            .prepare(adata_cflare.var_names[0], "0", "latent_time")
-            .fit()
-        )
+        model_w = SKLearnModel(adata_cflare, SVR()).prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
 
         assert model._weight_name == ""
         assert model_w._weight_name == "sample_weight"
@@ -428,21 +401,19 @@ class TestSKLearnModel:
         assert not np.allclose(model.predict(), model_w.predict())
 
     def test_svr_invalid_weight_name(self, adata_cflare: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Unable to detect"):
             SKLearnModel(adata_cflare, SVR(), weight_name="foobar")
 
     def test_svr_invalid_weight_name_no_raise_fit(self, adata_cflare: AnnData):
-        model = SKLearnModel(
-            adata_cflare, SVR(), weight_name="w", ignore_raise=True
-        ).prepare(adata_cflare.var_names[0], "0", "latent_time")
+        model = SKLearnModel(adata_cflare, SVR(), weight_name="w", ignore_raise=True).prepare(
+            adata_cflare.var_names[0], "0", "latent_time"
+        )
 
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match=r"Fatal model"):
             model.fit()
 
     def test_svr_invalid_weight_name_no_raise(self, adata_cflare: AnnData):
-        model = SKLearnModel(
-            adata_cflare, SVR(), weight_name="foobar", ignore_raise=True
-        )
+        model = SKLearnModel(adata_cflare, SVR(), weight_name="foobar", ignore_raise=True)
 
         assert model._weight_name == "foobar"
 
@@ -454,16 +425,12 @@ class TestSKLearnModel:
 
 class TestGAM:
     def test_invalid_distribution(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             GAM(adata, distribution="foobar")
 
     def test_invalid_link_function(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid option"):
             GAM(adata, link="foob")
-
-    def test_invalid_grid_type(self, adata: AnnData):
-        with pytest.raises(TypeError):
-            _ = GAM(adata, grid=1311)
 
     def test_default_grid(self, adata_cflare: AnnData):
         g = GAM(adata_cflare, grid="default")
@@ -492,9 +459,9 @@ class TestGAM:
         assert g.conf_int is not None
 
     def test_expectilegam_invalid_expectile(self, adata: AnnData):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be in"):
             GAM(adata, expectile=0)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be in"):
             GAM(adata, expectile=1)
 
     def test_expectile_sets_correct_distribution_and_link(self, adata_cflare: AnnData):
@@ -509,16 +476,8 @@ class TestGAM:
         assert g.y_test is not None
         assert g.conf_int is not None
 
-    def test_raises_invalid_kwargs(self, adata_cflare: AnnData):
-        with pytest.raises(TypeError):
-            GAM(adata_cflare, n_lineages=12)
-
-    @pytest.mark.parametrize(
-        "dist,link", product(list(GamDistribution), list(GamLinkFunction))
-    )
-    def test_dist_link_combinations(
-        self, adata_cflare: AnnData, dist: GamDistribution, link: GamLinkFunction
-    ):
+    @pytest.mark.parametrize(("dist", "link"), itertools.product(list(GamDistribution), list(GamLinkFunction)))
+    def test_dist_link_combinations(self, adata_cflare: AnnData, dist: GamDistribution, link: GamLinkFunction):
         g = GAM(adata_cflare, link=link, distribution=dist)
 
         expected_model_type = _gams[dist, link]
@@ -528,10 +487,6 @@ class TestGAM:
 
 
 class TestFailedModel:
-    def test_wrong_model_type(self):
-        with pytest.raises(TypeError):
-            _ = FailedModel(SVR())
-
     def test_correct_gene_and_lineage(self, gamr_model):
         fm = FailedModel(gamr_model)
 
@@ -551,7 +506,7 @@ class TestFailedModel:
             "default_confidence_interval",
             "plot",
         ]:
-            with pytest.raises(UnknownModelError):
+            with pytest.raises(UnknownModelError, match=r"Fatal model"):
                 getattr(fm, fn)()
 
     def test_do_nothing_bulk_fit(self, gamr_model: GAMR):
@@ -578,14 +533,10 @@ class TestFailedModel:
         assert fm1.model is not fm2.model
         assert fm1.adata is fm2.adata
 
-    def test_exception_not_base_exception(self, gamr_model: GAMR):
-        with pytest.raises(TypeError):
-            _ = FailedModel(gamr_model, exc=0)
-
     def test_reraise(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc=ValueError("foobar"))
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Fatal model"):
             fm.reraise()
 
         assert isinstance(fm._exc, ValueError)
@@ -593,7 +544,7 @@ class TestFailedModel:
     def test_reraise_str(self, gamr_model: GAMR):
         fm = FailedModel(gamr_model, exc="foobar")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r"Fatal model"):
             fm.reraise()
 
         assert isinstance(fm._exc, RuntimeError)
@@ -608,13 +559,13 @@ class TestFailedModel:
 
 class TestModelsIO:
     def test_shallow_copy_sklearn(self, sklearn_model: SKLearnModel):
-        assert_models_equal(sklearn_model, copy(sklearn_model), deepcopy=False)
+        assert_models_equal(sklearn_model, copy.copy(sklearn_model), deepcopy=False)
 
     def test_deep_copy_sklearn(self, sklearn_model: SKLearnModel):
-        assert_models_equal(sklearn_model, deepcopy(sklearn_model), deepcopy=True)
+        assert_models_equal(sklearn_model, copy.deepcopy(sklearn_model), deepcopy=True)
 
     def test_pickling_sklearn(self, sklearn_model: SKLearnModel):
-        fp = BytesIO()
+        fp = io.BytesIO()
 
         pickle.dump(sklearn_model, fp)
         fp.flush()
@@ -624,13 +575,13 @@ class TestModelsIO:
         assert_models_equal(sklearn_model, actual_model, pickled=True)
 
     def test_shallow_copy_pygam(self, pygam_model: GAM):
-        assert_models_equal(pygam_model, copy(pygam_model), deepcopy=False)
+        assert_models_equal(pygam_model, copy.copy(pygam_model), deepcopy=False)
 
     def test_deep_copy_pygam(self, pygam_model: GAM):
-        assert_models_equal(pygam_model, deepcopy(pygam_model), deepcopy=True)
+        assert_models_equal(pygam_model, copy.deepcopy(pygam_model), deepcopy=True)
 
     def test_pickling_pygam(self, pygam_model: GAM):
-        fp = BytesIO()
+        fp = io.BytesIO()
 
         pickle.dump(pygam_model, fp)
         fp.flush()
@@ -641,10 +592,8 @@ class TestModelsIO:
 
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("write_adata", [False, True])
-    def test_read_write(
-        self, sklearn_model: SKLearnModel, tmpdir, write_adata: bool, copy: bool
-    ):
-        path = Path(tmpdir) / "model.pickle"
+    def test_read_write(self, sklearn_model: SKLearnModel, tmpdir, write_adata: bool, copy: bool):
+        path = pathlib.Path(tmpdir) / "model.pickle"
         sklearn_model.write(path, write_adata=write_adata)
 
         if write_adata:
@@ -666,19 +615,19 @@ class TestModelsIO:
 
 class TestFittedModel:
     def test_wrong_xt_yt_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be of shape"):
             FittedModel(np.array([1]), np.array([2, 3]))
 
     def test_wrong_xt_dum(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be of shape"):
             FittedModel(np.array([[0, 1], [1, 2]]), np.array([2, 3]))
 
     def test_wrong_conf_int_dim(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* to be of shape"):
             FittedModel(np.array([0, 1]), np.array([2, 3]), conf_int=np.array([4, 5]))
 
     def test_wrong_conf_int_wrong_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* of shape"):
             FittedModel(
                 np.array([0, 1]),
                 np.array([2, 3]),
@@ -686,11 +635,11 @@ class TestFittedModel:
             )
 
     def test_densify_only_first_axis(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* of shape"):
             FittedModel(np.array([[[0, 1]]]), np.array([2, 3]))
 
     def test_wrong_x_all_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* of shape"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),
@@ -699,7 +648,7 @@ class TestFittedModel:
             )
 
     def test_wrong_y_all_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* of shape"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),
@@ -708,7 +657,7 @@ class TestFittedModel:
             )
 
     def test_wrong_w_all_shape(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r".* of shape"):
             FittedModel(
                 np.array([[0, 1]]),
                 np.array([2, 3]),
@@ -719,10 +668,10 @@ class TestFittedModel:
 
     def test_conf_int_raise_error_missing(self):
         fm = FittedModel([0, 1, 2], [3, 4, 5])
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r"No confidence"):
             fm.confidence_interval()
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r"No confidence"):
             fm.default_confidence_interval()
 
     def test_zero_array(self):
@@ -748,9 +697,7 @@ class TestFittedModel:
         assert fm.y_all is None
 
     def test_wrong_conf_int(self):
-        fm = FittedModel(
-            np.array([0, 1]), np.array([2, 3]), conf_int=np.array([[4, 5], [6, 7]])
-        )
+        fm = FittedModel(np.array([0, 1]), np.array([2, 3]), conf_int=np.array([[4, 5], [6, 7]]))
 
         np.testing.assert_array_equal(fm.x_test, [[0], [1]])
         np.testing.assert_array_equal(fm.y_test, [2, 3])
@@ -808,28 +755,20 @@ class TestFittedModel:
 
         np.testing.assert_array_equal(fm.predict(), [2, 3])
         np.testing.assert_array_equal(fm.confidence_interval(), [[4, 5], [6, 7]])
-        np.testing.assert_array_equal(
-            fm.default_confidence_interval(), [[4, 5], [6, 7]]
-        )
+        np.testing.assert_array_equal(fm.default_confidence_interval(), [[4, 5], [6, 7]])
 
     def test_from_model_wrong_type(self, adata_cflare):
         m = create_model(adata_cflare)
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match=r".* to be of type"):
             FittedModel.from_model(m.model)
 
     def test_from_model_not_fitted_model(self, adata_cflare: AnnData):
-        m = create_model(adata_cflare).prepare(
-            adata_cflare.var_names[0], "1", "latent_time"
-        )
-        with pytest.raises(ValueError):
+        m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1", "latent_time")
+        with pytest.raises(ValueError, match=r".* to be of shape"):
             FittedModel.from_model(m)
 
     def test_from_model_normal_run(self, adata_cflare: AnnData):
-        m = (
-            create_model(adata_cflare)
-            .prepare(adata_cflare.var_names[0], "1", "latent_time")
-            .fit()
-        )
+        m = create_model(adata_cflare).prepare(adata_cflare.var_names[0], "1", "latent_time").fit()
         m.predict()
         m.confidence_interval()
 

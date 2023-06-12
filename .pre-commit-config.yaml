@@ -1,88 +1,63 @@
 fail_fast: false
 default_language_version:
-    python: python3
+  python: python3
 default_stages:
--   commit
--   push
-minimum_pre_commit_version: 2.9.3
+- commit
+- push
+minimum_pre_commit_version: 3.0.0
 repos:
--   repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-    -   id: black
-        additional_dependencies: [toml]
--   repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-    -   id: isort
-        additional_dependencies: [toml]
-        args: [--order-by-type]
--   repo: https://github.com/asottile/yesqa
-    rev: v1.4.0
-    hooks:
-    -   id: yesqa
-        additional_dependencies: [flake8-tidy-imports, flake8-docstrings, flake8-comprehensions, flake8-bugbear, flake8-blind-except]
--   repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-    rev: v2.6.0
-    hooks:
-    -   id: pretty-format-yaml
-        args: [--autofix, --indent, '4']
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-    -   id: detect-private-key
-    -   id: check-merge-conflict
-    -   id: check-ast
-    -   id: check-symlinks
-    -   id: check-added-large-files
-    -   id: check-executables-have-shebangs
-    -   id: fix-encoding-pragma
-        args: [--remove]
-    -   id: end-of-file-fixer
-    -   id: mixed-line-ending
-        args: [--fix=lf]
-    -   id: trailing-whitespace
-        exclude: ^.bumpversion.cfg$  # trailing whitespace
-    -   id: check-case-conflict
-    -   id: check-docstring-first
-    -   id: check-yaml
-    -   id: check-toml
-    -   id: requirements-txt-fixer
--   repo: https://github.com/myint/autoflake
-    rev: v2.0.1
-    hooks:
-    -   id: autoflake
-        args: [--in-place, --remove-unused-variable, --ignore-init-module-imports]
--   repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-    -   id: flake8
-        additional_dependencies: [flake8-tidy-imports, flake8-docstrings, flake8-comprehensions, flake8-bugbear, flake8-blind-except]
--   repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 3.0.0
-    hooks:
-    -   id: script-must-have-extension
-        name: Check executable files use .sh extension
-        types: [shell, executable]
--   repo: https://github.com/asottile/blacken-docs
-    rev: 1.13.0
-    hooks:
-    -   id: blacken-docs
-        additional_dependencies: [black==23.1.0]
--   repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-    -   id: pyupgrade
-        args: [--py3-plus, --py37-plus]
--   repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-    -   id: python-no-eval
-    -   id: python-use-type-annotations
-    -   id: rst-backticks
-    -   id: rst-directive-colons
-    -   id: rst-inline-touching-normal
--   repo: https://github.com/PyCQA/doc8
-    rev: v1.1.1
-    hooks:
-    -   id: doc8
+- repo: https://github.com/psf/black
+  rev: 23.3.0
+  hooks:
+  - id: black
+    additional_dependencies: [toml]
+- repo: https://github.com/timothycrosley/isort
+  rev: 5.12.0
+  hooks:
+  - id: isort
+    additional_dependencies: [toml]
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.9.0
+  hooks:
+  - id: pretty-format-yaml
+    args: [--autofix, --indent, '2']
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+  - id: check-merge-conflict
+  - id: check-ast
+  - id: check-added-large-files
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+    args: [--fix=lf]
+  - id: file-contents-sorter
+    files: docs/spelling/.*\.txt
+  - id: trailing-whitespace
+  - id: check-docstring-first
+  - id: check-yaml
+  - id: check-toml
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.4.0
+  hooks:
+  - id: pyupgrade
+    args: [--py3-plus, --py38-plus, --keep-runtime-typing]
+- repo: https://github.com/asottile/blacken-docs
+  rev: 1.13.0
+  hooks:
+  - id: blacken-docs
+    additional_dependencies: [black==23.1.0]
+- repo: https://github.com/rstcheck/rstcheck
+  rev: v6.1.2
+  hooks:
+  - id: rstcheck
+    additional_dependencies: [tomli]
+    args: [--config=pyproject.toml]
+- repo: https://github.com/PyCQA/doc8
+  rev: v1.1.1
+  hooks:
+  - id: doc8
+- repo: https://github.com/charliermarsh/ruff-pre-commit
+  rev: v0.0.270
+  hooks:
+  - id: ruff
+    args: [--fix, --exit-non-zero-on-fix]

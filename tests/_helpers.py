@@ -1,28 +1,28 @@
-from typing import Tuple, Union, Optional
-
 import os
-import pytest
-from PIL import Image
-from pathlib import Path
+import pathlib
+from typing import Optional, Tuple, Union
 
-import scanpy as sc
+import pytest
 import scvelo as scv
-import cellrank as cr
-from anndata import AnnData
-from cellrank.kernels import VelocityKernel, PrecomputedKernel, ConnectivityKernel
-from cellrank._utils._utils import _connected
+from PIL import Image
 
 import numpy as np
 import pandas as pd
-from sklearn.svm import SVR
-from scipy.sparse import spdiags, issparse, csr_matrix
+import scipy.sparse as sp
 from pandas.testing import assert_frame_equal, assert_series_equal
+from sklearn.svm import SVR
+
+import scanpy as sc
+from anndata import AnnData
+
+import cellrank as cr
+from cellrank._utils._utils import _connected
+from cellrank.kernels import ConnectivityKernel, PrecomputedKernel, VelocityKernel
 
 
 def _jax_not_installed() -> bool:
     try:
-        import jax
-        import jaxlib
+        import jax  # noqa
 
         return False
     except ImportError:
@@ -55,12 +55,12 @@ def _rpy2_mgcv_not_installed() -> bool:
 
 
 def bias_knn(
-    conn: csr_matrix,
+    conn: sp.csr_matrix,
     pseudotime: np.ndarray,
     n_neighbors: int,
     k: int = 3,
     frac_to_keep: Optional[float] = None,
-) -> csr_matrix:
+) -> sp.csr_matrix:
     # frac_to_keep=None mimics original impl. (which mimics Palantir)
     k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
     conn_biased = conn.copy()
@@ -98,10 +98,10 @@ def bias_knn(
 def density_normalization(velo_graph, trans_graph):
     # function copied from scanpy
     q = np.asarray(trans_graph.sum(axis=0))
-    if not issparse(trans_graph):
+    if not sp.issparse(trans_graph):
         Q = np.diag(1.0 / q)
     else:
-        Q = spdiags(1.0 / q, 0, trans_graph.shape[0], trans_graph.shape[0])
+        Q = sp.spdiags(1.0 / q, 0, trans_graph.shape[0], trans_graph.shape[0])
     velo_graph = Q @ velo_graph @ Q
 
     return velo_graph
@@ -112,24 +112,19 @@ def create_kernels(
     velocity_variances: Optional[str] = None,
     connectivity_variances: Optional[str] = None,
 ) -> Tuple[VelocityKernel, ConnectivityKernel]:
+    rng = np.random.default_rng()
     vk = VelocityKernel(adata)
-    vk._mat_scaler = adata.obsp.get(
-        velocity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
-    )
+    vk._mat_scaler = adata.obsp.get(velocity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))
 
     ck = ConnectivityKernel(adata)
-    ck._mat_scaler = adata.obsp.get(
-        connectivity_variances, np.random.normal(size=(adata.n_obs, adata.n_obs))
-    )
+    ck._mat_scaler = adata.obsp.get(connectivity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))
 
-    vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
+    vk._transition_matrix = sp.csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1
-    ck._transition_matrix = csr_matrix(ck._transition_matrix)
+    ck._transition_matrix = sp.csr_matrix(ck._transition_matrix)
 
-    np.testing.assert_allclose(
-        np.sum(ck._transition_matrix.A, axis=1), 1
-    )  # sanity check
+    np.testing.assert_allclose(np.sum(ck._transition_matrix.A, axis=1), 1)  # sanity check
 
     return vk, ck
 
@@ -145,8 +140,8 @@ def create_failed_model(adata: AnnData) -> cr.models.FailedModel:
 
 
 def resize_images_to_same_sizes(
-    expected_image_path: Union[str, Path],
-    actual_image_path: Union[str, Path],
+    expected_image_path: Union[str, pathlib.Path],
+    actual_image_path: Union[str, pathlib.Path],
     kind: str = "actual_to_expected",
 ) -> None:
     if not os.path.isfile(actual_image_path):
@@ -167,9 +162,7 @@ def resize_images_to_same_sizes(
             )
 
 
-def assert_array_nan_equal(
-    actual: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]
-) -> None:
+def assert_array_nan_equal(actual: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]) -> None:
     """
     Test is 2 arrays or :class:`pandas.Series` are equal.
 
@@ -186,9 +179,7 @@ def assert_array_nan_equal(
     """
 
     mask1 = ~(pd.isnull(actual) if isinstance(actual, pd.Series) else np.isnan(actual))
-    mask2 = ~(
-        pd.isnull(expected) if isinstance(expected, pd.Series) else np.isnan(expected)
-    )
+    mask2 = ~(pd.isnull(expected) if isinstance(expected, pd.Series) else np.isnan(expected))
     np.testing.assert_array_equal(np.where(mask1), np.where(mask2))
     np.testing.assert_array_equal(actual[mask1], expected[mask2])
 
@@ -210,7 +201,7 @@ def assert_models_equal(
 
     assert expected.__dict__.keys() == actual.__dict__.keys()
 
-    for attr in expected.__dict__.keys():
+    for attr in expected.__dict__:
         val2, val1 = getattr(actual, attr), getattr(expected, attr)
         if attr == "_prepared":
             # we expect the expected model to be prepared only if deepcopied
@@ -229,9 +220,9 @@ def assert_models_equal(
             if deepcopy or pickled:
                 try:
                     assert val2 is not val1, attr
-                    # can be array of strings, can't get NaN
+                    # can be an array of strings, can't get NaN
                     assert_array_nan_equal(val2, val1)
-                except:
+                except Exception:  # noqa: BLE001
                     np.testing.assert_array_equal(val2, val1)
             # e.g. for GAMR, we point to the offset and design matrix
             # however, the `x`, and so pointers are not modified
@@ -239,7 +230,7 @@ def assert_models_equal(
                 assert val2 is val1, attr
         # we don't expect any dictionaries as in estimators
         elif attr == "_model":
-            assert val2 is not val1  # model is always deepcopied
+            assert val2 is not val1  # model is always deep-copied
         elif not isinstance(val2, AnnData) and not callable(val2):
             # callable because SKLearnModel has default conf int function
             assert val2 == val1, (val2, val1, attr)
@@ -272,7 +263,7 @@ def assert_estimators_equal(
                 np.testing.assert_array_compare(np.array_equal, x, y, equal_nan=True)
             except AssertionError:
                 raise
-            except Exception:
+            except Exception:  # noqa: BLE001
                 np.testing.assert_array_compare(np.allclose, x, y, equal_nan=True)
         elif isinstance(x, pd.DataFrame):
             assert_frame_equal(x, y, check_dtype=False)
@@ -295,15 +286,13 @@ def assert_estimators_equal(
     assert actual.adata is actual.kernel.adata
     assert actual.kernel.backward == expected.kernel.backward
 
-    np.testing.assert_array_equal(
-        actual.transition_matrix.A, expected.transition_matrix.A
-    )
+    np.testing.assert_array_equal(actual.transition_matrix.A, expected.transition_matrix.A)
 
     k1 = sorted(expected.__dict__.keys())
     k2 = sorted(actual.__dict__.keys())
     np.testing.assert_array_equal(k1, k2)
 
-    for attr in expected.__dict__.keys():
+    for attr in expected.__dict__:
         if attr == "_invalid_n_states" and from_adata:
             continue
         actual_val, expected_val = getattr(actual, attr), getattr(expected, attr)
@@ -323,9 +312,7 @@ def assert_estimators_equal(
                     else:
                         assert v2 == v1, (v2, v1, attr, k)
             else:
-                np.testing.assert_array_equal(
-                    sorted(actual_val.keys()), sorted(expected_val.keys())
-                )
+                np.testing.assert_array_equal(sorted(actual_val.keys()), sorted(expected_val.keys()))
                 for k in sorted(actual_val.keys()):
                     v2, v1 = actual_val[k], expected_val[k]
                     if isinstance(v1, (np.ndarray, pd.Series, pd.DataFrame)):
@@ -360,8 +347,8 @@ def random_transition_matrix(n: int) -> np.ndarray:
     -------
     Row-normalized transition matrix.
     """
-
-    x = np.abs(np.random.normal(size=(n, n)))
+    rng = np.random.default_rng()
+    x = np.abs(rng.normal(size=(n, n)))
     rsum = x.sum(axis=1)
     return x / rsum[:, np.newaxis]
 
@@ -381,8 +368,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     -------
     The created adata object.
     """
-
-    np.random.seed(42)
+    np.random.seed(42)  # noqa: NPY002
     adata = scv.datasets.toy_data(n_obs=n_obs)
     adata.obs_names_make_unique()
     adata.var_names_make_unique()
@@ -414,12 +400,8 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     return adata
 
 
-jax_not_installed_skip = pytest.mark.skipif(
-    _jax_not_installed(), reason="JAX is not installed."
-)
-gamr_skip = pytest.mark.skipif(
-    _rpy2_mgcv_not_installed(), reason="Cannot import `rpy2` or R's `mgcv` package."
-)
+jax_not_installed_skip = pytest.mark.skipif(_jax_not_installed(), reason="JAX is not installed.")
+gamr_skip = pytest.mark.skipif(_rpy2_mgcv_not_installed(), reason="Cannot import `rpy2` or R's `mgcv` package.")
 
 if __name__ == "__main__":
     for size in [50, 100, 200]:
