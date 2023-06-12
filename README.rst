@@ -3,7 +3,7 @@
 CellRank for directed single-cell fate mapping
 ==============================================
 
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/main/resources/images/cellrank_fate_map.png
+.. image:: https://raw.githubusercontent.com/theislab/cellrank/main/docs/_static/img/cellrank_overview.png
     :width: 600px
     :align: center
 
