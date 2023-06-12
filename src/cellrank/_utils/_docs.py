@@ -20,17 +20,16 @@ save
     Filename where to save the plot."""
 _n_jobs = """\
 n_jobs
-    Number of parallel jobs. If `-1`, use all available cores. If `None` or `1`, the execution is sequential."""
+    Number of parallel jobs. If -1, use all available cores. If :obj:`None` or 1, the execution is sequential."""
 _parallel = f"""\
 show_progress_bar
     Whether to show a progress bar. Disabling it may slightly improve performance.
 {_n_jobs}
 backend
-    Which backend to use for parallelization. See :class:`joblib.Parallel` for valid options."""
+    Which backend to use for parallelization. See :class:`~joblib.Parallel` for valid options."""
 _model = """\
 model
-    Model based on :class:`cellrank.models.BaseModel` to fit.
-
+    Model based on :class:`~cellrank.models.BaseModel` to fit.
     If a :class:`dict`, gene and lineage specific models can be specified. Use ``'*'`` to indicate
     all genes or lineages, for example ``{'gene_1': {'*': ...}, 'gene_2': {'lineage_1': ..., '*': ...}}``."""
 _just_plots = """\
@@ -55,15 +54,14 @@ n_cells
     Number of most likely cells from each macrostate to select."""
 _fit = """\
 n_lineages
-    Number of lineages. If `None`, it will be determined automatically.
+    Number of lineages. If :obj:`None`, it will be determined automatically.
 cluster_key
     Match computed states against pre-computed clusters to annotate the states.
-    For this, provide a key from :attr:`adata` ``.obs`` where cluster labels have been computed.
+    For this, provide a key from :attr:`anndata.AnnData.obs` where cluster labels have been computed.
 keys
-    Determines which %(initial_or_terminal)s states to use by passing their names.
-    Further, %(initial_or_terminal)s states can be combined. If e.g. the %(terminal)s states are
-    ['Neuronal_1', 'Neuronal_1', 'Astrocytes', 'OPC'], then passing ``keys=['Neuronal_1, Neuronal_2', 'OPC']``
-    means that the two neuronal %(terminal)s states are treated as one and the 'Astrocyte' state is excluded."""
+    Determines which states to use by passing their names. Furthermore, these states can be combined, e.g.,
+    if the states are ``['Neuronal_1', 'Neuronal_1', 'OPC']``, then passing
+    ``keys = ['Neuronal_1, Neuronal_2', 'OPC']`` means that the two neuronal states are treated as one."""
 _density_correction = (
     "Optionally, we apply a density correction as described in :cite:`coifman:05`, "
     "where we use the implementation of :cite:`haghverdi:16`."
@@ -72,9 +70,9 @@ _time_range = """\
 time_range
     Specify start and end times:
 
-    - If a :class:`tuple`, it specifies the minimum and maximum pseudotime. Both values can be `None`,
+    - :class:`tuple` - it specifies the minimum and maximum pseudotime. Both values can be :obj:`None`,
       in which case the minimum is the earliest pseudotime and the maximum is automatically determined.
-    - If a :class:`float`, it specifies the maximum pseudotime."""
+    - :class:`float` - it specifies the maximum pseudotime."""
 
 _velocity_mode = """\
 mode
@@ -85,13 +83,7 @@ mode
     - ``{m.STOCHASTIC!r}`` - second order approximation, only available when :mod:`jax` is installed."""
 _velocity_backward_mode = """\
 backward_mode
-    Only matters if initialized as :attr:`backward` ``= True``.  Valid options are:
-
-    - ``{b.TRANSPOSE!r}`` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
-    - ``{b.NEGATE!r}`` - negate the velocity vector."""
-_velocity_backward_mode_high_lvl = """\
-backward_mode
-    How to compute the backward transitions. Valid options are:
+    Only matters if initialized as :attr:`backward = True <backward>`. Valid options are:
 
     - ``{b.TRANSPOSE!r}`` - compute transitions from neighboring cells :math:`j` to cell :math:`i`.
     - ``{b.NEGATE!r}`` - negate the velocity vector."""
@@ -100,15 +92,15 @@ _initial = "initial"
 _terminal = "terminal"
 _model_callback = """\
 callback
-    Function which takes a :class:`cellrank.models.BaseModel` and some keyword arguments
-    for :meth:`cellrank.models.BaseModel.prepare` and returns the prepared model.
-    Can be specified in gene- and lineage-specific manner, similarly to :attr:`model`."""
+    Function which takes a :class:`~cellrank.models.BaseModel` and some keyword arguments
+    for :meth:`~cellrank.models.BaseModel.prepare` and returns the prepared model.
+    Can be specified in gene- and lineage-specific manner, similarly to the :attr:`model`."""
 _genes = """\
 genes
     Genes in :attr:`~anndata.AnnData.var_names`."""
 _softmax_scale = """\
 softmax_scale
-    Scaling parameter for the softmax. If `None`, it will be estimated using ``1 / median(correlations)``.
+    Scaling parameter for the softmax. If :obj:`None`, it will be estimated using ``1 / median(correlations)``.
     The idea behind this is to scale the softmax to counter everything tending to orthogonality in high dimensions."""
 _time_mode = """\
 mode
@@ -119,8 +111,8 @@ mode
 _write_to_adata = """\
 Updates the :attr:`adata` with the following fields:
 
-    - ``.obsp['{{key}}']`` - the transition matrix.
-    - ``.uns['{{key}}_params']`` - parameters used for the calculation."""
+    - :attr:`obsp['{{key}}'] <anndata.AnnData.obsp>` - the transition matrix.
+    - :attr:`uns['{{key}}_params'] <anndata.AnnData.uns>` - parameters used for the calculation."""
 _en_cutoff_p_thresh = """\
 en_cutoff
     If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
@@ -130,17 +122,17 @@ p_thresh
     If the test returns a positive statistic and a p-value smaller than ``p_thresh``, a warning will be issued."""
 _return_models = """\
 return_models
-    If `True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``."""
+    If :obj:`True`, return the fitted models for each gene in ``genes`` and lineage in ``lineages``."""
 _basis = """\
 basis
-    Basis to use when ``mode = 'embedding'``. If `None`, use `'umap'`."""
+    Basis to use when ``mode = 'embedding'``. If :obj:`None`, use ``'umap'``."""
 _velocity_scheme = """\
 scheme
-    Similarity measure between cells as described in :cite:`li:20`. Can be one of the following:
+    Similarity measure between cells as described in :cite:`li:20`. Valid options are:
 
-    - ``{s.CORRELATION!r}`` - :class:`cellrank.kernels.utils.Correlation`.
-    - ``{s.COSINE!r}`` - :class:`cellrank.kernels.utils.Cosine`.
-    - ``{s.DOT_PRODUCT!r}`` - :class:`cellrank.kernels.utils.DotProduct`.
+    - ``{s.CORRELATION!r}`` - :class:`~cellrank.kernels.utils.Correlation`.
+    - ``{s.COSINE!r}`` - :class:`~cellrank.kernels.utils.Cosine`.
+    - ``{s.DOT_PRODUCT!r}`` - :class:`~cellrank.kernels.utils.DotProduct`.
 
     Alternatively, any function can be passed as long as it follows the signature of
     :meth:`cellrank.kernels.utils.SimilarityABC.__call__`."""
@@ -156,18 +148,18 @@ nu
 _rw_ixs = """\
 Can be specified as:
 
-    - :class:`dict` - dictionary with 1 key in :attr:`anndata.AnnData.obs` with values corresponding
+    - :class:`dict` - dictionary with 1 key in :attr:`~anndata.AnnData.obs` with values corresponding
       to either 1 or more clusters (if the column is categorical) or a :class:`tuple` specifying
-      `[min, max]` interval from which to select the indices.
-    - :class:`typing.Sequence` - sequence of cell ids in :attr:`anndata.AnnData.obs_names`.
+      :math:`[min, max]` interval from which to select the indices.
+    - :class:`~typing.Sequence` - sequence of cell ids in :attr:`~anndata.AnnData.obs_names`.
 """
 _gene_symbols = """\
 gene_symbols
     Key in :attr:`~anndata.AnnData.var` to use instead of :attr:`~anndata.AnnData.var_names`."""
 _absorption_utils = """\
 solver
-    Solver to use for the linear problem. Options are `'direct', 'gmres', 'lgmres', 'bicgstab' or 'gcrotmk'`
-    when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
+    Solver to use for the linear problem. Options are ``'direct'``, ``'gmres'``, ``'lgmres'``, ``'bicgstab'`` or
+    ``'gcrotmk'`` when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
 
     Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
     :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
@@ -177,7 +169,7 @@ use_petsc
 n_jobs
     Number of parallel jobs to use when using an iterative solver.
 backend
-    Which backend to use for multiprocessing. See :class:`joblib.Parallel` for valid options.
+    Which backend to use for multiprocessing. See :class:`~joblib.Parallel` for valid options.
 show_progress_bar
     Whether to show progress bar. Only used when ``solver != 'direct'``.
 tol
@@ -186,7 +178,7 @@ tol
 preconditioner
     Preconditioner to use, only available when ``use_petsc = True``. For valid options, see
     `here <https://petsc.org/release/docs/manual/ksp/?highlight=pctype#preconditioners>`__.
-    We recommend the `'ilu'` preconditioner for badly conditioned problems."""
+    We recommend the ``'ilu'`` preconditioner for badly conditioned problems."""
 which = """\
 which
     Whether to compute initial or terminal states."""
@@ -196,7 +188,7 @@ allow_overlap
 """
 
 
-def inject_docs(**kwargs: Any):  # noqa
+def inject_docs(**kwargs: Any):
     def decorator(obj):
         obj.__doc__ = textwrap.dedent(obj.__doc__).format(**kwargs)
         return obj
@@ -231,7 +223,6 @@ d = DocstringProcessor(
     time_range=_time_range,
     velocity_mode=_velocity_mode,
     velocity_backward_mode=_velocity_backward_mode,
-    velocity_backward_mode_high_lvl=_velocity_backward_mode_high_lvl,
     model_callback=_model_callback,
     genes=_genes,
     softmax_scale=_softmax_scale,

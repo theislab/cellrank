@@ -225,7 +225,7 @@ class KernelExpression(IOMixin, abc.ABC):
         %(parallel)s
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scvelo.pl.scatter`.
 
         Returns
         -------
@@ -278,8 +278,8 @@ class KernelExpression(IOMixin, abc.ABC):
         recompute
             Whether to recompute the projection if it already exists.
         stream
-            If :obj:`True`, use :func:`~scvelo.plotting.velocity_embedding_stream`.
-            Otherwise, use :func:`~scvelo.plotting.velocity_embedding_grid`.
+            If :obj:`True`, use :func:`~scvelo.pl.velocity_embedding_stream`.
+            Otherwise, use :func:`~scvelo.pl.velocity_embedding_grid`.
         connectivities
             Connectivity matrix to use for projection. If :obj:`None`, use ones from the underlying kernel, is possible.
         kwargs
@@ -536,7 +536,17 @@ class Kernel(KernelExpression, abc.ABC):
         return kernel
 
     def copy(self, *, deep: bool = False) -> "Kernel":
-        """Return a copy of self."""
+        """Return a copy of self.
+
+        Parameters
+        ----------
+        deep
+            Whether to use :meth:`~copy.deepcopy`.
+
+        Returns
+        -------
+        Copy of self.
+        """
         with self._remove_adata:
             k = copy.deepcopy(self)
         k.adata = self.adata.copy() if deep else self.adata

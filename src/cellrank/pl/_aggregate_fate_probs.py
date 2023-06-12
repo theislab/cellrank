@@ -78,8 +78,8 @@ def aggregate_fate_probabilities(
         Type of plot to show. Valid options are:
 
         - ``{m.BAR!r}`` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
-        - ``{m.PAGA!r}`` - :func:`~scanpy.plotting.paga`, one per %(initial_or_terminal)s state, colored in by fate.
-        - ``{m.PAGA_PIE!r}`` - :func:`~scanpy.plotting.paga` with pie charts indicating aggregated fates.
+        - ``{m.PAGA!r}`` - :func:`~scvelo.pl.paga`, one per %(initial_or_terminal)s state, colored in by fate.
+        - ``{m.PAGA_PIE!r}`` - :func:`~scvelo.pl.paga` with pie charts indicating aggregated fates.
         - ``{m.VIOLIN!r}`` - violin plots, one per %(initial_or_terminal)s state.
         - ``{m.HEATMAP!r}`` - a heatmap, showing average fates per cluster.
         - ``{m.CLUSTERMAP!r}`` - same as a heatmap, but with a dendrogram.
@@ -105,12 +105,12 @@ def aggregate_fate_probabilities(
     figsize
         Size of the figure.
     legend_kwargs
-        Keyword arguments for :func:`~matplotlib.axes.Axes.legend`.
+        Keyword arguments for :meth:`~matplotlib.axes.Axes.legend`.
         For ``mode = {m.PAGA_PIE!r}`` and ``basis = '...'``, this controls the placement of the
         fate probabilities legend.
     %(plotting)s
     kwargs
-        Keyword arguments for :func:`~scvelo.plotting.paga`, :func:`~scanpy.pl.violin` or
+        Keyword arguments for :func:`~scvelo.pl.paga`, :func:`~scanpy.pl.violin` or
         :func:`~matplotlib.pyplot.bar`, depending on the ``mode``.
 
     Returns

@@ -126,8 +126,8 @@ class TmatProjection:
         args
             Positional argument for the plotting function.
         stream
-            If :obj:`True``, use :func:`~scvelo.plotting.velocity_embedding_stream`.
-            Otherwise, use :func:`~scvelo.plotting.velocity_embedding_grid`.
+            If :obj:`True``, use :func:`~scvelo.pl.velocity_embedding_stream`.
+            Otherwise, use :func:`~scvelo.pl.velocity_embedding_grid`.
         kwargs
             Keyword argument for the above-mentioned plotting function.
 

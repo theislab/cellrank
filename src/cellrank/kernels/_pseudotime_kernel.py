@@ -28,9 +28,9 @@ class ThresholdScheme(ModeEnum):
 
 @d.dedent
 class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
-    """Kernel which computes directed transition probabilities based on a kNN graph and pseudotime.
+    """Kernel which computes directed transition probabilities based on a k-NN graph and pseudotime.
 
-    The kNN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
+    The k-NN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime
     :cite:`setty:19` or to down-weight them :cite:`stassen:21`.
 
@@ -38,7 +38,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     ----------
     %(adata)s
     %(backward)s
-        If :obj:`True`, :attr:`pseudotime` will be set to ``max(pseudotime) - pseudotime``.
+        If :obj:`True`, the :attr:`pseudotime` will be set to ``max(pseudotime) - pseudotime``.
     time_key
         Key in :attr:`~anndata.AnnData.obs` where the pseudotime is stored.
     kwargs
@@ -87,7 +87,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         show_progress_bar: bool = True,
         **kwargs: Any,
     ) -> "PseudotimeKernel":
-        """Compute transition matrix based on kNN graph and pseudotemporal ordering.
+        """Compute transition matrix based on k-NN graph and pseudotemporal ordering.
 
         Depending on the choice of the ``threshold_scheme``, it is based on ideas by either *Palantir*
         :cite:`setty:19` or *VIA* :cite:`stassen:21`.
@@ -162,9 +162,9 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
 
         # make sure the biased graph is still connected
         if not _connected(biased_conn):
-            logg.warning("Biased kNN graph is disconnected")
+            logg.warning("Biased k-NN graph is disconnected")
         if check_irreducibility and not _irreducible(biased_conn):
-            logg.warning("Biased kNN graph is not irreducible")
+            logg.warning("Biased k-NN graph is not irreducible")
 
         self.transition_matrix = biased_conn
         logg.info("    Finish", time=start)
@@ -173,10 +173,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
 
     @property
     def pseudotime(self) -> Optional[np.array]:
-        """Pseudotemporal ordering of cells.
-
-        If :attr:`backward = True <backward>`, it will be set to ``max(pseudotime) - pseudotime``.
-        """
+        """Pseudotemporal ordering of cells."""
         if self._pseudotime is None:
             return None
         if self.backward:
