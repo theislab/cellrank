@@ -1,15 +1,15 @@
+import copy
+import io
+import itertools
+import pathlib
 import pickle
-from copy import copy, deepcopy
-from io import BytesIO
-from itertools import product
-from pathlib import Path
 
 import pytest
 from _helpers import assert_models_equal, create_model, gamr_skip
 from pygam import ExpectileGAM
 
 import numpy as np
-from scipy.stats import rankdata
+import scipy.stats as st
 from sklearn.svm import SVR
 
 from anndata import AnnData
@@ -152,19 +152,19 @@ class TestUtils:
     def test_rank_data_dummy_array(self):
         x = np.ones((100,))
 
-        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+        np.testing.assert_array_equal(_rankdata(x), st.rankdata(x))
 
     def test_rank_data_empty(self):
         x = np.empty(shape=(0,))
 
-        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+        np.testing.assert_array_equal(_rankdata(x), st.rankdata(x))
 
     @pytest.mark.parametrize("method", ["average", "min", "max", "dense", "ordinal"])
     def test_rank_data(self, method: str):
         rng = np.random.default_rng(42)
         x = rng.normal(size=(10,))
 
-        np.testing.assert_array_equal(_rankdata(x), rankdata(x))
+        np.testing.assert_array_equal(_rankdata(x), st.rankdata(x))
 
     def test_rank_data_invalid_method(self):
         with pytest.raises(AssertionError, match=r"Invalid ranking method"):
@@ -365,13 +365,13 @@ class TestGAMR:
         assert actual._lib is gamr_model._lib
 
     def test_shallow_copy(self, gamr_model: GAMR):
-        assert_models_equal(gamr_model, copy(gamr_model), deepcopy=False)
+        assert_models_equal(gamr_model, copy.copy(gamr_model), deepcopy=False)
 
     def test_deep_copy(self, gamr_model: GAMR):
-        assert_models_equal(gamr_model, deepcopy(gamr_model), deepcopy=True)
+        assert_models_equal(gamr_model, copy.deepcopy(gamr_model), deepcopy=True)
 
     def test_pickling(self, gamr_model: GAMR):
-        fp = BytesIO()
+        fp = io.BytesIO()
 
         pickle.dump(gamr_model, fp)
         fp.flush()
@@ -476,7 +476,7 @@ class TestGAM:
         assert g.y_test is not None
         assert g.conf_int is not None
 
-    @pytest.mark.parametrize(("dist", "link"), product(list(GamDistribution), list(GamLinkFunction)))
+    @pytest.mark.parametrize(("dist", "link"), itertools.product(list(GamDistribution), list(GamLinkFunction)))
     def test_dist_link_combinations(self, adata_cflare: AnnData, dist: GamDistribution, link: GamLinkFunction):
         g = GAM(adata_cflare, link=link, distribution=dist)
 
@@ -559,13 +559,13 @@ class TestFailedModel:
 
 class TestModelsIO:
     def test_shallow_copy_sklearn(self, sklearn_model: SKLearnModel):
-        assert_models_equal(sklearn_model, copy(sklearn_model), deepcopy=False)
+        assert_models_equal(sklearn_model, copy.copy(sklearn_model), deepcopy=False)
 
     def test_deep_copy_sklearn(self, sklearn_model: SKLearnModel):
-        assert_models_equal(sklearn_model, deepcopy(sklearn_model), deepcopy=True)
+        assert_models_equal(sklearn_model, copy.deepcopy(sklearn_model), deepcopy=True)
 
     def test_pickling_sklearn(self, sklearn_model: SKLearnModel):
-        fp = BytesIO()
+        fp = io.BytesIO()
 
         pickle.dump(sklearn_model, fp)
         fp.flush()
@@ -575,13 +575,13 @@ class TestModelsIO:
         assert_models_equal(sklearn_model, actual_model, pickled=True)
 
     def test_shallow_copy_pygam(self, pygam_model: GAM):
-        assert_models_equal(pygam_model, copy(pygam_model), deepcopy=False)
+        assert_models_equal(pygam_model, copy.copy(pygam_model), deepcopy=False)
 
     def test_deep_copy_pygam(self, pygam_model: GAM):
-        assert_models_equal(pygam_model, deepcopy(pygam_model), deepcopy=True)
+        assert_models_equal(pygam_model, copy.deepcopy(pygam_model), deepcopy=True)
 
     def test_pickling_pygam(self, pygam_model: GAM):
-        fp = BytesIO()
+        fp = io.BytesIO()
 
         pickle.dump(pygam_model, fp)
         fp.flush()
@@ -593,7 +593,7 @@ class TestModelsIO:
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("write_adata", [False, True])
     def test_read_write(self, sklearn_model: SKLearnModel, tmpdir, write_adata: bool, copy: bool):
-        path = Path(tmpdir) / "model.pickle"
+        path = pathlib.Path(tmpdir) / "model.pickle"
         sklearn_model.write(path, write_adata=write_adata)
 
         if write_adata:

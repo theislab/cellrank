@@ -1,8 +1,8 @@
+import collections
+import io
 import pickle
-from collections import defaultdict
-from html.parser import HTMLParser
-from io import BytesIO
-from unittest import mock
+import unittest
+from html import parser
 
 import pytest
 
@@ -16,12 +16,12 @@ from cellrank._utils._colors import _compute_mean_color, _create_categorical_col
 from cellrank._utils._lineage import _HT_CELLS, LineageView, PrimingDegree
 
 
-class SimpleHTMLValidator(HTMLParser):
+class SimpleHTMLValidator(parser.HTMLParser):
     _expected_tags = {"table", "div", "tr", "th", "td", "p"}
 
     def __init__(self, n_expected_rows: int, n_expected_cells: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._cnt = defaultdict(int)
+        self._cnt = collections.defaultdict(int)
         self._n_rows = 0
         self._n_cells = 0
 
@@ -716,7 +716,7 @@ class TestLineageNormalization:
         np.testing.assert_array_equal(lin.names, ["bar, foo", "baz, quux"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz, quux"]].colors)
 
-    @mock.patch("cellrank._utils._lineage._cosine_sim")
+    @unittest.mock.patch("cellrank._utils._lineage._cosine_sim")
     def test_cosine(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", dist_measure="cosine_sim", mode="dist")
@@ -725,7 +725,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._wasserstein_dist")
+    @unittest.mock.patch("cellrank._utils._lineage._wasserstein_dist")
     def test_wasserstein(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", dist_measure="wasserstein_dist", mode="dist")
@@ -734,7 +734,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._kl_div")
+    @unittest.mock.patch("cellrank._utils._lineage._kl_div")
     def test_kl_div(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", dist_measure="kl_div", mode="dist")
@@ -743,7 +743,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._js_div")
+    @unittest.mock.patch("cellrank._utils._lineage._js_div")
     def test_js_div(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", dist_measure="js_div", mode="dist")
@@ -752,7 +752,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._mutual_info")
+    @unittest.mock.patch("cellrank._utils._lineage._mutual_info")
     def test_mutual_info(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", dist_measure="mutual_info", mode="dist")
@@ -761,7 +761,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._row_normalize")
+    @unittest.mock.patch("cellrank._utils._lineage._row_normalize")
     def test_equal(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", dist_measure="equal", mode="dist")
@@ -771,7 +771,7 @@ class TestLineageNormalization:
             # should be twice, but we have extra check inside and we're mocking that does nothing
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._row_normalize")
+    @unittest.mock.patch("cellrank._utils._lineage._row_normalize")
     def test_row_normalize(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", mode="scale")
@@ -780,7 +780,7 @@ class TestLineageNormalization:
         finally:
             mocker.assert_called_once()
 
-    @mock.patch("cellrank._utils._lineage._softmax")
+    @unittest.mock.patch("cellrank._utils._lineage._softmax")
     def test_softmax(self, mocker, lineage: Lineage):
         try:
             _ = lineage.reduce("foo", "bar", normalize_weights="softmax", mode="dist")
@@ -975,7 +975,7 @@ class TestView:
 
 class TestPickling:
     def test_pickle_normal(self, lineage: Lineage):
-        handle = BytesIO()
+        handle = io.BytesIO()
 
         pickle.dump(lineage, handle)
         handle.flush()
@@ -996,7 +996,7 @@ class TestPickling:
 
     def test_pickle_transposed(self, lineage: Lineage):
         lineage = lineage.T.copy()
-        handle = BytesIO()
+        handle = io.BytesIO()
 
         pickle.dump(lineage, handle)
         handle.flush()

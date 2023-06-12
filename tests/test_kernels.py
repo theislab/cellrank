@@ -1,7 +1,7 @@
+import copy
 import itertools
+import pathlib
 import pickle
-from copy import copy
-from pathlib import Path
 from typing import Callable, Literal, Optional, Tuple, Type
 
 import pytest
@@ -14,9 +14,8 @@ from _helpers import (
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
-from scipy.sparse import eye as speye
-from scipy.sparse import issparse, isspmatrix_csr
 
 import scanpy as sc
 from anndata import AnnData
@@ -64,13 +63,13 @@ class CustomFuncHessian(CustomFunc):
 
 class CustomKernel(UnidirectionalKernel):
     def compute_transition_matrix(self, sparse: bool = False) -> "CustomKernel":
-        tmat = speye(self.adata.n_obs, dtype=np.float32) if sparse else np.eye(self.adata.n_obs, dtype=np.float32)
+        tmat = sp.eye(self.adata.n_obs, dtype=np.float32) if sparse else np.eye(self.adata.n_obs, dtype=np.float32)
 
         self.transition_matrix = tmat
         return self
 
     def copy(self, deep: bool = False) -> "CustomKernel":
-        return copy(self)
+        return copy.copy(self)
 
 
 class InvalidFuncProbs(cr.kernels.utils.SimilarityABC):
@@ -409,7 +408,7 @@ class TestKernel:
         c = CustomKernel(adata).compute_transition_matrix(sparse=sparse)
 
         if sparse:
-            assert isspmatrix_csr(c.transition_matrix)
+            assert sp.isspmatrix_csr(c.transition_matrix)
         else:
             assert isinstance(c.transition_matrix, np.ndarray)
 
@@ -914,7 +913,7 @@ class TestVelocityScheme:
         assert vk.params["similarity"] == str(CustomFunc())
 
     def test_save_to_anndata(self, adata: AnnData, tmpdir):
-        path = Path(tmpdir) / "adata.h5ad"
+        path = pathlib.Path(tmpdir) / "adata.h5ad"
         key = "vk"
 
         vk = VelocityKernel(adata).compute_transition_matrix(model=VelocityModel.DETERMINISTIC)
@@ -1227,7 +1226,7 @@ class TestTransportMapKernel:
         )
         for k, v in tmk.couplings.items():
             if sparse_mode is not None:
-                assert issparse(v.X), k
+                assert sp.issparse(v.X), k
             else:
                 assert isinstance(v.X, np.ndarray), k
 
@@ -1465,7 +1464,7 @@ class TestKernelIO:
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("write_adata", [False, True])
     def test_read_write(self, kernel: Kernel, tmpdir, write_adata: bool, copy: bool):
-        path = Path(tmpdir) / "kernel.pickle"
+        path = pathlib.Path(tmpdir) / "kernel.pickle"
         kernel.write(path, write_adata=write_adata)
 
         if write_adata:
@@ -1513,7 +1512,7 @@ class TestKernelIO:
 
         assert k1.backward == k2.backward
         assert k1.params == k2.params
-        if issparse(k1.transition_matrix):
+        if sp.issparse(k1.transition_matrix):
             np.testing.assert_almost_equal(k1.transition_matrix.A, k2.transition_matrix.A)
         else:
             np.testing.assert_almost_equal(k1.transition_matrix, k2.transition_matrix)

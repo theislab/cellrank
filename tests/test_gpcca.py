@@ -1,6 +1,6 @@
+import copy
+import enum
 import os
-from copy import deepcopy
-from enum import Enum
 from typing import List, Optional, Sequence, Tuple, Union
 
 import pytest
@@ -8,8 +8,8 @@ from _helpers import assert_array_nan_equal, assert_estimators_equal
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.testing import assert_frame_equal, assert_series_equal
-from scipy.sparse import issparse
 
 from anndata import AnnData
 
@@ -20,7 +20,7 @@ from cellrank.kernels import ConnectivityKernel, VelocityKernel
 
 
 # fmt: off
-class State(str, Enum):
+class State(str, enum.Enum):
     SCHUR = "schur"
     MACRO = "macro"
     TERM = "term"
@@ -124,7 +124,7 @@ class State(str, Enum):
 def shares_mem(x, y) -> bool:
     if isinstance(x, Lineage):
         return np.shares_memory(x.X, y.X)
-    if issparse(x):
+    if sp.issparse(x):
         return np.shares_memory(x.data, y.data)
     return np.shares_memory(x, y)
 
@@ -368,7 +368,7 @@ class TestGPCCA:
         mc.compute_eigendecomposition(k=10, only_evals=True)
 
         _check_eigdecomposition(mc)
-        orig_ed = deepcopy(mc.eigendecomposition)
+        orig_ed = copy.deepcopy(mc.eigendecomposition)
 
         mc._eigendecomposition = None
         mc.compute_schur(n_components=10, method="krylov")

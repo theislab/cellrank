@@ -3,9 +3,7 @@ from typing import Tuple
 import pytest
 
 import numpy as np
-from scipy.sparse import csr_matrix
-from scipy.sparse import eye as speye
-from scipy.sparse import random
+import scipy.sparse as sp
 
 from cellrank._utils._linear_solver import (
     _create_petsc_matrix,
@@ -20,8 +18,8 @@ petsc_slepc_skip = pytest.mark.skipif(not _is_petsc_slepc_available(), reason="P
 def _create_a_b_matrices(seed: int, sparse: bool) -> Tuple[np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     if sparse:
-        A = random(20, 20, density=0.8, random_state=rng.integers(0, 100), format="csr")
-        B = random(20, 10, density=1, random_state=rng.integers(0, 100), format="csr")
+        A = sp.random(20, 20, density=0.8, random_state=rng.integers(0, 100), format="csr")
+        B = sp.random(20, 10, density=1, random_state=rng.integers(0, 100), format="csr")
     else:
         A = rng.normal(size=(20, 20))
         B = rng.normal(size=(20, 10))
@@ -119,7 +117,7 @@ class TestLinearSolverPETSc:
         np.testing.assert_array_equal(res.getDenseArray(), x)
 
     def test_create_petsc_matrix_from_sparse_as_dense(self):
-        x = random(100, 10, format="csr", density=0.1)
+        x = sp.random(100, 10, format="csr", density=0.1)
         res = _create_petsc_matrix(x, as_dense=True)
 
         assert res.assembled
@@ -127,21 +125,21 @@ class TestLinearSolverPETSc:
         np.testing.assert_array_equal(res.getDenseArray(), x.A)
 
     def test_create_petsc_matrix_from_sparse_as_not_dense(self):
-        x = random(100, 10, format="csr", density=0.1)
+        x = sp.random(100, 10, format="csr", density=0.1)
         res = _create_petsc_matrix(x, as_dense=False)
 
         assert res.assembled
         assert res.getType() == "seqaij"
-        np.testing.assert_array_equal(csr_matrix(res.getValuesCSR()[::-1]).A, x.A)
+        np.testing.assert_array_equal(sp.csr_matrix(res.getValuesCSR()[::-1]).A, x.A)
 
     def test_create_petsc_matrix_from_sparse_not_csr(self):
-        x = random(100, 10, format="coo", density=0.1)
+        x = sp.random(100, 10, format="coo", density=0.1)
         res = _create_petsc_matrix(x, as_dense=False)
 
         assert res.assembled
         assert res.getType() == "seqaij"
 
-        np.testing.assert_array_equal(csr_matrix(res.getValuesCSR()[::-1]).A, x.A)
+        np.testing.assert_array_equal(sp.csr_matrix(res.getValuesCSR()[::-1]).A, x.A)
 
     def test_create_solver_invalid_solver(self):
         from petsc4py.PETSc import Error
@@ -265,7 +263,7 @@ class TestLinearSolverPETSc:
     @pytest.mark.parametrize(("seed", "sparse"), zip(range(10, 20), [False] * 5 + [True] * 5))
     def test_mat_solve(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
-        A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
+        A = (sp.eye(*A.shape) if sparse else np.eye(*A.shape)) - A
 
         X = _petsc_direct_solve(A, B, tol=1e-8)
         assert X.ndim == 2
@@ -278,7 +276,7 @@ class TestLinearSolverPETSc:
     @pytest.mark.parametrize(("seed", "sparse"), zip(range(10, 20), [False] * 5 + [True] * 5))
     def test_mat_solve_1_dim_b(self, seed: int, sparse: bool):
         A, B = _create_a_b_matrices(seed, sparse)
-        A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
+        A = (sp.eye(*A.shape) if sparse else np.eye(*A.shape)) - A
         B = B[:, 0]
 
         X = _petsc_direct_solve(A, B, tol=1e-12)
@@ -293,7 +291,7 @@ class TestLinearSolverPETSc:
     @pytest.mark.parametrize(("seed", "sparse"), zip(range(10, 20), [False] * 5 + [True] * 5))
     def test_mat_solve_inversion(self, seed: int, sparse: bool):
         A, _ = _create_a_b_matrices(seed, sparse)
-        A = (speye(*A.shape) if sparse else np.eye(*A.shape)) - A
+        A = (sp.eye(*A.shape) if sparse else np.eye(*A.shape)) - A
 
         X = _petsc_direct_solve(A, tol=1e-8)
         assert X.ndim == 2

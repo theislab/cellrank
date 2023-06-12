@@ -1,5 +1,5 @@
 import os
-from pathlib import Path
+import pathlib
 from typing import Callable, Literal, Tuple, Union
 
 import pytest
@@ -13,8 +13,8 @@ from _helpers import (
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.api.types import is_categorical_dtype
-from scipy.sparse import issparse
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -32,7 +32,7 @@ from cellrank.models import GAMR
 
 setup()
 
-HERE: str = Path(__file__).parent
+HERE: str = pathlib.Path(__file__).parent
 GT_FIGS = HERE / "_ground_truth_figures"
 FIGS = HERE / "figures"
 DPI = 40
@@ -73,10 +73,10 @@ scv.set_figure_params(transparent=True)
 def compare(
     *,
     kind: Literal["adata", "gpcca", "bwd", "gpcca_bwd", "cflare", "lineage", "gamr"] = "adata",
-    dirname: Union[str, Path] = None,
+    dirname: Union[str, pathlib.Path] = None,
     tol: int = TOL,
 ) -> Callable:
-    def _compare_images(expected_path: Union[str, Path], actual_path: Union[str, Path]) -> None:
+    def _compare_images(expected_path: Union[str, pathlib.Path], actual_path: Union[str, pathlib.Path]) -> None:
         resize_images_to_same_sizes(expected_path, actual_path)
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
@@ -2348,7 +2348,7 @@ class TestModel:
     def test_model_obs_data_key(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         gene = adata.X[:, 0]
-        adata.obs["foo"] = gene.A if issparse(gene) else gene
+        adata.obs["foo"] = gene.A if sp.issparse(gene) else gene
 
         model.prepare("foo", "1", "latent_time", data_key="obs")
         model.fit().predict()

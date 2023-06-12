@@ -3,13 +3,11 @@ from typing import Any, Optional
 import pytest
 from _helpers import assert_array_nan_equal, create_model, jax_not_installed_skip
 
+import numba as nb
 import numpy as np
 import pandas as pd
-from numba import njit
+import scipy.sparse as sp
 from pandas.api.types import is_categorical_dtype
-from scipy.sparse import csr_matrix, diags
-from scipy.sparse import rand as srand
-from scipy.sparse import random
 
 import scanpy as sc
 from anndata import AnnData
@@ -868,7 +866,7 @@ class TestKernelUtils:
         x = np.random.RandomState(42).normal(size=(10, 10))
 
         def _create_numba_fn(fn):
-            @njit
+            @nb.njit
             def wrapped(axis: int, x: np.ndarray):
                 return _np_apply_along_axis(fn, axis, x)
 
@@ -888,7 +886,7 @@ class TestKernelUtils:
         assert np.isclose(sum_to_1.sum(), 1.0)
 
     def test_calculate_starts(self):
-        starts = _calculate_starts(diags(np.ones(10)).tocsr().indptr, np.arange(10))
+        starts = _calculate_starts(sp.diags(np.ones(10)).tocsr().indptr, np.arange(10))
 
         np.testing.assert_array_equal(starts, np.arange(11))
 
@@ -896,13 +894,13 @@ class TestKernelUtils:
     def test_reconstruct_one(self, seed: int, shuffle: bool):
         rng = np.random.default_rng(42)
 
-        m1 = random(100, 10, random_state=seed, density=0.5, format="lil")
+        m1 = sp.random(100, 10, random_state=seed, density=0.5, format="lil")
         m1[:, 0] = 0.1
         m1 /= m1.sum(1)
-        m1 = csr_matrix(m1)
+        m1 = sp.csr_matrix(m1)
 
         m2_data = rng.normal(size=(m1.nnz))
-        m2 = csr_matrix((m2_data, m1.indices, m1.indptr))
+        m2 = sp.csr_matrix((m2_data, m1.indices, m1.indptr))
 
         if shuffle:
             ixs = np.arange(100)
@@ -955,14 +953,14 @@ class TestParallelize:
     @pytest.mark.parametrize("n_jobs", [1, 3, 4])
     def test_more_jobs_than_work(self, n_jobs: int):
         def callback(data, **_: Any):
-            assert isinstance(data, csr_matrix)
+            assert isinstance(data, sp.csr_matrix)
             assert data.shape[1] == 100
 
             return [42] * data.shape[0]
 
         res = parallelize(
             callback,
-            collection=srand(3, 100, format="csr"),
+            collection=sp.rand(3, 100, format="csr"),
             n_jobs=n_jobs,
             show_progress_bar=False,
             extractor=np.concatenate,

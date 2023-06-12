@@ -1,5 +1,5 @@
 import os
-from pathlib import Path
+import pathlib
 from typing import Optional, Tuple, Union
 
 import pytest
@@ -8,8 +8,8 @@ from PIL import Image
 
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from pandas.testing import assert_frame_equal, assert_series_equal
-from scipy.sparse import csr_matrix, issparse, spdiags
 from sklearn.svm import SVR
 
 import scanpy as sc
@@ -55,12 +55,12 @@ def _rpy2_mgcv_not_installed() -> bool:
 
 
 def bias_knn(
-    conn: csr_matrix,
+    conn: sp.csr_matrix,
     pseudotime: np.ndarray,
     n_neighbors: int,
     k: int = 3,
     frac_to_keep: Optional[float] = None,
-) -> csr_matrix:
+) -> sp.csr_matrix:
     # frac_to_keep=None mimics original impl. (which mimics Palantir)
     k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
     conn_biased = conn.copy()
@@ -98,10 +98,10 @@ def bias_knn(
 def density_normalization(velo_graph, trans_graph):
     # function copied from scanpy
     q = np.asarray(trans_graph.sum(axis=0))
-    if not issparse(trans_graph):
+    if not sp.issparse(trans_graph):
         Q = np.diag(1.0 / q)
     else:
-        Q = spdiags(1.0 / q, 0, trans_graph.shape[0], trans_graph.shape[0])
+        Q = sp.spdiags(1.0 / q, 0, trans_graph.shape[0], trans_graph.shape[0])
     velo_graph = Q @ velo_graph @ Q
 
     return velo_graph
@@ -119,10 +119,10 @@ def create_kernels(
     ck = ConnectivityKernel(adata)
     ck._mat_scaler = adata.obsp.get(connectivity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))
 
-    vk._transition_matrix = csr_matrix(np.eye(adata.n_obs))
+    vk._transition_matrix = sp.csr_matrix(np.eye(adata.n_obs))
     ck._transition_matrix = np.eye(adata.n_obs, k=1) / 2 + np.eye(adata.n_obs) / 2
     ck._transition_matrix[-1, -1] = 1
-    ck._transition_matrix = csr_matrix(ck._transition_matrix)
+    ck._transition_matrix = sp.csr_matrix(ck._transition_matrix)
 
     np.testing.assert_allclose(np.sum(ck._transition_matrix.A, axis=1), 1)  # sanity check
 
@@ -140,8 +140,8 @@ def create_failed_model(adata: AnnData) -> cr.models.FailedModel:
 
 
 def resize_images_to_same_sizes(
-    expected_image_path: Union[str, Path],
-    actual_image_path: Union[str, Path],
+    expected_image_path: Union[str, pathlib.Path],
+    actual_image_path: Union[str, pathlib.Path],
     kind: str = "actual_to_expected",
 ) -> None:
     if not os.path.isfile(actual_image_path):

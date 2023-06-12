@@ -1,5 +1,5 @@
+import pathlib
 import warnings
-from pathlib import Path
 from typing import Optional, Tuple
 
 import pytest
@@ -148,7 +148,7 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa:
 
 
 @pytest.fixture(scope="session")
-def gamr_model(adata_gamr: AnnData, tmp_path_factory: Path, worker_id: str) -> Optional[GAMR]:
+def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path, worker_id: str) -> Optional[GAMR]:
     if worker_id == "master":
         model = _create_gamr_model(adata_gamr)
     else:
