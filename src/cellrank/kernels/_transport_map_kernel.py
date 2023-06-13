@@ -222,6 +222,7 @@ class TransportMapKernel(UnidirectionalKernel):
         problem: "Union[TemporalProblem, LineageProblem, SpatioTemporalProblem]",
         sparse_mode: Optional[Literal["threshold", "percentile", "min_row"]] = None,
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
+        copy: bool = False,
         **kwargs: Any,
     ) -> "TransportMapKernel":
         """Construct the kernel from :mod:`moscot` :cite:`klein:23`.
@@ -236,6 +237,8 @@ class TransportMapKernel(UnidirectionalKernel):
             can also sparsify the final :attr:`transition_matrix`.
         sparsify_kwargs
             Keyword arguments for the sparsification.
+        copy
+            Whether to copy the underlying arrays. Note that :class:`jax arrays <jax.Array>` are always copied.
         kwargs
             Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
 
@@ -281,7 +284,10 @@ class TransportMapKernel(UnidirectionalKernel):
             coupling = solution.transport_matrix
             if not (isinstance(coupling, np.ndarray) or sp.issparse(coupling)):
                 # convert from, e.g., `jax`
-                coupling = np.asarray(coupling)
+                # we always copy because otherwise the array is read-only and we may sparsify
+                coupling = np.array(coupling, copy=True)
+            elif copy:
+                coupling = coupling.copy()
             couplings[t1, t2] = AnnData(coupling, obs=adata_src.obs, var=adata_tgt.obs)
 
         return cls(
@@ -488,7 +494,7 @@ class TransportMapKernel(UnidirectionalKernel):
             thresh = min(adata.X[i].max() for adata in couplings.values() for i in range(adata.n_obs))
             logg.info(f"Using automatic `threshold={thresh}`")
         elif threshold == "auto_local":
-            logg.info("Using automatic `threshold` for each src/tgt key separately")
+            logg.info("Using automatic `threshold` for each coupling separately")
         elif not (0 <= threshold <= 100):
             raise ValueError(f"Expected `threshold` to be in `[0, 100]`, found `{threshold}`.`")
 
@@ -508,17 +514,6 @@ class TransportMapKernel(UnidirectionalKernel):
 
             tmat = sp.csr_matrix(tmat, dtype=tmat.dtype)
             tmat.data[tmat.data < thresh] = 0.0
-            zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
-            if np.any(zeros_mask):
-                logg.warning(
-                    f"After thresholding, `{len(zeros_mask)}` row(s) of transport at `{key}` are forced to be uniform"
-                )
-                for ix in zeros_mask:
-                    start, end = tmat.indptr[ix], tmat.indptr[ix + 1]
-                    size = end - start
-                    tmat.data[start:end] = np.ones(size, dtype=tmat.dtype) / size
-
-            # after `zeros_mask` has been handled, to have access to removed row indices
             tmat.eliminate_zeros()
             couplings[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
 
@@ -565,6 +560,16 @@ class TransportMapKernel(UnidirectionalKernel):
                 coupling.var_names,
                 msg=f"Source observations for `{src, tgt}` don't match with `adata.var_names`.",
             )
+
+        for key, coupling in couplings.items():
+            tmat = coupling.X
+            zeros_mask = np.where(np.asarray(tmat.sum(1)).squeeze() == 0)[0]
+            if np.any(zeros_mask):
+                logg.warning(
+                    f"Coupling at `{key}` contains `{len(zeros_mask)}` empty row(s), e.g., due to "
+                    f"unbalancedness or 0s in the source marginals. Using uniform distribution"
+                )
+                tmat[zeros_mask] = np.ones((len(zeros_mask), tmat.shape[1]), dtype=tmat.dtype) / tmat.shape[1]
 
     def _coupling_to_adata(self, src: Any, tgt: Any, coupling: Coupling_t) -> AnnData:
         """Convert the coupling to :class:`~anndata.AnnData`."""
