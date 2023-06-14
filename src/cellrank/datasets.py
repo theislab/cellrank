@@ -235,7 +235,7 @@ def reprogramming_schiebinger(
     if subset_to_serum:
         key = "reprogramming_schiebinger_serum_subset"
         path, ext = os.path.splitext(path)
-        path = f"{path}_serum.{ext}"
+        path = f"{path}_serum{ext}"
     else:
         key = "reprogramming_schiebinger"
 
