@@ -93,7 +93,7 @@ def pancreas(
     path
         Path where to save the dataset.
     kwargs
-        Keyword arguments for :func:`scanpy.read`.
+        Keyword arguments for :func:`~scanpy.read`.
 
     Returns
     -------
@@ -131,8 +131,8 @@ def lung(
 
     sc-RNA-seq dataset comprising `24 051` cells recorded using Drop-seq :cite:`macosko:15` at 13 time points spanning
     days 2-15 past lung bleomycin injury. Data was filtered to remove control cells as well as later time points which
-    are more spaced out. We wanted to focus on the densely sampled days where RNA velocity :cite:`manno:18`
-    :cite:`bergen:20` can be used to predict the future cellular state.
+    are more spaced out. We wanted to focus on the densely sampled days when RNA velocity :cite:`manno:18,bergen:20`
+    can be used to predict the future cellular state.
 
     Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as original
     cluster annotations.
@@ -161,20 +161,20 @@ def reprogramming_morris(
     at 8 time points spanning days 0-28 past reprogramming initiation.
 
     Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as clonal information
-    from CellTagging :cite:`morris:18`. Moreover, it contains the following :attr:`anndata.AnnData.obs` annotations:
+    from CellTagging :cite:`morris:18`. Moreover, it contains the following :attr:`~anndata.AnnData.obs` annotations:
 
-        - `'reprogramming_day'` - time-point information.
-        - `'reprogramming'` - whether this clone is enriched for cells from successfully reprogrammed populations.
-        - `'CellTagDN_XXk'` - CellTag from day `N` from the `XXk` cells ``subset``.
+    - ``'reprogramming_day'`` - time-point information.
+    - ``'reprogramming'`` - whether this clone is enriched for cells from successfully reprogrammed populations.
+    - ``'CellTagDN_XXk'`` - CellTag from day `N` from the `XXk` cells ``subset``.
 
     Parameters
     ----------
     subset
         Whether to return the full object or just a subset. Can be one of:
 
-            - `{s.FULL!r}` - return the complete dataset containing `104 887` cells.
-            - `{s.K85!r}` - return the subset as described in :cite:`morris:18` Fig. 1, containing `85 010` cells.
-            - `{s.K48!r}` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
+        - ``{s.FULL!r}`` - return the complete dataset containing `104 887` cells.
+        - ``{s.K85!r}`` - return the subset as described in :cite:`morris:18` Fig. 1, containing `85 010` cells.
+        - ``{s.K48!r}`` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
 
     %(dataset.parameters)s
 
@@ -211,11 +211,11 @@ def reprogramming_schiebinger(
     at 39 time points spanning days 0-18 past reprogramming initiation.
 
     Contains total-counts normalized, log-transformed counts and low-dimensional embedding coordinates (force-directed).
-    Moreover, it contains the following :attr:`anndata.AnnData.obs` annotations:
+    Moreover, it contains the following :attr:`~anndata.AnnData.obs` annotations:
 
-        - `'day'` - time-point information.
-        - `'serum'`/`'2i'` - whether this cell comes from the serum/2i condition.
-        - `'cell_sets'` - cluster labels.
+    - ``'day'`` - time-point information.
+    - ``'serum'``/``'2i'`` - whether this cell comes from the serum/2i condition.
+    - ``'cell_sets'`` - cluster labels.
 
     Parameters
     ----------
@@ -232,7 +232,13 @@ def reprogramming_schiebinger(
     -----
     The full dataset has approximately 1.4GiB.
     """
-    key = "reprogramming_schiebinger_serum_subset" if subset_to_serum else "reprogramming_schiebinger"
+    if subset_to_serum:
+        key = "reprogramming_schiebinger_serum_subset"
+        path, ext = os.path.splitext(path)
+        path = f"{path}_serum.{ext}"
+    else:
+        key = "reprogramming_schiebinger"
+
     return _load_dataset_from_url(path, *_datasets[key], **kwargs)
 
 
