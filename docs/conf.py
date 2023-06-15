@@ -67,7 +67,7 @@ master_doc = "index"
 pygments_style = "tango"
 pygments_dark_style = "monokai"
 
-nitpicky = False  # TODO(michalk8): enable in the future
+nitpicky = True
 
 # bibliography
 bibtex_bibfiles = ["references.bib"]
