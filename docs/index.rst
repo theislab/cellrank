@@ -8,9 +8,7 @@ CellRank: dynamics from multi-view single-cell data
     :align: center
 
 **CellRank** :cite:`lange:22` is a modular framework to study cellular dynamics based on Markov state modeling of
-multi-view single-cell data. It estimates differentiation direction based on a varied (and growing!) number of
-biological priors including RNA velocity, pseudotime, developmental potential and experimental time points.
-See :doc:`about CellRank <about/index>` to learn more.
+multi-view single-cell data. See :doc:`about CellRank <about/index>` to learn more.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
 backend, it is powered by the `pyGPCCA package <https://github.com/msmdev/pyGPCCA>`_ :cite:`reuter:19,reuter:22`. Feel
@@ -19,12 +17,17 @@ want to make a comment/suggestion.
 
 CellRank's key applications
 ---------------------------
-- Under reconstruction. .. TODO(Marius1311): please re-factor this page
+- estimate differentiation direction based on a varied number of biological priors, including :doc:`pseudotime <notebooks/tutorials/kernels/300_pseudotime>`, :doc:`developmental potential <notebooks/tutorials/kernels/400_cytotrace>`, :doc:`RNA velocity <notebooks/tutorials/kernels/200_rna_velocity>`, :doc:`experimental time points <notebooks/tutorials/kernels/500_real_time>`, and :class:`more <cellrank.kernels>`.
+- compute initial, terminal and intermediate :doc:`macrostates <notebooks/tutorials/estimators/600_initial_terminal>`
+  :cite:`reuter:19,reuter:22`.
+- infer :doc:`fate probabilities and driver genes <notebooks/tutorials/estimators/700_fate_probabilities>`.
+- visualize and cluster :doc:`gene expression trends <notebooks/tutorials/estimators/800_gene_trends>`.
+- ... and much more, check out our :doc:`API <api/index>`.
 
 Getting started with CellRank
 -----------------------------
-We have :doc:`notebooks/tutorials/index` that will help you getting started. To see CellRank in action, explore our
-manuscript :cite:`lange:22` in Nature Methods.
+We have :doc:`notebooks/tutorials/index` to help you getting started. To see CellRank in action, explore our
+manuscript :cite:`lange:22` in Nature Methods. If you're moving from CellRank v1 to v2, see our :doc:`note on important changes <about/version2>`.
 
 Contributing
 ------------
