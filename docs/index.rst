@@ -51,6 +51,7 @@ We actively encourage any contribution! To get started, please check out the :do
     :hidden:
 
     about/index
+    about/version2
     about/cite
     about/team
     GitHub <https://github.com/theislab/cellrank>
