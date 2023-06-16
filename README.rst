@@ -17,10 +17,10 @@ want to make a comment/suggestion.
 
 CellRank's key applications
 ---------------------------
-- estimate differentiation direction based on a varied number of biological priors, including RNA velocity  (`La Manno et al. (2018)`_, `Bergen et al. (2020)`_), any pseudotime or developmental potential, experimental time points, and more.
-- compute initial, terminal and intermediate macrostates.
-- infer fate probabilities and driver genes.
-- visualize and cluster gene expression trends.
+- Estimate differentiation direction based on a varied number of biological priors, including RNA velocity  (`La Manno et al. (2018)`_, `Bergen et al. (2020)`_), any pseudotime or developmental potential, experimental time points, and more.
+- Compute initial, terminal and intermediate macrostates.
+- Infer fate probabilities and driver genes.
+- Visualize and cluster gene expression trends.
 - ... and much more, check out our `documentation`_.
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellrank.svg
