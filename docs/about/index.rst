@@ -33,12 +33,10 @@ of the construction of the transition matrix. For example, whether we use RNA ve
 directed transition probabilities does not change how initial and terminal states are inferred or fate probabilities
 estimated. The general structure of the framework, corresponding to steps **(i)** and **(ii)**, is given by:
 
-.. TODO(Marius1311): please re-add the links to docs in, if needed
-
-* :mod:`cellrank.kernels` that take multi-view single cell input data  and estimate a matrix of cell-cell
+* :mod:`~cellrank.kernels` that take multi-view single cell input data  and estimate a matrix of cell-cell
   transition probabilities :math:`T`. Row :math:`i` in matrix :math:`T` contains the transition probabilities from cell
   :math:`i` towards putative descendants. Therefore, all entries in the matrix are between 0 and 1, and rows sum to one.
-* :mod:`cellrank.estimators` that take a cell-cell transition matrix :math:`T` computed using any kernel and
+* :mod:`~cellrank.estimators` that take a cell-cell transition matrix :math:`T` computed using any kernel and
   apply concepts from the theory of Markov chains to identify initial, terminal, and intermediate macrostates
   and compute fate probabilities.
 
@@ -50,7 +48,7 @@ using the :class:`cellrank.estimators.GPCCA` estimator, see :doc:`citing CellRan
 We use fate probabilities to visualize trajectory-specific gene expression trends, infer putative driver genes,
 arrange cells in a :func:`circular embedding <cellrank.pl.circular_projection>` :cite:`velten:17`, visualize
 :func:`cascades of gene activation <cellrank.pl.heatmap>` along a trajectory, and
-:func:`cluster expression trends <cellrank.pl.cluster_trends>`.
+:func:`cluster expression trends <cellrank.pl.cluster_trends>`. See our :doc:`tutorials <../notebooks/tutorials/index>` to learn more.
 
 Sparsity
 ~~~~~~~~
