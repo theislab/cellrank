@@ -125,7 +125,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         if self.pseudotime is None:
             raise ValueError("Compute pseudotime first.")  # CytoTraceKernel
 
-        start = logg.info("Computing transition matrix based on pseudotime`")
+        start = logg.info("Computing transition matrix based on pseudotime")
         if isinstance(threshold_scheme, str):
             threshold_scheme = ThresholdScheme(threshold_scheme)
             if threshold_scheme == ThresholdScheme.SOFT:

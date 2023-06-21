@@ -143,6 +143,8 @@ html_css_files = [
 html_show_sphinx = False
 html_show_sourcelink = False
 html_theme_options = {
+    "announcement": "If you're moving from CellRank v1 to v2, "
+    "see our <a href='about/version2.html'>notes on important changes</a>.",
     "sidebar_hide_name": True,
     "light_logo": "img/light_mode_logo.png",
     "dark_logo": "img/light_mode_logo.png",
