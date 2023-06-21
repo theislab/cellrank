@@ -45,39 +45,28 @@ class IOMixin:
         self,
         fname: Union[str, pathlib.Path],
         write_adata: bool = True,
-        ext: Optional[str] = "pickle",
     ) -> None:
         """Serialize self to a file using :mod:`pickle`.
 
         Parameters
         ----------
         fname
-            Filename where to save the object.
+            Path where to save the object.
         write_adata
-            Whether to save :attr:`adata` object or not, if present.
-        ext
-            Filename extension to use. If :obj:`None`, don't append any extension.
+            Whether to save :attr:`adata` object.
 
         Returns
         -------
         Nothing, just writes itself to a file.
         """
-        fname = str(fname)
-        if ext is not None:
-            if not ext.startswith("."):
-                ext = "." + ext
-            if not fname.endswith(ext):
-                fname += ext
-
         logg.info(f"Writing `{self}` to `{fname}`")
 
         if write_adata:
             with open(fname, "wb") as fout:
                 pickle.dump(self, fout)
-            return
-
-        with self._remove_adata, open(fname, "wb") as fout:
-            pickle.dump(self, fout)
+        else:
+            with self._remove_adata, open(fname, "wb") as fout:
+                pickle.dump(self, fout)
 
     @staticmethod
     def read(fname: Union[str, pathlib.Path], adata: Optional[AnnData] = None, copy: bool = False) -> "IOMixin":
@@ -86,7 +75,7 @@ class IOMixin:
         Parameters
         ----------
         fname
-            Filename from which to read the object.
+            Path from which to read the object.
         adata
             :class:`~anndata.AnnData` object to assign to the saved object.
             Only used when the saved object has :attr:`adata` and it was saved without it.

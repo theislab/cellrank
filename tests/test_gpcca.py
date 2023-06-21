@@ -1089,42 +1089,11 @@ class TestGPCCAIO:
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_write_ext(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
-        _, mc = adata_gpcca_fwd
-
-        fname = "foo"
-        mc.write(os.path.join(tmpdir, fname), ext="bar")
-
-        assert os.path.isfile(os.path.join(tmpdir, "foo.bar"))
-
-    def test_write_no_ext(
-        self,
-        adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA],
-        tmpdir,
-    ):
-        _, mc = adata_gpcca_fwd
-        fname = "foo"
-        mc.write(os.path.join(tmpdir, fname), ext=None)
-
-        assert os.path.isfile(os.path.join(tmpdir, "foo"))
-
-    def test_write_ext_with_dot(
-        self,
-        adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA],
-        tmpdir,
-    ):
-        _, mc = adata_gpcca_fwd
-
-        fname = "foo"
-        mc.write(os.path.join(tmpdir, fname), ext=".bar")
-
-        assert os.path.isfile(os.path.join(tmpdir, "foo.bar"))
-
     def test_read(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
 
-        mc1.write(os.path.join(tmpdir, "foo"))
-        mc2 = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"))
+        mc1.write(os.path.join(tmpdir, "foo.pkl"))
+        mc2 = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pkl"))
 
         assert_estimators_equal(mc1, mc2)
 
@@ -1137,8 +1106,8 @@ class TestGPCCAIO:
     ):
         adata, mc1 = adata_gpcca_fwd
 
-        mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
-        mc2 = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=adata, copy=copy)
+        mc1.write(os.path.join(tmpdir, "foo.bar"), write_adata=False)
+        mc2 = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.bar"), adata=adata, copy=copy)
 
         if copy:
             assert adata is not mc2.adata
@@ -1149,18 +1118,18 @@ class TestGPCCAIO:
     def test_write_no_adata_read_none_supplied(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
 
-        mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+        mc1.write(os.path.join(tmpdir, "foo.pkl"), write_adata=False)
         with pytest.raises(TypeError, match="This object was saved without"):
-            _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=None)
+            _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pkl"), adata=None)
 
     def test_write_no_adata_read_wrong_length(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         rng = np.random.default_rng()
         _, mc1 = adata_gpcca_fwd
         adata = AnnData(rng.normal(size=(len(mc1) + 1, 1)))
 
-        mc1.write(os.path.join(tmpdir, "foo"), write_adata=False)
+        mc1.write(os.path.join(tmpdir, "foo.pkl"), write_adata=False)
         with pytest.raises(ValueError, match="Expected `adata` to be of length"):
-            _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pickle"), adata=adata)
+            _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pkl"), adata=adata)
 
     @pytest.mark.parametrize("verbose", [None, False])
     def test_compute_schur_verbosity(self, adata_large: AnnData, verbose: Optional[bool], capsys):
