@@ -2,15 +2,14 @@
 
 CellRank: dynamics from multi-view single-cell data
 ===================================================
-.. image:: docs/_static/img/light_mode_overview.png
+.. image:: docs/_static/img/light_mode_overview.png#gh-light-mode-only
     :width: 600px
     :align: center
     :class: only-light
 
-.. image:: docs/_static/img/dark_mode_overview.png
+.. image:: docs/_static/img/dark_mode_overview.png#gh-dark-mode-only
     :width: 600px
     :align: center
-    :class: only-dark
 
 **CellRank** is a modular framework to study cellular dynamics based on Markov state modeling of
 multi-view single-cell data. See our `documentation`_ or `manuscript`_ to learn more.
