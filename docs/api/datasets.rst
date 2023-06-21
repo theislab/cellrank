@@ -15,5 +15,4 @@ automatically download these datasets; see our tutorials for examples.
     datasets.reprogramming_morris
     datasets.reprogramming_schiebinger
     datasets.zebrafish
-    datasets.pancreas_preprocessed
     datasets.bone_marrow
