@@ -149,6 +149,9 @@ html_theme_options = {
     "light_css_variables": {
         "color-brand-primary": "#003262",
         "color-brand-content": "#003262",
+        "admonition-font-size": "var(--font-size-normal)",
+        "admonition-title-font-size": "var(--font-size-normal)",
+        "code-font-size": "var(--font-size--small)",
     },
     "footer_icons": [
         {
