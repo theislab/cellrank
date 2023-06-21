@@ -83,8 +83,8 @@ def pancreas(
 ) -> AnnData:  # pragma: no cover
     """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
-    scRNA-seq dataset with 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
-    to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
+    scRNA-seq dataset containing 2531 cells recorded using 10x Chromium in a single time point.
+    Data was filtered to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
 
     Parameters
     ----------
