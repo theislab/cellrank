@@ -1,0 +1,7 @@
+.sd-card-img-top {
+    width: 128px;
+    height: 128px;
+    object-fit: cover;
+    margin: 1em auto 0em auto;
+    border-radius: 50%;
+}

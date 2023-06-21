@@ -1,11 +1,18 @@
-|PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
+|PyPI| |Downloads| |CI| |Docs| |Codecov| |Discourse|
+
+.. module:: cellrank
 
 CellRank: dynamics from multi-view single-cell data
 ===================================================
-
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/main/docs/_static/img/cellrank_overview.png
+.. image:: _static/img/light_mode_overview.png
     :width: 600px
     :align: center
+    :class: only-light
+
+.. image:: _static/img/dark_mode_overview.png
+    :width: 600px
+    :align: center
+    :class: only-dark
 
 **CellRank** :cite:`lange:22` is a modular framework to study cellular dynamics based on Markov state modeling of
 multi-view single-cell data. See :doc:`about CellRank <about/index>` to learn more.
@@ -61,24 +68,20 @@ We actively encourage any contribution! To get started, please check out the :do
     :target: https://pypi.org/project/cellrank
     :alt: PyPI
 
-.. |Bioconda| image:: https://img.shields.io/conda/vn/bioconda/cellrank
-    :target: https://anaconda.org/bioconda/cellrank
-    :alt: Bioconda
-
 .. |Downloads| image:: https://pepy.tech/badge/cellrank
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
+
+.. |Discourse| image:: https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org
+    :target: https://discourse.scverse.org/c/ecosystem/cellrank/
+    :alt: Discourse
 
 .. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=main
     :target: https://github.com/theislab/cellrank/actions
     :alt: CI
 
-.. |Notebooks| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank_notebooks/ci.yml?branch=main&label=notebooks
-    :target: https://github.com/theislab/cellrank_notebooks/actions
-    :alt: CI-Notebooks
-
 .. |Docs|  image:: https://img.shields.io/readthedocs/cellrank
-    :target: https://cellrank.readthedocs.io/en/stable
+    :target: https://cellrank.readthedocs.io/
     :alt: Documentation
 
 .. |Codecov| image:: https://codecov.io/gh/theislab/cellrank/branch/main/graph/badge.svg
