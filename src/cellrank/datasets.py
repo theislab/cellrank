@@ -12,7 +12,6 @@ from cellrank._utils._enum import ModeEnum
 
 __all__ = [
     "pancreas",
-    "pancreas_preprocessed",
     "lung",
     "reprogramming_morris",
     "reprogramming_schiebinger",
@@ -31,6 +30,7 @@ class ReprogrammingSubset(ModeEnum):
 _datasets = {
     "pancreas": ("https://figshare.com/ndownloader/files/25060877", (2531, 27998)),
     "pancreas_preprocessed": ("https://figshare.com/ndownloader/files/25030028", (2531, 2000)),
+    "pancreas_preprocessed_vk": ("https://figshare.com/ndownloader/files/41325411", (2531, 5974)),
     "lung": ("https://figshare.com/ndownloader/files/25038224", (24882, 24051)),
     "reprogramming_morris": ("https://figshare.com/ndownloader/files/25503773", (104679, 22630)),
     "zebrafish": ("https://figshare.com/ndownloader/files/27265280", (2434, 23974)),
@@ -78,20 +78,28 @@ def _load_dataset_from_url(
 @d.dedent
 def pancreas(
     path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5.h5ad",
+    kind: Literal["raw", "preprocessed", "preprocessed-kernel"] = "raw",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
-    sc-RNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
+    scRNA-seq dataset with 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
     to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
-
-    Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as original
-    cluster annotations.
 
     Parameters
     ----------
     path
         Path where to save the dataset.
+    kind
+        What kind of dataset to download. Valid option are:
+
+        - ``'raw'`` - contains raw spliced and unspliced count data, low-dimensional embedding coordinates
+          as well as original cluster annotations.
+        - ``'preprocessed'`` - same as above, but additionally genes have been filtered to contain at least
+          20 unspliced and spliced counts and subsetted to the top 2000 highly variable genes. Data has been
+          normalized by total counts and log-transformed.
+        - ``'preprocessed-kernel'`` - same as above, but additionally a cell-cell transition matrix has been computed
+          using the :class:`~cellrank.kernels.VelocityKernel`.
     kwargs
         Keyword arguments for :func:`~scanpy.read`.
 
@@ -99,27 +107,16 @@ def pancreas(
     -------
     Annotated data object.
     """
-    return _load_dataset_from_url(path, *_datasets["pancreas"], **kwargs)
+    path, ext = os.path.splitext(path)
+    path = f"{path}_{kind}{ext}"
 
-
-@d.dedent
-def pancreas_preprocessed(
-    path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
-    **kwargs: Any,
-) -> AnnData:  # pragma: no cover
-    """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
-
-    .. TODO(michalk8): mention pre-processing
-
-    Parameters
-    ----------
-    %(dataset.parameters)s
-
-    Returns
-    -------
-    Annotated data object.
-    """
-    return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed"], **kwargs)
+    if kind == "raw":
+        return _load_dataset_from_url(path, *_datasets["pancreas"], **kwargs)
+    if kind == "preprocessed":
+        return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed"], **kwargs)
+    if kind == "preprocessed-kernel":
+        return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed_vk"], **kwargs)
+    raise ValueError(f"Unknown dataset kind `{kind!r}`.")
 
 
 @d.dedent
