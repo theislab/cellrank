@@ -36,7 +36,7 @@ CellRank's key applications
     :alt: Downloads
 
 .. |Discourse| image:: https://img.shields.io/discourse/posts?color=yellow&logo=discourse&server=https%3A%2F%2Fdiscourse.scverse.org
-    :target: https://discourse.scverse.org/
+    :target: https://discourse.scverse.org/c/ecosystem/cellrank/
     :alt: Discourse
 
 .. |CI| image:: https://img.shields.io/github/actions/workflow/status/theislab/cellrank/test.yml?branch=main
