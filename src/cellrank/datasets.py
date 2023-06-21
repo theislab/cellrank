@@ -13,6 +13,7 @@ from cellrank._utils._enum import ModeEnum
 __all__ = [
     "pancreas",
     "pancreas_preprocessed",
+    "pancreas_preprocessed_vk",
     "lung",
     "reprogramming_morris",
     "reprogramming_schiebinger",
@@ -31,6 +32,7 @@ class ReprogrammingSubset(ModeEnum):
 _datasets = {
     "pancreas": ("https://figshare.com/ndownloader/files/25060877", (2531, 27998)),
     "pancreas_preprocessed": ("https://figshare.com/ndownloader/files/25030028", (2531, 2000)),
+    "pancreas_preprocesses_vk": ("https://figshare.com/ndownloader/files/41325411", (2531, 5974)),
     "lung": ("https://figshare.com/ndownloader/files/25038224", (24882, 24051)),
     "reprogramming_morris": ("https://figshare.com/ndownloader/files/25503773", (104679, 22630)),
     "zebrafish": ("https://figshare.com/ndownloader/files/27265280", (2434, 23974)),
@@ -82,11 +84,9 @@ def pancreas(
 ) -> AnnData:  # pragma: no cover
     """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
 
-    sc-RNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
-    to remove heavily cycling populations and to focus on the late stages of endocrinogenesis.
-
-    Contains raw spliced and unspliced count data, low-dimensional embedding coordinates as well as original
-    cluster annotations.
+    scRNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
+    to remove heavily cycling populations and to focus on the late stages of endocrinogenesis. Contains raw spliced
+    and unspliced count data, low-dimensional embedding coordinates as well as original cluster annotations.
 
     Parameters
     ----------
@@ -107,9 +107,13 @@ def pancreas_preprocessed(
     path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5_preprocessed.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
-    """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19`.
+    """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19` (preprocessed).
 
-    .. TODO(michalk8): mention pre-processing
+    scRNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
+    to remove heavily cycling populations and to focus on the late stages of endocrinogenesis. Contains spliced and
+    unspliced count data, low-dimensional embedding coordinates as well as original cluster annotations. Genes have
+    been filtered to contain at least 20 unspliced and spliced counts and subsetted to the top 2000 highly variable
+    genes. Data has been total-counts normalized and log-transformed.
 
     Parameters
     ----------
@@ -120,6 +124,31 @@ def pancreas_preprocessed(
     Annotated data object.
     """
     return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed"], **kwargs)
+
+
+@d.dedent
+def pancreas_preprocessed_vk(
+    path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5_preprocessed_vk.h5ad",
+    **kwargs: Any,
+) -> AnnData:  # pragma: no cover
+    """Development of the murine pancreas at E15.5 from :cite:`bastidas-ponce:19` (preprocessed; VelocityKernel).
+
+    scRNA-seq dataset comprising 2531 cells recorded using 10x Chromium in a single time point. Data was filtered
+    to remove heavily cycling populations and to focus on the late stages of endocrinogenesis. Contains spliced
+    and unspliced count data, low-dimensional embedding coordinates as well as original cluster annotations.
+    Genes have been filtered to contain at least 20 unspliced and spliced counts and subsetted to the top 2000
+    highly variable genes. Data has been total-counts normalized and log-transformed. Additionally, a cell-cell
+    transition matrix has been computed using the :class:`~cellrank.kernels.VelocityKernel`.
+
+    Parameters
+    ----------
+    %(dataset.parameters)s
+
+    Returns
+    -------
+    Annotated data object.
+    """
+    return _load_dataset_from_url(path, *_datasets["pancreas_preprocessed_vk"], **kwargs)
 
 
 @d.dedent
