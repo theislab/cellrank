@@ -1,11 +1,17 @@
 |PyPI| |Bioconda| |Downloads| |CI| |Notebooks| |Docs| |Codecov|
 
+.. module:: cellrank
 CellRank: dynamics from multi-view single-cell data
 ===================================================
-
-.. image:: https://raw.githubusercontent.com/theislab/cellrank/main/docs/_static/img/cellrank_overview.png
+.. image:: _static/img/light_mode_overview.png
     :width: 600px
     :align: center
+    :class: only-light
+
+.. image:: _static/img/dark_mode_overview.png
+    :width: 600px
+    :align: center
+    :class: only-dark
 
 **CellRank** :cite:`lange:22` is a modular framework to study cellular dynamics based on Markov state modeling of
 multi-view single-cell data. See :doc:`about CellRank <about/index>` to learn more.
