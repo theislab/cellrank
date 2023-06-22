@@ -20,7 +20,7 @@ Important changes in version 2
 * Introduction of a :meth:`~cellrank.estimators.GPCCA.fit` :meth:`~cellrank.estimators.GPCCA.predict` workflow for estimators:
   given that we removed the old `.tl` high-level functions, we wanted to make it easier to interact with estimators. Thus,
   every estimator now has a `.fit` method, which computes macrostates, and a `.predict` method, which classifies some of these as
-  terminal states. The new {meth}`~cellrank.estimators.GPCCA.fit` {meth}`~cellrank.estimators.GPCCA.predict` workflow complements our fully-flexible low-level mode of interacting with estimators.
+  terminal states. The new :meth:`~cellrank.estimators.GPCCA.fit` :meth:`~cellrank.estimators.GPCCA.predict` workflow complements our fully-flexible low-level mode of interacting with estimators.
   See :doc:`../notebooks/tutorials/estimators/600_initial_terminal`.
 * Renaming of `absorption_probabilities` to `fate_probabilities` everwhere, for example in :meth:`~cellrank.estimators.GPCCA.compute_fate_probabilities`:
   while we still compute `absorption probabilities <https://en.wikipedia.org/wiki/Absorbing_Markov_chain>`_ on the Markov chain under the hood, we realized that the term is somewhat technical and decided
