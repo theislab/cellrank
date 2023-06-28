@@ -31,10 +31,8 @@ from cellrank._utils._utils import (
 )
 from cellrank.kernels._utils import (
     _calculate_starts,
-    _get_probs_for_zero_vec,
     _np_apply_along_axis,
     _random_normal,
-    _reconstruct_one,
 )
 from cellrank.kernels.utils._similarity import (
     _predict_transition_probabilities_jax,
@@ -876,44 +874,10 @@ class TestKernelUtils:
             for fn in (np.var, np.std):
                 np.testing.assert_allclose(fn(x, axis=axis), _create_numba_fn(fn)(axis, x))
 
-    def test_zero_unif_sum_to_1_vector(self):
-        sum_to_1, zero = _get_probs_for_zero_vec(10)
-
-        assert zero.shape == (10,)
-        assert sum_to_1.shape == (10,)
-        np.testing.assert_array_equal(zero, np.zeros_like(zero))
-        np.testing.assert_allclose(sum_to_1, np.ones_like(sum_to_1) / sum_to_1.shape[0])
-        assert np.isclose(sum_to_1.sum(), 1.0)
-
     def test_calculate_starts(self):
         starts = _calculate_starts(sp.diags(np.ones(10)).tocsr().indptr, np.arange(10))
 
         np.testing.assert_array_equal(starts, np.arange(11))
-
-    @pytest.mark.parametrize(("seed", "shuffle"), zip(range(4), [False] * 2 + [True] * 2))
-    def test_reconstruct_one(self, seed: int, shuffle: bool):
-        rng = np.random.default_rng(42)
-
-        m1 = sp.random(100, 10, random_state=seed, density=0.5, format="lil")
-        m1[:, 0] = 0.1
-        m1 /= m1.sum(1)
-        m1 = sp.csr_matrix(m1)
-
-        m2_data = rng.normal(size=(m1.nnz))
-        m2 = sp.csr_matrix((m2_data, m1.indices, m1.indptr))
-
-        if shuffle:
-            ixs = np.arange(100)
-            rng.shuffle(ixs)
-            data = np.c_[m1[ixs, :].data, m2[ixs, :].data].T
-        else:
-            ixs = None
-            data = np.c_[m1.data, m2.data].T
-
-        r1, r2 = _reconstruct_one(data, m1, ixs=ixs)
-
-        np.testing.assert_array_equal(r1.A, m1.A)
-        np.testing.assert_array_equal(r2.A, m2.A)
 
     @jax_not_installed_skip
     @pytest.mark.parametrize(

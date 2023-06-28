@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_bool_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype, is_categorical_dtype
 from sklearn.cluster import KMeans
 from statsmodels.stats.multitest import multipletests
 
@@ -528,17 +528,6 @@ def _correlation_test_helper(
     return corr, pvals, corr_ci_low, corr_ci_high
 
 
-def _make_cat(labels: List[List[Any]], n_states: int, state_names: Sequence[str]) -> pd.Series:
-    """Get categorical from list of lists."""
-    labels_new = np.repeat(np.nan, n_states)
-    for i, c in enumerate(labels):
-        labels_new[c] = i
-    labels_new = pd.Series(labels_new, index=state_names, dtype="category")
-    labels_new.cat.categories = labels_new.cat.categories.astype("int")
-
-    return labels_new
-
-
 def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: int) -> pd.Series:
     """Filter out some cells that look like transient states based on their neighbors."""
     if not is_categorical_dtype(rc_labels):
@@ -1014,16 +1003,6 @@ def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
     return [i for i in iterable if i not in seen and not seen.add(i)]
 
 
-def _info_if_obs_keys_categorical_present(
-    adata: AnnData, keys: Iterable[str], msg_fmt: str, warn_once: bool = True
-) -> None:
-    for key in keys:
-        if key in adata.obs and is_categorical_dtype(adata.obs[key]):
-            logg.info(msg_fmt.format(key))
-            if warn_once:
-                break
-
-
 def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
     """
     One-hot encode cat to a vector of length n.
@@ -1381,26 +1360,6 @@ def _calculate_lineage_absorption_time_means(
             res[f"{lineage}_var"] = var
             # fmt: on
     return res
-
-
-def _maybe_subset_hvgs(adata: AnnData, use_highly_variable: Optional[Union[bool, str]]) -> AnnData:
-    if use_highly_variable in (None, False):
-        return adata
-    key = "highly_variable" if use_highly_variable is True else use_highly_variable
-
-    if key not in adata.var.keys():
-        logg.warning(f"Unable to find HVGs in `adata.var[{key!r}]`. Using all genes")
-        return adata
-
-    if not is_bool_dtype(adata.var[key]):
-        logg.warning(
-            f"Expected `adata.var[{key!r}]` to be of bool dtype, "
-            f"found `{infer_dtype(adata.var[key])}`. Using all genes"
-        )
-        return adata
-
-    logg.info(f"Using `{np.sum(adata.var[key])}` HVGs from `adata.var[{key!r}]`")
-    return adata[:, adata.var[key]]
 
 
 def _check_collection(
