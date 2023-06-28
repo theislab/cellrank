@@ -601,7 +601,8 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 series_query=series_query,
                 colors_reference=colors_reference,
             )
-            categories.cat.categories = names
+            cats = categories.cat.categories
+            categories = categories.cat.rename_categories(dict(zip(cats, names)))
         else:
             colors = _create_categorical_colors(len(categories.cat.categories))
 
