@@ -1,3 +1,5 @@
+.. module:: cellrank
+
 API
 ===
 Import CellRank as::
