@@ -680,7 +680,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             - ``{nw.SCALE!r}`` - divide by the sum.
             - ``{nw.SOFTMAX!r}``- use a softmax.
 
-            Only use when ``mode = {m.DIST!r}``.
+            Only used when ``mode = {m.DIST!r}``.
         softmax_scale
             Scaling factor in the softmax, used for normalizing the weights to sum to :math:`1`.
         return_weights
