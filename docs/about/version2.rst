@@ -28,9 +28,9 @@ Important changes in version 2
 * Removal of the `external API`: anyone wishing to contribute to CellRank can do this now directly via :mod:`~cellrank.kernels` and
   :mod:`~cellrank.estimators`. We welcome any contribution to CellRank, see our :doc:`contribution guide <../contributing>`, and feel free to
   get in touch via an `issue <https://github.com/theislab/cellrank/issues/new/choose>`_ or `email <mailto:info@cellrank.org>`_.
-* Replacement of the old `WOTKernel` with a new :class:`~cellrank.kernels.TransportMapKernel`: this is CellRank's interface
+* Replacement of the old `WOTKernel` with a new :class:`~cellrank.kernels.RealTimeKernel`: this is CellRank's interface
   with `moscot <https://moscot-tools.org>`_, enabling us to analyze large-scale time-course studies with additional spatial or lineage readout :cite:`klein:23,lange:23`. In addition,
-  the :class:`~cellrank.kernels.TransportMapKernel` interfaces with `Waddington-OT <https://broadinstitute.github.io/wot/>`_ :cite:`schiebinger:19`.
+  the :class:`~cellrank.kernels.RealTimeKernel` interfaces with `Waddington-OT <https://broadinstitute.github.io/wot/>`_ :cite:`schiebinger:19`.
 
 There are many more changes and improvements in CellRank 2. For example, the computation of fate probabilities is 30x faster compared
 to version 1, we fixed many bugs, and improved and extended our documentation and :doc:`tutorials <../notebooks/tutorials/index>`.

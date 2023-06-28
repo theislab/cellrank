@@ -19,5 +19,5 @@ takes in multi-view single-cell data and outputs a cell-cell transition matrix.
     kernels.ConnectivityKernel
     kernels.PseudotimeKernel
     kernels.CytoTRACEKernel
-    kernels.TransportMapKernel
+    kernels.RealTimeKernel
     kernels.PrecomputedKernel
