@@ -147,7 +147,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         ----------
         n_states
             Number of macrostates to compute. If a :class:`~typing.Sequence`, use the *minChi*
-            criterion :cite:`reuter:18`. If :obj:`None`, use the *eigengap* heuristic.
+            criterion :cite:`reuter:18`. If :obj:`None`, use the `eigengap <https://en.wikipedia.org/wiki/Eigengap>`__
+            heuristic.
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
@@ -243,7 +244,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         method
             How to select the terminal states. Valid option are:
 
-            - ``'eigengap'`` - select the number of states based on the *eigengap* of :attr:`transition_matrix`.
+            - ``'eigengap'`` - select the number of states based on the
+              `eigengap <https://en.wikipedia.org/wiki/Eigengap>`__ of :attr:`transition_matrix`.
             - ``'eigengap_coarse'`` - select the number of states based on the *eigengap* of the diagonal
               of :attr:`coarse_T`.
             - ``'top_n'`` - select top ``n_states`` based on the probability of the diagonal of :attr:`coarse_T`.
@@ -578,9 +580,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Parameters
         ----------
         show_stationary_dist
-            Whether to show :attr:`coarse_stationary_distribution`, if present.
+            Whether to show the :attr:`coarse_stationary_distribution`, if present.
         show_initial_dist
-            Whether to show :attr:`coarse_initial_distribution`.
+            Whether to show the :attr:`coarse_initial_distribution`.
         order
             How to order the coarse-grained transition matrix. Valid options are:
 

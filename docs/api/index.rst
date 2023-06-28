@@ -13,11 +13,12 @@ CellRank has a modular API, organized around kernels and estimators:
 - :mod:`cellrank.estimators` use the cell-cell transition matrix to derive insights about cellular dynamics,
   for example, they compute initial and terminal states, fate probabilities, and driver genes. Our recommended
   estimator is the :class:`~cellrank.estimators.GPCCA` estimator.
-- In addition, there are :mod:`cellrank.models` for gene trend fitting, :mod:`plotting <cellrank.pl>`
+- In addition, there are :mod:`cellrank.models` for gene trend fitting, :mod:`cellrank.pl`
   for visualization, and :mod:`cellrank.datasets` that help you getting started with CellRank.
 
 If you are new to CellRank, check out our :doc:`about CellRank <../about/index>` page, and take a look at our
-:doc:`tutorials <../notebooks/tutorials/index>`.
+:doc:`tutorials <../notebooks/tutorials/index>`. If you're moving from CellRank 1 to CellRank 2,
+check out :doc:`../about/version2`.
 
 .. toctree::
     :caption: API

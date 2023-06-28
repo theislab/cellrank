@@ -44,7 +44,6 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(adata)s
     %(backward)s
     kwargs
-        Keyword arguments for the parent class.
         Keyword arguments for the :class:`~cellrank.kernels.PseudotimeKernel`.
 
     Examples
@@ -61,15 +60,17 @@ class CytoTRACEKernel(PseudotimeKernel):
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
 
-        # CytoTRACE by default uses imputed data - a simple way to compute k-NN imputed data is to use scVelo's moments
-        # function. However, note that this function expects `spliced` counts because it's designed for RNA velocity,
-        # so we're using a simple hack here:
+        # CytoTRACE by default uses imputed data - a simple way to compute
+        # k-NN imputed data is to use scVelo's moments function.
+        # However, note that this function expects `spliced` counts because
+        # it's designed for RNA velocity, so we're using a simple hack here:
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
         scv.pp.moments(adata)
 
-        ctk = cr.kernels.CytoTRACEKernel(adata).compute_cytotrace().compute_transition_matrix()
+        ctk = cr.kernels.CytoTRACEKernel(adata)
+        ckt = ctk.compute_cytotrace().compute_transition_matrix()
     """
 
     def __init__(

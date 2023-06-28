@@ -37,7 +37,7 @@ class GAMR(BaseModel):
         Number of knots.
     distribution
         Distribution family in `rpy2.robjects.r`, such as ``'gaussian'`` or ``'nb'`` for negative binomial.
-        If ``'nb'``, raw count data in :attr:`adata` ``.raw`` is always used.
+        If ``'nb'``, raw count data in :attr:`~anndata.AnnData.raw` is always used.
     basis
         Basis for the smoothing term.
         See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/s>`__ for valid options.
@@ -53,8 +53,8 @@ class GAMR(BaseModel):
     smoothing_penalty
         Penalty for the smoothing term. The larger the value, the smoother the fitted curve.
     kwargs
-        Keyword arguments for ``gam.control``.
-        See `here <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/gam.control>`__ for reference.
+        Keyword arguments for `gam control
+        <https://www.rdocumentation.org/packages/mgcv/versions/1.8-33/topics/gam.control>`__.
     """
 
     def __init__(

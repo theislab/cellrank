@@ -52,7 +52,7 @@ def log_odds(
     """Plot log-odds ratio between trajectories.
 
     This plotting function is geared towards time-series datasets that have been analyzed
-    using the :class:`cellrank.external.kernels.WOTKernel`. It visualizes log-odd ratios
+    using the :class:`~cellrank.kernels.RealTimeKernel`. It visualizes log-odd ratios
     between different trajectories per cell, with the option to color in certain
     molecular features, like genes. This can be useful to detect and visualize fate-decisive genes.
 

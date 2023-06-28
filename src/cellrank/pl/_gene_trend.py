@@ -158,7 +158,7 @@ def gene_trends(
     %(parallel)s
     %(plotting)s
     plot_kwargs
-        Keyword arguments for :meth:`~cellrank.models.BaseModel.plot`.
+        Keyword arguments for the :meth:`~cellrank.models.BaseModel.plot`.
     kwargs
         Keyword arguments for :meth:`~cellrank.models.BaseModel.prepare`.
 

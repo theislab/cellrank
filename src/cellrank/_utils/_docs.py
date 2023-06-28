@@ -111,8 +111,8 @@ mode
 _write_to_adata = """\
 Updates the :attr:`adata` with the following fields:
 
-    - :attr:`obsp['{{key}}'] <anndata.AnnData.obsp>` - the transition matrix.
-    - :attr:`uns['{{key}}_params'] <anndata.AnnData.uns>` - parameters used for the calculation."""
+- :attr:`obsp['{{key}}'] <anndata.AnnData.obsp>` - the transition matrix.
+- :attr:`uns['{{key}}_params'] <anndata.AnnData.uns>` - parameters used for the calculation."""
 _en_cutoff_p_thresh = """\
 en_cutoff
     If ``cluster_key`` is given, this parameter determines when an approximate recurrent class will
@@ -127,7 +127,7 @@ _basis = """\
 basis
     Basis to use when ``mode = 'embedding'``. If :obj:`None`, use ``'umap'``."""
 _velocity_scheme = """\
-scheme
+similarity
     Similarity measure between cells as described in :cite:`li:20`. Valid options are:
 
     - ``{s.CORRELATION!r}`` - :class:`~cellrank.kernels.utils.Correlation`.
@@ -159,10 +159,10 @@ gene_symbols
 _absorption_utils = """\
 solver
     Solver to use for the linear problem. Options are ``'direct'``, ``'gmres'``, ``'lgmres'``, ``'bicgstab'`` or
-    ``'gcrotmk'`` when ``use_petsc = False`` or one of :class:`petsc4py.PETSc.KPS.Type` otherwise.
+    ``'gcrotmk'`` when ``use_petsc = False``.
 
-    Information on the :mod:`scipy` iterative solvers can be found in :func:`scipy.sparse.linalg` or for
-    :mod:`petsc4py` solver `here <https://petsc.org/release/overview/linear_solve_table/>`__.
+    Information on the :mod:`scipy` iterative solvers can be found in :mod:`scipy.sparse.linalg` or for
+    the ``petsc`` solvers `here <https://petsc.org/release/overview/linear_solve_table/>`__.
 use_petsc
     Whether to use solvers from :mod:`petsc4py` or :mod:`scipy`. Recommended for large problems.
     If no installation is found, defaults to :func:`~scipy.sparse.linalg.gmres`.
