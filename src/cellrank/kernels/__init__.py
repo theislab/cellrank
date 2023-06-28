@@ -5,7 +5,7 @@ from cellrank.kernels._cytotrace_kernel import CytoTRACEKernel
 from cellrank.kernels._experimental_time_kernel import ExperimentalTimeKernel
 from cellrank.kernels._precomputed_kernel import PrecomputedKernel
 from cellrank.kernels._pseudotime_kernel import PseudotimeKernel
-from cellrank.kernels._transport_map_kernel import TransportMapKernel
+from cellrank.kernels._real_time_kernel import RealTimeKernel
 from cellrank.kernels._velocity_kernel import VelocityKernel
 
 __all__ = [
@@ -16,6 +16,6 @@ __all__ = [
     "ExperimentalTimeKernel",
     "PrecomputedKernel",
     "PseudotimeKernel",
-    "TransportMapKernel",
+    "RealTimeKernel",
     "VelocityKernel",
 ]

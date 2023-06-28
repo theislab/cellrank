@@ -30,7 +30,7 @@ from cellrank.kernels import (
     CytoTRACEKernel,
     PrecomputedKernel,
     PseudotimeKernel,
-    TransportMapKernel,
+    RealTimeKernel,
     VelocityKernel,
 )
 from cellrank.kernels._base_kernel import (
@@ -1124,14 +1124,14 @@ class TestCytoTRACEKernel:
         np.testing.assert_array_equal(np.max(pt) - pt, k.pseudotime)
 
 
-class TestTransportMapKernel:
+class TestRealTimeKernel:
     @pytest.mark.parametrize("policy", ["sequential", "triu"])
     @pytest.mark.parametrize("n", [5, 7])
     def test_default_initialization(self, adata: AnnData, n: int, policy: str):
         adata.obs["exp_time"] = pd.cut(adata.obs["dpt_pseudotime"], n)
         cats = adata.obs["exp_time"].cat.categories
 
-        tmk = TransportMapKernel(adata, time_key="exp_time", policy=policy)
+        tmk = RealTimeKernel(adata, time_key="exp_time", policy=policy)
 
         if policy == "sequential":
             assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
@@ -1155,7 +1155,7 @@ class TestTransportMapKernel:
                 val.var_names = adata.obs_names[col == tgt]
             couplings[src, tgt] = val
 
-        tmk = TransportMapKernel(adata, couplings=couplings, time_key="exp_time")
+        tmk = RealTimeKernel(adata, couplings=couplings, time_key="exp_time")
         assert tmk.couplings == couplings
 
         if correct_shape:
@@ -1180,7 +1180,7 @@ class TestTransportMapKernel:
         rng.shuffle(ixs)
         adata_large = adata_large[ixs].copy()
 
-        tmk = TransportMapKernel(adata_large, time_key="time", couplings=expected)
+        tmk = RealTimeKernel(adata_large, time_key="time", couplings=expected)
         tmk = tmk.compute_transition_matrix()
         tmat = tmk.transition_matrix
 
@@ -1220,7 +1220,7 @@ class TestTransportMapKernel:
 
         problem = problem.prepare(policy=policy, time_key="exp_time", xy_callback_kwargs={"n_comps": 5}).solve()
 
-        tmk = TransportMapKernel.from_moscot(
+        tmk = RealTimeKernel.from_moscot(
             problem,
             sparse_mode=sparse_mode,
         )
@@ -1245,7 +1245,7 @@ class TestTransportMapKernel:
         ot_model = wot.ot.OTModel(adata, day_field="exp_time", growth_iters=gr_iters)
         ot_model.compute_all_transport_maps(tmap_out=f"{tmpdir}/")
 
-        tmk = TransportMapKernel.from_wot(adata, path=tmpdir, time_key="exp_time")
+        tmk = RealTimeKernel.from_wot(adata, path=tmpdir, time_key="exp_time")
         obs = pd.read_csv(tmpdir / "tmaps_g.txt", index_col=0, sep="\t")
         tmk = tmk.compute_transition_matrix()
 
@@ -1271,7 +1271,7 @@ class TestTransportMapKernel:
             expected[src, tgt] = tmp = tmp / np.sum(tmp, axis=-1, keepdims=True)
             subprob.set_solution(tmp)
 
-        tmk = TransportMapKernel.from_moscot(problem)
+        tmk = RealTimeKernel.from_moscot(problem)
         for (src, tgt), actual in tmk.couplings.items():
             np.testing.assert_allclose(actual.X, expected[src, tgt], rtol=1e-6, atol=1e-6)
 

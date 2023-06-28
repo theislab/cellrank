@@ -32,7 +32,7 @@ from cellrank._utils._utils import _normalize
 from cellrank.kernels._base_kernel import UnidirectionalKernel
 from cellrank.settings import settings
 
-__all__ = ["TransportMapKernel"]
+__all__ = ["RealTimeKernel"]
 
 if TYPE_CHECKING:
     from moscot.problems.spatiotemporal import SpatioTemporalProblem
@@ -53,7 +53,7 @@ Coupling_t = Union[np.ndarray, sp.spmatrix, AnnData]
 
 # TODO(michalk8): subclass the `ExperimentalTimeKernel`
 @d.dedent
-class TransportMapKernel(UnidirectionalKernel):
+class RealTimeKernel(UnidirectionalKernel):
     """Kernel which computes transition matrix using optimal transport couplings.
 
     This class should be constructed using either:
@@ -146,7 +146,7 @@ class TransportMapKernel(UnidirectionalKernel):
         conn_weight: Optional[float] = None,
         conn_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
-    ) -> "TransportMapKernel":
+    ) -> "RealTimeKernel":
         """Compute transition matrix from optimal transport couplings.
 
         Parameters
@@ -224,7 +224,7 @@ class TransportMapKernel(UnidirectionalKernel):
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         copy: bool = False,
         **kwargs: Any,
-    ) -> "TransportMapKernel":
+    ) -> "RealTimeKernel":
         """Construct the kernel from :mod:`moscot` :cite:`klein:23`.
 
         Parameters
@@ -240,7 +240,7 @@ class TransportMapKernel(UnidirectionalKernel):
         copy
             Whether to copy the underlying arrays. Note that :class:`jax arrays <jax.Array>` are always copied.
         kwargs
-            Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
+            Keyword arguments for :class:`~cellrank.kernels.RealTimeKernel`.
 
         Returns
         -------
@@ -259,8 +259,8 @@ class TransportMapKernel(UnidirectionalKernel):
             problem = mt.problems.TemporalProblem(adata)
             problem = problem.prepare(time_key="day").solve()
 
-            tmk = cr.kernels.TransportMapKernel.from_moscot(problem)
-            tmk = tmk.compute_transition_matrix()
+            rtk = cr.kernels.RealTimeKernel.from_moscot(problem)
+            rtk = rtk.compute_transition_matrix()
         """
         from moscot.utils.subset_policy import SequentialPolicy, TriangularPolicy
 
@@ -305,7 +305,7 @@ class TransportMapKernel(UnidirectionalKernel):
         path: Union[str, pathlib.Path],
         time_key: str,
         **kwargs: Any,
-    ) -> "TransportMapKernel":
+    ) -> "RealTimeKernel":
         """Construct the kernel from Waddington-OT :cite:`schiebinger:19`.
 
         Parameters
@@ -317,7 +317,7 @@ class TransportMapKernel(UnidirectionalKernel):
         time_key
             Key in :attr:`~anndata.AnnData.obs` containing the experimental time.
         kwargs
-            Keyword arguments for :class:`~cellrank.kernels.TransportMapKernel`.
+            Keyword arguments for :class:`~cellrank.kernels.RealTimeKernel`.
 
         Returns
         -------
@@ -336,8 +336,8 @@ class TransportMapKernel(UnidirectionalKernel):
             ot_model = wot.ot.OTModel(adata, day_field="day")
             ot_model.compute_all_transport_maps(tmap_out="tmaps/")
 
-            tmk = cr.kernels.TransportMapKernel.from_wot(adata, path="tmaps/", time_key="day")
-            tmk = tmk.compute_transition_matrix()
+            rtk = cr.kernels.RealTimeKernel.from_wot(adata, path="tmaps/", time_key="day")
+            rtk = rtk.compute_transition_matrix()
         """
         path = pathlib.Path(path)
         dtype = type(adata.obs[time_key].iloc[0])
