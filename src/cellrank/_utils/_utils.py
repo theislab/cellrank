@@ -528,17 +528,6 @@ def _correlation_test_helper(
     return corr, pvals, corr_ci_low, corr_ci_high
 
 
-def _make_cat(labels: List[List[Any]], n_states: int, state_names: Sequence[str]) -> pd.Series:
-    """Get categorical from list of lists."""
-    labels_new = np.repeat(np.nan, n_states)
-    for i, c in enumerate(labels):
-        labels_new[c] = i
-    labels_new = pd.Series(labels_new, index=state_names, dtype="category")
-    labels_new.cat.categories = labels_new.cat.categories.astype("int")
-
-    return labels_new
-
-
 def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: int) -> pd.Series:
     """Filter out some cells that look like transient states based on their neighbors."""
     if not is_categorical_dtype(rc_labels):
