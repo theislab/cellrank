@@ -1,15 +1,5 @@
 import types
-from typing import (
-    Any,
-    Dict,
-    Literal,
-    Mapping,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Literal, Mapping, NamedTuple, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -146,39 +136,6 @@ class FateProbsProtocol(BaseProtocol):
         **kwargs: Any,
     ) -> None:
         ...
-
-
-def _normalize_abs_times(
-    keys: Sequence[str], time_to_absorption: Any = None
-) -> Dict[Tuple[str, ...], Literal["mean", "var"]]:
-    if time_to_absorption is None:
-        return {}
-
-    if isinstance(time_to_absorption, (str, tuple)):
-        time_to_absorption = [time_to_absorption]
-    if not isinstance(time_to_absorption, dict):
-        time_to_absorption = {ln: "mean" for ln in time_to_absorption}
-
-    res = {}
-    for ln, moment in time_to_absorption.items():
-        if moment not in ("mean", "var"):
-            raise ValueError(f"Moment must be either `'mean'` or `'var'`, found `{moment!r}` in `{ln}`.")
-
-        seen = set()
-        if isinstance(ln, str):
-            ln = tuple(keys) if ln == "all" else (ln,)
-        sorted_ln = tuple(sorted(ln))  # preserve the user order
-
-        if sorted_ln not in seen:
-            seen.add(sorted_ln)
-            for lin in ln:
-                if lin not in keys:
-                    raise ValueError(
-                        f"Invalid absorbing state `{lin!r}` in `{ln}`. " f"Valid options are `{list(keys)}`."
-                    )
-            res[tuple(ln)] = moment
-
-    return res
 
 
 class FateProbsMixin:

@@ -1,11 +1,10 @@
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable
 
 import wrapt
 
 import numba as nb
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
 from numba import prange
 from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
 
@@ -60,16 +59,6 @@ def np_std(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
 
 
 @nb.njit(**jit_kwargs)
-def np_max(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
-    return _np_apply_along_axis(np.max, axis, array)
-
-
-@nb.njit(**jit_kwargs)
-def np_sum(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
-    return _np_apply_along_axis(np.sum, axis, array)
-
-
-@nb.njit(**jit_kwargs)
 def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
     return _np_apply_along_axis(np.linalg.norm, axis, array)
 
@@ -105,74 +94,6 @@ def _random_normal(
     return np.array(
         [[np.random.normal(m[i], v[i]) for _ in prange(n_samples)] for i in prange(m.shape[0])]  # noqa: NPY002
     ).T
-
-
-@nb.njit(**jit_kwargs)
-def _get_probs_for_zero_vec(size: int) -> Tuple[np.ndarray, np.ndarray]:
-    """Get a vector with uniform probability and a vector of zeros.
-
-    Parameters
-    ----------
-    size
-        Size of the vector.
-
-    Returns
-    -------
-    The probability and variance vectors.
-    """
-    # float32 doesn't have enough precision
-    return (
-        np.ones(size, dtype=np.float64) / size,
-        np.zeros(size, dtype=np.float64),
-    )
-
-
-def _reconstruct_one(
-    data: np.ndarray,
-    mat: sp.csr_matrix,
-    ixs: Optional[np.ndarray] = None,
-) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
-    """Transform :class:`~numpy.ndarray` into :class:`~scipy.sparse.csr_matrix`.
-
-    Parameters
-    ----------
-    data
-        Array of shape ``(2 x number_of_nnz)``.
-    mat
-        The original sparse matrix.
-    ixs
-        Indices that were used to sort the data.
-
-    Returns
-    -------
-    The probability and correlation matrix.
-    """
-    assert data.shape == (2, mat.nnz), f"Dimension or shape mismatch: `{data.shape}`, `{2, mat.nnz}`."
-
-    aixs = None
-    if ixs is not None:
-        aixs = np.argsort(ixs)
-        assert len(ixs) == mat.shape[0], f"Shape mismatch: `{ixs.shape}`, `{mat.shape}`"
-        mat = mat[ixs]
-
-    # strange bug happens when no copying and eliminating zeros from cors (it's no longer row-stochastic)
-    # only happens when using numba
-    probs = sp.csr_matrix((np.array(data[0]), np.array(mat.indices), np.array(mat.indptr)))
-    cors = sp.csr_matrix((np.array(data[1]), np.array(mat.indices), np.array(mat.indptr)))
-
-    if aixs is not None:
-        assert len(aixs) == probs.shape[0], f"Shape mismatch: `{ixs.shape}`, `{probs.shape}`."
-        probs, cors = probs[aixs], cors[aixs]
-
-    probs.eliminate_zeros()
-    cors.eliminate_zeros()
-
-    row_sums = np.array(probs.sum(1).squeeze())
-    close_to_1 = np.isclose(row_sums, 1.0)
-    if not np.all(close_to_1):
-        raise ValueError(f"Matrix is not row-stochastic. The following rows don't sum to 1: `{row_sums[~close_to_1]}`.")
-
-    return probs, cors
 
 
 @nb.njit(**jit_kwargs)

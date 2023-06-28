@@ -1,4 +1,4 @@
-from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -278,44 +278,3 @@ def _compute_mean_color(cols: List[str]) -> str:
     cols = np.array([colors.rgb_to_hsv(colors.to_rgb(c)) for c in cols])
 
     return colors.to_hex(colors.hsv_to_rgb(np.mean(cols, axis=0)))
-
-
-def _colors_in_order(
-    adata,
-    clusters: Optional[Iterable[str]] = None,
-    cluster_key: str = "clusters",
-) -> List[Any]:
-    """Get list of colors from AnnData in defined order.
-
-    Extracts a list of colors from ``adata.uns[cluster_key]`` in the order defined by the ``clusters``.
-
-    Parameters
-    ----------
-    %(adata)s
-    clusters
-        Subset of the clusters we want the color for. Must be a subset of ``adata.obs['{cluster_key}'].cat.categories``.
-    cluster_key
-        Key from :attr:~`anndata.AnnData.obs``.
-
-    Returns
-    -------
-    List of colors in order defined by `clusters`.
-    """
-    assert cluster_key in adata.obs, f"Could not find {cluster_key} in `adata.obs`."
-
-    if clusters is not None:
-        assert np.all(np.in1d(clusters, adata.obs[cluster_key].cat.categories)), "Not all `clusters` found."
-
-    assert f"{cluster_key}_colors" in adata.uns, f"No colors associated to {cluster_key} in `adata.uns`."
-
-    if clusters is None:
-        clusters = adata.obs[cluster_key].cat.categories
-
-    color_list = []
-    all_clusters = adata.obs[cluster_key].cat.categories
-
-    for cl in clusters:
-        mask = np.in1d(all_clusters, cl)
-        color_list.append(adata.uns[f"{cluster_key}_colors"][mask][0])
-
-    return color_list
