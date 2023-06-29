@@ -1,4 +1,4 @@
-How to cite us
+How to Cite Us
 ==============
 If you find CellRank useful for your research, please consider citing :cite:`lange:22` as:
 
@@ -16,10 +16,10 @@ If you find CellRank useful for your research, please consider citing :cite:`lan
         publisher = {Nature Publishing Group}
     }
 
-In addition, if you use :class:`cellrank.estimators.GPCCA` to compute initial, terminal or intermediate states, you are
-using the `pyGPCCA package <https://github.com/msmdev/pyGPCCA>`_ :cite:`reuter:22` under the hood, which implements the
-Generalized Perron Cluster Cluster Analysis (GPCCA) algorithm. Thus, additionally to CellRank, please cite GPCCA
-:cite:`reuter:19` as:
+In addition, if you use the :class:`~cellrank.estimators.GPCCA` estimator to compute initial, terminal or intermediate
+states, you are using the `pyGPCCA package <https://github.com/msmdev/pyGPCCA>`_ :cite:`reuter:22` under the hood,
+which implements the Generalized Perron Cluster Cluster Analysis (GPCCA) algorithm. Thus, additionally to CellRank,
+please cite GPCCA :cite:`reuter:19` as:
 
 .. code-block:: bibtex
 

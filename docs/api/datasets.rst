@@ -3,7 +3,7 @@
 Datasets
 ========
 CellRank comes with a number of datasets that make it easy for you to get started. Our dataset API enables you to
-automatically download these datasets; see our tutorials for examples.
+automatically download these datasets; see our :doc:`tutorials <../notebooks/tutorials/index>`.
 
 .. currentmodule:: cellrank
 

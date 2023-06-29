@@ -57,6 +57,12 @@ class CoarseTOrder(ModeEnum):
 class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     """Generalized Perron Cluster Cluster Analysis (GPCCA) :cite:`reuter:18,reuter:19`.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/estimators/600_initial_terminal` on how to compute the
+          :attr:`initial <initial_states>` and :attr:`terminal <terminal_states>` states.
+        - See :doc:`../../../notebooks/tutorials/estimators/700_fate_probabilities` on how to compute the
+          :attr:`fate_probabilities` and :attr:`lineage_drivers`.
+
     This is our main and recommended estimator implemented in `pyGPCCA <https://pygpcca.readthedocs.io/en/latest/>`_ .
     Use it to compute macrostates, automatically and semi-automatically classify these as initial, intermediate and
     terminal states, compute fate probabilities towards macrostates, uncover driver genes, and much more. To compute and

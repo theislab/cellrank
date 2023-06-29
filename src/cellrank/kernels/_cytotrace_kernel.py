@@ -29,10 +29,14 @@ class CytoTRACEAggregation(ModeEnum):
 class CytoTRACEKernel(PseudotimeKernel):
     """Kernel which computes directed transition probabilities using the CytoTRACE score :cite:`gulati:20`.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/kernels/400_cytotrace` on how to
+          compute the :attr:`~cellrank.kernels.CytoTRACEKernel.transition_matrix` based on the CytoTRACE score.
+
     The k-NN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
     plastic to less plastic states. It relies on the assumption that differentiated cells express, on average,
-    less genes than naive cells.
+    fewer genes than naive cells.
 
     This kernel internally uses the :class:`~cellrank.kernels.PseudotimeKernel` to direct the k-NN graph
     on the basis of the CytoTRACE pseudotime.

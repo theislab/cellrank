@@ -1,6 +1,5 @@
 Developer API
 =============
-Under construction.
 
 Kernels
 -------

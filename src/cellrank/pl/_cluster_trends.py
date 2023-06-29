@@ -74,6 +74,10 @@ def cluster_trends(
 ) -> Optional[_return_model_type]:
     """Cluster and plot gene expression trends within a lineage.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/estimators/800_gene_trends` on how to
+          visualize the gene trends.
+
     This function is based on *Palantir* :cite:`setty:19`. It can be used to discover modules of genes that drive
     development along a given lineage. Consider running this function on a subset of genes which are potential
     lineage drivers.

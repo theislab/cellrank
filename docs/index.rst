@@ -20,6 +20,9 @@ backend, it is powered by the `pyGPCCA package <https://github.com/msmdev/pyGPCC
 free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or
 just want to make a comment/suggestion.
 
+.. important::
+    If you're moving from CellRank 1 to CellRank 2, check out :doc:`../about/version2`.
+
 CellRank's Key Applications
 ---------------------------
 - estimate differentiation direction based on a varied number of biological priors, including
@@ -36,8 +39,7 @@ CellRank's Key Applications
 Getting Started with CellRank
 -----------------------------
 We have :doc:`notebooks/tutorials/index` to help you getting started. To see CellRank in action, explore our
-manuscript :cite:`lange:22` in Nature Methods. If you're moving from CellRank v1 to v2, see our
-:doc:`notes on important changes <about/version2>`.
+manuscript :cite:`lange:22` in Nature Methods.
 
 Contributing
 ------------

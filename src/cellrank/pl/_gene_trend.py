@@ -83,6 +83,10 @@ def gene_trends(
 ) -> Optional[_return_model_type]:
     """Plot gene expression trends along lineages.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/estimators/800_gene_trends` on how to
+          visualize the gene trends.
+
     Each lineage is defined via its lineage weights. This function accepts any model based off
     :class:`~cellrank.models.BaseModel` to fit gene expression, where we take the lineage weights
     into account in the loss function.
