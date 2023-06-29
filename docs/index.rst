@@ -29,7 +29,7 @@ CellRank's Key Applications
   :doc:`pseudotime <notebooks/tutorials/kernels/300_pseudotime>`,
   :doc:`developmental potential <notebooks/tutorials/kernels/400_cytotrace>`,
   :doc:`RNA velocity <notebooks/tutorials/kernels/200_rna_velocity>`,
-  :doc:`experimental time points <notebooks/tutorials/kernels/500_real_time>`, and :class:`more <cellrank.kernels>`.
+  :doc:`experimental time points <notebooks/tutorials/kernels/500_real_time>`, and :mod:`more <cellrank.kernels>`.
 - compute initial, terminal and intermediate :doc:`macrostates <notebooks/tutorials/estimators/600_initial_terminal>`
   :cite:`reuter:19,reuter:22`.
 - infer :doc:`fate probabilities and driver genes <notebooks/tutorials/estimators/700_fate_probabilities>`.
