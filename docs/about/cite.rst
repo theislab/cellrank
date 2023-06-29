@@ -1,5 +1,5 @@
-How to Cite Us
-==============
+Citing CellRank
+===============
 If you find CellRank useful for your research, please consider citing :cite:`lange:22` as:
 
 .. code-block:: bibtex
