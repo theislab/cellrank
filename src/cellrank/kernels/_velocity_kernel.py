@@ -23,6 +23,10 @@ __all__ = ["VelocityKernel"]
 class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
     """Kernel which computes a transition matrix based on RNA velocity.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/kernels/200_rna_velocity` on how to
+          compute the :attr:`~cellrank.kernels.VelocityKernel.transition_matrix` based on RNA velocity.
+
     This borrows ideas from both :cite:`manno:18` and :cite:`bergen:20`. In short, for each cell :math:`i`, we compute
     transition probabilities :math:`T_{i, j}` to each cell :math:`j` in the neighborhood of :math:`i`. We quantify
     how much the velocity vector :math:`v_i` of cell :math:`i` points towards each of its nearst neighbors. For

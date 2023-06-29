@@ -89,7 +89,7 @@ class LinDriversMixin(FateProbsMixin):
             - ``{tm.FISHER!r}`` - Fisher transformation :cite:`fisher:21`.
             - ``{tm.PERM_TEST!r}`` - permutation test.
         cluster_key
-            Key from :attr:`anndata.AnnData.obs` to obtain cluster annotations. These are considered for ``clusters``.
+            Key in :attr:`~anndata.AnnData.obs` to obtain cluster annotations. These are considered for ``clusters``.
         clusters
             Restrict the correlations to these clusters.
         layer
@@ -104,6 +104,8 @@ class LinDriversMixin(FateProbsMixin):
         seed
             Random seed when ``method = {tm.PERM_TEST!r}``.
         %(parallel)s
+        kwargs
+            Keyword for the correlation test.
 
         Returns
         -------
@@ -343,7 +345,7 @@ class LinDriversMixin(FateProbsMixin):
         color
             Key in :attr:`~anndata.AnnData.var` or :attr:`~anndata.AnnData.varm`, preferring for the former.
         gene_sets
-            Gene sets annotations of the form `{'gene_set_name': ['gene_1', 'gene_2'], ...}`.
+            Gene sets annotations of the form ``{'gene_set_name': ['gene_1', 'gene_2'], ...}``.
         gene_sets_colors
             List of colors where each entry corresponds to a gene set from ``genes_sets``.
             If `None` and keys in ``gene_sets`` correspond to lineage names, use the lineage colors.

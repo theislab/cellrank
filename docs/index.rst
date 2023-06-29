@@ -1,7 +1,5 @@
 |PyPI| |Downloads| |CI| |Docs| |Codecov| |Discourse|
 
-.. module:: cellrank
-
 CellRank: dynamics from multi-view single-cell data
 ===================================================
 .. image:: _static/img/light_mode_overview.png
@@ -22,24 +20,26 @@ backend, it is powered by the `pyGPCCA package <https://github.com/msmdev/pyGPCC
 free to open an `issue`_ or send us an `email <mailto:info@cellrank.org>`_ if you encounter a bug, need our help or
 just want to make a comment/suggestion.
 
-CellRank's key applications
+.. important::
+    If you're moving from CellRank 1 to CellRank 2, check out :doc:`../about/version2`.
+
+CellRank's Key Applications
 ---------------------------
 - estimate differentiation direction based on a varied number of biological priors, including
   :doc:`pseudotime <notebooks/tutorials/kernels/300_pseudotime>`,
   :doc:`developmental potential <notebooks/tutorials/kernels/400_cytotrace>`,
   :doc:`RNA velocity <notebooks/tutorials/kernels/200_rna_velocity>`,
-  :doc:`experimental time points <notebooks/tutorials/kernels/500_real_time>`, and :class:`more <cellrank.kernels>`.
+  :doc:`experimental time points <notebooks/tutorials/kernels/500_real_time>`, and :mod:`more <cellrank.kernels>`.
 - compute initial, terminal and intermediate :doc:`macrostates <notebooks/tutorials/estimators/600_initial_terminal>`
   :cite:`reuter:19,reuter:22`.
 - infer :doc:`fate probabilities and driver genes <notebooks/tutorials/estimators/700_fate_probabilities>`.
 - visualize and cluster :doc:`gene expression trends <notebooks/tutorials/estimators/800_gene_trends>`.
 - ... and much more, check out our :doc:`API <api/index>`.
 
-Getting started with CellRank
+Getting Started with CellRank
 -----------------------------
 We have :doc:`notebooks/tutorials/index` to help you getting started. To see CellRank in action, explore our
-manuscript :cite:`lange:22` in Nature Methods. If you're moving from CellRank v1 to v2, see our
-:doc:`notes on important changes <about/version2>`.
+manuscript :cite:`lange:22` in Nature Methods.
 
 Contributing
 ------------

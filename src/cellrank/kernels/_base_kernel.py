@@ -271,7 +271,7 @@ class KernelExpression(IOMixin, abc.ABC):
         Parameters
         ----------
         basis
-            Key in :attr:`anndata.AnnData.obsm` containing the basis.
+            Key in :attr:`~anndata.AnnData.obsm` containing the basis.
         key_added
             If not :obj:`None`, save the result to :attr:`adata.obsm['{key_added}'] <anndata.AnnData.obsm>`.
             Otherwise, save the result to ``'T_fwd_{basis}'`` or ``'T_bwd_{basis}'``, depending on the direction.
@@ -369,6 +369,8 @@ class KernelExpression(IOMixin, abc.ABC):
         key
             Key used when writing transition matrix to :attr:`adata`.
             If :obj:`None`, the key will be determined automatically.
+        copy
+            Whether to copy the :attr:`transition_matrix`.
 
         Returns
         -------
@@ -462,8 +464,18 @@ class KernelExpression(IOMixin, abc.ABC):
         # fmt: on
 
 
+@d.dedent
 class Kernel(KernelExpression, abc.ABC):
-    """Base kernel class."""
+    """Base kernel class.
+
+    Parameters
+    ----------
+    %(adata)s
+    parent
+        Parent kernel expression.
+    kwargs
+        Keyword arguments for the parent.
+    """
 
     def __init__(self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any):
         super().__init__(parent=parent, **kwargs)
@@ -541,7 +553,7 @@ class Kernel(KernelExpression, abc.ABC):
         Parameters
         ----------
         deep
-            Whether to use :meth:`~copy.deepcopy`.
+            Whether to use :func:`~copy.deepcopy`.
 
         Returns
         -------
@@ -611,11 +623,11 @@ class Kernel(KernelExpression, abc.ABC):
 
 
 class UnidirectionalKernel(UnidirectionalMixin, Kernel, abc.ABC):
-    """Kernel with no directionality."""
+    pass
 
 
 class BidirectionalKernel(BidirectionalMixin, Kernel, abc.ABC):
-    """Kernel with either forward or backward direction that can be inverted using :meth:`__invert__`."""
+    pass
 
 
 class Constant(UnidirectionalKernel):

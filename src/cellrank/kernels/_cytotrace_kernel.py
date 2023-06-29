@@ -29,10 +29,14 @@ class CytoTRACEAggregation(ModeEnum):
 class CytoTRACEKernel(PseudotimeKernel):
     """Kernel which computes directed transition probabilities using the CytoTRACE score :cite:`gulati:20`.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/kernels/400_cytotrace` on how to
+          compute the :attr:`~cellrank.kernels.CytoTRACEKernel.transition_matrix` based on the CytoTRACE score.
+
     The k-NN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     CytoTRACE can be used to estimate cellular plasticity and in turn, a pseudotemporal ordering of cells from more
     plastic to less plastic states. It relies on the assumption that differentiated cells express, on average,
-    less genes than naive cells.
+    fewer genes than naive cells.
 
     This kernel internally uses the :class:`~cellrank.kernels.PseudotimeKernel` to direct the k-NN graph
     on the basis of the CytoTRACE pseudotime.
@@ -44,7 +48,6 @@ class CytoTRACEKernel(PseudotimeKernel):
     %(adata)s
     %(backward)s
     kwargs
-        Keyword arguments for the parent class.
         Keyword arguments for the :class:`~cellrank.kernels.PseudotimeKernel`.
 
     Examples
@@ -61,15 +64,17 @@ class CytoTRACEKernel(PseudotimeKernel):
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
 
-        # CytoTRACE by default uses imputed data - a simple way to compute k-NN imputed data is to use scVelo's moments
-        # function. However, note that this function expects `spliced` counts because it's designed for RNA velocity,
-        # so we're using a simple hack here:
+        # CytoTRACE by default uses imputed data - a simple way to compute
+        # k-NN imputed data is to use scVelo's moments function.
+        # However, note that this function expects `spliced` counts because
+        # it's designed for RNA velocity, so we're using a simple hack here:
         if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
             adata.layers['spliced'] = adata.X
             adata.layers['unspliced'] = adata.X
         scv.pp.moments(adata)
 
-        ctk = cr.kernels.CytoTRACEKernel(adata).compute_cytotrace().compute_transition_matrix()
+        ctk = cr.kernels.CytoTRACEKernel(adata)
+        ckt = ctk.compute_cytotrace().compute_transition_matrix()
     """
 
     def __init__(

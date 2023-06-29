@@ -52,7 +52,7 @@ class EigenMixin:
         A dictionary with the following keys:
 
         - ``'D'`` - the eigenvalues.
-        - ``'eigengap'`` - the eigengap.
+        - ``'eigengap'`` - the `eigengap <https://en.wikipedia.org/wiki/Eigengap>`__.
         - ``'params'`` - parameters used for the computation.
         - ``'V_l'`` - left eigenvectors (optional).
         - ``'V_r'`` - right eigenvectors (optional).
@@ -183,7 +183,7 @@ class EigenMixin:
             Marker symbol used, valid options can be found in :mod:`~matplotlib.markers`.
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`~matplotlib.axes.Axes.scatter`.
+            Keyword arguments for :meth:`~matplotlib.axes.Axes.scatter`.
 
         Returns
         -------

@@ -52,7 +52,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
           If :obj:`None`, the directionality will be determined automatically and
           ``adata`` must be provided in this case.
     kwargs
-        Keyword arguments for :class:`cellrank.kernels.PrecomputedKernel`.
+        Keyword arguments for the :class:`~cellrank.kernels.PrecomputedKernel`.
     """
 
     def __init__(

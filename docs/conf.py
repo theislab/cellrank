@@ -39,29 +39,30 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_autodoc_typehints",
     "myst_nb",
-    "sphinx_design",  # for cards
+    "sphinx_tippy",
+    "sphinx_design",
     "typed_returns",
 ]
 intersphinx_mapping = {
-    "anndata": ("https://anndata.readthedocs.io/en/stable/", None),
-    "scanpy": ("https://scanpy.readthedocs.io/en/stable/", None),
-    "squidpy": ("https://squidpy.readthedocs.io/en/latest/", None),
-    "scvelo": ("https://scvelo.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
-    "networkx": ("https://networkx.org/documentation/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "jax": ("https://jax.readthedocs.io/en/latest/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "sklearn": ("https://scikit-learn.org/stable/", None),
     "pandas": ("https://pandas.pydata.org/pandas-docs/stable/", None),
     "statsmodels": ("https://www.statsmodels.org/stable/", None),
-    "matplotlib": ("https://matplotlib.org/stable/", None),
-    "joblib": ("https://joblib.readthedocs.io/en/latest/", None),
-    "sklearn": ("https://scikit-learn.org/stable/", None),
-    "seaborn": ("https://seaborn.pydata.org/", None),
     "pygam": ("https://pygam.readthedocs.io/en/latest/", None),
-    "jax": ("https://jax.readthedocs.io/en/latest/", None),
     "pygpcca": ("https://pygpcca.readthedocs.io/en/latest/", None),
-    "ot": ("https://pythonot.github.io/", None),
+    "networkx": ("https://networkx.org/documentation/stable/", None),
+    "joblib": ("https://joblib.readthedocs.io/en/latest/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "seaborn": ("https://seaborn.pydata.org/", None),
+    "anndata": ("https://anndata.readthedocs.io/en/latest/", None),
+    "scanpy": ("https://scanpy.readthedocs.io/en/latest/", None),
+    "scvelo": ("https://scvelo.readthedocs.io/en/latest/", None),
+    "squidpy": ("https://squidpy.readthedocs.io/en/latest/", None),
     "moscot": ("https://moscot.readthedocs.io/en/latest/", None),
+    "ot": ("https://pythonot.github.io/", None),
 }
 master_doc = "index"
 pygments_style = "tango"
@@ -89,6 +90,12 @@ myst_enable_extensions = [
     "amsmath",
 ]
 myst_heading_anchors = 2
+
+# hover
+tippy_anchor_parent_selector = "div.content"
+tippy_enable_mathjax = True
+# no need because of sphinxcontrib-bibtex
+tippy_enable_doitips = False
 
 # autodoc + napoleon
 autosummary_generate = True
@@ -144,7 +151,7 @@ html_show_sphinx = False
 html_show_sourcelink = False
 html_theme_options = {
     "announcement": "If you're moving from CellRank v1 to v2, "
-    "see our <a href='about/version2.html'>notes on important changes</a>.",
+    "see our <a href='https://cellrank.readthedocs.io/en/latest/about/version2.html'>notes on important changes</a>.",
     "sidebar_hide_name": True,
     "light_logo": "img/light_mode_logo.png",
     "dark_logo": "img/dark_mode_logo.png",

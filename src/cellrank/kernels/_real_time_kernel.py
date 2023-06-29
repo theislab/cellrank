@@ -56,6 +56,11 @@ Coupling_t = Union[np.ndarray, sp.spmatrix, AnnData]
 class RealTimeKernel(UnidirectionalKernel):
     """Kernel which computes transition matrix using optimal transport couplings.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/kernels/500_real_time` on how to
+          compute the :attr:`~cellrank.kernels.RealTimeKernel.transition_matrix` between experimental time points
+          using `optimal transport <https://en.wikipedia.org/wiki/Transportation_theory_(mathematics)>`_.
+
     This class should be constructed using either:
 
     1. the :meth:`from_moscot` or :meth:`from_wot` method,

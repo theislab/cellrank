@@ -4,7 +4,7 @@ Estimators
 ==========
 Estimators enable quantitative analysis of Markov transition matrices computed using CellRank
 :doc:`kernels <kernels>`, including automatic detection of initial and terminal states, and computation
-of fate probabilities. Our recommended estimator is :class:`cellrank.estimators.GPCCA`.
+of fate probabilities. Our recommended estimator is the :class:`~cellrank.estimators.GPCCA` estimator.
 
 .. currentmodule:: cellrank
 

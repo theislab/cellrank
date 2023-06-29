@@ -103,7 +103,7 @@ def circular_projection(
     ----------
     %(adata)s
     keys
-        Keys in :attr:`~anndata.AnnData.obs` or :attr:`anndata.AnnData.var_names`. Additional keys are:
+        Keys in :attr:`~anndata.AnnData.obs` or :attr:`~anndata.AnnData.var_names`. Additional keys are:
 
         - ``'kl_divergence'`` - as in :cite:`velten:17`, computes KL-divergence between the fate probabilities
           of a cell and the average fate probabilities. See ``early_cells`` for more information.
@@ -143,13 +143,12 @@ def circular_projection(
         - ``'best'`` - rotate labels so that they are easily readable.
         - ``'default'`` - use :mod:`matplotlib`'s default.
         - :obj:`None` - same as ``'default'``.
-
-        If a :class:`float`, all labels will be rotated by this many degrees.
+        - :class:`float`, all labels will be rotated by this many degrees.
     show_edges
         Whether to show the edges surrounding the simplex.
     key_added
         Key in :attr:`~anndata.AnnData.obsm` where to add the circular embedding. If :obj:`None`, it will be set to
-        `'X_fate_simplex_{fwd,bwd}'`, based on the ``backward``.
+        ``'X_fate_simplex_{fwd,bwd}'``, based on the ``backward``.
     %(plotting)s
     kwargs
         Keyword arguments for :func:`~scvelo.pl.scatter`.

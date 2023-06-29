@@ -92,6 +92,10 @@ def heatmap(
 ) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
     """Plot a heatmap of smoothed gene expression along specified lineages.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/estimators/800_gene_trends` on how to
+          visualize the gene trends.
+
     This requires a pseudotemporal ordering of cellular dynamics, computed using a method like
     DPT :cite:`haghverdi:16` or Palantir :cite:`setty:19`. The function combines the pseudotemporal
     ordering with CellRank's fate probabilities to visualize each gene's expression along specific

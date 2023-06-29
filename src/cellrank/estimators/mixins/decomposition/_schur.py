@@ -98,7 +98,7 @@ class SchurMixin:
         A dictionary with the following keys:
 
         - ``'D'`` - the eigenvalues.
-        - ``'eigengap'`` - the eigengap.
+        - ``'eigengap'`` - the `eigengap <https://en.wikipedia.org/wiki/Eigengap>`__.
         - ``'params'`` - parameters used for the computation.
         - ``'V_l'`` - left eigenvectors (optional).
         - ``'V_r'`` - right eigenvectors (optional).
@@ -135,7 +135,7 @@ class SchurMixin:
         %(eigen)s
         verbose
             Whether to print extra information when computing the Schur decomposition.
-            If `None`, it's disabled when ``method = 'krylov'``.
+            If :obj:`None`, it's disabled when ``method = 'krylov'``.
 
         Returns
         -------

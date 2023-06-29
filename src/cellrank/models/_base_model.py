@@ -710,7 +710,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         fate_prob_cmap
             Colormap to use when coloring in the fate probabilities.
         cell_color
-            Key in :attr:`anndata.AnnData.obs` or :attr:`~anndata.AnnData.var_names` used for coloring the cells.
+            Key in :attr:`~anndata.AnnData.obs` or :attr:`~anndata.AnnData.var_names` used for coloring the cells.
         lineage_color
             Color for the lineage.
         alpha
@@ -740,7 +740,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
             Whether to compute and show smoothed lineage probability confidence interval.
         lineage_probability_color
             Color to use when plotting the smoothed ``lineage_probability``.
-            If :obj:`None`, it's the same as ``lineage_color``. Only used when ``show_lineage_probability=True``.
+            If :obj:`None`, it's the same as ``lineage_color``. Only used when ``show_lineage_probability = True``.
         obs_legend_loc
             Location of the legend when ``cell_color`` corresponds to a categorical variable.
         dpi

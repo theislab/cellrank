@@ -74,8 +74,6 @@ def _load_dataset_from_url(
     return adata
 
 
-@d.get_sections(base="dataset", sections=["Parameters"])
-@d.dedent
 def pancreas(
     path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5.h5ad",
     kind: Literal["raw", "preprocessed", "preprocessed-kernel"] = "raw",
@@ -119,7 +117,6 @@ def pancreas(
     raise ValueError(f"Unknown dataset kind `{kind!r}`.")
 
 
-@d.dedent
 def lung(
     path: Union[str, pathlib.Path] = "datasets/lung_regeneration.h5ad",
     **kwargs: Any,
@@ -136,7 +133,10 @@ def lung(
 
     Parameters
     ----------
-    %(dataset.parameters)s
+    path
+        Path where to save the dataset.
+    kwargs
+        Keyword arguments for :func:`~scanpy.read`.
 
     Returns
     -------
@@ -148,8 +148,8 @@ def lung(
 @inject_docs(s=ReprogrammingSubset)
 @d.dedent
 def reprogramming_morris(
-    subset: Literal["full", "48k", "85k"] = ReprogrammingSubset.FULL,
     path: Union[str, pathlib.Path] = "datasets/reprogramming_morris.h5ad",
+    subset: Literal["full", "48k", "85k"] = ReprogrammingSubset.FULL,
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Reprogramming of mouse embryonic fibroblasts to induced endoderm progenitors from :cite:`morris:18`.
@@ -166,14 +166,16 @@ def reprogramming_morris(
 
     Parameters
     ----------
+    path
+        Path where to save the dataset.
     subset
         Whether to return the full object or just a subset. Can be one of:
 
         - ``{s.FULL!r}`` - return the complete dataset containing `104 887` cells.
         - ``{s.K85!r}`` - return the subset as described in :cite:`morris:18` Fig. 1, containing `85 010` cells.
         - ``{s.K48!r}`` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
-
-    %(dataset.parameters)s
+    kwargs
+        Keyword arguments for :func:`~scanpy.read`.
 
     Returns
     -------
@@ -216,10 +218,13 @@ def reprogramming_schiebinger(
 
     Parameters
     ----------
-    %(dataset.parameters)s
+    path
+        Path where to save the dataset.
     subset_to_serum
         Whether to return the full object or subsetted to the serum condition.
         This subset also contains the pre-computed transition matrix.
+    kwargs
+        Keyword arguments for :func:`~scanpy.read`.
 
     Returns
     -------
@@ -251,7 +256,10 @@ def zebrafish(
 
     Parameters
     ----------
-    %(dataset.parameters)s
+    path
+        Path where to save the dataset.
+    kwargs
+        Keyword arguments for :func:`~scanpy.read`.
 
     Returns
     -------
@@ -272,7 +280,10 @@ def bone_marrow(
 
     Parameters
     ----------
-    %(dataset.parameters)s
+    path
+        Path where to save the dataset.
+    kwargs
+        Keyword arguments for :func:`~scanpy.read`.
 
     Returns
     -------

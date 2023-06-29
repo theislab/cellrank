@@ -30,6 +30,10 @@ class ThresholdScheme(ModeEnum):
 class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     """Kernel which computes directed transition probabilities based on a k-NN graph and pseudotime.
 
+    .. seealso::
+        - See :doc:`../../../notebooks/tutorials/kernels/300_pseudotime` on how to
+          compute the :attr:`~cellrank.kernels.PseudotimeKernel.transition_matrix` based on the pseudotime.
+
     The k-NN graph contains information about the (undirected) connectivities among cells, reflecting their similarity.
     Pseudotime can be used to either remove edges that point against the direction of increasing pseudotime
     :cite:`setty:19` or to down-weight them :cite:`stassen:21`.
