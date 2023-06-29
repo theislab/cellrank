@@ -12,7 +12,7 @@ changes to CellRank's API, many of which are **backward-compatibility breaking**
 version 1 could do (and much more); however, it does it differently.
 
 .. important::
-    We outline the most important changes here. In order to get a more detailed account, please refer to the
+    We outline the most important changes here. For a more detailed account, please refer to the
     :doc:`../release_notes`.
 
 Important changes in version 2
