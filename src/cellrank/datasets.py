@@ -173,9 +173,9 @@ def reprogramming_morris(
 
         - ``{s.FULL!r}`` - return the complete dataset containing `104 887` cells.
         - ``{s.K85!r}`` - return the subset as described in :cite:`morris:18` Fig. 1, containing `85 010` cells.
+        - ``{s.K48!r}`` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
     kwargs
         Keyword arguments for :func:`~scanpy.read`.
-        - ``{s.K48!r}`` - return the subset as described in :cite:`morris:18` Fig. 3, containing `48 515` cells.
 
     Returns
     -------
