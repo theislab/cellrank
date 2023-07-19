@@ -120,12 +120,20 @@ spelling_filters = [
 
 linkcheck_ignore = [
     # 403 Client Error: Forbidden for url
-    r"https://doi.org/10.1021/acs.jctc.8b00079",
-    r"https://doi.org/10.1073/pnas.0500334102",
     r"https://doi.org/10.1063/1.5064530",
+    r"https://doi.org/10.1021/acs.jctc.8b00079",
+    r"https://doi.org/10.1093/bioinformatics/btv325",
+    r"https://doi.org/10.1242/dev.173849",
+    r"https://doi.org/10.1242/dev.126011",
+    r"https://doi.org/10.2337/db20-0599",
+    r"https://doi.org/10.1210/en.2013-1663",
+    r"https://doi.org/10.4161/isl.21984",
+    r"https://doi.org/10.15252/msb.202110282",
+    r"https://doi.org/10.1073/pnas.0500334102",
     r"https://doi.org/10.1126/science.aar3131",
     r"https://doi.org/10.1126/science.aax0249",
-    r"https://doi.org/10.1242/dev.173849",
+    r"https://doi.org/10.1126/science.aax3072",
+    r"https://www.science.org/doi/full/10.1126/science.1247651",
 ]
 
 exclude_patterns = [
