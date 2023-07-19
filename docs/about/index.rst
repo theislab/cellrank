@@ -6,7 +6,7 @@ If you find CellRank useful for your research, please check out :doc:`citing Cel
 
 Design principles
 -----------------
-Our framework is based on three key principles: `Robustness`_, `Modularity`_ and `Sparsity`_.
+Our framework is based on three key principles: `Robustness`_, `Modularity`_ and `Scalability`_.
 
 Robustness
 ~~~~~~~~~~
@@ -50,10 +50,12 @@ arrange cells in a :func:`circular embedding <cellrank.pl.circular_projection>` 
 :func:`cascades of gene activation <cellrank.pl.heatmap>` along a trajectory, and
 :func:`cluster expression trends <cellrank.pl.cluster_trends>`. See our :doc:`tutorials <../notebooks/tutorials/index>` to learn more.
 
-Sparsity
+Scalability
 ~~~~~~~~
 All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`cellrank.estimators.GPCCA`
-estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to large datasets.
+estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to millions of cells.  
+
+For example, when computing :meth:`fate probabilities <cellrank.estimators.GPCCA.compute_fate_probabilities>`, we transform the matrix inversion problem into a set of linear systems, which we solve in parallel using the sparsity-optimized `GMRES`_ algorithm, implemented efficiently in `PETSc`_. We use similar tricks to infer macrostates of cellular dyanmics via sparsity-optimized partial real Schur decompositions (implemented under the hood via `pyGPCCA`_ and `SLEPc`_). 
 
 Why is it called "CellRank"?
 ----------------------------
@@ -64,3 +66,6 @@ website relevance).
 
 .. _PageRank: https://en.wikipedia.org/wiki/PageRank
 .. _pyGPCCA: https://github.com/msmdev/pyGPCCA
+.. _GMRES: https://en.wikipedia.org/wiki/Generalized_minimal_residual_method
+.. _PETSc: https://petsc.org/release/
+.. _SLEPc: https://slepc.upv.es/
