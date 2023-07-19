@@ -48,7 +48,7 @@ dependencies = [
     "anndata>=0.8",
     "docrep>=0.3.0",
     "joblib>=0.13.1",
-    "matplotlib>=3.5.0",
+    "matplotlib>=3.5.0,<3.7.2",
     "networkx>=2.2",
     "numba>=0.51.0,!=0.57.0",
     "numpy>=1.17.0",
