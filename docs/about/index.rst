@@ -51,11 +51,14 @@ arrange cells in a :func:`circular embedding <cellrank.pl.circular_projection>` 
 :func:`cluster expression trends <cellrank.pl.cluster_trends>`. See our :doc:`tutorials <../notebooks/tutorials/index>` to learn more.
 
 Scalability
-~~~~~~~~
+~~~~~~~~~~~
 All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`cellrank.estimators.GPCCA`
-estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to millions of cells.  
+estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to millions of cells.
 
-For example, when computing :meth:`fate probabilities <cellrank.estimators.GPCCA.compute_fate_probabilities>`, we transform the matrix inversion problem into a set of linear systems, which we solve in parallel using the sparsity-optimized `GMRES`_ algorithm, implemented efficiently in `PETSc`_. We use similar tricks to infer macrostates of cellular dyanmics via sparsity-optimized partial real Schur decompositions (implemented under the hood via `pyGPCCA`_ and `SLEPc`_). 
+For example, when computing :meth:`fate probabilities <cellrank.estimators.GPCCA.compute_fate_probabilities>`, we transform the matrix
+inversion problem into a set of linear systems, which we solve in parallel using the sparsity-optimized `GMRES`_ algorithm, implemented
+efficiently in `PETSc`_. We use similar tricks to infer macrostates of cellular dyanmics via sparsity-optimized partial real Schur
+decompositions (implemented under the hood via `pyGPCCA`_ and `SLEPc`_).
 
 Why is it called "CellRank"?
 ----------------------------
