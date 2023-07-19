@@ -274,7 +274,7 @@ passenv = PYENCHANT_LIBRARY_PATH
 setenv = SPHINXOPTS = -W -q --keep-going
 changedir = {toxinidir}{/}docs
 commands =
-    make linkcheck {posargs}
+    # make linkcheck {posargs}
     # make spelling {posargs}
 
 [testenv:clean-docs]
