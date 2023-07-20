@@ -29,12 +29,11 @@ Core Development Team
 ---------------------
 .. grid:: auto
 
-    .. grid-item-card:: :fab:`twitter` `Marius Lange <https://twitter.com/MariusLange8>`_
-        :img-top: https://mariuslange.com/author/marius-lange/avatar_huc2ea0f123de6d091882f094508aad23f_1614639_270x270_fill_q75_lanczos_center.jpg
+    .. grid-item-card:: :fab:`twitter` `Philipp Weiler <https://twitter.com/philippweiler7>`_
+        :img-top: https://avatars.githubusercontent.com/u/28675704
 
-        - :fas:`house` `mariuslange.com <https://mariuslange.com/>`_
-        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=QrhWUR4AAAAJ>`__
-        - :fab:`github` `Marius1311 <https://github.com/Marius1311>`_
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=Tn1E5RkAAAAJ>`__
+        - :fab:`github` `WeilerP <https://github.com/WeilerP>`_
 
     .. grid-item-card:: Michal Klein
         :img-top: https://avatars.githubusercontent.com/u/46717574
@@ -42,11 +41,12 @@ Core Development Team
         - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=zByzdzcAAAAJ>`__
         - :fab:`github` `michalk8 <https://github.com/michalk8>`_
 
-    .. grid-item-card:: :fab:`twitter` `Philipp Weiler <https://twitter.com/philippweiler7>`_
-        :img-top: https://avatars.githubusercontent.com/u/28675704
+    .. grid-item-card:: :fab:`twitter` `Marius Lange <https://twitter.com/MariusLange8>`_
+        :img-top: https://mariuslange.com/author/marius-lange/avatar_huc2ea0f123de6d091882f094508aad23f_1614639_270x270_fill_q75_lanczos_center.jpg
 
-        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=Tn1E5RkAAAAJ>`__
-        - :fab:`github` `WeilerP <https://github.com/WeilerP>`_
+        - :fas:`house` `mariuslange.com <https://mariuslange.com/>`_
+        - :fas:`graduation-cap` `Google Scholar <https://scholar.google.com/citations?user=QrhWUR4AAAAJ>`__
+        - :fab:`github` `Marius1311 <https://github.com/Marius1311>`_
 
 ``pyGPCCA`` Development
 -----------------------
