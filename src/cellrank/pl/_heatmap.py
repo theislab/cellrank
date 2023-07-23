@@ -88,6 +88,7 @@ def heatmap(
     figsize: Optional[Tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
+    gene_order: Optional[Sequence[str]] = None,
     **kwargs: Any,
 ) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
     """Plot a heatmap of smoothed gene expression along specified lineages.
@@ -343,14 +344,13 @@ def heatmap(
         return fig, None
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
-    def _() -> Tuple[List[plt.Figure], pd.DataFrame]:
+    def _(gene_order: Optional[Sequence[str]] = None) -> Tuple[List[plt.Figure], pd.DataFrame]:
         data_t = collections.defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():
                 data_t[ln][gene] = y
 
         figs = []
-        gene_order = None
         sorted_genes = pd.DataFrame() if return_genes else None
 
         for lname, models in data_t.items():
@@ -510,7 +510,13 @@ def heatmap(
     xlabel = time_key if xlabel is None else xlabel
 
     logg.debug(f"Plotting `{mode!r}` heatmap")
-    fig, genes = _plot_heatmap(mode)
+    if gene_order is not None and mode != HeatmapMode.LINEAGES:
+        gene_order = [gene for gene in gene_order if gene in genes]
+
+    if mode == HeatmapMode.LINEAGES:
+        fig, genes = _plot_heatmap(mode, gene_order)
+    else:
+        fig, genes = _plot_heatmap(mode)
 
     if return_figure:
         return fig, genes
