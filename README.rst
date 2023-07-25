@@ -12,9 +12,10 @@ CellRank: dynamics from multi-view single-cell data
     :align: center
 
 **CellRank** is a modular framework to study cellular dynamics based on Markov state modeling of
-multi-view single-cell data. See our `documentation`_ or `manuscript`_ to learn more.
+multi-view single-cell data. See our `documentation`_, and the `CellRank 1`_ and `CellRank 2 manuscript`_ to learn more.
+See `here <https://github.com/theislab/cellrank/blob/main/docs/about/cite.rst>`_ for how to properly cite our work.
 
-CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use.
+CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and easy to use.
 In the backend, it is powered by `pyGPCCA`_ (`Reuter et al. (2018)`_). Feel
 free to open an `issue`_ or send us an `email`_ if you encounter a bug, need our help or just
 want to make a comment/suggestion.
@@ -61,7 +62,8 @@ CellRank's key applications
 .. _scverse: https://scverse.org/
 .. _pyGPCCA: https://github.com/msmdev/pyGPCCA
 
-.. _manuscript: https://www.nature.com/articles/s41592-021-01346-6
+.. _CellRank 1: https://www.nature.com/articles/s41592-021-01346-6
+.. _CellRank 2 manuscript: https://doi.org/10.1101/2023.07.19.549685
 .. _documentation: https://cellrank.org
 
 .. _email: mailto:info@cellrank.org
