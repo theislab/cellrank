@@ -24,7 +24,7 @@ CellRank's key applications
 ---------------------------
 - Estimate differentiation direction based on a varied number of biological priors, including RNA velocity
   (`La Manno et al. (2018)`_, `Bergen et al. (2020)`_), any pseudotime or developmental potential,
-  experimental time points, and more.
+  experimental time points, metabolic labels, and more.
 - Compute initial, terminal and intermediate macrostates.
 - Infer fate probabilities and driver genes.
 - Visualize and cluster gene expression trends.
