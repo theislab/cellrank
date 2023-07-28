@@ -1,7 +1,7 @@
 |PyPI| |Downloads| |CI| |Docs| |Codecov| |Discourse|
 
-CellRank: dynamics from multi-view single-cell data
-===================================================
+CellRank 2: Unified fate mapping in multiview single-cell data
+==============================================================
 .. image:: docs/_static/img/light_mode_overview.png#gh-light-mode-only
     :width: 600px
     :align: center
