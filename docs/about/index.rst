@@ -52,7 +52,7 @@ arrange cells in a :func:`circular embedding <cellrank.pl.circular_projection>` 
 
 Scalability
 ~~~~~~~~~~~
-All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`cellrank.estimators.GPCCA`
+All CellRank kernels yield sparse transition matrices :math:`T`. Further, the :class:`~cellrank.estimators.GPCCA`
 estimator exploits sparsity in all major computations. Sparsity allows CellRank to scale to millions of cells.
 
 For example, when computing :meth:`fate probabilities <cellrank.estimators.GPCCA.compute_fate_probabilities>`, we transform the matrix

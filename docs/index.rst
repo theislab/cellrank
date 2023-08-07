@@ -13,8 +13,8 @@ CellRank 2: Unified fate mapping in multiview single-cell data
     :class: only-dark
 
 **CellRank** :cite:`lange:22,weiler:23` is a modular framework to study cellular dynamics based on Markov state modeling of
-multi-view single-cell data. See :doc:`about CellRank <about/index>` to learn more and :doc:`here <about/cite>` for how to correctly
-cite our work.
+multi-view single-cell data. See :doc:`about CellRank <about/index>` to learn more and :doc:`our citation guide <about/cite>` for guidance on
+citing our work correctly. Also, read our `recent preprint <https://doi.org/10.1101/2023.07.19.549685>`_ to see the new CellRank 2 features in action.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and is easy to use. In the
 backend, it is powered by the `pyGPCCA package <https://github.com/msmdev/pyGPCCA>`_ :cite:`reuter:19,reuter:22`. Feel

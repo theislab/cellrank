@@ -1,7 +1,7 @@
 Citing CellRank
 ===============
 If you find CellRank useful for your research, please consider citing our work as follows: If you are using
-CellRank's _VelocityKernel_ with classical RNA velocity, cite :cite:`lange:22` as:
+CellRank's :class:`~cellrank.kernels.VelocityKernel` with classical RNA velocity, cite :cite:`lange:22` as:
 
 .. code-block:: bibtex
 
@@ -17,8 +17,8 @@ CellRank's _VelocityKernel_ with classical RNA velocity, cite :cite:`lange:22` a
         publisher = {Nature Publishing Group}
     }
 
-If you are using the _PseudotimeKernel_, _CytoTRACEKernel_, `RealTimeKernel`, or _VelocityKernel_ with RNA velocity inferred
-from metabolic labeling data using our approach, cite :cite:`weiler:23` as:
+If you are using the :class:`~cellrank.kernels.PseudotimeKernel`, :class:`~cellrank.kernels.CytoTRACEKernel`, :class:`~cellrank.kernels.RealTimeKernel`, or the :class:`~cellrank.kernels.VelocityKernel` with velocities inferred
+from metabolic labeling data using the CellRank 2 approach, cite :cite:`weiler:23` as:
 
 .. code-block:: bibtex
 
