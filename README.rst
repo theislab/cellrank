@@ -34,7 +34,7 @@ CellRank's key applications
     :target: https://pypi.org/project/cellrank
     :alt: PyPI
 
-.. |Downloads| image:: https://pepy.tech/badge/cellrank
+.. |Downloads| image:: https://static.pepy.tech/badge/cellrank
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
 

@@ -74,7 +74,7 @@ We actively encourage any contribution! To get started, please check out the :do
     :target: https://pypi.org/project/cellrank
     :alt: PyPI
 
-.. |Downloads| image:: https://pepy.tech/badge/cellrank
+.. |Downloads| image:: https://static.pepy.tech/badge/cellrank
     :target: https://pepy.tech/project/cellrank
     :alt: Downloads
 
