@@ -1195,13 +1195,10 @@ def _mutual_info(reference, query):
     return weights
 
 
-_SPEC = IOSpec("array", "0.2.0")
-
-
-@_REGISTRY.register_write(H5Group, Lineage, _SPEC)
-@_REGISTRY.register_write(H5Group, LineageView, _SPEC)
-@_REGISTRY.register_write(ZarrGroup, Lineage, _SPEC)
-@_REGISTRY.register_write(ZarrGroup, LineageView, _SPEC)
+@_REGISTRY.register_write(H5Group, Lineage, IOSpec("array", "0.2.0"))
+@_REGISTRY.register_write(H5Group, LineageView, IOSpec("array", "0.2.0"))
+@_REGISTRY.register_write(ZarrGroup, Lineage, IOSpec("array", "0.2.0"))
+@_REGISTRY.register_write(ZarrGroup, LineageView, IOSpec("array", "0.2.0"))
 def _write_lineage(
     f: Any,
     k: str,
