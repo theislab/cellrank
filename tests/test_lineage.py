@@ -11,6 +11,8 @@ import pandas as pd
 
 from matplotlib import colors
 
+from anndata import AnnData, read_h5ad, read_zarr
+
 from cellrank._utils import Lineage
 from cellrank._utils._colors import _compute_mean_color, _create_categorical_colors
 from cellrank._utils._lineage import _HT_CELLS, LineageView, PrimingDegree
@@ -973,7 +975,7 @@ class TestView:
         assert x.owner is lineage
 
 
-class TestPickling:
+class TestIO:
     def test_pickle_normal(self, lineage: Lineage):
         handle = io.BytesIO()
 
@@ -1014,6 +1016,24 @@ class TestPickling:
         assert res._names_to_ixs == lineage._names_to_ixs
         assert res._n_lineages == lineage._n_lineages
         assert res._is_transposed == lineage._is_transposed
+
+    def test_anndata_write(self, lineage: Lineage, tmp_path):
+        rng = np.random.default_rng(0)
+        adata = AnnData(rng.normal(size=(lineage.shape[0], 13)))
+        adata.obsm["lin"] = lineage
+
+        assert isinstance(adata.obsm["lin"], Lineage)
+
+        adata.write_h5ad(tmp_path / "tmp.h5ad")
+        adata.write_zarr(tmp_path / "tmp.zarr")
+
+        adata_h5ad = read_h5ad(tmp_path / "tmp.h5ad")
+        adata_zarr = read_zarr(tmp_path / "tmp.zarr")
+
+        assert isinstance(adata_h5ad.obsm["lin"], np.ndarray)
+        assert isinstance(adata_zarr.obsm["lin"], np.ndarray)
+        np.testing.assert_array_equal(adata_h5ad.obsm["lin"], adata.obsm["lin"].X)
+        np.testing.assert_array_equal(adata_zarr.obsm["lin"], adata.obsm["lin"].X)
 
 
 class TestPriming:
