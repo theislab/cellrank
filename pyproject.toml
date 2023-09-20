@@ -45,7 +45,7 @@ maintainers = [
 
 
 dependencies = [
-    "anndata>=0.8",
+    "anndata>=0.9",
     "docrep>=0.3.0",
     "joblib>=0.13.1",
     "matplotlib>=3.5.0,<3.7.2",
@@ -74,6 +74,7 @@ test = [
     "pytest-mock>=3.5.0",
     "pytest-cov>=4",
     "coverage[toml]>=7",
+    "zarr",
     "igraph",
     "leidenalg",
     "Pillow",
