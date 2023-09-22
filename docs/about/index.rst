@@ -57,7 +57,7 @@ estimator exploits sparsity in all major computations. Sparsity allows CellRank 
 
 For example, when computing :meth:`fate probabilities <cellrank.estimators.GPCCA.compute_fate_probabilities>`, we transform the matrix
 inversion problem into a set of linear systems, which we solve in parallel using the sparsity-optimized `GMRES`_ algorithm, implemented
-efficiently in `PETSc`_. We use similar tricks to infer macrostates of cellular dyanmics via sparsity-optimized partial real Schur
+efficiently in `PETSc`_. We use similar tricks to infer macrostates of cellular dynamics via sparsity-optimized partial real Schur
 decompositions (implemented under the hood via `pyGPCCA`_ and `SLEPc`_).
 
 Why is it called "CellRank"?
