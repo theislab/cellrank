@@ -106,8 +106,7 @@ class GAM(BaseModel):
             0,
             spline_order=spline_order,
             n_splines=n_knots,
-            penalties=["derivative", "l2"],
-            **_filter_kwargs(s, **{**{"lam": 3}, **spline_kwargs}),
+            **_filter_kwargs(s, **{**{"lam": 3, "penalties": ["derivative", "l2"]}, **spline_kwargs}),
         )
         link = GamLinkFunction(link)
         distribution = GamDistribution(distribution)
