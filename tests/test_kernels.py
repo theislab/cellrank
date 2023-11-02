@@ -603,9 +603,9 @@ class TestVelocityKernelReadData:
             adata.obsm[vkey] = adata.layers[vkey][:, : adata.obsm[xkey].shape[1]]
             nans_v = np.isnan(np.sum(adata.obsm[vkey], axis=0))
 
-        gene_subset = adata.var[f"{vkey}_genes"]
+        gene_subset = adata.var[f"{vkey}_genes"].copy()
         if use_gene_subset:
-            gene_subset[10:] = False
+            gene_subset.iloc[10:] = False
         else:
             gene_subset = None
 
