@@ -367,7 +367,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if stat_dist is None:
             raise RuntimeError("No coarse-grained stationary distribution found.")
 
-        states = list(stat_dist[np.argsort(stat_dist)][:n_states].index)
+        states = list(stat_dist.iloc[np.argsort(stat_dist)][:n_states].index)
         return self.set_initial_states(states, n_cells=n_cells, allow_overlap=allow_overlap)
 
     @d.dedent

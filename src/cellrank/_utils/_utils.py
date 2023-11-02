@@ -1158,7 +1158,7 @@ def _series_from_one_hot_matrix(
     target_series = pd.Series(index=index, dtype="category")
     for vec, name in zip(membership.T, names):
         target_series = target_series.cat.add_categories(name)
-        target_series[np.where(vec)[0]] = name
+        target_series.iloc[np.where(vec)[0]] = name
 
     return target_series
 
