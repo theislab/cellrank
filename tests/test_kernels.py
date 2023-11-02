@@ -1151,7 +1151,7 @@ class TestRealTimeKernel:
             val = np.abs(rng.normal(size=(n, m)))
             if not correct_shape:
                 val = AnnData(val)
-                val.obs_names = list(adata.obs_names[col == src]) + [adata.obs_names[-1]]
+                val.obs_names = list(adata.obs_names[col == src]) + ["foo"]
                 val.var_names = adata.obs_names[col == tgt]
             couplings[src, tgt] = val
 
