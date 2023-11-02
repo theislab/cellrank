@@ -18,7 +18,7 @@ import scipy.sparse as sp
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 import scanpy as sc
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
 from scanpy import Neighbors
 
 import cellrank as cr
@@ -925,7 +925,7 @@ class TestVelocityScheme:
 
         sc.write(path, adata)
 
-        bdata = sc.read(path)
+        bdata = read_h5ad(path)
         assert vk.params == bdata.uns[f"{key}_params"]["params"]
 
 

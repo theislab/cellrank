@@ -342,7 +342,7 @@ def _filter_models(
         return x.x_test is not None and x.y_test is not None and np.all(np.isfinite(x.y_test))
 
     modelmat = pd.DataFrame(models).T
-    modelmask = modelmat.applymap(is_valid)
+    modelmask = modelmat.map(is_valid)
     to_keep = modelmask[modelmask.any(axis=1)]
     to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
 
