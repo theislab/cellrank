@@ -7,7 +7,7 @@ from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -367,7 +367,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if stat_dist is None:
             raise RuntimeError("No coarse-grained stationary distribution found.")
 
-        states = list(stat_dist[np.argsort(stat_dist)][:n_states].index)
+        states = list(stat_dist.iloc[np.argsort(stat_dist)][:n_states].index)
         return self.set_initial_states(states, n_cells=n_cells, allow_overlap=allow_overlap)
 
     @d.dedent
@@ -876,7 +876,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
         if key not in self.adata.obs:
             raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
-        if not is_categorical_dtype(self.adata.obs[key]):
+        if not isinstance(self.adata.obs[key].dtype, pd.CategoricalDtype):
             raise TypeError(
                 f"Expected `adata.obs[{key!r}]` to be `categorical`, " f"found `{infer_dtype(self.adata.obs[key])}`."
             )
@@ -893,7 +893,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             cats_colors = _create_categorical_colors(len(self.adata.obs[key].cat.categories))
         cat_color_mapper = dict(zip(self.adata.obs[key].cat.categories, cats_colors))
         x_indices = np.arange(len(macrostates.cat.categories))
-        bottom = np.zeros_like(x_indices, dtype=np.float32)
+        bottom = np.zeros_like(x_indices, dtype=float)
 
         width = min(1, max(0, width))
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
@@ -1155,7 +1155,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._set("_coarse_stat_dist", value=stat_dist, shadow_only=True)
             self._set(
                 obj=self.adata.uns, key=Key.uns.coarse(self.backward),
-                value=AnnData(tmat, obs=dists, dtype=float)
+                value=AnnData(tmat, obs=dists),
             )
         else:
             for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:

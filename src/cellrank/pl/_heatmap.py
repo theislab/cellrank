@@ -178,7 +178,7 @@ def heatmap(
             return int(ix)
 
         series = series.sort_values(ascending=True)
-        return list(series[[find_nearest(series.values, v) for v in values]].index)
+        return list(series.iloc[[find_nearest(series.values, v) for v in values]].index)
 
     def subset_lineage(lname: str, rng: np.ndarray) -> np.ndarray:
         time_series = adata.obs[time_key]

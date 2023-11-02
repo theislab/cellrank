@@ -4,7 +4,7 @@ from typing import Any, Dict, Literal, Mapping, NamedTuple, Optional, Sequence, 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 from anndata import AnnData
 
@@ -386,7 +386,7 @@ class FateProbsMixin:
             key = next(iter(early_cells.keys()))
             if key not in self.adata.obs:
                 raise KeyError(f"Unable to find clusters in `adata.obs[{key!r}]`.")
-            if not is_categorical_dtype(self.adata.obs[key]):
+            if not isinstance(self.adata.obs[key].dtype, pd.CategoricalDtype):
                 raise TypeError(
                     f"Expected `adata.obs[{key!r}]` to be categorical, " f"found `{infer_dtype(self.adata.obs[key])}`."
                 )

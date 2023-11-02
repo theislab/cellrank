@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 from matplotlib import cm, colors
 
@@ -175,9 +175,9 @@ def _map_names_and_colors(
     Series with updated category names and a corresponding array of colors.
     """
     # checks: dtypes, matching indices, make sure colors match the categories
-    if not is_categorical_dtype(series_reference):
+    if not isinstance(series_reference.dtype, pd.CategoricalDtype):
         raise TypeError(f"Reference series must be `categorical`, found `{infer_dtype(series_reference)}`.")
-    if not is_categorical_dtype(series_query):
+    if not isinstance(series_query.dtype, pd.CategoricalDtype):
         raise TypeError(f"Query series must be `categorical`, found `{infer_dtype(series_query)}`.")
     if len(series_reference) != len(series_query):
         raise ValueError(

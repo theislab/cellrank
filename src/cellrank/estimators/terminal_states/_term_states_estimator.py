@@ -7,7 +7,7 @@ import scvelo as scv
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 from matplotlib.colors import to_hex
 
@@ -411,7 +411,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     ) -> None:
         if not isinstance(_data, pd.Series):
             raise TypeError(f"Expected `data` to be of type `pandas.Series`, found `{type(_data)}`.")
-        if not is_categorical_dtype(_data):
+        if not isinstance(_data.dtype, pd.CategoricalDtype):
             raise TypeError(f"Expected `data` to be `categorical`, found `{infer_dtype(_data)}`.")
 
         names = list(_data.cat.categories)
@@ -564,7 +564,9 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         # fmt: off
         if isinstance(categories, dict):
             key = next(iter(categories.keys()))
-            if len(categories) == 1 and is_categorical_dtype(self.adata.obs.get(key, None)):
+            data = self.adata.obs.get(key, None)
+            is_categorical = data is not None and isinstance(data.dtype, pd.CategoricalDtype)
+            if len(categories) == 1 and is_categorical:
                 vals = categories[key]
                 if isinstance(vals, str) or not isinstance(vals, Sequence):
                     vals = (categories[key],)
@@ -575,7 +577,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 categories = {cat: self.adata[clusters == cat].obs_names for cat in vals}
 
             categories = _convert_to_categorical_series(categories, list(self.adata.obs_names))
-        if not is_categorical_dtype(categories):
+        if not isinstance(categories.dtype, pd.CategoricalDtype):
             raise TypeError(f"Expected object to be `categorical`, found `{infer_dtype(categories)}`.")
 
         if existing is not None:

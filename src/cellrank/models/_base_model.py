@@ -9,8 +9,9 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 import wrapt
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import infer_dtype
 from scipy.ndimage import convolve
 
 import matplotlib as mpl
@@ -399,7 +400,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         else:
             val_start, val_end = None, time_range
 
-        if isinstance(weight_threshold, (int, float)):
+        if isinstance(weight_threshold, (int, float, np.number)):
             weight_threshold = (weight_threshold, weight_threshold)
         if len(weight_threshold) != 2:
             raise ValueError(f"Expected `weight_threshold` to be of size `2`, found `{len(weight_threshold)}`.")
@@ -1076,7 +1077,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
             return None, key, ColorType.STR, None
 
         if key in self.adata.obs:
-            if is_categorical_dtype(self.adata.obs[key]):
+            if isinstance(self.adata.obs[key].dtype, pd.CategoricalDtype):
                 add_colors_for_categorical_sample_annotation(
                     self.adata,
                     key=key,
@@ -1097,7 +1098,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
                     col_dict,
                 )
 
-            if is_numeric_dtype(self.adata.obs[key]):
+            if np.issubdtype(self.adata.obs[key].dtype, np.number):
                 return key, self.adata.obs[key].values, ColorType.CONT, None
 
             logg.debug(f"Unable to interpret cell color from type `{infer_dtype(self.adata.obs[key])}`")

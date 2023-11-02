@@ -21,7 +21,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -102,7 +102,7 @@ def wrap(numpy_func: Callable) -> Callable:
     """
 
     @functools.wraps(numpy_func)
-    def decorator(array, *args, **kwargs):
+    def decorator(array: "Lineage", *args, **kwargs):
         if not isinstance(array, Lineage):
             raise TypeError(f"Expected array to be of type `Lineage`, found `{type(array).__name__}`.")
         if fname == "squeeze":
@@ -172,16 +172,21 @@ def wrap(numpy_func: Callable) -> Callable:
 
 
 def _register_handled_functions():
+    # adapted from:
+    # https://github.com/numpy/numpy/blob/v1.26.0/numpy/testing/overrides.py#L50
+    try:
+        from numpy.core.overrides import ARRAY_FUNCTIONS
+    except ImportError:
+        ARRAY_FUNCTIONS = [getattr(np, attr) for attr in dir(np)]
+
     handled_fns = {}
-    for attrname in dir(np):
-        fn = getattr(np, attrname)
-        if isinstance(fn, types.FunctionType):
-            try:
-                sig = inspect.signature(fn)
-                if "axis" in sig.parameters:
-                    handled_fns[fn] = wrap(fn)
-            except ValueError:
-                pass
+    for fn in ARRAY_FUNCTIONS:
+        try:
+            sig = inspect.signature(fn)
+            if "axis" in sig.parameters:
+                handled_fns[fn] = wrap(fn)
+        except Exception:  # noqa: BLE001
+            pass
 
     handled_fns.pop(np.expand_dims, None)
 
@@ -289,7 +294,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             return NotImplemented
         # Note: this allows subclasses that don't override
         # __array_function__ to handle MyArray objects
-        if not all(issubclass(t, type(self)) for t in types):
+        if not all(issubclass(t, self.__class__) for t in types):
             return NotImplemented
 
         return _HANDLED_FUNCTIONS[func](*args, **kwargs)
@@ -648,7 +653,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             "cosine_sim", "wasserstein_dist", "kl_div", "js_div", "mutual_info", "equal"
         ] = DistanceMeasure.MUTUAL_INFO,
         normalize_weights: Literal["scale", "softmax"] = NormWeights.SOFTMAX,
-        softmax_scale: float = 1,
+        softmax_scale: float = 1.0,
         return_weights: bool = False,
     ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
         """Subset states and normalize them so that they again sum to :math:`1`.
@@ -854,7 +859,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         states = adata.obs.get(nkey, None)
         if states is None:
             logg.warning(f"Unable to find states in `adata.obs[{nkey!r}]`. Using default names")
-        elif not is_categorical_dtype(states):
+        elif not isinstance(states.dtype, pd.CategoricalDtype):
             logg.warning(
                 f"Expected `adata.obs[{key!r}]` to be `categorical`, "
                 f"found `{infer_dtype(adata.obs[nkey])}`. Using default names"
@@ -1129,10 +1134,10 @@ def _softmax(X, beta: float = 1):
     return np.exp(X * beta) / np.expand_dims(np.sum(np.exp(X * beta), axis=1), -1)
 
 
-def _row_normalize(X):
+def _row_normalize(X: Union[np.ndarray, Lineage]) -> Union[np.ndarray, Lineage]:
     if isinstance(X, Lineage):
-        return X / X.sum(1)  # Lineage is shape-preserving
-    return X / np.expand_dims(X.sum(1), -1)
+        return X / X.sum(1)  # lineage is shape-preserving
+    return X / X.sum(1, keepdims=True)
 
 
 def _col_normalize(X, norm_ord=2):

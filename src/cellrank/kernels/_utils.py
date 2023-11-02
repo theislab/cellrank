@@ -6,7 +6,7 @@ import numba as nb
 import numpy as np
 import pandas as pd
 from numba import prange
-from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import infer_dtype
 
 from anndata import AnnData
 
@@ -130,19 +130,19 @@ def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
         raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
 
     exp_time = adata.obs[key].copy()
-    if not is_numeric_dtype(np.asarray(exp_time)):
+    if not np.issubdtype(np.asarray(exp_time).dtype, np.number):
         try:
             exp_time = np.asarray(exp_time).astype(float)
-        except ValueError as e:
+        except Exception as e:  # noqa: BLE001/Cannot interpret
             raise TypeError(
                 f"Unable to convert `adata.obs[{key!r}]` of type `{infer_dtype(adata.obs[key])}` to `float`."
             ) from e
 
-    if not is_categorical_dtype(exp_time):
+    if not isinstance(exp_time.dtype, pd.CategoricalDtype):
         logg.debug(f"Converting `adata.obs[{key!r}]` to `categorical`")
         exp_time = np.asarray(exp_time)
         categories = sorted(set(exp_time[~np.isnan(exp_time)]))
-        if len(categories) > 100:
+        if len(categories) > 100:  # arbitrary threshold
             raise ValueError(
                 f"Unable to convert `adata.obs[{key!r}]` to `categorical` since it "
                 f"would create `{len(categories)}` categories."

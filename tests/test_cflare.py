@@ -6,7 +6,6 @@ from _helpers import assert_estimators_equal
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
 
@@ -66,7 +65,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
 
-        assert is_categorical_dtype(mc.terminal_states)
+        assert isinstance(mc.terminal_states.dtype, pd.CategoricalDtype)
         assert mc.terminal_states_probabilities is not None
 
         key = Key.obs.term_states(mc.backward)
@@ -416,7 +415,7 @@ class TestCFLARE:
 
         c = cr.estimators.CFLARE(cr.kernels.PrecomputedKernel(transition_matrix))
 
-        state_annotation = pd.Series(index=range(len(c)))
+        state_annotation = pd.Series(index=range(len(c)), dtype=str)
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
@@ -425,7 +424,7 @@ class TestCFLARE:
         c.compute_fate_probabilities()
         fate_probabilities_query = c.fate_probabilities[state_annotation.isna()]
 
-        np.allclose(fate_probabilities_query, fate_probabilities_reference)
+        np.allclose(fate_probabilities_query.X, fate_probabilities_reference)
 
     def test_manual_approx_rc_set(self, adata_large):
         adata = adata_large

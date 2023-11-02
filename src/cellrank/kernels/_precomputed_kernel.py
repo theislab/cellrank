@@ -142,7 +142,7 @@ class PrecomputedKernel(UnidirectionalKernel):
         # fmt: off
         if adata is None:
             logg.warning(f"Creating empty `AnnData` object of shape `{matrix.shape[0], 1}`")
-            adata = AnnData(sp.csr_matrix((matrix.shape[0], 1), dtype=np.float64))
+            adata = AnnData(sp.csr_matrix((matrix.shape[0], 1)))
         super().__init__(adata)
         self._backward: Optional[bool] = backward
         self.transition_matrix = matrix.copy() if copy else matrix

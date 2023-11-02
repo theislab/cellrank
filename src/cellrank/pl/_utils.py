@@ -18,7 +18,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import infer_dtype
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -342,7 +342,8 @@ def _filter_models(
         return x.x_test is not None and x.y_test is not None and np.all(np.isfinite(x.y_test))
 
     modelmat = pd.DataFrame(models).T
-    modelmask = modelmat.applymap(is_valid)
+    # `DataFrame.map` in `pandas>=2.1.0`
+    modelmask = modelmat.map(is_valid) if hasattr(modelmat, "map") else modelmat.applymap(is_valid)
     to_keep = modelmask[modelmask.any(axis=1)]
     to_keep = to_keep.loc[:, to_keep.any(axis=0)].T
 
@@ -892,7 +893,7 @@ def composition(
     """
     if key not in adata.obs:
         raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
-    if not is_categorical_dtype(adata.obs[key]):
+    if not isinstance(adata.obs[key].dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected `adata.obs[{key!r}]` is not `categorical`, found `{infer_dtype(adata.obs[key])}`.")
 
     colors = adata.uns.get(f"{key}_colors", None)
@@ -986,7 +987,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
 def _get_categorical_colors(adata: AnnData, cluster_key: str) -> Tuple[np.ndarray, Mapping[str, str]]:
     if cluster_key not in adata.obs:
         raise KeyError(f"Unable to find data in `adata.obs[{cluster_key!r}].`")
-    if not is_categorical_dtype(adata.obs[cluster_key]):
+    if not isinstance(adata.obs[cluster_key].dtype, pd.CategoricalDtype):
         raise TypeError(
             f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
             f"found `{infer_dtype(adata.obs[cluster_key])}`."
@@ -1030,7 +1031,7 @@ def _get_sorted_colors(
             cols, mapper = _get_categorical_colors(adata, ck)
             res.append(np.array([colors.to_hex(mapper[v]) for v in adata.obs[ck].values[order]]))
         except TypeError:
-            if not is_numeric_dtype(adata.obs[ck]):
+            if not np.issubdtype(adata.obs[ck].dtype, np.number):
                 raise TypeError(
                     f"Expected `adata.obs[{cluster_key!r}]` to be numeric, "
                     f"found `{infer_dtype(adata.obs[cluster_key])}`."

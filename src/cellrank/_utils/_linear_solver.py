@@ -149,8 +149,10 @@ def _(
     b.setArray(mat_b.squeeze())
 
     ksp.solve(b, x)
+    # `is_converged` in PETSc >= 3.20
+    converged = ksp.is_converged if hasattr(ksp, "is_converged") else ksp.converged
 
-    return np.atleast_1d(x.getArray().copy().squeeze()), int(ksp.converged)
+    return np.atleast_1d(x.getArray().copy().squeeze()), int(converged)
 
 
 @_solve_many_sparse_problems_petsc.register(sp.csc_matrix)
@@ -174,7 +176,8 @@ def _(
         ksp.solve(b, x)
 
         xs.append(np.atleast_1d(x.getArray().copy().squeeze()))
-        converged += ksp.converged
+        # `is_converged` in PETSc >= 3.20
+        converged += ksp.is_converged if hasattr(ksp, "is_converged") else ksp.converged
 
         if queue is not None:
             queue.put(1)
@@ -306,8 +309,10 @@ def _petsc_direct_solve(
     factored_matrix.matSolve(B, x)
 
     res = np.array(x.getDenseArray(), copy=True)
+    # `is_converged` in PETSc >= 3.20
+    converged = ksp.is_converged if hasattr(ksp, "is_converged") else ksp.converged
 
-    if not ksp.converged:
+    if not converged:
         logg.debug(
             f"The solution for system "
             f"`A{list(A.getSize())} * X{list(x.getSize())} = B{list(B.getSize())}` "

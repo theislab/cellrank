@@ -56,7 +56,7 @@ def _rpy2_mgcv_not_installed() -> bool:
 
 def bias_knn(
     conn: sp.csr_matrix,
-    pseudotime: np.ndarray,
+    pseudotime: pd.Series,
     n_neighbors: int,
     k: int = 3,
     frac_to_keep: Optional[float] = None,
@@ -72,7 +72,7 @@ def bias_knn(
         # get indices, values and current pseudo t
         row_data = conn[i, :].data
         row_ixs = conn[i, :].indices
-        current_t = pseudotime[i]
+        current_t = pseudotime.iloc[i]
 
         if frac_to_keep is not None:
             k_thresh = max(0, min(30, int(np.floor(len(row_data) * frac_to_keep))))
@@ -83,7 +83,7 @@ def bias_knn(
         cand_ixs = sorted_ixs[k_thresh:]
 
         # compare pseudotimes and set indices to zero
-        cand_t = pseudotime[cand_ixs]
+        cand_t = pseudotime.iloc[cand_ixs]
         rem_ixs = cand_ixs[cand_t < current_t]
         conn_biased[i, rem_ixs] = 0
 

@@ -18,7 +18,7 @@ import scipy.sparse as sp
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 import scanpy as sc
-from anndata import AnnData
+from anndata import AnnData, read_h5ad
 from scanpy import Neighbors
 
 import cellrank as cr
@@ -603,9 +603,9 @@ class TestVelocityKernelReadData:
             adata.obsm[vkey] = adata.layers[vkey][:, : adata.obsm[xkey].shape[1]]
             nans_v = np.isnan(np.sum(adata.obsm[vkey], axis=0))
 
-        gene_subset = adata.var[f"{vkey}_genes"]
+        gene_subset = adata.var[f"{vkey}_genes"].copy()
         if use_gene_subset:
-            gene_subset[10:] = False
+            gene_subset.iloc[10:] = False
         else:
             gene_subset = None
 
@@ -658,7 +658,7 @@ class TestKernelAddition:
         k = (vk + ck + vk1).compute_transition_matrix()
         expected = (
             np.eye(adata.n_obs) * (1 / 3 + 1 / 6 + 1 / 6)
-            + np.eye(adata._n_obs, k=1) * 1 / 6
+            + np.eye(adata.n_obs, k=1) * 1 / 6
             + np.eye(adata.n_obs, k=-1) * 1 / 6
         )
         expected[0, 0] = expected[-1, -1] = 2 / 3 + 1 / 3 * 0.5
@@ -925,7 +925,7 @@ class TestVelocityScheme:
 
         sc.write(path, adata)
 
-        bdata = sc.read(path)
+        bdata = read_h5ad(path)
         assert vk.params == bdata.uns[f"{key}_params"]["params"]
 
 
@@ -1151,7 +1151,7 @@ class TestRealTimeKernel:
             val = np.abs(rng.normal(size=(n, m)))
             if not correct_shape:
                 val = AnnData(val)
-                val.obs_names = list(adata.obs_names[col == src]) + [adata.obs_names[-1]]
+                val.obs_names = list(adata.obs_names[col == src]) + ["foo"]
                 val.var_names = adata.obs_names[col == tgt]
             couplings[src, tgt] = val
 

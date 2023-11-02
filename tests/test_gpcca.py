@@ -160,7 +160,7 @@ def _check_compute_macro(mc: cr.estimators.GPCCA) -> None:
     else:
         assert isinstance(mc.macrostates_memberships, cr.Lineage)
         if mc.macrostates_memberships.shape[1] > 1:
-            np.testing.assert_allclose(mc.macrostates_memberships.sum(1), 1.0)
+            np.testing.assert_allclose(mc.macrostates_memberships.X.sum(1), 1.0)
 
         assert isinstance(mc.schur_matrix, np.ndarray)
         assert isinstance(mc.schur_vectors, np.ndarray)

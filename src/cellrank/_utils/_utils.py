@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 from sklearn.cluster import KMeans
 from statsmodels.stats.multitest import multipletests
 
@@ -183,7 +183,7 @@ def _process_series(
     process_colors = cols is not None
 
     # assert dtype of the series
-    if not is_categorical_dtype(series):
+    if not isinstance(series.dtype, pd.CategoricalDtype):
         raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
 
     # if keys is None, just return
@@ -530,7 +530,7 @@ def _correlation_test_helper(
 
 def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: int) -> pd.Series:
     """Filter out some cells that look like transient states based on their neighbors."""
-    if not is_categorical_dtype(rc_labels):
+    if not isinstance(rc_labels.dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected `categories` be `categorical`, found `{infer_dtype(rc_labels)}`.")
 
     # retrieve knn graph
@@ -886,7 +886,7 @@ def _convert_to_categorical_series(
             "that there are no conflicting keys, such as `0` and `'0'`."
         )
 
-    term_states = pd.Series([np.nan] * len(cell_names), index=cell_names)
+    term_states = pd.Series([None] * len(cell_names), index=cell_names, dtype=str)
     for ts, cells in mapper.items():
         term_states[cells] = ts
 
@@ -947,10 +947,10 @@ def _merge_categorical_series(
 
         return cols
 
-    if not is_categorical_dtype(old):
+    if not isinstance(old.dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected old approx. recurrent classes to be categorical, found " f"`{infer_dtype(old)}`.")
 
-    if not is_categorical_dtype(new):
+    if not isinstance(new.dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected new approx. recurrent classes to be categorical, found " f"`{infer_dtype(new)}`.")
 
     if (old.index != new.index).any():
@@ -1158,7 +1158,7 @@ def _series_from_one_hot_matrix(
     target_series = pd.Series(index=index, dtype="category")
     for vec, name in zip(membership.T, names):
         target_series = target_series.cat.add_categories(name)
-        target_series[np.where(vec)[0]] = name
+        target_series.iloc[np.where(vec)[0]] = name
 
     return target_series
 

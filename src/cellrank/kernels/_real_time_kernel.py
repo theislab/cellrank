@@ -20,7 +20,7 @@ from tqdm.auto import tqdm
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 import scanpy as sc
 from anndata import AnnData
@@ -105,7 +105,7 @@ class RealTimeKernel(UnidirectionalKernel):
     ) -> None:
         super()._read_from_adata(**kwargs)
         self._time = self.adata.obs[time_key].copy()
-        if not is_categorical_dtype(self._time):
+        if not isinstance(self._time.dtype, pd.CategoricalDtype):
             raise TypeError(f"Expected `adata.obs[{time_key!r}]` to be categorical, found `{infer_dtype(self._time)}`.")
         self._time = self._time.cat.remove_unused_categories()
         cats = self._time.cat.categories
@@ -448,7 +448,7 @@ class RealTimeKernel(UnidirectionalKernel):
         for ix in range(len(blocks)):
             index.extend(obs_names[ix])
 
-        tmp = AnnData(sp.bmat(blocks, format="csr"), dtype="float64")
+        tmp = AnnData(sp.bmat(blocks, format="csr"))
         tmp.obs_names = index
         tmp.var_names = index
         tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
@@ -513,14 +513,14 @@ class RealTimeKernel(UnidirectionalKernel):
             if threshold == "auto_local":
                 thresh = min(tmat[i].max() for i in range(tmat.shape[0]))
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
-            elif isinstance(threshold, (int, float)):
+            elif isinstance(threshold, (int, float, np.number)):
                 thresh = np.percentile(tmat.data, threshold)
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
 
             tmat = sp.csr_matrix(tmat, dtype=tmat.dtype)
             tmat.data[tmat.data < thresh] = 0.0
             tmat.eliminate_zeros()
-            couplings[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
+            couplings[key] = AnnData(tmat, obs=adata.obs, var=adata.var)
 
         return couplings if copy else None
 
@@ -579,9 +579,9 @@ class RealTimeKernel(UnidirectionalKernel):
     def _coupling_to_adata(self, src: Any, tgt: Any, coupling: Coupling_t) -> AnnData:
         """Convert the coupling to :class:`~anndata.AnnData`."""
         if not isinstance(coupling, AnnData):
-            coupling = AnnData(X=coupling, dtype=coupling.dtype)
-            coupling.obs_names = self.adata[self._time == src].obs_names
-            coupling.var_names = self.adata[self._time == tgt].obs_names
+            coupling = AnnData(X=coupling)
+            coupling.obs_names = np.asarray(self.adata.obs_names)[self.time == src]
+            coupling.var_names = np.asarray(self.adata.obs_names)[self.time == tgt]
 
         if sp.issparse(coupling.X) and not sp.isspmatrix_csr(coupling.X):
             coupling.X = coupling.X.tocsr()
