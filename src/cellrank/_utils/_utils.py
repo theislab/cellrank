@@ -886,7 +886,7 @@ def _convert_to_categorical_series(
             "that there are no conflicting keys, such as `0` and `'0'`."
         )
 
-    term_states = pd.Series([np.nan] * len(cell_names), index=cell_names)
+    term_states = pd.Series([None] * len(cell_names), index=cell_names, dtype=str)
     for ts, cells in mapper.items():
         term_states[cells] = ts
 

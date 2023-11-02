@@ -415,7 +415,7 @@ class TestCFLARE:
 
         c = cr.estimators.CFLARE(cr.kernels.PrecomputedKernel(transition_matrix))
 
-        state_annotation = pd.Series(index=range(len(c)))
+        state_annotation = pd.Series(index=range(len(c)), dtype=str)
         state_annotation[7] = "terminal_1"
         state_annotation[10] = "terminal_2"
         state_annotation = state_annotation.astype("category")
