@@ -288,7 +288,7 @@ def circular_projection(
 
         # clockwise
         for color, text in zip(probs.colors[::-1], texts):
-            if isinstance(label_rot, (int, float)):
+            if isinstance(label_rot, (int, float, np.number)):
                 text.set_rotation(label_rot)
             elif label_rot == LabelRot.BEST:
                 rot = text.get_rotation()

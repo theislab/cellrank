@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 from scipy.interpolate import interp1d
 from statsmodels.nonparametric.smoothers_lowess import lowess
 
@@ -71,7 +71,7 @@ class FlowPlotter:
 
         if self._ckey not in self._adata.obs:
             raise KeyError(f"Unable to find clusters in `adata.obs[{self._ckey!r}]`.")
-        if not is_categorical_dtype(self._adata.obs[self._ckey]):
+        if not isinstance(self._adata.obs[self._ckey].dtype, pd.CategoricalDtype):
             raise TypeError(
                 f"Expected `adata.obs[{self._ckey!r}]` to be categorical, "
                 f"found `{infer_dtype(self._adata.obs[self._ckey])}`."

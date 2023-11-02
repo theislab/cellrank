@@ -7,7 +7,6 @@ import numba as nb
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import is_categorical_dtype
 
 import scanpy as sc
 from anndata import AnnData
@@ -263,7 +262,7 @@ class TestProcessSeries:
         res, colors = _process_series(x, keys=["b, a", "d, c"], cols=["red", "green", "blue", "white"])
 
         assert isinstance(res, pd.Series)
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
         assert isinstance(colors, list)
 
         np.testing.assert_array_equal(res.values, expected.values)

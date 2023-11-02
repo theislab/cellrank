@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
 
@@ -13,7 +12,7 @@ def _assert_has_all_keys(adata: AnnData, bwd: bool = False) -> None:
     # fmt: off
     # term states
     key = Key.obs.term_states(bwd)
-    assert is_categorical_dtype(adata.obs[key])
+    assert isinstance(adata.obs[key].dtype, pd.CategoricalDtype)
     assert Key.obs.probs(key) in adata.obs
     assert Key.uns.colors(key) in adata.uns
 

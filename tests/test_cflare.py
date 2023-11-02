@@ -6,7 +6,6 @@ from _helpers import assert_estimators_equal
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
 
 from anndata import AnnData
 
@@ -66,7 +65,7 @@ class TestCFLARE:
         mc.compute_eigendecomposition(k=5)
         mc.predict(use=2)
 
-        assert is_categorical_dtype(mc.terminal_states)
+        assert isinstance(mc.terminal_states.dtype, pd.CategoricalDtype)
         assert mc.terminal_states_probabilities is not None
 
         key = Key.obs.term_states(mc.backward)

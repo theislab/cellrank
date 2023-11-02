@@ -5,8 +5,9 @@ from typing import Any, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 import scvelo as scv
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import infer_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
@@ -294,9 +295,9 @@ class RandomWalk:
                 raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
 
             vals = self._adata.obs[key]
-            if is_categorical_dtype(vals):
+            if isinstance(vals.dtype, pd.CategoricalDtype):
                 ixs = np.where(np.isin(vals, ixs[key]))[0]
-            elif is_numeric_dtype(vals):
+            elif np.issubdtype(vals.dtype, np.number):
                 if len(ixs[key]) != 2:
                     raise ValueError(f"Expected range to be of length `2`, found `{len(ixs[key])}`")
                 minn, maxx = sorted(ixs[key])

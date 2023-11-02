@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 from sklearn.cluster import KMeans
 from statsmodels.stats.multitest import multipletests
 
@@ -183,7 +183,7 @@ def _process_series(
     process_colors = cols is not None
 
     # assert dtype of the series
-    if not is_categorical_dtype(series):
+    if not isinstance(series.dtype, pd.CategoricalDtype):
         raise TypeError(f"Series must be `categorical`, found `{infer_dtype(series)}`.")
 
     # if keys is None, just return
@@ -530,7 +530,7 @@ def _correlation_test_helper(
 
 def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: int) -> pd.Series:
     """Filter out some cells that look like transient states based on their neighbors."""
-    if not is_categorical_dtype(rc_labels):
+    if not isinstance(rc_labels.dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected `categories` be `categorical`, found `{infer_dtype(rc_labels)}`.")
 
     # retrieve knn graph
@@ -947,10 +947,10 @@ def _merge_categorical_series(
 
         return cols
 
-    if not is_categorical_dtype(old):
+    if not isinstance(old.dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected old approx. recurrent classes to be categorical, found " f"`{infer_dtype(old)}`.")
 
-    if not is_categorical_dtype(new):
+    if not isinstance(new.dtype, pd.CategoricalDtype):
         raise TypeError(f"Expected new approx. recurrent classes to be categorical, found " f"`{infer_dtype(new)}`.")
 
     if (old.index != new.index).any():

@@ -21,7 +21,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -859,7 +859,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         states = adata.obs.get(nkey, None)
         if states is None:
             logg.warning(f"Unable to find states in `adata.obs[{nkey!r}]`. Using default names")
-        elif not is_categorical_dtype(states):
+        elif not isinstance(states.dtype, pd.CategoricalDtype):
             logg.warning(
                 f"Expected `adata.obs[{key!r}]` to be `categorical`, "
                 f"found `{infer_dtype(adata.obs[nkey])}`. Using default names"

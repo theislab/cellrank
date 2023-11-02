@@ -20,7 +20,7 @@ from tqdm.auto import tqdm
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 import scanpy as sc
 from anndata import AnnData
@@ -105,7 +105,7 @@ class RealTimeKernel(UnidirectionalKernel):
     ) -> None:
         super()._read_from_adata(**kwargs)
         self._time = self.adata.obs[time_key].copy()
-        if not is_categorical_dtype(self._time):
+        if not isinstance(self._time.dtype, pd.CategoricalDtype):
             raise TypeError(f"Expected `adata.obs[{time_key!r}]` to be categorical, found `{infer_dtype(self._time)}`.")
         self._time = self._time.cat.remove_unused_categories()
         cats = self._time.cat.categories
@@ -513,7 +513,7 @@ class RealTimeKernel(UnidirectionalKernel):
             if threshold == "auto_local":
                 thresh = min(tmat[i].max() for i in range(tmat.shape[0]))
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
-            elif isinstance(threshold, (int, float)):
+            elif isinstance(threshold, (int, float, np.number)):
                 thresh = np.percentile(tmat.data, threshold)
                 logg.debug(f"Using `threshold={thresh}` at `{key}`")
 

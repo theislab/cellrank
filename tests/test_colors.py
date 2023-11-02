@@ -2,7 +2,6 @@ import pytest
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_categorical_dtype
 
 from matplotlib.colors import is_color_like
 
@@ -87,7 +86,7 @@ class TestMappingColors:
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
 
     def test_mapping_colors_simple_colors(self):
         query = pd.Series(["foo", "bar", "baz"], dtype="category")
@@ -97,7 +96,7 @@ class TestMappingColors:
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
 
         assert isinstance(c, list)
         assert c == ["#ff0000", "#008000", "#0000ff"]
@@ -110,7 +109,7 @@ class TestMappingColors:
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
 
         assert isinstance(c, list)
         assert c == ["#ff0000", "#008000", "#0000ff"]
@@ -123,7 +122,7 @@ class TestMappingColors:
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
 
         assert isinstance(c, list)
         assert c == ["#ff0000", "#008000", "#0000ff"]
@@ -136,7 +135,7 @@ class TestMappingColors:
 
         assert isinstance(res, pd.Series)
         assert len(res) == 3
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
 
         assert isinstance(c, list)
         assert c == ["#ff0000", "#ff0000", "#ff0000"]
@@ -168,7 +167,7 @@ class TestMappingColors:
         r = _map_names_and_colors(reference, query)
 
         assert isinstance(r, pd.Series)
-        assert is_categorical_dtype(r)
+        assert isinstance(r.dtype, pd.CategoricalDtype)
 
     def test_mapping_colors_empty_with_color(self):
         query = pd.Series([], dtype="category")
@@ -177,7 +176,7 @@ class TestMappingColors:
         r, c = _map_names_and_colors(reference, query, colors_reference=[])
 
         assert isinstance(r, pd.Series)
-        assert is_categorical_dtype(r)
+        assert isinstance(r.dtype, pd.CategoricalDtype)
         assert isinstance(c, list)
         assert len(c) == 0
 
@@ -196,7 +195,7 @@ class TestMappingColors:
         r = _map_names_and_colors(reference, query, en_cutoff=0)
 
         assert isinstance(r, pd.Series)
-        assert is_categorical_dtype(r)
+        assert isinstance(r.dtype, pd.CategoricalDtype)
         assert list(r.index) == ["bar"]
         assert list(r.values) == ["bar"]
 
@@ -229,7 +228,7 @@ class TestMappingColors:
         res = _map_names_and_colors(x, y)
 
         assert isinstance(res, pd.Series)
-        assert is_categorical_dtype(res)
+        assert isinstance(res.dtype, pd.CategoricalDtype)
         np.testing.assert_array_equal(res.values, expected.values)
         np.testing.assert_array_equal(res.index.values, expected_index.values)
         np.testing.assert_array_equal(res.cat.categories.values, res.values)

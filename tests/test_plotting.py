@@ -14,7 +14,6 @@ from _helpers import (
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import is_categorical_dtype
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -678,7 +677,7 @@ class TestClusterTrends:
 
         assert isinstance(adata_cflare.uns["lineage_0_trend"], AnnData)
         assert adata_cflare.uns["lineage_0_trend"].shape == (10, 200)
-        assert is_categorical_dtype(adata_cflare.uns["lineage_0_trend"].obs["clusters"])
+        assert isinstance(adata_cflare.uns["lineage_0_trend"].obs["clusters"].dtype, pd.CategoricalDtype)
 
     def test_cluster_lineage_key(self, adata_cflare: AnnData):
         model = create_model(adata_cflare)
@@ -694,7 +693,7 @@ class TestClusterTrends:
 
         assert isinstance(adata_cflare.uns["foobar"], AnnData)
         assert adata_cflare.uns["foobar"].shape == (10, 200)
-        assert is_categorical_dtype(adata_cflare.uns["foobar"].obs["clusters"])
+        assert isinstance(adata_cflare.uns["foobar"].obs["clusters"].dtype, pd.CategoricalDtype)
 
     @compare()
     def test_cluster_lineage_covariates(self, adata: AnnData, fpath: str):

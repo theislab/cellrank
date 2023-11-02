@@ -7,7 +7,7 @@ from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype, is_categorical_dtype
+from pandas.api.types import infer_dtype
 
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
@@ -876,7 +876,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             raise RuntimeError("Compute macrostates first as `.compute_macrostates()`.")
         if key not in self.adata.obs:
             raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
-        if not is_categorical_dtype(self.adata.obs[key]):
+        if not isinstance(self.adata.obs[key].dtype, pd.CategoricalDtype):
             raise TypeError(
                 f"Expected `adata.obs[{key!r}]` to be `categorical`, " f"found `{infer_dtype(self.adata.obs[key])}`."
             )
