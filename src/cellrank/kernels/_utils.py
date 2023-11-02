@@ -130,10 +130,10 @@ def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
         raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
 
     exp_time = adata.obs[key].copy()
-    if not np.issubdtype(exp_time.dtype, np.number):
+    if not np.issubdtype(np.asarray(exp_time).dtype, np.number):
         try:
             exp_time = np.asarray(exp_time).astype(float)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001/Cannot interpret
             raise TypeError(
                 f"Unable to convert `adata.obs[{key!r}]` of type `{infer_dtype(adata.obs[key])}` to `float`."
             ) from e
