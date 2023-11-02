@@ -425,7 +425,7 @@ class TestCFLARE:
         c.compute_fate_probabilities()
         fate_probabilities_query = c.fate_probabilities[state_annotation.isna()]
 
-        np.allclose(fate_probabilities_query, fate_probabilities_reference)
+        np.allclose(fate_probabilities_query.X, fate_probabilities_reference)
 
     def test_manual_approx_rc_set(self, adata_large):
         adata = adata_large

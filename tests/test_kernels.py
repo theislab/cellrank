@@ -658,7 +658,7 @@ class TestKernelAddition:
         k = (vk + ck + vk1).compute_transition_matrix()
         expected = (
             np.eye(adata.n_obs) * (1 / 3 + 1 / 6 + 1 / 6)
-            + np.eye(adata._n_obs, k=1) * 1 / 6
+            + np.eye(adata.n_obs, k=1) * 1 / 6
             + np.eye(adata.n_obs, k=-1) * 1 / 6
         )
         expected[0, 0] = expected[-1, -1] = 2 / 3 + 1 / 3 * 0.5

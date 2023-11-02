@@ -580,8 +580,8 @@ class RealTimeKernel(UnidirectionalKernel):
         """Convert the coupling to :class:`~anndata.AnnData`."""
         if not isinstance(coupling, AnnData):
             coupling = AnnData(X=coupling, dtype=coupling.dtype)
-            coupling.obs_names = self.adata[self._time == src].obs_names
-            coupling.var_names = self.adata[self._time == tgt].obs_names
+            coupling.obs_names = np.asarray(self.adata.obs_names)[self.time == src]
+            coupling.var_names = np.asarray(self.adata.obs_names)[self.time == tgt]
 
         if sp.issparse(coupling.X) and not sp.isspmatrix_csr(coupling.X):
             coupling.X = coupling.X.tocsr()

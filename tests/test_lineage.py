@@ -13,7 +13,7 @@ from matplotlib import colors
 
 from anndata import AnnData, read_h5ad, read_zarr
 
-from cellrank._utils import Lineage
+from cellrank import Lineage
 from cellrank._utils._colors import _compute_mean_color, _create_categorical_colors
 from cellrank._utils._lineage import _HT_CELLS, LineageView, PrimingDegree
 
