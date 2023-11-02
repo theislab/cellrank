@@ -448,7 +448,7 @@ class RealTimeKernel(UnidirectionalKernel):
         for ix in range(len(blocks)):
             index.extend(obs_names[ix])
 
-        tmp = AnnData(sp.bmat(blocks, format="csr"), dtype="float64")
+        tmp = AnnData(sp.bmat(blocks, format="csr"))
         tmp.obs_names = index
         tmp.var_names = index
         tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
@@ -520,7 +520,7 @@ class RealTimeKernel(UnidirectionalKernel):
             tmat = sp.csr_matrix(tmat, dtype=tmat.dtype)
             tmat.data[tmat.data < thresh] = 0.0
             tmat.eliminate_zeros()
-            couplings[key] = AnnData(tmat, obs=adata.obs, var=adata.var, dtype=tmat.dtype)
+            couplings[key] = AnnData(tmat, obs=adata.obs, var=adata.var)
 
         return couplings if copy else None
 
@@ -579,7 +579,7 @@ class RealTimeKernel(UnidirectionalKernel):
     def _coupling_to_adata(self, src: Any, tgt: Any, coupling: Coupling_t) -> AnnData:
         """Convert the coupling to :class:`~anndata.AnnData`."""
         if not isinstance(coupling, AnnData):
-            coupling = AnnData(X=coupling, dtype=coupling.dtype)
+            coupling = AnnData(X=coupling)
             coupling.obs_names = np.asarray(self.adata.obs_names)[self.time == src]
             coupling.var_names = np.asarray(self.adata.obs_names)[self.time == tgt]
 

@@ -328,7 +328,7 @@ def aggregate_fate_probabilities(
         kwargs["rotation"] = xrot
 
         data = np.ravel(probs.X.T)[..., None]
-        tmp = AnnData(sp.csr_matrix(data.shape, dtype=data.dtype), dtype=data.dtype)
+        tmp = AnnData(sp.csr_matrix(data.shape, dtype=data.dtype))
         tmp.obs["fate probability"] = data
         tmp.obs[term_states] = (
             pd.Series(np.concatenate([[f"{direction.lower()} {n}"] * adata.n_obs for n in probs.names]))
