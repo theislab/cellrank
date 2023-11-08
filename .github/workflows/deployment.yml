@@ -1,10 +1,14 @@
 name: Deployment
+on:
+  push:
+    tags: [v*]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
+    environment: deployment
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.10
