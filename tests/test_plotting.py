@@ -419,7 +419,7 @@ class TestAggregateAbsorptionProbabilities:
             adata,
             cluster_key="clusters",
             mode="heatmap",
-            fmt=".10f",
+            fmt=".1f",
             dpi=DPI,
             save=fpath,
         )
@@ -489,7 +489,7 @@ class TestAggregateAbsorptionProbabilities:
             adata,
             cluster_key="clusters",
             mode="clustermap",
-            fmt=".10f",
+            fmt=".1f",
             dpi=DPI,
             save=fpath,
         )

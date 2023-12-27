@@ -48,7 +48,7 @@ dependencies = [
     "anndata>=0.9",
     "docrep>=0.3.0",
     "joblib>=0.13.1",
-    "matplotlib>=3.5.0,<3.7.2",
+    "matplotlib>=3.5.0",
     "networkx>=2.2",
     "numba>=0.51.0,!=0.57.0",
     "numpy>=1.22.0",
@@ -241,8 +241,6 @@ envlist = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
-# TODO(michalk8): remove after new scVelo version is up
-deps = git+https://github.com/theislab/scvelo
 conda_deps =
     py: r-mgcv
     py: rpy2
