@@ -1,9 +1,10 @@
 ---
 name: Bug Report
 about: Create a bug report to help us improve CellRank
-title: ""
+title: ''
 labels: bug
-assignees: "michalk8"
+assignees: michalk8
+
 ---
 
 <!-- Please give a clear and concise description of the bug: -->
