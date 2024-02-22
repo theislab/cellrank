@@ -577,6 +577,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         return tsi_df
 
+    def get_tsi_score(self) -> float:
+        """Compute TSI score."""
+        if not hasattr(self, "tsi"):
+            raise RuntimeError("Compute TSI with `get_tsi` first.")
+
+        optimal_score = self.tsi["Optimal identification"].sum()
+
+        return self.tsi["Identified terminal states"].sum() / optimal_score
+
     @d.dedent
     def fit(
         self,
