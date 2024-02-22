@@ -2,7 +2,7 @@ import datetime
 import enum
 import pathlib
 import types
-from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -531,6 +531,51 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             **kwargs,
         )
         return self
+
+    def get_tsi(self, n_macrostates: int, terminal_states: List[str], cluster_key: str) -> pd.DataFrame:
+        """Compute terminal state identificiation (TSI).
+
+        Parameters
+        ----------
+        n_macrostates
+            Maximum number of macrostates to consider.
+        terminal_states
+            List of terminal states.
+        cluster_key
+            Key in :attr:`~anndata.AnnData.obs` defining cluster labels including terminal states.
+
+        Returns
+        -------
+        Returns TSI as a Pandas DataFrame and adds the class attribute :attr:`tsi`.
+        """
+        macrostates = {}
+        for n_states in range(1, n_macrostates):
+            self.compute_macrostates(n_states=n_states, cluster_key=cluster_key)
+            macrostates[n_states] = self._macrostates.assignment.cat.categories
+
+        max_terminal_states = len(terminal_states)
+
+        tsi_df = {
+            "Number of macrostates": [],
+            "Identified terminal states": [],
+            "Optimal identification": [],
+        }
+        for n_states, states in macrostates.items():
+            n_terminal_states = (
+                states.str.replace(r"(_).*", "", regex=True).drop_duplicates().isin(terminal_states).sum()
+            )
+            tsi_df["Number of macrostates"].append(n_states)
+            tsi_df["Identified terminal states"].append(n_terminal_states)
+
+            if n_states <= max_terminal_states:
+                tsi_df["Optimal identification"].append(n_states)
+            else:
+                tsi_df["Optimal identification"].append(max_terminal_states)
+
+        tsi_df = pd.DataFrame(tsi_df)
+        self.tsi = tsi_df
+
+        return tsi_df
 
     @d.dedent
     def fit(
