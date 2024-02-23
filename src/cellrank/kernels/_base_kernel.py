@@ -463,6 +463,30 @@ class KernelExpression(IOMixin, abc.ABC):
             self._params = expected_params
         # fmt: on
 
+    def _get_mask(self, series, subset):
+        if isinstance(subset, str):
+            subset = [subset]
+        return series.isin(subset)
+
+    def get_boundary(self, source: str, target: str, cluster_key: str, graph: str = "distances"):
+        """Identify source observations at boundary to target cluster."""
+        source_obs_mask = self._get_mask(series=self.adata.obs[cluster_key], subset=source)
+        target_obs_mask = self._get_mask(series=self.adata.obs[cluster_key], subset=target)
+        obs_ids = np.arange(0, self.adata.n_obs)
+
+        source_ids = obs_ids[source_obs_mask]
+        adj_mat_subset = self.adata.obsp[graph][source_ids, :]
+
+        boundary_ids = []
+        for row_id, row in enumerate(adj_mat_subset):
+            _obs_mask = row.A.squeeze().astype(bool)
+            _obs_mask = _obs_mask & target_obs_mask
+
+            if _obs_mask.any():
+                boundary_ids.append(source_ids[row_id])
+
+        return boundary_ids
+
 
 @d.dedent
 class Kernel(KernelExpression, abc.ABC):
