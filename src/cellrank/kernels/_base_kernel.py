@@ -4,6 +4,7 @@ import pathlib
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+import pandas as pd
 import scipy.sparse as sp
 
 import matplotlib.pyplot as plt
@@ -486,6 +487,28 @@ class KernelExpression(IOMixin, abc.ABC):
                 boundary_ids.append(source_ids[row_id])
 
         return boundary_ids
+
+    def get_empirical_velocity_field(self, boundary_ids, target_obs_mask, rep: str, graph: str = "distances"):
+        """Compute an emprical estimate of velocity field between two clusters."""
+        obs_ids = np.arange(0, self.adata.n_obs)
+        empirical_velo = pd.DataFrame(
+            index=obs_ids[boundary_ids], columns=[f"dim_{dim}" for dim in range(self.adata.obsm[rep].shape[1])]
+        )
+
+        adj_mat = self.adata.obsp[graph][boundary_ids, :]
+        for row_id, row in enumerate(adj_mat):
+            source_id = boundary_ids[row_id]
+            obs_mask = row.astype(bool).A.squeeze().copy() & target_obs_mask
+            neighbors = obs_ids[obs_mask]
+            weights = row.A.squeeze()[obs_mask]
+
+            empirical_velo.loc[source_id, :] = np.sum(
+                weights.reshape(-1, 1) * (self.adata[neighbors, :].obsm[rep] - self.adata[source_id, :].obsm[rep]),
+                axis=0,
+            )
+        empirical_velo = empirical_velo.dropna(axis=0).astype(float)
+
+        return empirical_velo.values
 
 
 @d.dedent
