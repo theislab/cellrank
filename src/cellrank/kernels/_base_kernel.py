@@ -510,6 +510,11 @@ class KernelExpression(IOMixin, abc.ABC):
 
         return empirical_velo.values
 
+    def get_vector_field_estimate(self, rep: str):
+        """Compute estimate of vector field under one step of the transition matrix."""
+        extrapolated_gex = self.transition_matrix @ self.adata.obsm[rep]
+        return extrapolated_gex - self.adata.obsm[rep]
+
 
 @d.dedent
 class Kernel(KernelExpression, abc.ABC):
