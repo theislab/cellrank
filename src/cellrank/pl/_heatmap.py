@@ -89,6 +89,7 @@ def heatmap(
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     gene_order: Optional[Sequence[str]] = None,
+    title: Optional[str] = None,
     **kwargs: Any,
 ) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
     """Plot a heatmap of smoothed gene expression along specified lineages.
@@ -340,6 +341,8 @@ def heatmap(
             labelbottom=True,
         )
         ax.set_xlabel(xlabel)
+        if title is not None:
+            ax.set_title(title)
 
         return fig, None
 
@@ -443,6 +446,8 @@ def heatmap(
             g.ax_heatmap.set_xlabel(xlabel)
             g.ax_heatmap.set_xticks(np.linspace(0, len(df.columns), _N_XTICKS))
             g.ax_heatmap.set_xticklabels([round(n, 3) for n in np.linspace(x_min, x_max, _N_XTICKS)])
+            if title is not None:
+                g.ax_heatmap.set_title(title)
             # fmt: on
             if show_clust:
                 # robustly show dendrogram, because gene names can be long
