@@ -362,6 +362,7 @@ def heatmap(
 
             if not cluster_genes:
                 if gene_order is not None:
+                    gene_order = [gene for gene in gene_order if gene in df.index]
                     df = df.loc[gene_order]
                 else:
                     max_sort = np.argsort(np.argmax(df.apply(_min_max_scale, axis=1).values, axis=1))
