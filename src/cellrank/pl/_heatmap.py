@@ -77,6 +77,7 @@ def heatmap(
     lineage_height: float = 0.33,
     fontsize: Optional[float] = None,
     xlabel: Optional[str] = None,
+    title: Optional[str] = None,
     cmap: colors.ListedColormap = cm.viridis,
     dendrogram: bool = True,
     return_genes: bool = False,
@@ -89,7 +90,6 @@ def heatmap(
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     gene_order: Optional[Sequence[str]] = None,
-    title: Optional[str] = None,
     **kwargs: Any,
 ) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
     """Plot a heatmap of smoothed gene expression along specified lineages.
@@ -148,6 +148,8 @@ def heatmap(
         Size of the title's font.
     xlabel
         Label on the x-axis. If :obj:`None`, it is determined based on ``time_key``.
+    title
+        Title of the figure.
     cmap
         Colormap to use when visualizing the smoothed expression.
     dendrogram
