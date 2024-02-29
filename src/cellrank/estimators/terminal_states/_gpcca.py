@@ -2,7 +2,7 @@ import datetime
 import enum
 import pathlib
 import types
-from pathlib import PosixPath
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -591,7 +591,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def plot_tsi(
         self,
         tsi_df: pd.DataFrame,
-        fname: Optional[PosixPath] = None,
+        fname: Optional[Path] = None,
         x_offset: Optional[Tuple[float, float]] = None,
         y_offset: Optional[Tuple[float, float]] = None,
         **kwargs: Any,
