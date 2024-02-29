@@ -464,22 +464,36 @@ class KernelExpression(IOMixin, abc.ABC):
             self._params = expected_params
         # fmt: on
 
-    def get_boundary(self, source: str, target: str, cluster_key: str, graph: str = "distances"):
-        """Identify source observations at boundary to target cluster."""
+    def _get_boundary(self, source: str, target: str, cluster_key: str, graph_key: str = "distances") -> List[int]:
+        """Identify source observations at boundary to target cluster.
+
+        Parameters
+        ----------
+        source
+            Name of source cluster.
+        target
+            Name of target cluster.
+        cluster_key
+            Key in :attr:`~anndata.AnnData.obs` to obtain cluster annotations.
+        graph_key
+            Name of graph representation to use from :attr:`~anndata.AnnData.obsp`.
+
+        Returns
+        -------
+        List of observation IDs at boundary to target cluster.
+        """
         source_obs_mask = self.adata.obs[cluster_key].isin([source] if isinstance(source, str) else source)
         target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
-        obs_ids = np.arange(0, self.adata.n_obs)
 
-        source_ids = obs_ids[source_obs_mask]
-        adj_mat_subset = self.adata.obsp[graph][source_ids, :]
-
+        source_ids = np.where(source_obs_mask)[0]
         boundary_ids = []
-        for row_id, row in enumerate(adj_mat_subset):
-            _obs_mask = row.A.squeeze().astype(bool)
-            _obs_mask = _obs_mask & target_obs_mask
 
-            if _obs_mask.any():
-                boundary_ids.append(source_ids[row_id])
+        graph = self.adata.obsp[graph_key]
+        for source_id in source_ids:
+            obs_mask = graph[source_id, :].toarray().squeeze().astype(bool)
+
+            if (obs_mask & target_obs_mask).any():
+                boundary_ids.append(source_id)
 
         return boundary_ids
 
@@ -530,7 +544,7 @@ class KernelExpression(IOMixin, abc.ABC):
             return pearson_corr
 
         target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
-        boundary_ids = self.get_boundary(source=source, target=target, cluster_key=cluster_key, graph=graph)
+        boundary_ids = self._get_boundary(source=source, target=target, cluster_key=cluster_key, graph_key=graph)
         empirical_velo = self.get_empirical_velocity_field(
             boundary_ids=boundary_ids, target_obs_mask=target_obs_mask, rep=rep, graph=graph
         )
