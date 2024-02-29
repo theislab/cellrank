@@ -4,7 +4,6 @@ import pathlib
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
-import pandas as pd
 import scipy.sparse as sp
 
 import matplotlib.pyplot as plt
@@ -497,27 +496,44 @@ class KernelExpression(IOMixin, abc.ABC):
 
         return boundary_ids
 
-    def get_empirical_velocity_field(self, boundary_ids, target_obs_mask, rep: str, graph: str = "distances"):
-        """Compute an emprical estimate of velocity field between two clusters."""
+    def _get_empirical_velocity_field(
+        self, boundary_ids: List[int], target_obs_mask, rep: str, graph_key: str = "distances"
+    ) -> np.ndarray:
+        """Compute an emprical estimate of velocity field between two clusters.
+
+        Parameters
+        ----------
+        boundary_ids
+            List of observation IDs at boundary to target cluster.
+        target_obs_mask
+            Boolean indicator identifying relevant observations from target.
+        graph_key
+            Name of graph representation to use from :attr:`~anndata.AnnData.obsp`.
+
+        Returns
+        -------
+        Empirical velocity estimate.
+        """
         obs_ids = np.arange(0, self.adata.n_obs)
-        empirical_velo = pd.DataFrame(
-            index=obs_ids[boundary_ids], columns=[f"dim_{dim}" for dim in range(self.adata.obsm[rep].shape[1])]
-        )
+        graph = self.adata.obsp[graph_key]
+        features = self.adata.obsm[rep]
+        empirical_velo = []
 
-        adj_mat = self.adata.obsp[graph][boundary_ids, :]
-        for row_id, row in enumerate(adj_mat):
-            source_id = boundary_ids[row_id]
-            obs_mask = row.astype(bool).A.squeeze().copy() & target_obs_mask
+        for boundary_id in boundary_ids:
+            row = graph[boundary_id, :].toarray().squeeze()
+            obs_mask = row.astype(bool) & target_obs_mask
             neighbors = obs_ids[obs_mask]
-            weights = row.A.squeeze()[obs_mask]
+            weights = row[obs_mask]
 
-            empirical_velo.loc[source_id, :] = np.sum(
-                weights.reshape(-1, 1) * (self.adata[neighbors, :].obsm[rep] - self.adata[source_id, :].obsm[rep]),
-                axis=0,
+            empirical_velo.append(
+                np.sum(weights.reshape(-1, 1) * (features[neighbors, :] - features[boundary_id, :]), axis=0)
             )
-        empirical_velo = empirical_velo.dropna(axis=0).astype(float)
 
-        return empirical_velo.values
+        empirical_velo = np.array(empirical_velo)
+        obs_mask = np.isnan(empirical_velo).any(axis=1)
+        empirical_velo = empirical_velo[~obs_mask, :]
+
+        return empirical_velo
 
     def get_vector_field_estimate(self, rep: str):
         """Compute estimate of vector field under one step of the transition matrix."""
@@ -545,8 +561,8 @@ class KernelExpression(IOMixin, abc.ABC):
 
         target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
         boundary_ids = self._get_boundary(source=source, target=target, cluster_key=cluster_key, graph_key=graph)
-        empirical_velo = self.get_empirical_velocity_field(
-            boundary_ids=boundary_ids, target_obs_mask=target_obs_mask, rep=rep, graph=graph
+        empirical_velo = self._get_empirical_velocity_field(
+            boundary_ids=boundary_ids, target_obs_mask=target_obs_mask, rep=rep, graph_key=graph
         )
         estimated_velo = self.get_vector_field_estimate(rep=rep)[boundary_ids, :]
 
