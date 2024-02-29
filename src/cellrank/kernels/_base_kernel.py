@@ -535,8 +535,18 @@ class KernelExpression(IOMixin, abc.ABC):
 
         return empirical_velo
 
-    def get_vector_field_estimate(self, rep: str):
-        """Compute estimate of vector field under one step of the transition matrix."""
+    def _get_vector_field_estimate(self, rep: str) -> np.ndarray:
+        """Compute estimate of vector field under one step of the transition matrix.
+
+        Parameters
+        ----------
+        rep
+            Key in :attr:`~anndata.AnnData.obsm` to use as data representation.
+
+        Returns
+        -------
+        Vector field estimate based on kernel dynamics.
+        """
         extrapolated_gex = self.transition_matrix @ self.adata.obsm[rep]
         return extrapolated_gex - self.adata.obsm[rep]
 
@@ -564,7 +574,7 @@ class KernelExpression(IOMixin, abc.ABC):
         empirical_velo = self._get_empirical_velocity_field(
             boundary_ids=boundary_ids, target_obs_mask=target_obs_mask, rep=rep, graph_key=graph
         )
-        estimated_velo = self.get_vector_field_estimate(rep=rep)[boundary_ids, :]
+        estimated_velo = self._get_vector_field_estimate(rep=rep)[boundary_ids, :]
 
         cbc = get_pearson_corr(x=estimated_velo, y=empirical_velo)
         if hasattr(self, "cbc"):
