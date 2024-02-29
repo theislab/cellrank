@@ -464,15 +464,10 @@ class KernelExpression(IOMixin, abc.ABC):
             self._params = expected_params
         # fmt: on
 
-    def _get_mask(self, series, subset):
-        if isinstance(subset, str):
-            subset = [subset]
-        return series.isin(subset)
-
     def get_boundary(self, source: str, target: str, cluster_key: str, graph: str = "distances"):
         """Identify source observations at boundary to target cluster."""
-        source_obs_mask = self._get_mask(series=self.adata.obs[cluster_key], subset=source)
-        target_obs_mask = self._get_mask(series=self.adata.obs[cluster_key], subset=target)
+        source_obs_mask = self.adata.obs[cluster_key].isin([source] if isinstance(source, str) else source)
+        target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
         obs_ids = np.arange(0, self.adata.n_obs)
 
         source_ids = obs_ids[source_obs_mask]
@@ -534,7 +529,7 @@ class KernelExpression(IOMixin, abc.ABC):
                 )
             return pearson_corr
 
-        target_obs_mask = self._get_mask(series=self.adata.obs[cluster_key], subset=target)
+        target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
         boundary_ids = self.get_boundary(source=source, target=target, cluster_key=cluster_key, graph=graph)
         empirical_velo = self.get_empirical_velocity_field(
             boundary_ids=boundary_ids, target_obs_mask=target_obs_mask, rep=rep, graph=graph
@@ -542,7 +537,7 @@ class KernelExpression(IOMixin, abc.ABC):
         estimated_velo = self.get_vector_field_estimate(rep=rep)[boundary_ids, :]
 
         cbc = get_pearson_corr(x=estimated_velo, y=empirical_velo)
-        if hasattr(self, cbc):
+        if hasattr(self, "cbc"):
             self.cbc[(source, target)] = cbc
         return cbc
 
