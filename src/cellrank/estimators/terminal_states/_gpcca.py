@@ -555,7 +555,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cluster_key
             Key in :attr:`~anndata.AnnData.obs` defining cluster labels including terminal states.
         kwargs
-            Keyword arguments passed to the class' `compute_macrostates` function.
+            Keyword arguments passed to :meth:`compute_macrostates` function.
 
         Returns
         -------
