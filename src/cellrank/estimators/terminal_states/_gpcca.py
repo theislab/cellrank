@@ -553,9 +553,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Returns TSI as a Pandas DataFrame and adds the class attribute :attr:`tsi`. The DataFrame contains the columns
 
-        - "Number of macrostates": Number of macrostates computed
-        - "Identified terminal states": Number of terminal states identified
-        - "Optimal identification": Number of terminal states identified when using an optimal identification scheme
+        - "number_of_macrostates": Number of macrostates computed
+        - "identified_terminal_states": Number of terminal states identified
+        - "optimal_identification": Number of terminal states identified when using an optimal identification scheme
         """
         macrostates = {}
         for n_states in range(n_macrostates, 0, -1):
@@ -569,10 +569,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             n_terminal_states = (
                 states.str.replace(r"(_).*", "", regex=True).drop_duplicates().isin(terminal_states).sum()
             )
-            tsi_df["Number of macrostates"].append(n_states)
-            tsi_df["Identified terminal states"].append(n_terminal_states)
+            tsi_df["number_of_macrostates"].append(n_states)
+            tsi_df["identified_terminal_states"].append(n_terminal_states)
 
-            tsi_df["Optimal identification"].append(min(n_states, max_terminal_states))
+            tsi_df["optimal_identification"].append(min(n_states, max_terminal_states))
 
         tsi_df = pd.DataFrame(tsi_df)
         self.tsi = tsi_df
@@ -584,9 +584,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if not hasattr(self, "tsi"):
             raise RuntimeError("Compute TSI with `get_tsi` first.")
 
-        optimal_score = self.tsi["Optimal identification"].sum()
+        optimal_score = self.tsi["optimal_identification"].sum()
 
-        return self.tsi["Identified terminal states"].sum() / optimal_score
+        return self.tsi["identified_terminal_states"].sum() / optimal_score
 
     @d.dedent
     def plot_tsi(
@@ -617,14 +617,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Plot TSI of the kernel and an optimal identification strategy.
         """
-        optimal_identification = tsi_df[["Number of macrostates", "Optimal identification"]]
+        optimal_identification = tsi_df[["number_of_macrostates", "optimal_identification"]]
         optimal_identification = optimal_identification.rename(
-            columns={"Optimal identification": "Identified terminal states"}
+            columns={"optimal_identification": "identified_terminal_states"}
         )
         optimal_identification["Method"] = "Optimal identification"
         optimal_identification["line_style"] = "--"
 
-        df = tsi_df[["Number of macrostates", "Identified terminal states"]]
+        df = tsi_df[["number_of_macrostates", "identified_terminal_states"]]
         df["Method"] = self.kernel.__class__.__name__
         df["line_style"] = "-"
 
@@ -633,8 +633,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi, tight_layout=True)
         sns.lineplot(
             data=df,
-            x="Number of macrostates",
-            y="Identified terminal states",
+            x="number_of_macrostates",
+            y="identified_terminal_states",
             hue="Method",
             style="line_style",
             drawstyle="steps-post",
@@ -642,18 +642,23 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             **kwargs,
         )
 
-        ax.set_xticks(df["Number of macrostates"].unique().astype(int))
+        ax.set_xticks(df["number_of_macrostates"].unique().astype(int))
         # Plot is generated from large to small values on the x-axis
         for label_id, label in enumerate(ax.xaxis.get_ticklabels()[::-1]):
             if ((label_id + 1) % 5 != 0) and label_id != 0:
                 label.set_visible(False)
-        ax.set_yticks(df["Identified terminal states"].unique())
+        ax.set_yticks(df["identified_terminal_states"].unique())
 
-        x_min = df["Number of macrostates"].min() - x_offset[0]
-        x_max = df["Number of macrostates"].max() + x_offset[1]
-        y_min = df["Identified terminal states"].min() - y_offset[0]
-        y_max = df["Identified terminal states"].max() + y_offset[1]
-        ax.set(xlim=[x_min, x_max], ylim=[y_min, y_max])
+        x_min = df["number_of_macrostates"].min() - x_offset[0]
+        x_max = df["number_of_macrostates"].max() + x_offset[1]
+        y_min = df["identified_terminal_states"].min() - y_offset[0]
+        y_max = df["identified_terminal_states"].max() + y_offset[1]
+        ax.set(
+            xlim=[x_min, x_max],
+            ylim=[y_min, y_max],
+            xlabel="Number of macrostates",
+            ylabel="Identified terminal states",
+        )
 
         ax.get_legend().remove()
 
