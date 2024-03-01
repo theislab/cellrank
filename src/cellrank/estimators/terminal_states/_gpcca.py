@@ -560,7 +560,6 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         Returns
         -------
         Returns TSI score.
-
         """
         tsi_precomputed = (self._tsi is not None) and (self._tsi[:, "number_of_macrostates"].X.max() >= n_macrostates)
         if terminal_states is not None:
