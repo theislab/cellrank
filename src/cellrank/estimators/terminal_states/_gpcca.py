@@ -89,6 +89,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
         self._coarse_tmat: Optional[pd.DataFrame] = None
+        self._tsi: Optional[pd.DataFrame] = None
 
     @property
     @d.get_summary(base="gpcca_macro")
@@ -575,18 +576,18 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             tsi_df["optimal_identification"].append(min(n_states, max_terminal_states))
 
         tsi_df = pd.DataFrame(tsi_df)
-        self.tsi = tsi_df
+        self._tsi = tsi_df
 
         return tsi_df
 
     def get_tsi_score(self) -> float:
         """Compute TSI score."""
-        if not hasattr(self, "tsi"):
+        if not hasattr(self, "_tsi"):
             raise RuntimeError("Compute TSI with `get_tsi` first.")
 
-        optimal_score = self.tsi["optimal_identification"].sum()
+        optimal_score = self._tsi["optimal_identification"].sum()
 
-        return self.tsi["identified_terminal_states"].sum() / optimal_score
+        return self._tsi["identified_terminal_states"].sum() / optimal_score
 
     @d.dedent
     def plot_tsi(
