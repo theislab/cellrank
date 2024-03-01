@@ -621,11 +621,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         optimal_identification = optimal_identification.rename(
             columns={"optimal_identification": "identified_terminal_states"}
         )
-        optimal_identification["Method"] = "Optimal identification"
+        optimal_identification["method"] = "Optimal identification"
         optimal_identification["line_style"] = "--"
 
         df = tsi_df[["number_of_macrostates", "identified_terminal_states"]]
-        df["Method"] = self.kernel.__class__.__name__
+        df["method"] = self.kernel.__class__.__name__
         df["line_style"] = "-"
 
         df = pd.concat([df, optimal_identification])
@@ -635,7 +635,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             data=df,
             x="number_of_macrostates",
             y="identified_terminal_states",
-            hue="Method",
+            hue="method",
             style="line_style",
             drawstyle="steps-post",
             ax=ax,
@@ -662,11 +662,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         ax.get_legend().remove()
 
-        n_methods = len(df["Method"].unique())
+        n_methods = len(df["method"].unique())
         handles, labels = ax.get_legend_handles_labels()
         handles[n_methods].set_linestyle("--")
         handles = handles[: (n_methods + 1)]
         labels = labels[: (n_methods + 1)]
+        labels[0] = "Method"
         fig.legend(handles=handles, labels=labels, loc="lower center", ncol=(n_methods + 1), bbox_to_anchor=(0.5, -0.1))
 
         if save is not None:
