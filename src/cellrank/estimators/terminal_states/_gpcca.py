@@ -611,7 +611,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         dpi: Optional[int] = None,
         save: Optional[Union[str, Path]] = None,
         **kwargs: Any,
-    ) -> Tuple[plt.Figure, Axes]:
+    ) -> Axes:
         """Plot terminal state identificiation (TSI).
 
         Requires computing TSI with :meth:`tsi` first.
@@ -626,14 +626,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             Offset of y-axis.
         %(plotting)s
         kwargs
-            Keyword arguments for :meth:`~seaborn.lineplot`.
+            Keyword arguments for :func:`~seaborn.lineplot`.
 
         Returns
         -------
         Plot TSI of the kernel and an optimal identification strategy.
         """
-        if not hasattr(self, "_tsi"):
-            raise RuntimeError("Compute TSI with `tsi` first.")
+        if self._tsi is None:
+            raise RuntimeError("Compute TSI with `tsi` first as `.tsi()`.")
 
         tsi_df = self._tsi.to_df()
         if n_macrostates is not None:
@@ -695,7 +695,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if save is not None:
             save_fig(fig=fig, path=save)
 
-        return fig, ax
+        return ax
 
     @d.dedent
     def fit(
