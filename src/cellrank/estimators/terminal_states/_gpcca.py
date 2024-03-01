@@ -536,6 +536,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
         return self
 
+    # TODO: Add definition/link to paper.
     def tsi(
         self,
         n_macrostates: int,
