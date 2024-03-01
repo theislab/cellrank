@@ -615,6 +615,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     ) -> Tuple[plt.Figure, Axes]:
         """Plot terminal state identificiation (TSI).
 
+        Requires computing TSI with :meth:`tsi` first.
+
         Parameters
         ----------
         n_macrostates
