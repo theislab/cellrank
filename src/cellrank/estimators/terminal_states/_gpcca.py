@@ -89,7 +89,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self._coarse_init_dist: Optional[pd.Series] = None
         self._coarse_stat_dist: Optional[pd.Series] = None
         self._coarse_tmat: Optional[pd.DataFrame] = None
-        self._tsi: Optional[pd.DataFrame] = None
+        self._tsi: Optional[AnnData] = None
 
     @property
     @d.get_summary(base="gpcca_macro")
@@ -536,8 +536,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         )
         return self
 
-    def get_tsi(self, n_macrostates: int, terminal_states: List[str], cluster_key: str, **kwargs: Any) -> pd.DataFrame:
-        """Compute terminal state identificiation (TSI).
+    def tsi(
+        self,
+        n_macrostates: int,
+        terminal_states: Optional[List[str]] = None,
+        cluster_key: Optional[str] = None,
+        **kwargs: Any,
+    ) -> float:
+        """Compute terminal state identificiation (TSI) score.
 
         Parameters
         ----------
@@ -552,42 +558,48 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Returns
         -------
-        Returns TSI as a Pandas DataFrame and adds the class attribute :attr:`tsi`. The DataFrame contains the columns
+        Returns TSI score.
 
-        - "number_of_macrostates": Number of macrostates computed
-        - "identified_terminal_states": Number of terminal states identified
-        - "optimal_identification": Number of terminal states identified when using an optimal identification scheme
         """
-        macrostates = {}
-        for n_states in range(n_macrostates, 0, -1):
-            self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
-            macrostates[n_states] = self.macrostates.cat.categories
+        tsi_precomputed = (self._tsi is not None) and (self._tsi[:, "number_of_macrostates"].X.max() >= n_macrostates)
+        if terminal_states is not None:
+            tsi_precomputed = tsi_precomputed and (self._tsi.uns["terminal_states"] == set(terminal_states))
+        if cluster_key is not None:
+            tsi_precomputed = tsi_precomputed and (self._tsi.uns["cluster_key"] == cluster_key)
 
-        max_terminal_states = len(terminal_states)
+        if not tsi_precomputed:
+            if terminal_states is None:
+                raise RuntimeError("`terminal_states` needs to be specified to compute TSI.")
+            if cluster_key is None:
+                raise RuntimeError("`cluster_key` needs to be specified to compute TSI.")
 
-        tsi_df = collections.defaultdict(list)
-        for n_states, states in macrostates.items():
-            n_terminal_states = (
-                states.str.replace(r"(_).*", "", regex=True).drop_duplicates().isin(terminal_states).sum()
+            macrostates = {}
+            for n_states in range(n_macrostates, 0, -1):
+                self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
+                macrostates[n_states] = self.macrostates.cat.categories
+
+            max_terminal_states = len(terminal_states)
+
+            tsi_df = collections.defaultdict(list)
+            for n_states, states in macrostates.items():
+                n_terminal_states = (
+                    states.str.replace(r"(_).*", "", regex=True).drop_duplicates().isin(terminal_states).sum()
+                )
+                tsi_df["number_of_macrostates"].append(n_states)
+                tsi_df["identified_terminal_states"].append(n_terminal_states)
+
+                tsi_df["optimal_identification"].append(min(n_states, max_terminal_states))
+
+            tsi_df = AnnData(
+                pd.DataFrame(tsi_df), uns={"terminal_states": set(terminal_states), "cluster_key": cluster_key}
             )
-            tsi_df["number_of_macrostates"].append(n_states)
-            tsi_df["identified_terminal_states"].append(n_terminal_states)
+            self._tsi = tsi_df
 
-            tsi_df["optimal_identification"].append(min(n_states, max_terminal_states))
+        tsi_df = self._tsi.to_df()
+        row_mask = tsi_df["number_of_macrostates"] <= n_macrostates
+        optimal_score = tsi_df.loc[row_mask, "optimal_identification"].sum()
 
-        tsi_df = pd.DataFrame(tsi_df)
-        self._tsi = tsi_df
-
-        return tsi_df
-
-    def get_tsi_score(self) -> float:
-        """Compute TSI score."""
-        if not hasattr(self, "_tsi"):
-            raise RuntimeError("Compute TSI with `get_tsi` first.")
-
-        optimal_score = self._tsi["optimal_identification"].sum()
-
-        return self._tsi["identified_terminal_states"].sum() / optimal_score
+        return tsi_df.loc[row_mask, "identified_terminal_states"].sum() / optimal_score
 
     @d.dedent
     def plot_tsi(
