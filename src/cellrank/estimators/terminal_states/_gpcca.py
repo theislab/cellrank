@@ -604,7 +604,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def plot_tsi(
         self,
-        tsi_df: pd.DataFrame,
+        n_macrostates: Optional[int] = None,
         x_offset: Tuple[float, float] = (0.2, 0.2),
         y_offset: Tuple[float, float] = (0.1, 0.1),
         figsize: Tuple[float, float] = (6, 4),
@@ -616,8 +616,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         Parameters
         ----------
-        tsi_df
-            Pre-computed TSI DataFrame with :meth:`get_tsi_score`.
+        n_macrostates
+            Maximum number of macrostates to consider. Defaults to using all.
         x_offset
             Offset of x-axis.
         y_offset
@@ -630,6 +630,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Plot TSI of the kernel and an optimal identification strategy.
         """
+        if not hasattr(self, "_tsi"):
+            raise RuntimeError("Compute TSI with `tsi` first.")
+
+        tsi_df = self._tsi.to_df()
+        if n_macrostates is not None:
+            tsi_df = tsi_df.loc[tsi_df["number_of_macrostates"] <= n_macrostates, :]
+
         optimal_identification = tsi_df[["number_of_macrostates", "optimal_identification"]]
         optimal_identification = optimal_identification.rename(
             columns={"optimal_identification": "identified_terminal_states"}
