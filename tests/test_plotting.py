@@ -2257,6 +2257,13 @@ class TestGPCCA:
             save=fpath,
         )
 
+    @compare(kind="gpcca")
+    def test_plot_tsi(self, mc: GPCCA, fpath: str):
+        terminal_states = ["Neuroblast", "Astrocyte", "Granule mature"]
+        cluster_key = "clusters"
+        _ = mc.tsi(n_macrostates=3, terminal_states=terminal_states, cluster_key=cluster_key, n_cells=10)
+        mc.plot_tsi(dpi=DPI, save=fpath)
+
 
 class TestLineage:
     @compare(kind="lineage")
