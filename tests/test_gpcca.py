@@ -828,6 +828,24 @@ class TestGPCCA:
 
         mc.plot_lineage_drivers("0", use_raw=False)
 
+    def test_tsi(self, adata_large: AnnData):
+        groundtruth_adata = adata_large.uns["tsi"].copy()
+
+        vk = VelocityKernel(adata_large).compute_transition_matrix()
+        estimator = cr.estimators.GPCCA(vk)
+        estimator.compute_schur(n_components=5)
+
+        terminal_states = ["Neuroblast", "Astrocyte", "Granule mature"]
+        cluster_key = "clusters"
+        tsi_score = estimator.tsi(n_macrostates=3, terminal_states=terminal_states, cluster_key=cluster_key, n_cells=10)
+
+        np.testing.assert_almost_equal(tsi_score, groundtruth_adata.uns["score"])
+        assert isinstance(estimator._tsi.uns["terminal_states"], list)
+        assert len(estimator._tsi.uns["terminal_states"]) == len(groundtruth_adata.uns["terminal_states"])
+        assert (estimator._tsi.uns["terminal_states"] == groundtruth_adata.uns["terminal_states"]).all()
+        assert estimator._tsi.uns["cluster_key"] == groundtruth_adata.uns["cluster_key"]
+        pd.testing.assert_frame_equal(estimator._tsi.to_df(), groundtruth_adata.to_df())
+
     def test_compute_priming_clusters(self, adata_large: AnnData):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
