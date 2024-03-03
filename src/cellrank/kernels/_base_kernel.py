@@ -517,16 +517,16 @@ class KernelExpression(IOMixin, abc.ABC):
         obs_ids = np.arange(0, self.adata.n_obs)
         graph = self.adata.obsp[graph_key]
         features = self.adata.obsm[rep]
-        empirical_velo = []
+        empirical_velo = np.empty(shape=(len(boundary_ids), features.shape[1]))
 
-        for boundary_id in boundary_ids:
+        for idx, boundary_id in enumerate(boundary_ids):
             row = graph[boundary_id, :].toarray().squeeze()
             obs_mask = row.astype(bool) & target_obs_mask
             neighbors = obs_ids[obs_mask]
             weights = row[obs_mask]
 
-            empirical_velo.append(
-                np.sum(weights.reshape(-1, 1) * (features[neighbors, :] - features[boundary_id, :]), axis=0)
+            empirical_velo[idx, :] = np.sum(
+                weights.reshape(-1, 1) * (features[neighbors, :] - features[boundary_id, :]), axis=0
             )
 
         empirical_velo = np.array(empirical_velo)
