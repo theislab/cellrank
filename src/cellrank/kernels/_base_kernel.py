@@ -550,15 +550,16 @@ class KernelExpression(IOMixin, abc.ABC):
         extrapolated_gex = self.transition_matrix @ self.adata.obsm[rep]
         return extrapolated_gex - self.adata.obsm[rep]
 
-    def get_cbc(self, source: str, target: str, cluster_key: str, rep: str, graph_key: str = "distances") -> np.ndarray:
+    # TODO: Add definition/reference to paper
+    def cbc(self, source: str, target: str, cluster_key: str, rep: str, graph_key: str = "distances") -> np.ndarray:
         """Compute cross-boundary correctness score between source and target cluster.
 
         Parameters
         ----------
         source
-            Name of source cluster.
+            Name of the source cluster.
         target
-            Name of target cluster.
+            Name of the target cluster.
         cluster_key
             Key in :attr:`~anndata.AnnData.obs` to obtain cluster annotations.
         rep
@@ -571,14 +572,12 @@ class KernelExpression(IOMixin, abc.ABC):
         Cross-boundary correctness score for each observation.
         """
 
-        def _pearsonr(x, y):
-            x_centered = x - np.mean(x, axis=1).reshape(-1, 1)
-            y_centered = y - np.mean(y, axis=1).reshape(-1, 1)
-            return (
-                np.sum(x_centered * y_centered, axis=1)
-                / np.linalg.norm(x_centered, axis=1)
-                / np.linalg.norm(y_centered, axis=1)
-            )
+        def _pearsonr(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+            x_centered = x - np.mean(x, axis=1, keepdims=True)
+            y_centered = y - np.mean(y, axis=1, keepdims=True)
+            denom = np.linalg.norm(x_centered, axis=1) * np.linalg.norm(y_centered, axis=1)
+
+            return np.sum(x_centered * y_centered, axis=1) / denom
 
         target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
         boundary_ids = self._get_boundary(source=source, target=target, cluster_key=cluster_key, graph_key=graph_key)
@@ -587,10 +586,7 @@ class KernelExpression(IOMixin, abc.ABC):
         )
         estimated_velo = self._get_vector_field_estimate(rep=rep)[boundary_ids, :]
 
-        cbc = _pearsonr(x=estimated_velo, y=empirical_velo)
-        if hasattr(self, "cbc"):
-            self.cbc[(source, target)] = cbc
-        return cbc
+        return _pearsonr(x=estimated_velo, y=empirical_velo)
 
 
 @d.dedent
