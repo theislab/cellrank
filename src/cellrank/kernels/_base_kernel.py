@@ -579,7 +579,7 @@ class KernelExpression(IOMixin, abc.ABC):
 
             return np.sum(x_centered * y_centered, axis=1) / denom
 
-        target_obs_mask = self.adata.obs[cluster_key].isin([target] if isinstance(target, str) else target)
+        target_obs_mask = self.adata.obs[cluster_key].isin([target])
         boundary_ids = self._get_boundary(source=source, target=target, cluster_key=cluster_key, graph_key=graph_key)
         empirical_velo = self._get_empirical_velocity_field(
             boundary_ids=boundary_ids, target_obs_mask=target_obs_mask, rep=rep, graph_key=graph_key
