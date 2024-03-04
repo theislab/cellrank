@@ -583,6 +583,28 @@ class TestKernel:
         assert T_cr is not adata.obsp[key]
         np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
 
+    @pytest.mark.parametrize("cluster_pair", [("Granule immature", "Granule mature"), ("nIPC", "Neuroblast")])
+    @pytest.mark.parametrize("graph_key", ["distances", "connectivities"])
+    def test_cbc(self, adata: AnnData, cluster_pair: Tuple[str, str], graph_key: str):
+        cluster_key = "clusters"
+        rep = "X_pca"
+        source, target = cluster_pair
+
+        vk = cr.kernels.VelocityKernel(adata)
+        vk.compute_transition_matrix()
+
+        ck = cr.kernels.ConnectivityKernel(adata)
+        ck.compute_transition_matrix()
+        combined_kernel = 0.8 * vk + 0.2 * ck
+
+        cbc_vk = vk.cbc(source=source, target=target, cluster_key=cluster_key, rep=rep)
+        np.testing.assert_almost_equal(cbc_vk, adata.uns["cbc"][f"{source}-{target}-{graph_key}-vk"])
+
+        cbc_combined_kernel = combined_kernel.cbc(source=source, target=target, cluster_key=cluster_key, rep=rep)
+        np.testing.assert_almost_equal(
+            cbc_combined_kernel, adata.uns["cbc"][f"{source}-{target}-{graph_key}-0.8vk+0.2ck"]
+        )
+
 
 class TestVelocityKernelReadData:
     @pytest.mark.parametrize("attr", ["layers", "obsm"])
