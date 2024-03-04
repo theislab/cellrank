@@ -544,7 +544,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cluster_key: Optional[str] = None,
         **kwargs: Any,
     ) -> float:
-        """Compute terminal state identificiation (TSI) score.
+        """Compute terminal state identification (TSI) score.
 
         Parameters
         ----------
@@ -573,10 +573,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             if cluster_key is None:
                 raise RuntimeError("`cluster_key` needs to be specified to compute TSI.")
 
+            # create a new GPCCA object to avoid unsetting attributes
+            # that depend on the macrostates, e.g. the terminal states
+            g = self.copy(deep=True)
             macrostates = {}
             for n_states in range(n_macrostates, 0, -1):
-                self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
-                macrostates[n_states] = self.macrostates.cat.categories
+                g = g.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
+                macrostates[n_states] = g.macrostates.cat.categories
 
             max_terminal_states = len(terminal_states)
 
