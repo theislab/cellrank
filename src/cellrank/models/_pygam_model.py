@@ -34,7 +34,7 @@ class GamLinkFunction(ModeEnum):
     LOGIT = enum.auto()
     INVERSE = enum.auto()
     LOG = enum.auto()
-    INV_SQUARED = "inverse-squared"
+    INV_SQUARED = enum.auto()
 
 
 class GamDistribution(ModeEnum):
@@ -95,7 +95,7 @@ class GAM(BaseModel):
         n_knots: Optional[int] = 6,
         spline_order: int = 3,
         distribution: Literal["normal", "binomial", "poisson", "gamma", "gaussian", "inv_gauss"] = "gamma",
-        link: Literal["identity", "logit", "inverse", "log", "inverse-squared"] = "log",
+        link: Literal["identity", "logit", "inverse", "log", "inv_squared"] = "log",
         max_iter: int = 2000,
         expectile: Optional[float] = None,
         grid: Optional[Union[str, Mapping[str, Any]]] = None,
