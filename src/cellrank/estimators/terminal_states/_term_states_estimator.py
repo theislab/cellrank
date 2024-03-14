@@ -440,10 +440,15 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         # fmt: off
         with RandomKeys(self.adata, n=1 if same_plot else len(states), where="obs") as keys:
             if same_plot:
+                outline = _data.cat.categories.to_list()
+                _data = _data.astype(str).astype("category").cat.reorder_categories(["nan"] + states)
+                states = ["nan"] + states
+                color_mapper["nan"] = "#dedede"
                 self.adata.obs[keys[0]] = _data
                 self.adata.uns[f"{keys[0]}_colors"] = [color_mapper[name] for name in states]
                 title = _title if title is None else title
             else:
+                outline = None
                 for key, cat in zip(keys, states):
                     self.adata.obs[key] = _data.cat.set_categories([cat])
                     self.adata.uns[f"{key}_colors"] = [color_mapper[cat]]
@@ -456,6 +461,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 self.adata,
                 color=color + keys,
                 title=color + title,
+                add_outline=outline,
                 **kwargs,
             )
         # fmt: on
