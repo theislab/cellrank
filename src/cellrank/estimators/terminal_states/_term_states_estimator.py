@@ -441,8 +441,8 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         with RandomKeys(self.adata, n=1 if same_plot else len(states), where="obs") as keys:
             if same_plot:
                 outline = _data.cat.categories.to_list()
-                _data = _data.astype(str).astype("category").cat.reorder_categories(["nan"] + states)
-                states = ["nan"] + states
+                _data = _data.cat.add_categories(["nan"]).fillna("nan")
+                states.append("nan")
                 color_mapper["nan"] = "#dedede"
                 self.adata.obs[keys[0]] = _data
                 self.adata.uns[f"{keys[0]}_colors"] = [color_mapper[name] for name in states]
