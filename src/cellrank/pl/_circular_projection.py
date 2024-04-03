@@ -73,8 +73,7 @@ def circular_projection(
     keys: Union[str, Sequence[str]],
     backward: bool = False,
     lineages: Optional[Union[str, Sequence[str]]] = None,
-    early_cells: Optional[Union[Mapping[str,
-                                        Sequence[str]], Sequence[str]]] = None,
+    early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
     lineage_order: Optional[Literal["default", "optimal"]] = None,
     metric: Union[str, Callable, np.ndarray, pd.DataFrame] = "correlation",
     normalize_by_mean: bool = True,
@@ -161,8 +160,7 @@ def circular_projection(
       if a method is present in the ``keys``.
     """
     if label_distance is not None and label_distance < 0:
-        raise ValueError(
-            f"Expected `label_distance` to be positive, found `{label_distance}`.")
+        raise ValueError(f"Expected `label_distance` to be positive, found `{label_distance}`.")
 
     if label_rot is None:
         label_rot = LabelRot.DEFAULT
@@ -194,8 +192,7 @@ def circular_projection(
     lineages = _unique_order_preserving(lineages)
     probs = probs[lineages]
     if probs.nlin < 3:
-        raise ValueError(
-            f"Expected at least `3` lineages, found `{probs.nlin}`.")
+        raise ValueError(f"Expected at least `3` lineages, found `{probs.nlin}`.")
 
     X = probs.X.copy()
     if normalize_by_mean:
@@ -295,8 +292,7 @@ def circular_projection(
                 rot = text.get_rotation()
                 text.set_rotation(rot + 90 + (1 - rot // 180) * 180)
             elif label_rot != LabelRot.DEFAULT:
-                raise NotImplementedError(
-                    f"Label rotation `{label_rot}` is not yet implemented.")
+                raise NotImplementedError(f"Label rotation `{label_rot}` is not yet implemented.")
             text.set_color(color)
 
         if not show_edges:
@@ -309,8 +305,7 @@ def circular_projection(
             points = np.array([x, y]).T.reshape(-1, 1, 2)
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-            cmap = LinearSegmentedColormap.from_list(
-                "fate_prob_cmap", [color, probs.colors[next]], N=_N)
+            cmap = LinearSegmentedColormap.from_list("fate_prob_cmap", [color, probs.colors[next]], N=_N)
             lc = LineCollection(segments, cmap=cmap, zorder=-1)
             lc.set_array(np.linspace(0, 1, _N))
             lc.set_linewidth(2)
