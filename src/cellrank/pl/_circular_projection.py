@@ -14,7 +14,6 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
 
 from anndata import AnnData
-from scanpy._utils import deprecated_arg_names
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -69,7 +68,6 @@ def _get_optimal_order(data: Lineage, metric: Metric_T) -> Tuple[float, np.ndarr
 
 
 @d.dedent
-@deprecated_arg_names({"labeldistance": "label_distance", "labelrot": "label_rot"})
 def circular_projection(
     adata: AnnData,
     keys: Union[str, Sequence[str]],
