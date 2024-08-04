@@ -12,7 +12,7 @@ from anndata import AnnData
 
 from cellrank import logging as logg
 
-jit_kwargs = {"nogil": True, "cache": True, "fastmath": True}
+jit_kwargs = {"nogil": True, "fastmath": True}
 
 
 @nb.njit(parallel=False, **jit_kwargs)
