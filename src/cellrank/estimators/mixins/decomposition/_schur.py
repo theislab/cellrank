@@ -163,9 +163,9 @@ class SchurMixin:
             verbose = method == "brandts"
 
         tmat = self.transition_matrix
-        if method == "brandts" and sp.issparse(self.transition_matrix):
+        if method == "brandts" and sp.issparse(tmat):
             logg.warning("For `method='brandts'`, dense matrix is required. Densifying")
-            tmat = tmat.A
+            tmat = tmat.toarray()
 
         self._gpcca = GPCCA(tmat, eta=initial_distribution, z=which, method=method)
         start = logg.info("Computing Schur decomposition")

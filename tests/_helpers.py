@@ -124,7 +124,7 @@ def create_kernels(
     ck._transition_matrix[-1, -1] = 1
     ck._transition_matrix = sp.csr_matrix(ck._transition_matrix)
 
-    np.testing.assert_allclose(np.sum(ck._transition_matrix.A, axis=1), 1)  # sanity check
+    np.testing.assert_allclose(np.sum(ck._transition_matrix.toarray(), axis=1), 1)  # sanity check
 
     return vk, ck
 
@@ -286,7 +286,7 @@ def assert_estimators_equal(
     assert actual.adata is actual.kernel.adata
     assert actual.kernel.backward == expected.kernel.backward
 
-    np.testing.assert_array_equal(actual.transition_matrix.A, expected.transition_matrix.A)
+    np.testing.assert_array_equal(actual.transition_matrix.toarray(), expected.transition_matrix.toarray())
 
     k1 = sorted(expected.__dict__.keys())
     k2 = sorted(actual.__dict__.keys())

@@ -339,7 +339,7 @@ class RandomWalk:
     def _sample(self, ix: int, *, rs: np.random.RandomState) -> int:
         return rs.choice(
             self._ixs,
-            p=self._tmat[ix].A.squeeze() if self._is_sparse else self._tmat[ix],
+            p=self._tmat[ix].toarray().squeeze() if self._is_sparse else self._tmat[ix],
         )
 
     def _max_iter(self, max_iter: Union[int, float]) -> int:
