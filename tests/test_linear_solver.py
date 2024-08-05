@@ -52,8 +52,8 @@ class TestScipyLinearSolver:
         assert sol.ndim == 2
 
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
 
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
@@ -73,8 +73,8 @@ class TestScipyLinearSolver:
         assert sol.ndim == 2
 
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
 
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
 
@@ -94,8 +94,8 @@ class TestScipyLinearSolver:
         assert sol.ndim == 2
 
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
         A = np.eye(20, 20) - A
 
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
@@ -122,7 +122,7 @@ class TestLinearSolverPETSc:
 
         assert res.assembled
         assert res.getType() == "seqdense"
-        np.testing.assert_array_equal(res.getDenseArray(), x.A)
+        np.testing.assert_array_equal(res.getDenseArray(), x.toarray())
 
     def test_create_petsc_matrix_from_sparse_as_not_dense(self):
         x = sp.random(100, 10, format="csr", density=0.1)
@@ -130,7 +130,7 @@ class TestLinearSolverPETSc:
 
         assert res.assembled
         assert res.getType() == "seqaij"
-        np.testing.assert_array_equal(sp.csr_matrix(res.getValuesCSR()[::-1]).A, x.A)
+        np.testing.assert_array_equal(sp.csr_matrix(res.getValuesCSR()[::-1]).toarray(), x.toarray())
 
     def test_create_petsc_matrix_from_sparse_not_csr(self):
         x = sp.random(100, 10, format="coo", density=0.1)
@@ -139,7 +139,7 @@ class TestLinearSolverPETSc:
         assert res.assembled
         assert res.getType() == "seqaij"
 
-        np.testing.assert_array_equal(sp.csr_matrix(res.getValuesCSR()[::-1]).A, x.A)
+        np.testing.assert_array_equal(sp.csr_matrix(res.getValuesCSR()[::-1]).toarray(), x.toarray())
 
     def test_create_solver_invalid_solver(self):
         from petsc4py.PETSc import Error
@@ -207,8 +207,8 @@ class TestLinearSolverPETSc:
         assert sol_petsc.ndim == 2
         assert sol_scipy.ndim == 2
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
         A = np.eye(A.shape[0]) - A
 
         np.testing.assert_allclose(A @ sol_scipy, B, rtol=1e-6, atol=1e-8)
@@ -232,9 +232,9 @@ class TestLinearSolverPETSc:
         assert sol.ndim == 2
 
         if sparse:
-            A = A.A
+            A = A.toarray()
             A = np.eye(A.shape[0]) - A
-            B = B.A
+            B = B.toarray()
 
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-8)
 
@@ -254,8 +254,8 @@ class TestLinearSolverPETSc:
         assert sol.ndim == 2
 
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
         A = np.eye(A.shape[0]) - A
 
         np.testing.assert_allclose(A @ sol, B, rtol=1e-6, atol=1e-10)
@@ -268,8 +268,8 @@ class TestLinearSolverPETSc:
         X = _petsc_direct_solve(A, B, tol=1e-8)
         assert X.ndim == 2
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
 
         np.testing.assert_allclose(A @ X, B, rtol=1e-6)
 
@@ -283,8 +283,8 @@ class TestLinearSolverPETSc:
         assert X.ndim == 2
         assert X.shape[1] == 1
         if sparse:
-            A = A.A
-            B = B.A
+            A = A.toarray()
+            B = B.toarray()
 
         np.testing.assert_allclose(((A @ X).squeeze()), B.squeeze(), rtol=1e-6, atol=1e-6)
 
@@ -296,6 +296,6 @@ class TestLinearSolverPETSc:
         X = _petsc_direct_solve(A, tol=1e-8)
         assert X.ndim == 2
         if sparse:
-            A = A.A
+            A = A.toarray()
 
         np.testing.assert_allclose(A @ X, np.eye(*A.shape), rtol=1e-6, atol=1e-6)

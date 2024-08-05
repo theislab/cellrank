@@ -98,7 +98,7 @@ class TmatProjection:
                 if np.any(np.isnan(dX)):
                     T_emb[row_id, :] = np.nan
                 else:
-                    probs = row[:, conn_idxs].A.squeeze() if sp.issparse(row) else row[conn_idxs]
+                    probs = row[:, conn_idxs].toarray().squeeze() if sp.issparse(row) else row[conn_idxs]
                     dX /= np.linalg.norm(dX, axis=1)[:, None]
                     dX = np.nan_to_num(dX)
                     T_emb[row_id, :] = probs.dot(dX) - dX.sum(0) / dX.shape[0]

@@ -2354,7 +2354,7 @@ class TestModel:
     def test_model_obs_data_key(self, adata: AnnData, fpath: str):
         model = create_model(adata)
         gene = adata.X[:, 0]
-        adata.obs["foo"] = gene.A if sp.issparse(gene) else gene
+        adata.obs["foo"] = gene.toarray() if sp.issparse(gene) else gene
 
         model.prepare("foo", "1", "latent_time", data_key="obs")
         model.fit().predict()

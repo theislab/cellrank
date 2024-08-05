@@ -166,7 +166,7 @@ class FlowPlotter:
         def default_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
             subset, row_cls, col_cls = self._get_time_subset(t1, t2)
 
-            df = pd.DataFrame(subset.A if sp.issparse(subset) else subset)
+            df = pd.DataFrame(subset.toarray() if sp.issparse(subset) else subset)
             df = df.groupby(row_cls).sum().T.groupby(col_cls).sum().T
 
             res = pd.DataFrame(np.zeros((n, n)), index=categories, columns=categories)
@@ -178,7 +178,7 @@ class FlowPlotter:
         def cluster_helper(t1: Numeric_t, t2: Numeric_t) -> pd.DataFrame:
             subset, row_cls, col_cls = self._get_time_subset(t1, t2, cluster=cluster)
 
-            df = pd.DataFrame(subset.A if sp.issparse(subset) else subset).sum(0)
+            df = pd.DataFrame(subset.toarray() if sp.issparse(subset) else subset).sum(0)
             df = df.groupby(col_cls).sum()
             df = pd.DataFrame([df], index=[cluster], columns=df.index)
 

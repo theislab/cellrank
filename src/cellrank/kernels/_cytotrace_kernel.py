@@ -257,7 +257,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         # fmt: off
         imputed_exp = self.adata[:, top_genes].X if layer == "X" else self.adata[:, top_genes].layers[layer]
         if sp.issparse(imputed_exp) and aggregation not in (CytoTRACEAggregation.MEAN, CytoTRACEAggregation.MEDIAN):
-            imputed_exp = imputed_exp.A
+            imputed_exp = imputed_exp.toarray()
 
         if aggregation == CytoTRACEAggregation.MEAN:
             cytotrace_score = np.asarray(imputed_exp.mean(axis=1)).reshape((-1,))

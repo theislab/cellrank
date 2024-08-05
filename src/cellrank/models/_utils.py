@@ -221,7 +221,7 @@ def _(
 
     ref = x[ref_ix]
     if sp.issparse(ref):
-        ref = ref.A.squeeze(0)  # (genes,)
+        ref = ref.toarray().squeeze(0)  # (genes,)
 
     return parallelize(
         _calc_factor_weighted,
@@ -283,7 +283,7 @@ def _(x: Union[np.ndarray, sp.spmatrix], **_) -> np.ndarray:
     mask = np.array((x > 0).sum(0)).squeeze() == x.shape[0]
     tmp = x[:, mask]
     if sp.issparse(tmp):
-        tmp = tmp.A
+        tmp = tmp.toarray()
 
     gm = np.array(np.exp(np.mean(np.log(tmp), axis=0))).squeeze()
     gm_mask = (gm > 0) & np.isfinite(gm)
@@ -323,7 +323,7 @@ def _calc_factor_weighted(
 
         obs = obs_[ix]
         if sp.issparse(obs):
-            obs = obs.A.squeeze(0)  # (genes,)
+            obs = obs.toarray().squeeze(0)  # (genes,)
         obs_lib_size = obs_lib_size_[ix]
 
         res[i] = _calc_factor_weighted_helper(

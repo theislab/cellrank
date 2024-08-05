@@ -250,9 +250,9 @@ class TestInitializeKernel:
         ck = ConnectivityKernel(adata).compute_transition_matrix()
 
         actual = (vk * ck).transition_matrix
-        expected = _normalize(vk.transition_matrix.A * ck.transition_matrix.A)
+        expected = _normalize(vk.transition_matrix.toarray() * ck.transition_matrix.toarray())
 
-        np.testing.assert_allclose(actual.A, expected)
+        np.testing.assert_allclose(actual.toarray(), expected)
 
     def test_constant(self, adata: AnnData):
         k = 9 * VelocityKernel(adata) + 1 * ConnectivityKernel(adata)
@@ -399,7 +399,7 @@ class TestKernel:
         k = clazz(**kwargs)
 
         if isinstance(k, ConnectivityMixin):
-            np.testing.assert_array_equal(k.connectivities.A, conn.A)
+            np.testing.assert_array_equal(k.connectivities.toarray(), conn.toarray())
         else:
             assert not hasattr(k, "_conn")
 
@@ -458,13 +458,13 @@ class TestKernel:
         )
         T_2 = pk.transition_matrix
 
-        np.testing.assert_allclose(T_1.A, T_2.A, rtol=_rtol)
+        np.testing.assert_allclose(T_1.toarray(), T_2.toarray(), rtol=_rtol)
 
     def test_pseudotime_parallelize(self, adata: AnnData):
         pk1 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(n_jobs=None)
         pk2 = PseudotimeKernel(adata, time_key="latent_time").compute_transition_matrix(n_jobs=2)
 
-        np.testing.assert_allclose(pk1.transition_matrix.A, pk2.transition_matrix.A, rtol=_rtol)
+        np.testing.assert_allclose(pk1.transition_matrix.toarray(), pk2.transition_matrix.toarray(), rtol=_rtol)
 
     def test_pseudotime_inverse(self, adata: AnnData):
         pk = PseudotimeKernel(adata, time_key="latent_time")
@@ -521,7 +521,7 @@ class TestKernel:
         comb_kernel = 0.8 * vk + 0.2 * ck
         T_comb_kernel = comb_kernel.transition_matrix
 
-        np.testing.assert_allclose(T_comb_kernel.A, T_comb_manual.A, rtol=_rtol)
+        np.testing.assert_allclose(T_comb_kernel.toarray(), T_comb_manual.toarray(), rtol=_rtol)
 
     def test_manual_combination_no_precomputed(self, adata: AnnData):
         density_normalize = False
@@ -539,7 +539,7 @@ class TestKernel:
         comb_kernel.compute_transition_matrix()
         T_comb_kernel = comb_kernel.transition_matrix
 
-        np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
+        np.testing.assert_allclose(T_comb_manual.toarray(), T_comb_kernel.toarray(), rtol=_rtol)
 
     @pytest.mark.parametrize("density_normalize", [False, True])
     def test_manual_combination_backward(self, adata: AnnData, density_normalize):
@@ -555,7 +555,7 @@ class TestKernel:
         comb_kernel = 0.8 * vk + 0.2 * ck
         T_comb_kernel = comb_kernel.transition_matrix
 
-        np.testing.assert_allclose(T_comb_manual.A, T_comb_kernel.A, rtol=_rtol)
+        np.testing.assert_allclose(T_comb_manual.toarray(), T_comb_kernel.toarray(), rtol=_rtol)
 
     @pytest.mark.parametrize("density_normalize", [False, True])
     def test_dnorm_scanpy(self, adata: AnnData, density_normalize: bool):
@@ -568,7 +568,7 @@ class TestKernel:
         T_sc = neigh.transitions
 
         assert T_sc.shape == T_cr.shape
-        np.testing.assert_allclose(T_cr.A, T_cr.A)
+        np.testing.assert_allclose(T_cr.toarray(), T_cr.toarray())
 
     def test_connectivities_key_kernel(self, adata: AnnData):
         key = "foobar"
@@ -580,7 +580,7 @@ class TestKernel:
 
         assert key == ck.params["key"]
         assert T_cr is not adata.obsp[key]
-        np.testing.assert_array_equal(T_cr.A, adata.obsp[key])
+        np.testing.assert_array_equal(T_cr.toarray(), adata.obsp[key])
 
     @pytest.mark.parametrize("cluster_pair", [("Granule immature", "Granule mature"), ("nIPC", "Neuroblast")])
     @pytest.mark.parametrize("graph_key", ["distances", "connectivities"])
@@ -654,7 +654,7 @@ class TestKernelAddition:
         expected = np.eye(adata.n_obs) * 0.75 + np.eye(adata.n_obs, k=1) * 0.25
         expected[-1, -1] = 1
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix.toarray(), expected)
 
     def test_addtion_with_constant(self, adata: AnnData):
         vk, ck = create_kernels(adata)  # diagonal + upper diag
@@ -667,14 +667,16 @@ class TestKernelAddition:
         )
         expected[-1, -1] = 1
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(k.transition_matrix.toarray(), expected)
 
     def test_addition_3_kernels(self, adata: AnnData):
         vk, ck = create_kernels(adata)  # diagonal + upper diag
         vk1 = VelocityKernel(adata)
         vk1._transition_matrix = np.eye(adata.n_obs, k=-1) / 2 + np.eye(adata.n_obs) / 2
         vk1._transition_matrix[0, 0] = 1
-        np.testing.assert_allclose(np.sum(ck._transition_matrix, axis=1), 1)  # sanity check
+        # convert to a sparse array, otherwise the resulting kernel will be `matrix`
+        # which doesn't have `.toarray()`
+        vk1._transition_matrix = sp.csr_matrix(vk1._transition_matrix)
 
         k = (vk + ck + vk1).compute_transition_matrix()
         expected = (
@@ -685,7 +687,8 @@ class TestKernelAddition:
         expected[0, 0] = expected[-1, -1] = 2 / 3 + 1 / 3 * 0.5
         expected[0, 1] = expected[-1, -2] = 1 - expected[0, 0]
 
-        np.testing.assert_allclose(k.transition_matrix.A, expected)
+        np.testing.assert_allclose(np.sum(ck._transition_matrix, axis=1), 1)  # sanity check
+        np.testing.assert_allclose(k.transition_matrix.toarray(), expected)
 
 
 class TestKernelCopy:
@@ -706,7 +709,7 @@ class TestKernelCopy:
         vk1 = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk2 = vk1.copy()
 
-        np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
+        np.testing.assert_array_equal(vk1.transition_matrix.toarray(), vk2.transition_matrix.toarray())
 
     def test_copy_params(self, adata: AnnData):
         vk1 = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
@@ -719,7 +722,7 @@ class TestKernelCopy:
         vk1 = VelocityKernel(adata).compute_transition_matrix(softmax_scale=4)
         vk2 = vk1.copy()
 
-        np.testing.assert_array_equal(vk1.transition_matrix.A, vk2.transition_matrix.A)
+        np.testing.assert_array_equal(vk1.transition_matrix.toarray(), vk2.transition_matrix.toarray())
 
         assert vk1.params == vk2.params
         assert vk1.backward == vk2.backward
@@ -728,7 +731,7 @@ class TestKernelCopy:
         ck1 = ConnectivityKernel(adata).compute_transition_matrix()
         ck2 = ck1.copy()
 
-        np.testing.assert_array_equal(ck1.transition_matrix.A, ck2.transition_matrix.A)
+        np.testing.assert_array_equal(ck1.transition_matrix.toarray(), ck2.transition_matrix.toarray())
         assert ck1.params == ck2.params
         assert ck1.backward == ck2.backward
 
@@ -736,7 +739,7 @@ class TestKernelCopy:
         pk1 = PseudotimeKernel(adata, time_key="dpt_pseudotime").compute_transition_matrix()
         pk2 = pk1.copy()
 
-        np.testing.assert_array_equal(pk1.transition_matrix.A, pk2.transition_matrix.A)
+        np.testing.assert_array_equal(pk1.transition_matrix.toarray(), pk2.transition_matrix.toarray())
         assert pk1.params == pk2.params
         assert pk1.backward == pk2.backward
 
@@ -895,9 +898,9 @@ class TestVelocityScheme:
         np.testing.assert_allclose(vk_cor.transition_matrix.sum(1), 1.0)
         np.testing.assert_allclose(vk_cor.transition_matrix.sum(1), 1.0)
 
-        assert not np.allclose(vk_dot.transition_matrix.A, vk_cos.transition_matrix.A)
-        assert not np.allclose(vk_cos.transition_matrix.A, vk_cor.transition_matrix.A)
-        assert not np.allclose(vk_cor.transition_matrix.A, vk_dot.transition_matrix.A)
+        assert not np.allclose(vk_dot.transition_matrix.toarray(), vk_cos.transition_matrix.toarray())
+        assert not np.allclose(vk_cos.transition_matrix.toarray(), vk_cor.transition_matrix.toarray())
+        assert not np.allclose(vk_cor.transition_matrix.toarray(), vk_dot.transition_matrix.toarray())
 
     @pytest.mark.parametrize(
         ("key", "fn"),
@@ -917,7 +920,7 @@ class TestVelocityScheme:
         vk_k.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity=key)
         vk_fn.compute_transition_matrix(model="deterministic", softmax_scale=4, similarity=fn)
 
-        np.testing.assert_allclose(vk_k.transition_matrix.A, vk_fn.transition_matrix.A)
+        np.testing.assert_allclose(vk_k.transition_matrix.toarray(), vk_fn.transition_matrix.toarray())
 
     @pytest.mark.parametrize("backward", [True, False])
     def test_custom_function(self, adata: AnnData, backward: bool):
@@ -1207,7 +1210,7 @@ class TestRealTimeKernel:
 
         for src, tgt in zip(cats[:-1], cats[1:]):
             src_mask, tgt_mask = tmk.time == src, tmk.time == tgt
-            np.testing.assert_allclose(tmat[src_mask, :][:, tgt_mask].A, expected[src, tgt])
+            np.testing.assert_allclose(tmat[src_mask, :][:, tgt_mask].toarray(), expected[src, tgt])
 
     @pytest.mark.parametrize(
         ("problem", "sparse_mode", "policy"),
@@ -1502,7 +1505,7 @@ class TestKernelIO:
             else:
                 assert k.adata is kernel.adata
 
-        np.testing.assert_array_equal(k.transition_matrix.A, kernel.transition_matrix.A)
+        np.testing.assert_array_equal(k.transition_matrix.toarray(), kernel.transition_matrix.toarray())
 
     @pytest.mark.parametrize(
         "clazz",
@@ -1534,6 +1537,6 @@ class TestKernelIO:
         assert k1.backward == k2.backward
         assert k1.params == k2.params
         if sp.issparse(k1.transition_matrix):
-            np.testing.assert_almost_equal(k1.transition_matrix.A, k2.transition_matrix.A)
+            np.testing.assert_almost_equal(k1.transition_matrix.toarray(), k2.transition_matrix.toarray())
         else:
             np.testing.assert_almost_equal(k1.transition_matrix, k2.transition_matrix)
