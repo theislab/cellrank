@@ -674,6 +674,7 @@ class TestKernelAddition:
         vk1 = VelocityKernel(adata)
         vk1._transition_matrix = np.eye(adata.n_obs, k=-1) / 2 + np.eye(adata.n_obs) / 2
         vk1._transition_matrix[0, 0] = 1
+        vk1._transition_matrix = sp.csr_matrix(vk1._transition_matrix)
         np.testing.assert_allclose(np.sum(ck._transition_matrix, axis=1), 1)  # sanity check
 
         k = (vk + ck + vk1).compute_transition_matrix()
