@@ -26,13 +26,13 @@ jobs:
           python: '3.9'
           slepc: noslepc
         - os: ubuntu-latest
-          python: '3.9'
+          python: '3.10'
           slepc: slepc
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
 
@@ -48,7 +48,7 @@ jobs:
         PYTEST_ADDOPTS: -vv -n 2
 
     - name: Upload coverage
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: ./coverage.xml
         flags: tests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.slepc }}
