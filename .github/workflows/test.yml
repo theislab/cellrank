@@ -54,5 +54,6 @@ jobs:
         flags: tests-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.slepc }}
         name: unittests
         env_vars: OS,PYTHON
+        token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
         verbose: true
