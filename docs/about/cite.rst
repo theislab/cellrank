@@ -22,13 +22,16 @@ from metabolic labeling data using the CellRank 2 approach, cite :cite:`weiler:2
 
 .. code-block:: bibtex
 
-    @article{weiler:23,
-        title = {Unified fate mapping in multiview single-cell data},
+    @article{weiler:24,
+        title = {CellRank 2: unified fate mapping in multiview single-cell data},
         author = {Weiler, Philipp and Lange, Marius and Klein, Michal and Pe{\textquotesingle}er, Dana and Theis, Fabian},
-        doi = {10.1101/2023.07.19.549685},
-        url = {https://doi.org/10.1101/2023.07.19.549685},
-        year = {2023},
-        publisher = {Cold Spring Harbor Laboratory},
+        doi = {10.1038/s41592-024-02303-9},
+        url = {https://doi.org/10.1038/s41592-024-02303-9},
+        year = {2024},
+        journal = {Nature Methods},
+        volume = {21},
+        number = {7},
+        pages = {1196--1205},
     }
 
 In addition, if you use the :class:`~cellrank.estimators.GPCCA` estimator to compute initial, terminal or intermediate
