@@ -18,7 +18,7 @@ CellRank's :class:`~cellrank.kernels.VelocityKernel` with classical RNA velocity
     }
 
 If you are using the :class:`~cellrank.kernels.PseudotimeKernel`, :class:`~cellrank.kernels.CytoTRACEKernel`, :class:`~cellrank.kernels.RealTimeKernel`, or the :class:`~cellrank.kernels.VelocityKernel` with velocities inferred
-from metabolic labeling data using the CellRank 2 approach, cite :cite:`weiler:23` as:
+from metabolic labeling data using the CellRank 2 approach, cite :cite:`weiler:24` as:
 
 .. code-block:: bibtex
 
