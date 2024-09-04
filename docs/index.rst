@@ -12,7 +12,7 @@ CellRank 2: Unified fate mapping in multiview single-cell data
     :align: center
     :class: only-dark
 
-**CellRank** :cite:`lange:22,weiler:23` is a modular framework to study cellular dynamics based on Markov state modeling of
+**CellRank** :cite:`lange:22,weiler:24` is a modular framework to study cellular dynamics based on Markov state modeling of
 multi-view single-cell data. See :doc:`about CellRank <about/index>` to learn more and :doc:`our citation guide <about/cite>` for guidance on
 citing our work correctly. Also, read our `recent preprint <https://doi.org/10.1101/2023.07.19.549685>`_ to see the new CellRank 2 features in action.
 
