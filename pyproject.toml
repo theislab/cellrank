@@ -107,6 +107,9 @@ include-package-data = true
 
 [tool.ruff]
 target-version = "py38"
+line-length = 120
+
+[tool.ruff.lint]
 exclude = [
     ".eggs",
     ".git",
@@ -136,7 +139,6 @@ ignore = [
     # Missing docstring in magic method
     "D105",
 ]
-line-length = 120
 select = [
     "D", # flake8-docstrings
     "E", # pycodestyle
@@ -155,15 +157,15 @@ select = [
     "RET", # flake8-raise
 ]
 unfixable = ["B", "UP", "C4", "BLE", "T20", "RET"]
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
 "*/__init__.py" = ["F401"]
 "docs/*" = ["D"]
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 inline-quotes = "double"
 
 [tool.black]

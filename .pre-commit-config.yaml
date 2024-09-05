@@ -56,8 +56,8 @@ repos:
   rev: v1.1.1
   hooks:
   - id: doc8
-- repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.270
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.6.3
   hooks:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix]
