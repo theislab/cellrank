@@ -32,14 +32,9 @@ def _jax_not_installed() -> bool:
 def _rpy2_mgcv_not_installed() -> bool:
     try:
         import rpy2
+        from importlib_metadata import version as get_version
         from packaging import version
         from rpy2.robjects.packages import PackageNotInstalledError, importr
-
-        try:
-            from importlib_metadata import version as get_version
-        except ImportError:
-            # >=Python3.8
-            from importlib.metadata import version as get_version
 
         try:
             assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
