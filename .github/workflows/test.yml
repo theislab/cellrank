@@ -22,8 +22,8 @@ jobs:
         python: ['3.8', '3.10', '3.11', '3.12']
         slepc: [noslepc]
         include:
-        - os: macos-latest
-          python: '3.9'
+        - os: macos-14
+          python: '3.10'
           slepc: noslepc
         - os: ubuntu-latest
           python: '3.10'
