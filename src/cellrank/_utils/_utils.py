@@ -596,7 +596,7 @@ def _cluster_X(
     elif method == "leiden":
         adata_dummy = sc.AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors)
-        sc.tl.leiden(adata_dummy, resolution=resolution)
+        sc.tl.leiden(adata_dummy, flavor="igraph", n_iterations=2, directed=False, resolution=resolution)
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(f"Invalid method `{method}`. Valid options are `kmeans` or `leiden`.")

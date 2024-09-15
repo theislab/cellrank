@@ -179,7 +179,7 @@ class FlowPlotter:
             subset, row_cls, col_cls = self._get_time_subset(t1, t2, cluster=cluster)
 
             df = pd.DataFrame(subset.toarray() if sp.issparse(subset) else subset).sum(0)
-            df = df.groupby(col_cls).sum()
+            df = df.groupby(col_cls, observed=True).sum()
             df = pd.DataFrame([df], index=[cluster], columns=df.index)
 
             res = pd.DataFrame(np.zeros((1, n)), index=[cluster], columns=categories)

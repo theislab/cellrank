@@ -1050,7 +1050,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         mask = ~macrostates.isnull()
         df = (
             pd.DataFrame({"macrostates": macrostates, key: self.adata.obs[key]})[mask]
-            .groupby([key, "macrostates"])
+            .groupby([key, "macrostates"], observed=True)
             .size()
         )
         try:
