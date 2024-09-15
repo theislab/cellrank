@@ -1,6 +1,7 @@
 import copy
 import pathlib
-from typing import Any, Iterable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Iterable, Sequence
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -43,7 +44,7 @@ def log_odds(
     legend_loc: Optional[str] = "best",
     jitter: Union[bool, float] = True,
     seed: Optional[int] = None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     show: bool = True,
@@ -120,7 +121,7 @@ def log_odds(
             ax.set_xticks(np.arange(0, n_cats, step))
             ax.set_xticklabels(df[time_key].cat.categories[::step])
 
-    def cont_palette(values: np.ndarray) -> Tuple[List[str], ScalarMappable]:
+    def cont_palette(values: np.ndarray) -> tuple[list[str], ScalarMappable]:
         cm = copy.copy(plt.get_cmap(cmap))
         cm.set_bad("grey")
         sm = ScalarMappable(cmap=cm, norm=Normalize(vmin=np.nanmin(values), vmax=np.nanmax(values)))
@@ -129,7 +130,7 @@ def log_odds(
     def get_data(
         key: str,
         thresh: Optional[float] = None,
-    ) -> Tuple[Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable]:
+    ) -> tuple[Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable]:
         try:
             _, palette = _get_categorical_colors(adata, key)
             df[key] = adata.obs[key].values[mask]

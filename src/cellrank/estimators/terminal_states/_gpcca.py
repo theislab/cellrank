@@ -3,8 +3,9 @@ import datetime
 import enum
 import pathlib
 import types
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -377,7 +378,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def set_terminal_states(
         self,
-        states: Optional[Union[str, Sequence[str], Dict[str, Sequence[str]], pd.Series]] = None,
+        states: Optional[Union[str, Sequence[str], dict[str, Sequence[str]], pd.Series]] = None,
         n_cells: int = 30,
         allow_overlap: bool = False,
         cluster_key: Optional[str] = None,
@@ -458,7 +459,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def set_initial_states(
         self,
-        states: Optional[Union[str, Sequence[str], Dict[str, Sequence[str]], pd.Series]] = None,
+        states: Optional[Union[str, Sequence[str], dict[str, Sequence[str]], pd.Series]] = None,
         n_cells: int = 30,
         allow_overlap: bool = False,
         cluster_key: Optional[str] = None,
@@ -540,7 +541,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def tsi(
         self,
         n_macrostates: int,
-        terminal_states: Optional[List[str]] = None,
+        terminal_states: Optional[list[str]] = None,
         cluster_key: Optional[str] = None,
         **kwargs: Any,
     ) -> float:
@@ -606,9 +607,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def plot_tsi(
         self,
         n_macrostates: Optional[int] = None,
-        x_offset: Tuple[float, float] = (0.2, 0.2),
-        y_offset: Tuple[float, float] = (0.1, 0.1),
-        figsize: Tuple[float, float] = (6, 4),
+        x_offset: tuple[float, float] = (0.2, 0.2),
+        y_offset: tuple[float, float] = (0.1, 0.1),
+        figsize: tuple[float, float] = (6, 4),
         dpi: Optional[int] = None,
         save: Optional[Union[str, Path]] = None,
         **kwargs: Any,
@@ -741,7 +742,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         annotate: bool = True,
         show_cbar: bool = True,
         title: Optional[str] = None,
-        figsize: Tuple[float, float] = (8, 8),
+        figsize: tuple[float, float] = (8, 8),
         dpi: int = 80,
         save: Optional[Union[str, pathlib.Path]] = None,
         text_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
@@ -785,7 +786,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
         def order_matrix(
             order: Optional[CoarseTOrder],
-        ) -> Tuple[pd.DataFrame, Optional[pd.Series], Optional[pd.Series]]:
+        ) -> tuple[pd.DataFrame, Optional[pd.Series], Optional[pd.Series]]:
             coarse_T = self.coarse_T
             init_d = self.coarse_initial_distribution
             stat_d = self.coarse_stationary_distribution
@@ -1006,7 +1007,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         title: Optional[str] = None,
         labelrot: float = 45,
         legend_loc: Optional[str] = "upper right out",
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,
@@ -1151,7 +1152,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_cells: int,
         check_row_sums: bool = False,
         return_not_enough_cells: bool = False,
-    ) -> Union[pd.Series, Tuple[pd.Series, np.ndarray]]:
+    ) -> Union[pd.Series, tuple[pd.Series, np.ndarray]]:
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
@@ -1212,7 +1213,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         cluster_key: str = "clusters",
         check_row_sums: bool = True,
         time: Optional[datetime.datetime] = None,
-        params: Dict[str, Any] = types.MappingProxyType({}),
+        params: dict[str, Any] = types.MappingProxyType({}),
     ) -> None:
         """Map fuzzy clustering to pre-computed annotations to get names and colors.
 
@@ -1286,7 +1287,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         macrostates: pd.Series,
         colors: np.ndarray,
         memberships: Lineage,
-        params: Dict[str, Any] = types.MappingProxyType({}),
+        params: dict[str, Any] = types.MappingProxyType({}),
     ) -> str:
         # fmt: off
         key = Key.obs.macrostates(self.backward)
@@ -1350,7 +1351,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
         memberships: Optional[Lineage] = None,
-        params: Dict[str, Any] = types.MappingProxyType({}),
+        params: dict[str, Any] = types.MappingProxyType({}),
         allow_overlap: bool = False,
     ) -> str:
         msg = super()._write_states(

@@ -1,7 +1,8 @@
 import contextlib
 import pathlib
 import types
-from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal, Optional, Union
 
 import scvelo as scv
 
@@ -37,7 +38,7 @@ class LinDriversProtocol(BaseProtocol):
     ) -> None: ...
 
     @property
-    def eigendecomposition(self) -> Dict[str, Any]: ...
+    def eigendecomposition(self) -> dict[str, Any]: ...
 
     @property
     def fate_probabilities(self) -> Optional[Lineage]: ...
@@ -207,7 +208,7 @@ class LinDriversMixin(FateProbsMixin):
         ascending: bool = False,
         ncols: Optional[int] = None,
         title_fmt: str = "{gene} qval={qval:.4e}",
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
@@ -244,8 +245,8 @@ class LinDriversMixin(FateProbsMixin):
             pval: Optional[float],
             qval: Optional[float],
             corr: Optional[float],
-        ) -> Dict[str, Any]:
-            kwargs: Dict[str, Optional[Union[str, float]]] = {}
+        ) -> dict[str, Any]:
+            kwargs: dict[str, Optional[Union[str, float]]] = {}
             if "{gene" in title_fmt:
                 kwargs["gene"] = gene
             if "{pval" in title_fmt:
@@ -315,14 +316,14 @@ class LinDriversMixin(FateProbsMixin):
         lineage_x: str,
         lineage_y: str,
         color: Optional[str] = None,
-        gene_sets: Optional[Dict[str, Sequence[str]]] = None,
+        gene_sets: Optional[dict[str, Sequence[str]]] = None,
         gene_sets_colors: Optional[Sequence[str]] = None,
         use_raw: bool = False,
         cmap: str = "RdYlBu_r",
         fontsize: int = 12,
         adjust_text: bool = False,
         legend_loc: Optional[str] = "best",
-        figsize: Optional[Tuple[float, float]] = (4, 4),
+        figsize: Optional[tuple[float, float]] = (4, 4),
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,

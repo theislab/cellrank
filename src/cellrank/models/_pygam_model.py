@@ -3,7 +3,8 @@ import copy
 import enum
 import types
 import warnings
-from typing import Any, Literal, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import Any, Literal, Optional, Union
 
 from pygam import GAM as pGAM
 from pygam import (

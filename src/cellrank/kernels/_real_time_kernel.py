@@ -2,18 +2,8 @@ import itertools
 import os
 import pathlib
 import types
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    Literal,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from collections.abc import Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union
 
 from tqdm.auto import tqdm
 
@@ -46,7 +36,7 @@ class SelfTransitions(ModeEnum):
     ALL = "all"
 
 
-Key_t = Tuple[Any, Any]
+Key_t = tuple[Any, Any]
 Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
 Coupling_t = Union[np.ndarray, sp.spmatrix, AnnData]
 
@@ -466,7 +456,7 @@ class RealTimeKernel(UnidirectionalKernel):
     @d.get_sections(base="tmk_thresh", sections=["Parameters"])
     def _sparsify_couplings(
         self,
-        couplings: Dict[Key_t, AnnData],
+        couplings: dict[Key_t, AnnData],
         threshold: Threshold_t,
         copy: bool = False,
     ) -> Optional[Mapping[Key_t, AnnData]]:
@@ -592,7 +582,7 @@ class RealTimeKernel(UnidirectionalKernel):
         self,
         couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]],
         policy: Literal["sequential", "triu"],
-    ) -> Tuple[Dict[Key_t, Optional[Coupling_t]], Any]:
+    ) -> tuple[dict[Key_t, Optional[Coupling_t]], Any]:
         cats = self._time.cat.categories
         if policy == "sequential":
             if couplings is None:
@@ -618,7 +608,7 @@ class RealTimeKernel(UnidirectionalKernel):
         return self._time
 
     @property
-    def couplings(self) -> Optional[Dict[Key_t, AnnData]]:
+    def couplings(self) -> Optional[dict[Key_t, AnnData]]:
         """Optimal transport couplings."""
         return self._couplings
 

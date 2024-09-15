@@ -1,4 +1,4 @@
-from typing import Any, Optional, Tuple, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -29,7 +29,7 @@ class KernelMixin:
         return self.kernel.adata
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """Shape of the kernel."""
         return self.kernel.shape
 

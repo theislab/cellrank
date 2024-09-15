@@ -1,6 +1,6 @@
 import os
 import pathlib
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import pytest
 import scvelo as scv
@@ -104,7 +104,7 @@ def create_kernels(
     adata: AnnData,
     velocity_variances: Optional[str] = None,
     connectivity_variances: Optional[str] = None,
-) -> Tuple[VelocityKernel, ConnectivityKernel]:
+) -> tuple[VelocityKernel, ConnectivityKernel]:
     rng = np.random.default_rng()
     vk = VelocityKernel(adata)
     vk._mat_scaler = adata.obsp.get(velocity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))

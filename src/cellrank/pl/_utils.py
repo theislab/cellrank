@@ -2,19 +2,8 @@ import collections
 import copy
 import itertools
 import pathlib
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Mapping,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable, NamedTuple, Optional, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -43,7 +32,7 @@ Graph = TypeVar("Graph")
 
 
 _ERROR_INCOMPLETE_SPEC = "No options were specified for {}. " "Consider specifying a fallback model using '*'."
-_time_range_type = Optional[Union[float, Tuple[Optional[float], Optional[float]]]]
+_time_range_type = Optional[Union[float, tuple[Optional[float], Optional[float]]]]
 _return_model_type = Mapping[str, Mapping[str, BaseModel]]
 _input_model_type = Union[BaseModel, _return_model_type]
 _callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
@@ -54,7 +43,7 @@ class BulkRes(NamedTuple):
     y_test: np.ndarray
 
 
-def _is_any_gam_mgcv(models: Union[BaseModel, Dict[str, Dict[str, BaseModel]]]) -> bool:
+def _is_any_gam_mgcv(models: Union[BaseModel, dict[str, dict[str, BaseModel]]]) -> bool:
     """Return whether any models to be fit are from R's `mgcv` package.
 
     Parameters
@@ -88,7 +77,7 @@ def _create_models(
     The created models.
     """
 
-    def process_lineages(obs_name: str, lin_names: Union[BaseModel, Dict[Optional[str], Any]]):
+    def process_lineages(obs_name: str, lin_names: Union[BaseModel, dict[Optional[str], Any]]):
         if isinstance(lin_names, BaseModel):
             # sharing the same models for all lineages
             for lin_name in lineages:
@@ -181,11 +170,11 @@ def _fit_bulk_helper(
     models: _input_model_type,
     callbacks: _callback_type,
     lineages: Sequence[Optional[str]],
-    time_range: Sequence[Union[float, Tuple[float, float]]],
+    time_range: Sequence[Union[float, tuple[float, float]]],
     return_models: bool = False,
     queue: Optional[Queue] = None,
     **kwargs,
-) -> Dict[str, Dict[str, BaseModel]]:
+) -> dict[str, dict[str, BaseModel]]:
     """Fit model for given genes and lineages.
 
     Parameters
@@ -262,7 +251,7 @@ def _fit_bulk(
     return_models: bool = False,
     filter_all_failed: bool = True,
     **kwargs,
-) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
+) -> tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
     """Fit models for given genes and lineages.
 
     Parameters
@@ -333,7 +322,7 @@ def _fit_bulk(
 
 def _filter_models(
     models, return_models: bool = False, filter_all_failed: bool = True
-) -> Tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
+) -> tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
     def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
         if return_models:
             assert isinstance(x, BaseModel), f"Expected `BaseModel`, found `{type(x).__name__!r}`."
@@ -381,7 +370,7 @@ def _filter_models(
 
 @d.dedent
 def _trends_helper(
-    models: Dict[str, Dict[str, Any]],
+    models: dict[str, dict[str, Any]],
     gene: str,
     transpose: bool = False,
     lineage_names: Optional[Sequence[str]] = None,
@@ -700,7 +689,7 @@ def _create_callbacks(
     lineages: Sequence[Optional[str]],
     perform_sanity_check: Optional[bool] = None,
     **kwargs,
-) -> Dict[str, Dict[str, Callable]]:
+) -> dict[str, dict[str, Callable]]:
     """Create models for each gene and lineage.
 
     Parameters
@@ -724,7 +713,7 @@ def _create_callbacks(
     The created callbacks.
     """
 
-    def process_lineages(obs_name: str, lin_names: Optional[Union[Callable, Dict[Optional[str], Any]]]) -> None:
+    def process_lineages(obs_name: str, lin_names: Optional[Union[Callable, dict[Optional[str], Any]]]) -> None:
         if lin_names is None:
             lin_names = _default_model_callback
 
@@ -759,7 +748,7 @@ def _create_callbacks(
         for lin_name in lineages - set(callbacks[obs_name].keys()):
             callbacks[obs_name][lin_name] = lin_rest_callback
 
-    def maybe_sanity_check(callbacks: Dict[str, Dict[str, Callable]]) -> None:
+    def maybe_sanity_check(callbacks: dict[str, dict[str, Callable]]) -> None:
         if not perform_sanity_check:
             return
 
@@ -869,7 +858,7 @@ def composition(
     adata: AnnData,
     key: str,
     fontsize: Optional[str] = None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[float] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,
@@ -916,7 +905,7 @@ def composition(
 
 
 # modified from: https://github.com/CarlEkerot/held-karp
-def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
+def _held_karp(dists: np.ndarray) -> tuple[float, np.ndarray]:
     """Held-Karp algorithm solves the Traveling Salesman Problem.
 
     This algorithm uses dynamic programming with memoization.
@@ -984,7 +973,7 @@ def _held_karp(dists: np.ndarray) -> Tuple[float, np.ndarray]:
     return opt, np.array(path)[::-1]
 
 
-def _get_categorical_colors(adata: AnnData, cluster_key: str) -> Tuple[np.ndarray, Mapping[str, str]]:
+def _get_categorical_colors(adata: AnnData, cluster_key: str) -> tuple[np.ndarray, Mapping[str, str]]:
     if cluster_key not in adata.obs:
         raise KeyError(f"Unable to find data in `adata.obs[{cluster_key!r}].`")
     if not isinstance(adata.obs[cluster_key].dtype, pd.CategoricalDtype):
@@ -1010,7 +999,7 @@ def _get_sorted_colors(
     time_key: Optional[str] = None,
     tmin: float = -np.inf,
     tmax: float = np.inf,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     if time_key is not None:
         if time_key not in adata.obs:
             raise KeyError(f"Unable to find time in `adata.obs[{time_key!r}]`.")

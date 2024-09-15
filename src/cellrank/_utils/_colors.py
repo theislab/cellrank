@@ -1,4 +1,5 @@
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -11,14 +12,14 @@ from cellrank import logging as logg
 
 
 def _create_colors(
-    base_color: Union[str, Tuple[float, float, float]],
+    base_color: Union[str, tuple[float, float, float]],
     n: int,
-    hue_range: Optional[Tuple[float, float]] = (-0.1, 0.1),
-    saturation_range: Optional[Tuple[float, float]] = (-0.3, 0.3),
-    value_range: Optional[Tuple[float, float]] = (-0.3, 0.3),
+    hue_range: Optional[tuple[float, float]] = (-0.1, 0.1),
+    saturation_range: Optional[tuple[float, float]] = (-0.3, 0.3),
+    value_range: Optional[tuple[float, float]] = (-0.3, 0.3),
     convert_to_rgb: bool = True,
     as_hex: bool = True,
-) -> List[Any]:
+) -> list[Any]:
     """Create variations of colors from base color.
 
     Parameters
@@ -74,7 +75,7 @@ def _create_colors(
     return res[::2]  # we've created twice as many colors, select every other
 
 
-def _convert_to_hex_colors(cols: Sequence[Any]) -> List[str]:
+def _convert_to_hex_colors(cols: Sequence[Any]) -> list[str]:
     if not all(colors.is_color_like(c) for c in cols):
         raise ValueError("Not all values are color-like.")
 
@@ -108,7 +109,7 @@ def _create_categorical_colors(n_categories: Optional[int] = None):
     raise RuntimeError(f"Unable to create `{n_categories}` colors.")
 
 
-def _insert_categorical_colors(seen_colors: Union[np.ndarray, List], n_categories: int):
+def _insert_categorical_colors(seen_colors: Union[np.ndarray, list], n_categories: int):
     seen_colors = set(_convert_to_hex_colors(seen_colors))
     candidates = list(filter(lambda c: c not in seen_colors, _create_categorical_colors()))[:n_categories]
 
@@ -135,7 +136,7 @@ def _get_black_or_white(value: float, cmap) -> str:
     return _contrasting_color(r, g, b)
 
 
-def _get_bg_fg_colors(color, sat_scale: Optional[float] = None) -> Tuple[str, str]:
+def _get_bg_fg_colors(color, sat_scale: Optional[float] = None) -> tuple[str, str]:
     if not colors.is_color_like(color):
         raise ValueError(f"Value `{color}` is not color-like.")
 
@@ -155,7 +156,7 @@ def _map_names_and_colors(
     series_query: pd.Series,
     colors_reference: Optional[np.array] = None,
     en_cutoff: Optional[float] = None,
-) -> Union[pd.Series, Tuple[pd.Series, List[Any]]]:
+) -> Union[pd.Series, tuple[pd.Series, list[Any]]]:
     """Map annotations and colors from one series to another.
 
     Parameters
@@ -270,7 +271,7 @@ def _map_names_and_colors(
     return (names_query_new, list(_convert_to_hex_colors(colors_query_new))) if process_colors else names_query_new
 
 
-def _compute_mean_color(cols: List[str]) -> str:
+def _compute_mean_color(cols: list[str]) -> str:
     """Compute mean color."""
     if not all(colors.is_color_like(c) for c in cols):
         raise ValueError(f"Not all values are valid colors `{cols}`.")

@@ -2,7 +2,7 @@ import copy
 import itertools
 import pathlib
 import pickle
-from typing import Callable, Literal, Optional, Tuple, Type
+from typing import Callable, Literal, Optional
 
 import pytest
 from _helpers import (
@@ -48,7 +48,7 @@ _rtol = 1e-6
 
 
 class CustomFunc(cr.kernels.utils.SimilarityABC):
-    def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(self, v: np.ndarray, D: np.ndarray, softmax_scale: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
         probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
         probs[0] = 1.0
 
@@ -73,12 +73,12 @@ class CustomKernel(UnidirectionalKernel):
 
 
 class InvalidFuncProbs(cr.kernels.utils.SimilarityABC):
-    def __call__(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
         return np.ones((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
 
 
 class InvalidFuncHessianShape(CustomFunc):
-    def __call__(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> Tuple[np.ndarray, np.ndarray]:
+    def __call__(self, v: np.ndarray, D: np.ndarray, _softmax_scale: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
         probs, logits = np.zeros((D.shape[0],), dtype=np.float64), np.zeros((D.shape[0],), dtype=np.float64)
         probs[-1] = 1.0
 
@@ -584,7 +584,7 @@ class TestKernel:
 
     @pytest.mark.parametrize("cluster_pair", [("Granule immature", "Granule mature"), ("nIPC", "Neuroblast")])
     @pytest.mark.parametrize("graph_key", ["distances", "connectivities"])
-    def test_cbc(self, adata: AnnData, cluster_pair: Tuple[str, str], graph_key: str):
+    def test_cbc(self, adata: AnnData, cluster_pair: tuple[str, str], graph_key: str):
         cluster_key = "clusters"
         rep = "X_pca"
         source, target = cluster_pair
@@ -752,7 +752,7 @@ class TestKernelCopy:
         assert ck2.transition_matrix is None
 
     @pytest.mark.parametrize("ignored", [("_transition_matrix",), ("_params", "foobar")])
-    def test_copy_ignore(self, adata: AnnData, ignored: Tuple[str, ...]):
+    def test_copy_ignore(self, adata: AnnData, ignored: tuple[str, ...]):
         ck1 = ConnectivityKernel(adata).compute_transition_matrix()
         ck2 = ck1._copy_ignore(*ignored)
 
@@ -1518,7 +1518,7 @@ class TestKernelIO:
             CustomKernel,
         ],
     )
-    def test_from_adata(self, adata: AnnData, clazz: Type[Kernel]):
+    def test_from_adata(self, adata: AnnData, clazz: type[Kernel]):
         kwargs, key = {}, "foo"
         if clazz is PseudotimeKernel:
             kwargs["time_key"] = "latent_time"

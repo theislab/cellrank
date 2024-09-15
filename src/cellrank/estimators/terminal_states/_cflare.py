@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Literal, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -122,7 +123,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
 
-        def convert_use(use: Optional[Union[int, Sequence[int], np.ndarray]]) -> List[int]:
+        def convert_use(use: Optional[Union[int, Sequence[int], np.ndarray]]) -> list[int]:
             if method not in ["kmeans", "leiden"]:
                 raise ValueError(f"Invalid method `{method!r}`. Valid options are `leiden` or `kmeans`.")
 
@@ -221,7 +222,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
             time=start,
         )
 
-    def _compute_term_states_probs(self, eig: Dict[str, Any], use: List[int]) -> pd.Series:
+    def _compute_term_states_probs(self, eig: dict[str, Any], use: list[int]) -> pd.Series:
         # get the truncated eigendecomposition
         V, evals = eig["V_l"].real[:, use], eig["D"].real[use]
 

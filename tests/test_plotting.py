@@ -1,6 +1,6 @@
 import os
 import pathlib
-from typing import Callable, Literal, Tuple, Union
+from typing import Callable, Literal, Union
 
 import pytest
 import scvelo as scv
@@ -81,7 +81,7 @@ def compare(
         assert res is None, res
 
     # TODO: refactor (we can remove the prefix from scvelo
-    def _prepare_fname(func: Callable) -> Tuple[str, str]:
+    def _prepare_fname(func: Callable) -> tuple[str, str]:
         fpath = f"{func.__name__.replace('test_', '')}"
         # scvelo saves figures as pdf
         return fpath, str(fpath[7:] + ".png" if fpath.startswith("scvelo_") else fpath)

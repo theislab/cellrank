@@ -2,7 +2,8 @@ import contextlib
 import io
 import pathlib
 import types
-from typing import Any, Dict, Literal, Mapping, Optional, Tuple, Union
+from collections.abc import Mapping
+from typing import Any, Literal, Optional, Union
 
 from pygpcca import GPCCA
 from pygpcca._sorted_schur import _check_conj_split
@@ -33,13 +34,13 @@ class SchurProtocol(BaseProtocol):
 
     schur_vectors: Optional[np.ndarray] = None
     _schur_matrix: Optional[np.ndarray] = None
-    _eigendecomposition: Optional[Dict[str, Any]] = None
+    _eigendecomposition: Optional[dict[str, Any]] = None
 
     def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
 
     def _write_schur_decomposition(
         self,
-        decomp: Dict[str, Any],
+        decomp: dict[str, Any],
         vectors: np.ndarray,
         matrix: np.ndarray,
         params: Mapping[str, Any] = types.MappingProxyType({}),
@@ -56,7 +57,7 @@ class SchurMixin:
 
         self._schur_vectors: Optional[np.ndarray] = None
         self._schur_matrix: Optional[np.ndarray] = None
-        self._eigendecomposition: Optional[Dict[str, Any]] = None
+        self._eigendecomposition: Optional[dict[str, Any]] = None
 
     @property
     @d.get_summary(base="schur_vectors")
@@ -85,7 +86,7 @@ class SchurMixin:
 
     @property
     @d.get_summary(base="eigen")
-    def eigendecomposition(self) -> Optional[Dict[str, Any]]:
+    def eigendecomposition(self) -> Optional[dict[str, Any]]:
         """Eigendecomposition of the :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex.
@@ -208,7 +209,7 @@ class SchurMixin:
         self,
         title: Optional[str] = "schur matrix",
         cmap: str = "viridis",
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[float] = 80,
         save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
@@ -272,7 +273,7 @@ class SchurMixin:
     @shadow
     def _write_schur_decomposition(
         self: SchurProtocol,
-        decomp: Dict[str, Any],
+        decomp: dict[str, Any],
         vectors: np.ndarray,
         matrix: np.ndarray,
         params: Mapping[str, Any] = types.MappingProxyType({}),

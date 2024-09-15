@@ -1,5 +1,4 @@
 import os
-from typing import Tuple
 
 import pytest
 from _helpers import assert_estimators_equal
@@ -492,13 +491,13 @@ class TestCFLARE:
 
 class TestCFLAREIO:
     @pytest.mark.parametrize("deep", [False, True])
-    def test_copy(self, adata_cflare_fwd: Tuple[AnnData, cr.estimators.CFLARE], deep: bool):
+    def test_copy(self, adata_cflare_fwd: tuple[AnnData, cr.estimators.CFLARE], deep: bool):
         _, mc1 = adata_cflare_fwd
         mc2 = mc1.copy(deep=deep)
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_read(self, adata_cflare_fwd: Tuple[AnnData, cr.estimators.CFLARE], tmpdir):
+    def test_read(self, adata_cflare_fwd: tuple[AnnData, cr.estimators.CFLARE], tmpdir):
         _, mc1 = adata_cflare_fwd
 
         mc1.write(os.path.join(tmpdir, "foo.pickle"))

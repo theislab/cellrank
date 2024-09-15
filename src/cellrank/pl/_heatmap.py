@@ -3,7 +3,8 @@ import enum
 import math
 import os
 import pathlib
-from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -64,7 +65,7 @@ def heatmap(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     mode: Literal["genes", "lineages"] = HeatmapMode.LINEAGES,
-    time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
+    time_range: Optional[Union[_time_range_type, list[_time_range_type]]] = None,
     callback: _callback_type = None,
     cluster_key: Optional[Union[str, Sequence[str]]] = None,
     show_fate_probabilities: bool = False,
@@ -86,12 +87,12 @@ def heatmap(
     n_jobs: Optional[int] = 1,
     backend: Backend_t = DEFAULT_BACKEND,
     show_progress_bar: bool = True,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     gene_order: Optional[Sequence[str]] = None,
     **kwargs: Any,
-) -> Optional[Union[Dict[str, pd.DataFrame], Tuple[_return_model_type, Dict[str, pd.DataFrame]]]]:
+) -> Optional[Union[dict[str, pd.DataFrame], tuple[_return_model_type, dict[str, pd.DataFrame]]]]:
     """Plot a heatmap of smoothed gene expression along specified lineages.
 
     .. seealso::
@@ -173,7 +174,7 @@ def heatmap(
     - If ``return_figure = True``, returns a tuple containing the figure and genes.
     """
 
-    def find_indices(series: pd.Series, values) -> List[int]:
+    def find_indices(series: pd.Series, values) -> list[int]:
         def find_nearest(array: np.ndarray, value: float) -> int:
             ix = np.searchsorted(array, value, side="left")
             if ix > 0 and (ix == len(array) or math.fabs(value - array[ix - 1]) < math.fabs(value - array[ix])):
@@ -192,7 +193,7 @@ def heatmap(
             return lin.copy()
         return convolve(lin, np.ones(n_convolve) / n_convolve, mode="nearest")
 
-    def create_col_colors(lname: str, rng: np.ndarray) -> Tuple[np.ndarray, colors.Colormap, colors.Normalize]:
+    def create_col_colors(lname: str, rng: np.ndarray) -> tuple[np.ndarray, colors.Colormap, colors.Normalize]:
         color = probs[lname].colors[0]
         lin = subset_lineage(lname, rng)
 
@@ -246,7 +247,7 @@ def heatmap(
         raise NotImplementedError(mode.value)
 
     @_plot_heatmap.register(HeatmapMode.GENES)
-    def _() -> Tuple[plt.Figure, None]:
+    def _() -> tuple[plt.Figure, None]:
         def color_fill_rec(ax, xs, y1, y2, colors=None, cmap=cmap, **kwargs) -> None:
             colors = colors if cmap is None else cmap(colors)
 
@@ -349,7 +350,7 @@ def heatmap(
         return fig, None
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
-    def _(gene_order: Optional[Sequence[str]] = None) -> Tuple[List[plt.Figure], pd.DataFrame]:
+    def _(gene_order: Optional[Sequence[str]] = None) -> tuple[list[plt.Figure], pd.DataFrame]:
         data_t = collections.defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():

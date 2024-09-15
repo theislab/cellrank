@@ -1,5 +1,6 @@
 import dataclasses
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -143,7 +144,7 @@ class FlowPlotter:
 
     def compute_flow(
         self,
-        time_points: Sequence[Tuple[Numeric_t, Numeric_t]],
+        time_points: Sequence[tuple[Numeric_t, Numeric_t]],
         cluster: Optional[str] = None,
     ) -> pd.DataFrame:
         """Compute outgoing flow.
@@ -219,7 +220,7 @@ class FlowPlotter:
         alpha: float = 0.8,
         xticks_step_size: Optional[int] = 1,
         legend_loc: Optional[str] = "upper right out",
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
     ) -> plt.Axes:
         """Plot outgoing flow.
@@ -275,7 +276,7 @@ class FlowPlotter:
 
     def _get_time_subset(
         self, t1: Numeric_t, t2: Numeric_t, cluster: Optional[str] = None
-    ) -> Tuple[Union[np.ndarray, sp.spmatrix], pd.Series, pd.Series]:
+    ) -> tuple[Union[np.ndarray, sp.spmatrix], pd.Series, pd.Series]:
         if cluster is None:
             row_ixs = np.where(self.time == t1)[0]
         else:
@@ -306,7 +307,7 @@ class FlowPlotter:
         self._cmat.columns = tmp
         return old_times
 
-    def _order_clusters(self, cluster: str, ascending: Optional[bool] = False) -> Tuple[List[Any], List[Any]]:
+    def _order_clusters(self, cluster: str, ascending: Optional[bool] = False) -> tuple[list[Any], list[Any]]:
         if ascending is not None:
             tmp = [[], []]
             total_flow = self._flow.loc[(slice(None), cluster), :].sum().sort_values(ascending=ascending)
@@ -329,7 +330,7 @@ class FlowPlotter:
         clusters: Sequence[Any],
         y_offset: Mapping[Any, float],
         alpha: float = 0.8,
-    ) -> Tuple[Mapping[Any, np.ndarray], Mapping[Any, PolyCollection]]:
+    ) -> tuple[Mapping[Any, np.ndarray], Mapping[Any, PolyCollection]]:
         start_t, end_t = self._cmat.columns.min(), self._cmat.columns.max()
         x = np.array(self._cmat.columns)  # fitting
         # extrapolation
@@ -362,8 +363,8 @@ class FlowPlotter:
         x2: Point,
         y1: Point,
         y2: Point,
-        start_color: Tuple[float, float, float],
-        end_color: Tuple[float, float, float],
+        start_color: tuple[float, float, float],
+        end_color: tuple[float, float, float],
         flow: float,
         alpha: float = 0.8,
     ) -> None:
@@ -416,7 +417,7 @@ class FlowPlotter:
         alpha: float = 0.8,
         xticks_step_size: Optional[int] = 1,
         legend_loc: Optional[str] = "upper right out",
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
     ) -> plt.Axes:
         from cellrank.pl._utils import _position_legend

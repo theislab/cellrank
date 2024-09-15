@@ -1,17 +1,13 @@
 import copy
 import enum
+from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     Any,
     Callable,
-    Dict,
-    Iterable,
     Literal,
-    Mapping,
     NamedTuple,
     Optional,
     Protocol,
-    Sequence,
-    Tuple,
     TypeVar,
     Union,
 )
@@ -61,7 +57,7 @@ class BaseProtocol(Protocol):  # noqa: D101
         ...
 
     @property
-    def params(self) -> Dict[str, Any]:  # noqa: D102
+    def params(self) -> dict[str, Any]:  # noqa: D102
         ...
 
     def _set(
@@ -69,7 +65,7 @@ class BaseProtocol(Protocol):  # noqa: D101
         attr: Optional[str] = None,
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, dict[str, Any]]] = None,
         copy: bool = True,
         shadow_only: bool = False,
     ) -> None: ...
@@ -80,7 +76,7 @@ class BaseProtocol(Protocol):  # noqa: D101
         obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
         shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
-        dtype: Optional[Union[type, Tuple[type, ...]]] = None,
+        dtype: Optional[Union[type, tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
     ) -> Any: ...
@@ -90,13 +86,13 @@ class BaseProtocol(Protocol):  # noqa: D101
         locs: Optional[Mapping[str, Any]] = None,
         func: Optional[Callable] = None,
         remove: Sequence[str] = (),
-    ) -> Dict[str, Any]: ...
+    ) -> dict[str, Any]: ...
 
-    def _read_params(self, key: str) -> Dict[str, Any]: ...
+    def _read_params(self, key: str) -> dict[str, Any]: ...
 
 
 @decorator()
-def logger(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: Dict[str, Any]) -> str:
+def logger(wrapped: Callable[..., str], instance: Any, args: Any, kwargs: dict[str, Any]) -> str:
     """Handle logging for :class:`~anndata.AnnData` writing functions of :class:`~cellrank.estimators.BaseEstimator`."""
     log, time = kwargs.pop("log", True), kwargs.pop("time", None)
     msg = wrapped(*args, **kwargs)

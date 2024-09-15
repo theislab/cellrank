@@ -1,6 +1,7 @@
 import itertools
 import pathlib
-from typing import Any, List, Literal, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal, Optional, Union
 
 import scvelo as scv
 
@@ -23,7 +24,7 @@ from cellrank.kernels._utils import _get_basis
 
 __all__ = ["RandomWalk"]
 
-Indices_t = Optional[Union[Sequence[str], Mapping[str, Union[str, Sequence[str], Tuple[float, float]]]]]
+Indices_t = Optional[Union[Sequence[str], Mapping[str, Union[str, Sequence[str], tuple[float, float]]]]]
 
 
 @d.dedent
@@ -121,7 +122,7 @@ class RandomWalk:
         seed: Optional[int] = None,
         successive_hits: int = 0,
         queue: Optional[Any] = None,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         res = []
         for s in sims:
             sim = self.simulate_one(
@@ -148,7 +149,7 @@ class RandomWalk:
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
-    ) -> List[np.ndarray]:
+    ) -> list[np.ndarray]:
         """Simulate many random walks.
 
         Parameters
@@ -186,13 +187,13 @@ class RandomWalk:
     @d.dedent
     def plot(
         self,
-        sims: List[np.ndarray],
+        sims: list[np.ndarray],
         basis: str = "umap",
         cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
         linewidth: float = 1.0,
         linealpha: float = 0.3,
         ixs_legend_loc: Optional[str] = None,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,

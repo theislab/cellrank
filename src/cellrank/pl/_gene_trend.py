@@ -1,6 +1,7 @@
 import pathlib
 import types
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -47,13 +48,13 @@ def gene_trends(
     lineages: Optional[Union[str, Sequence[str]]] = None,
     backward: bool = False,
     data_key: str = "X",
-    time_range: Optional[Union[_time_range_type, List[_time_range_type]]] = None,
+    time_range: Optional[Union[_time_range_type, list[_time_range_type]]] = None,
     transpose: bool = False,
     callback: _callback_type = None,
     conf_int: Union[bool, float] = True,
     same_plot: bool = False,
     hide_cells: bool = False,
-    perc: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]] = None,
+    perc: Optional[Union[tuple[float, float], Sequence[tuple[float, float]]]] = None,
     lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
     fate_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
     cell_color: Optional[str] = None,
@@ -74,7 +75,7 @@ def gene_trends(
     n_jobs: Optional[int] = 1,
     backend: Backend_t = DEFAULT_BACKEND,
     show_progress_bar: bool = True,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     return_figure: bool = False,

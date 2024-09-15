@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import pytest
 
 import numpy as np
@@ -15,7 +13,7 @@ from cellrank._utils._linear_solver import (
 petsc_slepc_skip = pytest.mark.skipif(not _is_petsc_slepc_available(), reason="PETSc or SLEPc is not installed.")
 
 
-def _create_a_b_matrices(seed: int, sparse: bool) -> Tuple[np.ndarray, np.ndarray]:
+def _create_a_b_matrices(seed: int, sparse: bool) -> tuple[np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     if sparse:
         A = sp.random(20, 20, density=0.8, random_state=rng.integers(0, 100), format="csr")

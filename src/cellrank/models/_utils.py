@@ -1,5 +1,6 @@
 import enum
-from typing import Any, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any, Optional, Union
 
 import numba as nb
 import numpy as np

@@ -1,5 +1,6 @@
 import types
-from typing import Any, Dict, Literal, Mapping, NamedTuple, Optional, Sequence, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal, NamedTuple, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ class RecTransStates(NamedTuple):
     s: Union[np.ndarray, sp.spmatrix]
     trans_indices: np.ndarray
     rec_indices: np.ndarray
-    name_to_ixs: Dict[str, np.ndarray]
+    name_to_ixs: dict[str, np.ndarray]
     term_states: pd.Series
     term_states_colors: Sequence[Any]
 

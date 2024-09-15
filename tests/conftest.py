@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from typing import Optional, Tuple
+from typing import Optional
 
 import pytest
 from _helpers import create_model
@@ -44,7 +44,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus) -> None:
             logger.removeHandler(handler)
 
 
-def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
+def _create_cflare(*, backward: bool = False) -> tuple[AnnData, CFLARE]:
     adata = _adata_medium.copy()
 
     sc.tl.paga(adata, groups="clusters")
@@ -67,7 +67,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     return adata, mc
 
 
-def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
+def _create_gpcca(*, backward: bool = False) -> tuple[AnnData, GPCCA]:
     adata = _adata_medium.copy()
 
     sc.tl.paga(adata, groups="clusters")
@@ -115,19 +115,19 @@ def adata_large() -> AnnData:
 @pytest.fixture
 def adata_cflare_fwd(
     adata_cflare=_create_cflare(backward=False),  # noqa: B008
-) -> Tuple[AnnData, CFLARE]:
+) -> tuple[AnnData, CFLARE]:
     adata, cflare = adata_cflare
     return adata.copy(), cflare
 
 
 @pytest.fixture
-def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
+def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
 @pytest.fixture
-def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
+def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
@@ -138,7 +138,7 @@ def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noq
 
 
 @pytest.fixture
-def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
+def g(adata_gpcca=_create_gpcca(backward=False)) -> tuple[AnnData, GPCCA]:  # noqa: B008
     return adata_gpcca[1].copy()
 
 
