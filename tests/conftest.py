@@ -102,17 +102,17 @@ def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
         return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata() -> AnnData:
     return _adata_small.copy()
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_large() -> AnnData:
     return _adata_large.copy()
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_cflare_fwd(
     adata_cflare=_create_cflare(backward=False),  # noqa: B008
 ) -> Tuple[AnnData, CFLARE]:
@@ -120,24 +120,24 @@ def adata_cflare_fwd(
     return adata.copy(), cflare
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa: B008
     return adata_cflare[0].copy()
 
 
-@pytest.fixture()
+@pytest.fixture
 def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
     return adata_gpcca[1].copy()
 
@@ -168,7 +168,7 @@ def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path, worker_id: s
     return model
 
 
-@pytest.fixture()
+@pytest.fixture
 def pygam_model(adata_cflare: AnnData) -> GAM:
     m = GAM(adata_cflare)
     m.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
@@ -178,7 +178,7 @@ def pygam_model(adata_cflare: AnnData) -> GAM:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     m = create_model(adata_cflare)
     assert isinstance(m, SKLearnModel), m
@@ -190,7 +190,7 @@ def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def lineage():
     x = cr._utils.Lineage(
         np.array(
@@ -212,7 +212,7 @@ def lineage():
     return x / x.sum(1)
 
 
-@pytest.fixture()
+@pytest.fixture
 def kernel(adata_large: AnnData):
     vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata_large).compute_transition_matrix()

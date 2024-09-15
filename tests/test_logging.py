@@ -11,7 +11,7 @@ from cellrank import logging as logg
 from cellrank import settings
 
 
-@pytest.fixture()
+@pytest.fixture
 def logging_state():  # noqa: PT004
     verbosity_orig = settings.verbosity
     yield
