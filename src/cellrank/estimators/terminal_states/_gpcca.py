@@ -1321,7 +1321,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._set("_coarse_stat_dist", value=stat_dist, shadow_only=True)
             self._set(
                 obj=self.adata.uns, key=Key.uns.coarse(self.backward),
-                value=AnnData(tmat, obs=dists),
+                value=AnnData(tmat, obs=dists), copy=False,
             )
         else:
             for attr in ["_schur_vectors", "_schur_matrix", "_coarse_tmat", "_coarse_init_dist", "_coarse_stat_dist"]:
