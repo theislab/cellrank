@@ -1412,7 +1412,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             self._coarse_init_dist = tmat.obs["coarse_init_dist"]
             self._coarse_stat_dist = tmat.obs.get("coarse_stat_dist", None)
 
-            self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat)
+            self._set(obj=self._shadow_adata.uns, key=Key.uns.coarse(self.backward), value=tmat, copy=False)
 
         if not sg.ok:
             return False
