@@ -549,6 +549,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             norm=False,
             dpi=DPI,
