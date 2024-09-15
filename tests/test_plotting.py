@@ -3027,6 +3027,7 @@ class TestLogOdds:
             keys=adata.var_names[:3],
             figsize=(4, 3),
             size=4,
+            seed=42,
         )
 
     @compare()
@@ -3137,6 +3138,7 @@ class TestLogOdds:
             keys="clusters",
             size=20,
             figsize=(4, 3),
+            seed=42,
         )
 
     @compare()
@@ -3152,6 +3154,7 @@ class TestLogOdds:
             size=10,
             cmap="inferno",
             figsize=(4, 3),
+            seed=43,
         )
 
     @compare()
@@ -3167,7 +3170,7 @@ class TestLogOdds:
             alpha=0.5,
             figsize=(4, 3),
             size=10,
-            seed=42,
+            seed=0,
         )
 
     @compare()
@@ -3183,7 +3186,7 @@ class TestLogOdds:
             ncols=1,
             figsize=(3, 4),
             size=10,
-            seed=42,
+            seed=2,
         )
 
     @compare()
@@ -3199,7 +3202,7 @@ class TestLogOdds:
             fontsize=25,
             figsize=(3, 4),
             size=10,
-            seed=42,
+            seed=1,
         )
 
     @compare()
@@ -3215,7 +3218,7 @@ class TestLogOdds:
             xticks_step_size=None,
             figsize=(3, 4),
             size=10,
-            seed=42,
+            seed=3,
         )
 
     @compare()
@@ -3231,7 +3234,7 @@ class TestLogOdds:
             legend_loc="upper right out",
             figsize=(4, 3),
             size=10,
-            seed=42,
+            seed=5,
         )
 
     @compare(tol=250)
@@ -3245,7 +3248,7 @@ class TestLogOdds:
             save=fpath,
             figsize=(4, 3),
             size=10,
-            seed=42,
+            seed=0,
             jitter=1,
         )
 
@@ -3263,6 +3266,7 @@ class TestLogOdds:
             edgecolor="red",
             figsize=(4, 3),
             size=4,
+            seed=11,
         )
         assert isinstance(ax, plt.Axes)
 
@@ -3280,6 +3284,7 @@ class TestLogOdds:
             show=False,
             figsize=(4, 3),
             size=4,
+            seed=12,
         )
         assert isinstance(axes, np.ndarray)
         assert axes.shape == (3,)
@@ -3298,6 +3303,7 @@ class TestLogOdds:
             edgecolor="red",
             figsize=(4, 3),
             size=4,
+            seed=13,
         )
 
 
