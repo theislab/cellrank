@@ -855,17 +855,17 @@ class TestKernelUtils:
         numpy_fn = getattr(np, fn)
         numba_fn = globals()[f"np_{fn}"]
 
-        x = np.random.RandomState(42).normal(size=(10, 10))
+        x = np.random.default_rng(42).normal(size=(10, 10))
 
         np.testing.assert_allclose(numpy_fn(x, axis=axis), numba_fn(x, axis))
 
     def test_apply_along_axis(self):
-        x = np.random.RandomState(42).normal(size=(10, 10))
+        x = np.random.default_rng(42).normal(size=(10, 10))
 
-        def _create_numba_fn(fn):
+        def _create_numba_fn(func):
             @nb.njit
             def wrapped(axis: int, x: np.ndarray):
-                return _np_apply_along_axis(fn, axis, x)
+                return _np_apply_along_axis(func, axis, x)
 
             return wrapped
 

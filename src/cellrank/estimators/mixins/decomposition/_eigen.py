@@ -1,6 +1,7 @@
 import pathlib
 import types
-from typing import Any, Dict, Literal, Mapping, Optional, Tuple, Union
+from collections.abc import Mapping
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -23,13 +24,11 @@ EPS = np.finfo(np.float64).eps
 
 class EigenProtocol(BaseProtocol):
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
-        ...
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
 
     def _write_eigendecomposition(
-        self, decomp: Dict[str, Any], params: Mapping[str, Any] = types.MappingProxyType({})
-    ) -> str:
-        ...
+        self, decomp: dict[str, Any], params: Mapping[str, Any] = types.MappingProxyType({})
+    ) -> str: ...
 
 
 class EigenMixin:
@@ -41,7 +40,7 @@ class EigenMixin:
 
     @property
     @d.get_summary(base="eigen")
-    def eigendecomposition(self) -> Optional[Dict[str, Any]]:
+    def eigendecomposition(self) -> Optional[dict[str, Any]]:
         """Eigendecomposition of the :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
@@ -157,7 +156,7 @@ class EigenMixin:
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         marker: str = ".",
-        figsize: Optional[Tuple[float, float]] = (5, 5),
+        figsize: Optional[tuple[float, float]] = (5, 5),
         dpi: int = 100,
         save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
@@ -230,14 +229,14 @@ class EigenMixin:
         self,
         n: int,
         dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         marker: str = ".",
         **kwargs: Any,
     ) -> plt.Figure:
         # define a function to make the data limits rectangular
-        def adapt_range(min_: float, max_: float, range_: float) -> Tuple[float, float]:
+        def adapt_range(min_: float, max_: float, range_: float) -> tuple[float, float]:
             return (
                 min_ + (max_ - min_) / 2 - range_ / 2,
                 min_ + (max_ - min_) / 2 + range_ / 2,
@@ -288,7 +287,7 @@ class EigenMixin:
         show_eigengap: bool = True,
         show_all_xticks: bool = True,
         dpi: int = 100,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         legend_loc: Optional[str] = None,
         title: Optional[str] = None,
         marker: str = ".",
@@ -348,7 +347,7 @@ class EigenMixin:
     @shadow
     def _write_eigendecomposition(
         self: EigenProtocol,
-        decomp: Dict[str, Any],
+        decomp: dict[str, Any],
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         key = Key.uns.eigen(self.backward)

@@ -1,6 +1,6 @@
 import copy
 import enum
-from typing import Any, Literal, Optional, Tuple, Union
+from typing import Any, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -337,7 +337,7 @@ class GAMR(BaseModel):
         self._lib, self._lib_name = _maybe_import_r_lib(self._lib_name, raise_exc=True)
 
 
-def _maybe_import_r_lib(name: str, raise_exc: bool = False) -> Tuple[Optional[Any], Optional[str]]:
+def _maybe_import_r_lib(name: str, raise_exc: bool = False) -> tuple[Optional[Any], Optional[str]]:
     global _r_lib, _r_lib_name
 
     if name == _r_lib_name and _r_lib is not None:

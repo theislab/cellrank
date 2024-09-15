@@ -1,7 +1,8 @@
 import abc
 import copy
 import pathlib
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -34,7 +35,7 @@ class KernelExpression(IOMixin, abc.ABC):
         self._parent = parent
         self._normalize = parent is None
         self._transition_matrix = None
-        self._params: Dict[str, Any] = {}
+        self._params: dict[str, Any] = {}
         self._init_kwargs = kwargs  # for `_read_from_adata`
 
     def __init_subclass__(cls, **_: Any) -> None:
@@ -72,12 +73,12 @@ class KernelExpression(IOMixin, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def kernels(self) -> Tuple["KernelExpression", ...]:
+    def kernels(self) -> tuple["KernelExpression", ...]:
         """Underlying base kernels."""
 
     @property
     @abc.abstractmethod
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """``(n_cells, n_cells)``."""
 
     @property
@@ -110,7 +111,7 @@ class KernelExpression(IOMixin, abc.ABC):
         legend_loc: Optional[str] = "upper right out",
         alpha: Optional[float] = 0.8,
         xticks_step_size: Optional[int] = 1,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,
@@ -185,7 +186,7 @@ class KernelExpression(IOMixin, abc.ABC):
         n_jobs: Optional[int] = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
@@ -436,13 +437,13 @@ class KernelExpression(IOMixin, abc.ABC):
         self._transition_matrix = matrix
 
     @property
-    def params(self) -> Dict[str, Any]:
+    def params(self) -> dict[str, Any]:
         """Parameters which are used to compute the transition matrix."""
         if len(self.kernels) == 1:
             return self._params
         return {f"{k!r}:{i}": k.params for i, k in enumerate(self.kernels)}
 
-    def _reuse_cache(self, expected_params: Dict[str, Any], *, time: Optional[Any] = None) -> bool:
+    def _reuse_cache(self, expected_params: dict[str, Any], *, time: Optional[Any] = None) -> bool:
         # fmt: off
         try:
             if expected_params == self._params:
@@ -463,7 +464,7 @@ class KernelExpression(IOMixin, abc.ABC):
             self._params = expected_params
         # fmt: on
 
-    def _get_boundary(self, source: str, target: str, cluster_key: str, graph_key: str = "distances") -> List[int]:
+    def _get_boundary(self, source: str, target: str, cluster_key: str, graph_key: str = "distances") -> list[int]:
         """Identify source observations at boundary to target cluster.
 
         Parameters
@@ -497,7 +498,7 @@ class KernelExpression(IOMixin, abc.ABC):
         return boundary_ids
 
     def _get_empirical_velocity_field(
-        self, boundary_ids: List[int], target_obs_mask, rep: str, graph_key: str = "distances"
+        self, boundary_ids: list[int], target_obs_mask, rep: str, graph_key: str = "distances"
     ) -> np.ndarray:
         """Compute an emprical estimate of velocity field between two clusters.
 
@@ -531,9 +532,7 @@ class KernelExpression(IOMixin, abc.ABC):
 
         empirical_velo = np.array(empirical_velo)
         obs_mask = np.isnan(empirical_velo).any(axis=1)
-        empirical_velo = empirical_velo[~obs_mask, :]
-
-        return empirical_velo
+        return empirical_velo[~obs_mask, :]
 
     def _get_vector_field_estimate(self, rep: str) -> np.ndarray:
         """Compute estimate of vector field under one step of the transition matrix.
@@ -720,12 +719,12 @@ class Kernel(KernelExpression, abc.ABC):
         KernelExpression.transition_matrix.fset(self, matrix)
 
     @property
-    def kernels(self) -> Tuple["KernelExpression", ...]:
+    def kernels(self) -> tuple["KernelExpression", ...]:
         """Underlying base kernels."""
         return (self,)
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """``(n_cells, n_cells)``."""
         return self._n_obs, self._n_obs
 
@@ -875,7 +874,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
             kexpr.adata = adata
 
     @property
-    def kernels(self) -> Tuple["KernelExpression", ...]:
+    def kernels(self) -> tuple["KernelExpression", ...]:
         """Underlying unique basic kernels."""
         kernels = []
         for kexpr in self:
@@ -892,7 +891,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         return type(self)(*kexprs, parent=self._parent)
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """``(n_cells, n_cells)``."""
         # all kernels have the same shape
         return self[0].shape
@@ -944,7 +943,7 @@ class KernelAdd(NaryKernelExpression):
                 kexpr._normalize = False
 
     @property
-    def _bin_consts(self) -> List[KernelExpression]:
+    def _bin_consts(self) -> list[KernelExpression]:
         """Return constant expressions for each binary multiplication children with at least 1 constant."""
         return [c for k in self if isinstance(k, KernelMul) for c in k._bin_consts]
 
@@ -976,7 +975,7 @@ class KernelMul(NaryKernelExpression):
         return fmt
 
     @property
-    def _bin_consts(self) -> List[KernelExpression]:
+    def _bin_consts(self) -> list[KernelExpression]:
         """Return all constants if this expression contains only 2 subexpressions."""
         if len(self) != 2:
             return []
@@ -984,7 +983,7 @@ class KernelMul(NaryKernelExpression):
         return [k for k in self if isinstance(k, Constant)]
 
     @property
-    def _split_const(self) -> Tuple[Optional[Constant], Optional[KernelExpression]]:
+    def _split_const(self) -> tuple[Optional[Constant], Optional[KernelExpression]]:
         """Return a constant and the other expression, iff this expression is of length 2 and contains a constant."""
         if not self._bin_consts:
             return None, None

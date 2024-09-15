@@ -126,7 +126,7 @@ def _get_basis(adata: AnnData, basis: str) -> np.ndarray:
 
 
 def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
-    if key not in adata.obs.keys():
+    if key not in adata.obs:
         raise KeyError(f"Unable to find data in `adata.obs[{key!r}]`.")
 
     exp_time = adata.obs[key].copy()

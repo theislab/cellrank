@@ -2,18 +2,8 @@ import abc
 import contextlib
 import copy as copy_
 import inspect
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -67,7 +57,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
             object = PrecomputedKernel(object, copy=False, **kwargs)
         super().__init__(kernel=object)
 
-        self._params: Dict[str, Any] = {}
+        self._params: dict[str, Any] = {}
         self._shadow_adata = AnnData(
             X=sp.csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
             obs=self.adata.obs[[]].copy(),
@@ -115,7 +105,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
         attr: Optional[str] = None,
         obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
         key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]] = None,
+        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, dict[str, Any]]] = None,
         copy: bool = True,
         shadow_only: bool = False,
     ) -> None:
@@ -172,7 +162,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
         obj: Union[pd.DataFrame, Mapping[str, Any]],
         key: str,
         shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
-        dtype: Optional[Union[type, Tuple[type, ...]]] = None,
+        dtype: Optional[Union[type, tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
     ) -> Any:
@@ -250,7 +240,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
         locs: Optional[Mapping[str, Any]] = None,
         func: Optional[Callable] = None,
         remove: Sequence[str] = (),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create parameters of interest from a function call.
 
         Parameters
@@ -298,7 +288,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
         finally:
             del frame
 
-    def _read_params(self, key: str) -> Dict[str, Any]:
+    def _read_params(self, key: str) -> dict[str, Any]:
         """Read ``key`` from estimator params in :attr:`adata`.
 
         Usually called in :meth:`_read_adata` during :meth:`from_adata`.
@@ -334,7 +324,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
         Annotated data object.
         """  # noqa: D400
 
-        def handle_attribute(attr: Attr_t, keys: List[str], *, copy: bool) -> None:
+        def handle_attribute(attr: Attr_t, keys: list[str], *, copy: bool) -> None:
             try:
                 if attr == "X":
                     adata.X = copy_.deepcopy(self.adata.X) if copy else self.adata.X
@@ -457,6 +447,6 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
         return repr(self)
 
     @property
-    def params(self) -> Dict[str, Any]:
+    def params(self) -> dict[str, Any]:
         """Estimator parameters."""
         return self._params

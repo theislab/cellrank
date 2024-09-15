@@ -7,22 +7,22 @@ default_stages:
 minimum_pre_commit_version: 3.0.0
 repos:
 - repo: https://github.com/psf/black
-  rev: 23.3.0
+  rev: 24.8.0
   hooks:
   - id: black
     additional_dependencies: [toml]
 - repo: https://github.com/timothycrosley/isort
-  rev: 5.12.0
+  rev: 5.13.2
   hooks:
   - id: isort
     additional_dependencies: [toml]
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.9.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.6.0
   hooks:
   - id: check-merge-conflict
   - id: check-ast
@@ -37,27 +37,27 @@ repos:
   - id: check-yaml
   - id: check-toml
 - repo: https://github.com/asottile/pyupgrade
-  rev: v3.4.0
+  rev: v3.17.0
   hooks:
   - id: pyupgrade
     args: [--py3-plus, --py38-plus, --keep-runtime-typing]
 - repo: https://github.com/asottile/blacken-docs
-  rev: 1.13.0
+  rev: 1.18.0
   hooks:
   - id: blacken-docs
-    additional_dependencies: [black==23.1.0]
+    additional_dependencies: [black==24.8.0]
 - repo: https://github.com/rstcheck/rstcheck
-  rev: v6.1.2
+  rev: v6.2.4
   hooks:
   - id: rstcheck
     additional_dependencies: [tomli]
     args: [--config=pyproject.toml]
 - repo: https://github.com/PyCQA/doc8
-  rev: v1.1.1
+  rev: v1.1.2
   hooks:
   - id: doc8
-- repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.270
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.6.5
   hooks:
   - id: ruff
     args: [--fix, --exit-non-zero-on-fix]

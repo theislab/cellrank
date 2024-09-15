@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import pickle
-from typing import Optional, Protocol, Tuple, Union
+from typing import Optional, Protocol, Union
 
 from anndata import AnnData
 
@@ -12,16 +12,13 @@ __all__ = ["IOMixin"]
 
 class IOMixinProtocol(Protocol):
     @property
-    def shape(self) -> Tuple[int, ...]:
-        ...
+    def shape(self) -> tuple[int, ...]: ...
 
     @property
-    def adata(self) -> AnnData:
-        ...
+    def adata(self) -> AnnData: ...
 
     @adata.setter
-    def adata(self, adata: AnnData) -> None:
-        ...
+    def adata(self, adata: AnnData) -> None: ...
 
 
 class IOMixin:

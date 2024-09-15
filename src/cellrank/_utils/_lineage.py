@@ -5,18 +5,8 @@ import inspect
 import itertools
 import pathlib
 import types
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from collections.abc import Iterable, Mapping
+from typing import Any, Callable, Literal, Optional, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -314,13 +304,15 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def _mix_lineages(self, rows, mixtures: Iterable[Union[str, Any]]) -> "Lineage":
         from cellrank._utils._utils import _unique_order_preserving
 
-        def unsplit(names: str) -> Tuple[str, ...]:
+        def unsplit(names: str) -> tuple[str, ...]:
             return tuple(sorted({name.strip(" ") for name in names.strip(" ,").split(",")}))
 
         keys = [
-            tuple(self._maybe_convert_names(unsplit(mixture), default=mixture))
-            if isinstance(mixture, str)
-            else (mixture,)
+            (
+                tuple(self._maybe_convert_names(unsplit(mixture), default=mixture))
+                if isinstance(mixture, str)
+                else (mixture,)
+            )
             for mixture in mixtures
         ]
         keys = _unique_order_preserving(keys)
@@ -565,7 +557,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         title: Optional[str] = None,
         legend_loc: Optional[str] = "on data",
         legend_kwargs: Mapping = types.MappingProxyType({}),
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[float] = None,
         save: Optional[Union[pathlib.Path, str]] = None,
         **kwargs: Any,
@@ -655,7 +647,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         normalize_weights: Literal["scale", "softmax"] = NormWeights.SOFTMAX,
         softmax_scale: float = 1.0,
         return_weights: bool = False,
-    ) -> Union["Lineage", Tuple["Lineage", Optional[pd.DataFrame]]]:
+    ) -> Union["Lineage", tuple["Lineage", Optional[pd.DataFrame]]]:
         """Subset states and normalize them so that they again sum to :math:`1`.
 
         Parameters
@@ -905,9 +897,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
             cells = "".join(
-                f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
-                if isinstance(c, int)
-                else _DUMMY_CELL
+                (
+                    f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
+                    if isinstance(c, int)
+                    else _DUMMY_CELL
+                )
                 for c in rng
             )
             return f"<tr>{(names[r] if self._is_transposed else '') + cells}</tr>"
@@ -996,7 +990,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
-    def _check_axis1_shape(self, array: Iterable[Union[str, ColorLike]], msg: str) -> List[Union[str, ColorLike]]:
+    def _check_axis1_shape(self, array: Iterable[Union[str, ColorLike]], msg: str) -> list[Union[str, ColorLike]]:
         """Check whether the size of the 1D array has the correct length."""
         array = list(array)
         if len(array) != self._n_lineages:
@@ -1010,7 +1004,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         is_singleton: bool = False,
         default: Optional[Union[int, str]] = None,
         make_unique: bool = True,
-    ) -> Union[int, List[int], List[bool]]:
+    ) -> Union[int, list[int], list[bool]]:
         """Convert string indices to their corresponding int indices."""
         from cellrank._utils._utils import _unique_order_preserving
 
@@ -1041,7 +1035,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     @staticmethod
     def _prepare_annotation(
-        array: List[str],
+        array: list[str],
         checker: Optional[Callable] = None,
         transformer: Optional[Callable] = None,
         checker_msg: Optional[str] = None,
@@ -1117,7 +1111,7 @@ class LineageView(Lineage):
         return obj.T if was_trasposed else obj
 
 
-def _remove_zero_rows(a: np.ndarray, b: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _remove_zero_rows(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     if a.shape[0] != b.shape[0]:
         raise ValueError("Lineage objects have unequal cell numbers")
 

@@ -1,6 +1,6 @@
 import pathlib
 import warnings
-from typing import Optional, Tuple
+from typing import Optional
 
 import pytest
 from _helpers import create_model
@@ -44,7 +44,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus) -> None:
             logger.removeHandler(handler)
 
 
-def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
+def _create_cflare(*, backward: bool = False) -> tuple[AnnData, CFLARE]:
     adata = _adata_medium.copy()
 
     sc.tl.paga(adata, groups="clusters")
@@ -67,7 +67,7 @@ def _create_cflare(*, backward: bool = False) -> Tuple[AnnData, CFLARE]:
     return adata, mc
 
 
-def _create_gpcca(*, backward: bool = False) -> Tuple[AnnData, GPCCA]:
+def _create_gpcca(*, backward: bool = False) -> tuple[AnnData, GPCCA]:
     adata = _adata_medium.copy()
 
     sc.tl.paga(adata, groups="clusters")
@@ -102,43 +102,43 @@ def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
         return None
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata() -> AnnData:
     return _adata_small.copy()
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_large() -> AnnData:
     return _adata_large.copy()
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_cflare_fwd(
     adata_cflare=_create_cflare(backward=False),  # noqa: B008
-) -> Tuple[AnnData, CFLARE]:
+) -> tuple[AnnData, CFLARE]:
     adata, cflare = adata_cflare
     return adata.copy(), cflare
 
 
-@pytest.fixture()
-def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
+@pytest.fixture
+def adata_gpcca_fwd(adata_gpcca=_create_gpcca(backward=False)) -> tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
-@pytest.fixture()
-def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
+@pytest.fixture
+def adata_gpcca_bwd(adata_gpcca=_create_gpcca(backward=True)) -> tuple[AnnData, GPCCA]:  # noqa: B008
     adata, gpcca = adata_gpcca
     return adata.copy(), gpcca
 
 
-@pytest.fixture()
+@pytest.fixture
 def adata_cflare(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa: B008
     return adata_cflare[0].copy()
 
 
-@pytest.fixture()
-def g(adata_gpcca=_create_gpcca(backward=False)) -> Tuple[AnnData, GPCCA]:  # noqa: B008
+@pytest.fixture
+def g(adata_gpcca=_create_gpcca(backward=False)) -> tuple[AnnData, GPCCA]:  # noqa: B008
     return adata_gpcca[1].copy()
 
 
@@ -147,28 +147,12 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa:
     return adata_cflare[0].copy()
 
 
-@pytest.fixture(scope="session")
-def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path, worker_id: str) -> Optional[GAMR]:
-    if worker_id == "master":
-        model = _create_gamr_model(adata_gamr)
-    else:
-        root_tmp_dir = tmp_path_factory.getbasetemp().parent
-        fn = root_tmp_dir / "model.pickle"
-
-        if fn.is_file():
-            model = GAMR.read(fn)
-        else:
-            model = _create_gamr_model(adata_gamr)
-            if model is not None:
-                model.write(fn)
-
-    if model is None:
-        pytest.skip("Unable to create `cellrank.models.GAMR`.")
-
-    return model
+@pytest.fixture
+def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path) -> Optional[GAMR]:
+    return _create_gamr_model(adata_gamr)
 
 
-@pytest.fixture()
+@pytest.fixture
 def pygam_model(adata_cflare: AnnData) -> GAM:
     m = GAM(adata_cflare)
     m.prepare(adata_cflare.var_names[0], "0", "latent_time").fit()
@@ -178,7 +162,7 @@ def pygam_model(adata_cflare: AnnData) -> GAM:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     m = create_model(adata_cflare)
     assert isinstance(m, SKLearnModel), m
@@ -190,7 +174,7 @@ def sklearn_model(adata_cflare: AnnData) -> SKLearnModel:
     return m
 
 
-@pytest.fixture()
+@pytest.fixture
 def lineage():
     x = cr._utils.Lineage(
         np.array(
@@ -212,7 +196,7 @@ def lineage():
     return x / x.sum(1)
 
 
-@pytest.fixture()
+@pytest.fixture
 def kernel(adata_large: AnnData):
     vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
     ck = ConnectivityKernel(adata_large).compute_transition_matrix()

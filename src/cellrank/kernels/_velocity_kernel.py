@@ -1,4 +1,5 @@
-from typing import Any, Callable, Literal, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Callable, Literal, Optional, Union
 
 from scvelo.preprocessing.moments import get_moments
 
@@ -114,7 +115,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
         similarity: Union[
             Literal["correlation", "cosine", "dot_product"],
-            Callable[[np.ndarray, np.ndarray, float], Tuple[np.ndarray, np.ndarray]],
+            Callable[[np.ndarray, np.ndarray, float], tuple[np.ndarray, np.ndarray]],
         ] = Similarity.CORRELATION,
         softmax_scale: Optional[float] = None,
         n_samples: int = 1000,

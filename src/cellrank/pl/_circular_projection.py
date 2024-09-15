@@ -1,7 +1,8 @@
 import enum
 import pathlib
 import types
-from typing import Any, Callable, Literal, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable, Literal, Optional, Union
 
 import scvelo as scv
 
@@ -62,7 +63,7 @@ def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.nda
     return np.asarray(metric, dtype=np.float64)
 
 
-def _get_optimal_order(data: Lineage, metric: Metric_T) -> Tuple[float, np.ndarray]:
+def _get_optimal_order(data: Lineage, metric: Metric_T) -> tuple[float, np.ndarray]:
     """Solve the TSP using dynamic programming."""
     return _held_karp(_get_distances(data, metric))
 
@@ -85,7 +86,7 @@ def circular_projection(
     label_rot: Union[Literal["default", "best"], float] = "best",
     show_edges: bool = True,
     key_added: Optional[str] = None,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,

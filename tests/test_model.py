@@ -487,16 +487,16 @@ class TestGAM:
 
 
 class TestFailedModel:
-    def test_correct_gene_and_lineage(self, gamr_model):
-        fm = FailedModel(gamr_model)
+    def test_correct_gene_and_lineage(self, pygam_model: GAM):
+        fm = FailedModel(pygam_model)
 
-        assert fm.adata is gamr_model.adata
-        assert fm.model is gamr_model
-        assert fm._gene == gamr_model._gene
-        assert fm._lineage == gamr_model._lineage
+        assert fm.adata is pygam_model.adata
+        assert fm.model is pygam_model
+        assert fm._gene == pygam_model._gene
+        assert fm._lineage == pygam_model._lineage
 
-    def test_do_nothing_no_bulk_fit(self, gamr_model: GAMR):
-        fm = FailedModel(gamr_model)
+    def test_do_nothing_no_bulk_fit(self, pygam_model: GAM):
+        fm = FailedModel(pygam_model)
 
         for fn in [
             "prepare",
@@ -509,9 +509,9 @@ class TestFailedModel:
             with pytest.raises(UnknownModelError, match=r"Fatal model"):
                 getattr(fm, fn)()
 
-    def test_do_nothing_bulk_fit(self, gamr_model: GAMR):
-        gamr_model._is_bulk = True
-        fm = FailedModel(gamr_model)
+    def test_do_nothing_bulk_fit(self, pygam_model: GAM):
+        pygam_model._is_bulk = True
+        fm = FailedModel(pygam_model)
         expected_dict = fm.__dict__.copy()
 
         for fn in [
@@ -526,32 +526,32 @@ class TestFailedModel:
 
         assert expected_dict == fm.__dict__
 
-    def test_copy(self, gamr_model):
-        fm1 = FailedModel(gamr_model)
+    def test_copy(self, pygam_model):
+        fm1 = FailedModel(pygam_model)
         fm2 = fm1.copy()
 
         assert fm1.model is not fm2.model
         assert fm1.adata is fm2.adata
 
-    def test_reraise(self, gamr_model: GAMR):
-        fm = FailedModel(gamr_model, exc=ValueError("foobar"))
+    def test_reraise(self, pygam_model: GAM):
+        fm = FailedModel(pygam_model, exc=ValueError("foobar"))
 
         with pytest.raises(ValueError, match=r"Fatal model"):
             fm.reraise()
 
         assert isinstance(fm._exc, ValueError)
 
-    def test_reraise_str(self, gamr_model: GAMR):
-        fm = FailedModel(gamr_model, exc="foobar")
+    def test_reraise_str(self, pygam_model: GAM):
+        fm = FailedModel(pygam_model, exc="foobar")
 
         with pytest.raises(RuntimeError, match=r"Fatal model"):
             fm.reraise()
 
         assert isinstance(fm._exc, RuntimeError)
 
-    def test_str_repr(self, gamr_model: GAMR):
-        expected = f"<FailedModel[origin={str(gamr_model).strip('<>')}]>"
-        fm = FailedModel(gamr_model)
+    def test_str_repr(self, pygam_model: GAM):
+        expected = f"<FailedModel[origin={str(pygam_model).strip('<>')}]>"
+        fm = FailedModel(pygam_model)
 
         assert str(fm) == expected
         assert repr(fm) == expected

@@ -1,6 +1,7 @@
 import pathlib
 import types
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Optional, Union
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -63,12 +64,12 @@ def cluster_trends(
     show_progress_bar: bool = True,
     n_jobs: Optional[int] = 1,
     backend: Backend_t = DEFAULT_BACKEND,
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
-    pca_kwargs: Dict = types.MappingProxyType({"svd_solver": "arpack"}),
-    neighbors_kwargs: Dict = types.MappingProxyType({"use_rep": "X"}),
-    clustering_kwargs: Dict = types.MappingProxyType({}),
+    pca_kwargs: dict = types.MappingProxyType({"svd_solver": "arpack"}),
+    neighbors_kwargs: dict = types.MappingProxyType({"use_rep": "X"}),
+    clustering_kwargs: dict = types.MappingProxyType({}),
     return_models: bool = False,
     **kwargs: Any,
 ) -> Optional[_return_model_type]:
@@ -231,7 +232,7 @@ def cluster_trends(
         if trends.n_vars != n_points:
             raise RuntimeError(f"Expected to find `{n_points}` points, found `{trends.n_vars}`.")
 
-        random_state = np.random.RandomState(random_state).randint(2**16)
+        random_state = np.random.default_rng(random_state).integers(0, 2**16)
 
         pca_kwargs = dict(pca_kwargs)
         pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)

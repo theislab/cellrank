@@ -5,20 +5,8 @@ import itertools
 import os
 import types
 import warnings
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Hashable,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from collections.abc import Hashable, Iterable, Sequence
+from typing import Any, Callable, Literal, Optional, TypeVar, Union
 
 import wrapt
 
@@ -153,8 +141,8 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
 
 
 def _process_series(
-    series: pd.Series, keys: Optional[List[str]], cols: Optional[np.array] = None
-) -> Union[pd.Series, Tuple[pd.Series, List[str]]]:
+    series: pd.Series, keys: Optional[list[str]], cols: Optional[np.array] = None
+) -> Union[pd.Series, tuple[pd.Series, list[str]]]:
     """Process :class:`~pandas.Series` of categorical objects.
 
     Categories in ``series`` are combined/removed according to ``keys``,
@@ -216,14 +204,14 @@ def _process_series(
 
     # check the `keys` are all proper categories
     remaining_cat = [b for a in keys_ for b in a]
-    if not np.all(np.in1d(remaining_cat, series_in.cat.categories)):
+    if not np.all(np.isin(remaining_cat, series_in.cat.categories)):
         raise ValueError("Not all keys are proper categories. Check for spelling mistakes in `keys`.")
 
     # remove cats and colors according to keys
     n_remaining = len(remaining_cat)
     removed_cat = list(set(series_in.cat.categories) - set(remaining_cat))
     if process_colors:
-        mask = np.in1d(series_in.cat.categories, remaining_cat)
+        mask = np.isin(series_in.cat.categories, remaining_cat)
         colors_temp = colors_in[mask].copy()
     series_temp = series_in.cat.remove_categories(removed_cat)
 
@@ -243,11 +231,11 @@ def _process_series(
 
             if process_colors:
                 # apply the same to the colors array. We just append new colors at the end
-                color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat)
+                color_mask = np.isin(series_temp.cat.categories[:n_remaining], cat)
                 colors_merge = np.array(colors_temp)[:n_remaining][color_mask]
                 colors_mod[new_cat_name] = _compute_mean_color(colors_merge)
         elif process_colors:
-            color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat[0])
+            color_mask = np.isin(series_temp.cat.categories[:n_remaining], cat[0])
             colors_mod[cat[0]] = np.array(colors_temp)[:n_remaining][color_mask][0]
 
     # Since we have just appended colors at the end, we must now delete the unused ones
@@ -333,8 +321,8 @@ def _perm_test(
     Y: np.ndarray,
     seed: Optional[int] = None,
     queue=None,
-) -> Tuple[np.ndarray, np.ndarray]:
-    rs = np.random.RandomState(None if seed is None else seed + ixs[0])
+) -> tuple[np.ndarray, np.ndarray]:
+    rs = np.random.default_rng(None if seed is None else seed + ixs[0])
     cell_ixs = np.arange(X.shape[1])
     pvals = np.zeros_like(corr, dtype=np.float64)
     corr_bs = np.zeros((len(ixs), X.shape[0], Y.shape[1]))  # perms x genes x lineages
@@ -449,7 +437,7 @@ def _correlation_test_helper(
     seed: Optional[int] = None,
     confidence_level: float = 0.95,
     **kwargs: Any,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Compute the correlation between rows in matrix ``X`` columns of matrix ``Y``.
 
     Parameters
@@ -476,7 +464,7 @@ def _correlation_test_helper(
     """
     from cellrank._utils._parallelize import parallelize
 
-    def perm_test_extractor(res: Sequence[Tuple[np.ndarray, np.ndarray]]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def perm_test_extractor(res: Sequence[tuple[np.ndarray, np.ndarray]]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pvals, corr_bs = zip(*res)
         pvals = np.sum(pvals, axis=0) / float(n_perms)
 
@@ -545,7 +533,7 @@ def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: i
             own_cl = rc_labels[cell]
             neighbors = cols[rows == cell]
             n_cls = rc_labels[neighbors]
-            n_matches = np.sum(np.in1d(n_cls, own_cl))
+            n_matches = np.sum(np.isin(n_cls, own_cl))
             if n_matches < n_matches_min:
                 rc_labels[cell] = None
 
@@ -566,7 +554,7 @@ def _cluster_X(
     method: Literal["leiden", "kmeans"] = "leiden",
     n_neighbors: int = 20,
     resolution: float = 1.0,
-) -> List[Any]:
+) -> list[Any]:
     """Cluster the rows of ``X``.
 
     Parameters
@@ -596,7 +584,7 @@ def _cluster_X(
     elif method == "leiden":
         adata_dummy = sc.AnnData(X=X)
         sc.pp.neighbors(adata_dummy, use_rep="X", n_neighbors=n_neighbors)
-        sc.tl.leiden(adata_dummy, resolution=resolution)
+        sc.tl.leiden(adata_dummy, flavor="igraph", n_iterations=2, directed=False, resolution=resolution)
         labels = adata_dummy.obs[method]
     else:
         raise NotImplementedError(f"Invalid method `{method}`. Valid options are `kmeans` or `leiden`.")
@@ -630,7 +618,7 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
 
 def _partition(
     conn: Union[DiGraph, np.ndarray, sp.spmatrix], sort: bool = True
-) -> Tuple[List[List[Any]], List[List[Any]]]:
+) -> tuple[list[list[Any]], list[list[Any]]]:
     """Partition a directed graph into its transient and recurrent classes.
 
     In a directed graph *G*, node *j* is accessible from node *i* if there exists a path from *i* to *j*.
@@ -852,7 +840,7 @@ def save_fig(fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str
 
 
 def _convert_to_categorical_series(
-    term_states: Dict[Union[int, str], Sequence[Union[int, str]]], cell_names: List[str]
+    term_states: dict[Union[int, str], Sequence[Union[int, str]]], cell_names: list[str]
 ) -> pd.Series:
     """Convert a mapping of terminal states to cells to a :class:`~pandas.Series`.
 
@@ -900,10 +888,10 @@ def _convert_to_categorical_series(
 def _merge_categorical_series(
     old: pd.Series,
     new: pd.Series,
-    colors_old: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
-    colors_new: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]] = None,
+    colors_old: Union[list[ColorLike], np.ndarray, dict[Any, ColorLike]] = None,
+    colors_new: Union[list[ColorLike], np.ndarray, dict[Any, ColorLike]] = None,
     color_overwrite: bool = False,
-) -> Optional[Union[pd.Series, Tuple[pd.Series, np.ndarray]]]:
+) -> Optional[Union[pd.Series, tuple[pd.Series, np.ndarray]]]:
     """Update categorical :class:`~pandas.Series` with new information.
 
     It **can never remove** old categories, only add to the existing ones.
@@ -930,7 +918,7 @@ def _merge_categorical_series(
 
     def get_color_mapper(
         series: pd.Series,
-        cols: Union[List[ColorLike], np.ndarray, Dict[Any, ColorLike]],
+        cols: Union[list[ColorLike], np.ndarray, dict[Any, ColorLike]],
     ):
         if len(series.cat.categories) != len(cols):
             raise ValueError(f"Series ({len(series.cat.categories)}) and colors ({len(colors_new)}) differ in length.")
@@ -997,7 +985,7 @@ def _merge_categorical_series(
     return old, colors_merged
 
 
-def _unique_order_preserving(iterable: Iterable[Hashable]) -> List[Hashable]:
+def _unique_order_preserving(iterable: Iterable[Hashable]) -> list[Hashable]:
     """Remove items from an iterable while preserving the order."""
     seen = set()
     return [i for i in iterable if i not in seen and not seen.add(i)]
@@ -1022,7 +1010,7 @@ def _fuzzy_to_discrete(
     remove_overlap: bool = True,
     raise_threshold: Optional[float] = 0.2,
     check_row_sums: bool = True,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Map fuzzy clustering to discrete clustering.
 
     Given a fuzzy clustering of `n_samples` samples represented by a matrix ``a_fuzzy`` of shape
@@ -1145,7 +1133,7 @@ def _series_from_one_hot_matrix(
     if not np.all(membership.sum(axis=1) <= 1):
         raise ValueError("Not all items are one-hot encoded or empty.")
     if (membership.sum(0) == 0).any():
-        logg.warning(f"Detected {np.sum((membership.sum(0) == 0))} empty categories")
+        logg.warning(f"Detected {np.sum(membership.sum(0) == 0)} empty categories")
 
     if index is None:
         index = range(n_samples)
@@ -1165,7 +1153,7 @@ def _series_from_one_hot_matrix(
 
 def _get_cat_and_null_indices(
     cat_series: pd.Series,
-) -> Tuple[np.ndarray, np.ndarray, Dict[Any, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, dict[Any, np.ndarray]]:
     """Given a categorical :class:`~pandas.Series`, get the indices corresponding to categories and `NaNs`.
 
     Parameters
@@ -1212,7 +1200,7 @@ def _calculate_absorption_time_moments(
     n: int,
     calculate_variance: bool = False,
     **kwargs: Any,
-) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+) -> tuple[np.ndarray, Optional[np.ndarray]]:
     """Calculate the mean time until absorption and optionally its variance.
 
     Parameters
@@ -1272,7 +1260,7 @@ def _calculate_lineage_absorption_time_means(
     Q: sp.csr_matrix,
     R: sp.csr_matrix,
     trans_indices: np.ndarray,
-    ixs: Dict[str, np.ndarray],
+    ixs: dict[str, np.ndarray],
     index: pd.Index,
     calculate_variance: bool = False,
     **kwargs: Any,
@@ -1369,7 +1357,7 @@ def _check_collection(
     key_name: str = "Gene",
     use_raw: bool = False,
     raise_exc: bool = True,
-) -> List[str]:
+) -> list[str]:
     """Check if given collection contains all the keys.
 
     Parameters
@@ -1409,7 +1397,7 @@ def _check_collection(
     return res
 
 
-def _minmax(data: np.ndarray, perc: Optional[Tuple[float, float]] = None) -> Tuple[float, float]:
+def _minmax(data: np.ndarray, perc: Optional[tuple[float, float]] = None) -> tuple[float, float]:
     """Return minimum and maximum value of the data.
 
     Parameters
@@ -1461,7 +1449,7 @@ def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
     return _modify_neigh_key(key) in adata.uns
 
 
-def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> Dict[str, Any]:
+def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> dict[str, Any]:
     return adata.uns.get(key, {}).get("params", {})
 
 

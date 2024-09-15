@@ -4,7 +4,8 @@ import copy
 import enum
 import re
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Callable, Optional, Union
 
 import wrapt
 
@@ -32,7 +33,7 @@ from cellrank.kernels.mixins import IOMixin
 __all__ = ["BaseModel"]
 
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
-ArrayLike = Union[np.ndarray, sp.spmatrix, List, Tuple]
+ArrayLike = Union[np.ndarray, sp.spmatrix, list, tuple]
 
 
 class UnknownModelError(RuntimeError):
@@ -126,7 +127,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
 class BaseModelMeta(abc.ABCMeta):
     """Metaclass for all base models."""
 
-    def __new__(cls, clsname: str, superclasses: Tuple[type, ...], attributedict: Dict[str, Any]):
+    def __new__(cls, clsname: str, superclasses: tuple[type, ...], attributedict: dict[str, Any]):
         """Create a new instance.
 
         Parameters
@@ -217,7 +218,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         self._adata = adata
 
     @property
-    def shape(self) -> Tuple[int]:
+    def shape(self) -> tuple[int]:
         """Number of cells in :attr:`adata`."""
         return (self._n_obs,)
 
@@ -301,11 +302,11 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         lineage: Optional[str],
         time_key: str,
         backward: bool = False,
-        time_range: Optional[Union[float, Tuple[float, float]]] = None,
+        time_range: Optional[Union[float, tuple[float, float]]] = None,
         data_key: Optional[str] = "X",
         use_raw: bool = False,
         threshold: Optional[float] = None,
-        weight_threshold: Union[float, Tuple[float, float]] = (0.01, 0.01),
+        weight_threshold: Union[float, tuple[float, float]] = (0.01, 0.01),
         filter_cells: Optional[float] = None,
         n_test_points: int = 200,
     ) -> "BaseModel":
@@ -668,10 +669,10 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     @d.dedent
     def plot(
         self,
-        figsize: Tuple[float, float] = (8, 5),
+        figsize: tuple[float, float] = (8, 5),
         same_plot: bool = False,
         hide_cells: bool = False,
-        perc: Tuple[float, float] = None,
+        perc: tuple[float, float] = None,
         fate_prob_cmap: colors.ListedColormap = cm.viridis,
         cell_color: Optional[str] = None,
         lineage_color: str = "black",
@@ -1053,7 +1054,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
+    ) -> tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[dict[str, Any]]]:
         """
         Get color array.
 
@@ -1237,7 +1238,7 @@ class FailedModel(BaseModel):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
+    ) -> tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[dict[str, Any]]]:
         return None, "black", ColorType.STR, None
 
     def _return_min_max(self, show_conf_int: bool):
@@ -1344,7 +1345,7 @@ class FittedModel(BaseModel):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
+    ) -> tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[dict[str, Any]]]:
         # w_all does not need to be defined
         if same_plot or self.w_all is None or np.allclose(self.w_all, 1.0):
             return None, "black", ColorType.STR, None

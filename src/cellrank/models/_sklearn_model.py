@@ -1,6 +1,7 @@
 import inspect
 import warnings
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any, Optional
 
 import numpy as np
 from sklearn.base import BaseEstimator

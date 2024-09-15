@@ -19,11 +19,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.8', '3.10', '3.11']
+        python: ['3.9', '3.10', '3.11', '3.12']
         slepc: [noslepc]
         include:
-        - os: macos-latest
-          python: '3.9'
+        - os: macos-14
+          python: '3.10'
           slepc: noslepc
         - os: ubuntu-latest
           python: '3.10'
@@ -41,11 +41,17 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install tox
 
+    - name: Setup Conda
+      if: runner.os == 'macOS'
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+
     - name: Test
       run: |
-        tox -e py${{ matrix.python }}-${{ matrix.slepc }} -vv
+        tox -e py${{ matrix.python }}-${{ matrix.slepc }} -v
       env:
-        PYTEST_ADDOPTS: -vv
+        PYTEST_ADDOPTS: -v
 
     - name: Upload coverage
       uses: codecov/codecov-action@v4

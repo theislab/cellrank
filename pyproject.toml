@@ -7,7 +7,7 @@ name = "cellrank"
 dynamic = ["version"]
 description = "CellRank: dynamics from multi-view single-cell data"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -19,10 +19,10 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Typing :: Typed",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Visualization",
@@ -69,8 +69,7 @@ dev = [
     "tox>=4",
 ]
 test = [
-    "pytest>=7,<8.1.0",
-    "pytest-xdist>=3",
+    "pytest>=8",
     "pytest-mock>=3.5.0",
     "pytest-cov>=4",
     "coverage[toml]>=7",
@@ -106,7 +105,10 @@ include-package-data = true
 [tool.setuptools_scm]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
+line-length = 120
+
+[tool.ruff.lint]
 exclude = [
     ".eggs",
     ".git",
@@ -136,7 +138,6 @@ ignore = [
     # Missing docstring in magic method
     "D105",
 ]
-line-length = 120
 select = [
     "D", # flake8-docstrings
     "E", # pycodestyle
@@ -154,21 +155,21 @@ select = [
     "T20",  # flake8-print
     "RET", # flake8-raise
 ]
-unfixable = ["B", "UP", "C4", "BLE", "T20", "RET"]
-[tool.ruff.per-file-ignores]
+unfixable = ["B", "C4", "BLE", "T20", "RET"]
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["D"]
 "*/__init__.py" = ["F401"]
 "docs/*" = ["D"]
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
-[tool.ruff.flake8-quotes]
+[tool.ruff.lint.flake8-quotes]
 inline-quotes = "double"
 
 [tool.black]
 line-length = 120
-target-version = ['py38']
+target-version = ['py39']
 include = '\.pyi?$'
 
 [tool.isort]
@@ -237,7 +238,7 @@ legacy_tox_ini = """
 # TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
 requires = tox-conda
 isolated_build = true
-envlist = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
+envlist = lint-code,py{3.9,3.10,3.11,3.12}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]

@@ -1,6 +1,6 @@
 import os
 import pathlib
-from typing import Callable, Literal, Tuple, Union
+from typing import Callable, Literal, Union
 
 import pytest
 import scvelo as scv
@@ -81,7 +81,7 @@ def compare(
         assert res is None, res
 
     # TODO: refactor (we can remove the prefix from scvelo
-    def _prepare_fname(func: Callable) -> Tuple[str, str]:
+    def _prepare_fname(func: Callable) -> tuple[str, str]:
         fpath = f"{func.__name__.replace('test_', '')}"
         # scvelo saves figures as pdf
         return fpath, str(fpath[7:] + ".png" if fpath.startswith("scvelo_") else fpath)
@@ -506,6 +506,7 @@ class TestClusterTrends:
             "1",
             "latent_time",
             random_state=0,
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             dpi=DPI,
             save=fpath,
         )
@@ -520,6 +521,7 @@ class TestClusterTrends:
             "0",
             "latent_time",
             random_state=0,
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             backward=True,
             dpi=DPI,
             save=fpath,
@@ -535,6 +537,7 @@ class TestClusterTrends:
             "1",
             "latent_time",
             random_state=0,
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             dpi=DPI,
             save=fpath,
             use_raw=True,
@@ -549,6 +552,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             norm=False,
             dpi=DPI,
@@ -564,6 +568,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             data_key="Ms",
             norm=False,
@@ -580,6 +585,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=42,
             dpi=DPI,
             save=fpath,
@@ -594,6 +600,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             dpi=DPI,
             save=fpath,
@@ -608,6 +615,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             key="foobar",
             dpi=DPI,
@@ -625,6 +633,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             return_models=True,
         )
@@ -648,6 +657,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=42,
             key="foo",
         )
@@ -658,6 +668,7 @@ class TestClusterTrends:
             GENES[:10],
             "1",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=42,
             key="bar",
         )
@@ -672,6 +683,7 @@ class TestClusterTrends:
             GENES[:10],
             "0",
             time_key="latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             n_test_points=200,
         )
 
@@ -687,6 +699,7 @@ class TestClusterTrends:
             GENES[:10],
             "0",
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             n_test_points=200,
             key="foobar",
         )
@@ -705,6 +718,7 @@ class TestClusterTrends:
             "1",
             "latent_time",
             covariate_key=["clusters", "latent_time"],
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             dpi=DPI,
             save=fpath,
@@ -720,6 +734,7 @@ class TestClusterTrends:
             "1",
             "latent_time",
             covariate_key="latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             cmap="inferno",
             random_state=0,
             dpi=DPI,
@@ -736,6 +751,7 @@ class TestClusterTrends:
             "1",
             "latent_time",
             covariate_key="latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             ratio=0.25,
             random_state=0,
             dpi=DPI,
@@ -752,6 +768,7 @@ class TestClusterTrends:
             "1",
             "latent_time",
             gene_symbols="symbol",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             random_state=0,
             dpi=DPI,
             save=fpath,
@@ -3026,6 +3043,7 @@ class TestLogOdds:
             keys=adata.var_names[:3],
             figsize=(4, 3),
             size=4,
+            seed=42,
         )
 
     @compare()
@@ -3136,6 +3154,7 @@ class TestLogOdds:
             keys="clusters",
             size=20,
             figsize=(4, 3),
+            seed=42,
         )
 
     @compare()
@@ -3151,6 +3170,7 @@ class TestLogOdds:
             size=10,
             cmap="inferno",
             figsize=(4, 3),
+            seed=43,
         )
 
     @compare()
@@ -3166,7 +3186,7 @@ class TestLogOdds:
             alpha=0.5,
             figsize=(4, 3),
             size=10,
-            seed=42,
+            seed=0,
         )
 
     @compare()
@@ -3182,7 +3202,7 @@ class TestLogOdds:
             ncols=1,
             figsize=(3, 4),
             size=10,
-            seed=42,
+            seed=2,
         )
 
     @compare()
@@ -3198,7 +3218,7 @@ class TestLogOdds:
             fontsize=25,
             figsize=(3, 4),
             size=10,
-            seed=42,
+            seed=1,
         )
 
     @compare()
@@ -3214,7 +3234,7 @@ class TestLogOdds:
             xticks_step_size=None,
             figsize=(3, 4),
             size=10,
-            seed=42,
+            seed=3,
         )
 
     @compare()
@@ -3230,7 +3250,7 @@ class TestLogOdds:
             legend_loc="upper right out",
             figsize=(4, 3),
             size=10,
-            seed=42,
+            seed=5,
         )
 
     @compare(tol=250)
@@ -3244,7 +3264,7 @@ class TestLogOdds:
             save=fpath,
             figsize=(4, 3),
             size=10,
-            seed=42,
+            seed=0,
             jitter=1,
         )
 
@@ -3262,6 +3282,7 @@ class TestLogOdds:
             edgecolor="red",
             figsize=(4, 3),
             size=4,
+            seed=11,
         )
         assert isinstance(ax, plt.Axes)
 
@@ -3279,6 +3300,7 @@ class TestLogOdds:
             show=False,
             figsize=(4, 3),
             size=4,
+            seed=12,
         )
         assert isinstance(axes, np.ndarray)
         assert axes.shape == (3,)
@@ -3297,6 +3319,7 @@ class TestLogOdds:
             edgecolor="red",
             figsize=(4, 3),
             size=4,
+            seed=13,
         )
 
 

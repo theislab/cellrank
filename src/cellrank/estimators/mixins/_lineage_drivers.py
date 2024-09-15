@@ -1,7 +1,8 @@
 import contextlib
 import pathlib
 import types
-from typing import Any, Dict, Literal, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal, Optional, Union
 
 import scvelo as scv
 
@@ -34,20 +35,16 @@ class LinDriversProtocol(BaseProtocol):
         drivers: Optional[pd.DataFrame],
         use_raw: bool,
         params: Mapping[str, Any] = types.MappingProxyType({}),
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @property
-    def eigendecomposition(self) -> Dict[str, Any]:
-        ...
+    def eigendecomposition(self) -> dict[str, Any]: ...
 
     @property
-    def fate_probabilities(self) -> Optional[Lineage]:
-        ...
+    def fate_probabilities(self) -> Optional[Lineage]: ...
 
     @property
-    def lineage_drivers(self) -> Optional[pd.DataFrame]:
-        ...
+    def lineage_drivers(self) -> Optional[pd.DataFrame]: ...
 
 
 class LinDriversMixin(FateProbsMixin):
@@ -144,7 +141,7 @@ class LinDriversMixin(FateProbsMixin):
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
-            if cluster_key not in self.adata.obs.keys():
+            if cluster_key not in self.adata.obs:
                 raise KeyError(f"Unable to find clusters in `adata.obs[{cluster_key!r}]`.")
             if isinstance(clusters, str):
                 clusters = [clusters]
@@ -157,7 +154,7 @@ class LinDriversMixin(FateProbsMixin):
                     f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
                     f"`adata.obs[{cluster_key!r}]`."
                 )
-            subset_mask = np.in1d(self.adata.obs[cluster_key], clusters)
+            subset_mask = np.isin(self.adata.obs[cluster_key], clusters)
             adata_comp = self.adata[subset_mask]
             lin_probs = fate_probs[subset_mask, :]
         else:
@@ -211,7 +208,7 @@ class LinDriversMixin(FateProbsMixin):
         ascending: bool = False,
         ncols: Optional[int] = None,
         title_fmt: str = "{gene} qval={qval:.4e}",
-        figsize: Optional[Tuple[float, float]] = None,
+        figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         **kwargs: Any,
@@ -248,8 +245,8 @@ class LinDriversMixin(FateProbsMixin):
             pval: Optional[float],
             qval: Optional[float],
             corr: Optional[float],
-        ) -> Dict[str, Any]:
-            kwargs: Dict[str, Optional[Union[str, float]]] = {}
+        ) -> dict[str, Any]:
+            kwargs: dict[str, Optional[Union[str, float]]] = {}
             if "{gene" in title_fmt:
                 kwargs["gene"] = gene
             if "{pval" in title_fmt:
@@ -319,14 +316,14 @@ class LinDriversMixin(FateProbsMixin):
         lineage_x: str,
         lineage_y: str,
         color: Optional[str] = None,
-        gene_sets: Optional[Dict[str, Sequence[str]]] = None,
+        gene_sets: Optional[dict[str, Sequence[str]]] = None,
         gene_sets_colors: Optional[Sequence[str]] = None,
         use_raw: bool = False,
         cmap: str = "RdYlBu_r",
         fontsize: int = 12,
         adjust_text: bool = False,
         legend_loc: Optional[str] = "best",
-        figsize: Optional[Tuple[float, float]] = (4, 4),
+        figsize: Optional[tuple[float, float]] = (4, 4),
         dpi: Optional[int] = None,
         save: Optional[Union[str, pathlib.Path]] = None,
         show: bool = True,

@@ -1,7 +1,8 @@
 import copy
 import enum
 import os
-from typing import List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import pytest
 from _helpers import assert_array_nan_equal, assert_estimators_equal
@@ -71,7 +72,7 @@ class State(str, enum.Enum):
         return None
 
     @property
-    def attr_keys(self) -> Optional[Sequence[Tuple[str, str]]]:
+    def attr_keys(self) -> Optional[Sequence[tuple[str, str]]]:
         bwd = False
         if self.value == "schur":
             key1 = Key.uns.eigen(bwd)
@@ -99,7 +100,7 @@ class State(str, enum.Enum):
         return None
 
     @property
-    def attrs(self) -> Optional[Sequence[Tuple[str, type]]]:
+    def attrs(self) -> Optional[Sequence[tuple[str, type]]]:
         if self.value == "schur":
             return ("_eigendecomposition", dict), ("_schur_vectors", np.ndarray), ("_schur_matrix", np.ndarray)
         if self.value == "macro":
@@ -593,7 +594,7 @@ class TestGPCCA:
             mc.set_terminal_states(states=["foobar"])
 
     @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
-    def test_set_terminal_states_clusters(self, adata_large: AnnData, values: Union[str, List[str]]):
+    def test_set_terminal_states_clusters(self, adata_large: AnnData, values: Union[str, list[str]]):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -1101,13 +1102,13 @@ class TestGPCCASerialization:
 
 class TestGPCCAIO:
     @pytest.mark.parametrize("deep", [False, True])
-    def test_copy(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], deep: bool):
+    def test_copy(self, adata_gpcca_fwd: tuple[AnnData, cr.estimators.GPCCA], deep: bool):
         _, mc1 = adata_gpcca_fwd
         mc2 = mc1.copy(deep=deep)
 
         assert_estimators_equal(mc1, mc2, copy=True, deep=deep)
 
-    def test_read(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
+    def test_read(self, adata_gpcca_fwd: tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo.pkl"))
@@ -1118,7 +1119,7 @@ class TestGPCCAIO:
     @pytest.mark.parametrize("copy", [False, True])
     def test_write_no_adata(
         self,
-        adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA],
+        adata_gpcca_fwd: tuple[AnnData, cr.estimators.GPCCA],
         copy: bool,
         tmpdir,
     ):
@@ -1133,14 +1134,14 @@ class TestGPCCAIO:
             assert adata is mc2.adata
         assert_estimators_equal(mc1, mc2)
 
-    def test_write_no_adata_read_none_supplied(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
+    def test_write_no_adata_read_none_supplied(self, adata_gpcca_fwd: tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         _, mc1 = adata_gpcca_fwd
 
         mc1.write(os.path.join(tmpdir, "foo.pkl"), write_adata=False)
         with pytest.raises(TypeError, match="This object was saved without"):
             _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pkl"), adata=None)
 
-    def test_write_no_adata_read_wrong_length(self, adata_gpcca_fwd: Tuple[AnnData, cr.estimators.GPCCA], tmpdir):
+    def test_write_no_adata_read_wrong_length(self, adata_gpcca_fwd: tuple[AnnData, cr.estimators.GPCCA], tmpdir):
         rng = np.random.default_rng()
         _, mc1 = adata_gpcca_fwd
         adata = AnnData(rng.normal(size=(len(mc1) + 1, 1)))

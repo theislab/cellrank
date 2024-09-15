@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import numpy as np
 import scipy.sparse as sp
@@ -46,7 +46,7 @@ class ThresholdSchemeABC(abc.ABC):
         pseudotime: np.ndarray,
         queue=None,
         **kwargs: Any,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         i, indices, indptr, data = 0, [], [], []
         for i in ixs:
             row = conn[i]

@@ -1,5 +1,5 @@
 import enum
-from typing import Any, List, Literal, Optional, Tuple
+from typing import Any, Literal, Optional
 
 import numpy as np
 import pandas as pd
@@ -230,7 +230,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         aggregation: CytoTRACEAggregation.MEAN,
         ascending: bool = False,
         n_genes: int = 200,
-    ) -> Tuple[np.ndarray, List[str]]:
+    ) -> tuple[np.ndarray, list[str]]:
         from sklearn.utils.sparsefuncs import csc_median_axis_0
 
         # fmt: off

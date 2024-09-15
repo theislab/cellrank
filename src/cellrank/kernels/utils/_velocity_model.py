@@ -1,7 +1,7 @@
 import abc
 import enum
 import math
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -35,7 +35,7 @@ class ModelABC(abc.ABC):
         v: np.ndarray,
         similarity: Union[
             SimilarityABC,
-            Callable[[np.ndarray, np.ndarray, float], Tuple[np.ndarray, np.ndarray]],
+            Callable[[np.ndarray, np.ndarray, float], tuple[np.ndarray, np.ndarray]],
         ],
         backward_mode: Optional[BackwardMode] = None,
         softmax_scale: float = 1.0,
@@ -50,7 +50,7 @@ class ModelABC(abc.ABC):
         self._dtype = dtype
 
     @abc.abstractmethod
-    def _compute(self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any) -> Tuple[np.ndarray, np.ndarray]:
+    def _compute(self, ix: int, neighs_ixs: np.ndarray, **kwargs: Any) -> tuple[np.ndarray, np.ndarray]:
         pass
 
     def __call__(
@@ -59,7 +59,7 @@ class ModelABC(abc.ABC):
         backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         ixs = self._ixs
         return parallelize(
             self._compute_helper,
@@ -72,7 +72,7 @@ class ModelABC(abc.ABC):
             unit=self._unit,
         )(**kwargs)
 
-    def _compute_helper(self, ixs: np.ndarray, queue=None, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
+    def _compute_helper(self, ixs: np.ndarray, queue=None, **kwargs) -> tuple[np.ndarray, np.ndarray]:
         indptr, indices = self._conn.indptr, self._conn.indices
         starts = _calculate_starts(indptr, ixs)
         probs_logits = np.empty((2, starts[-1]), dtype=np.float64)
@@ -115,7 +115,7 @@ class ModelABC(abc.ABC):
         The reconstructed CSR matrix.
         """
 
-        def reconstruct(data: np.ndarray) -> Tuple[sp.csr_matrix, sp.csr_matrix]:
+        def reconstruct(data: np.ndarray) -> tuple[sp.csr_matrix, sp.csr_matrix]:
             data = sp.csr_matrix(
                 (
                     np.array(data, copy=True),
@@ -152,7 +152,7 @@ class ModelABC(abc.ABC):
         rng.shuffle(ixs)
         return ixs
 
-    def _uniform(self, n: int) -> Tuple[np.ndarray, np.ndarray]:
+    def _uniform(self, n: int) -> tuple[np.ndarray, np.ndarray]:
         """Uninformative probability vector when velocity is 0."""
         return np.ones(n, dtype=self._dtype) / n, np.zeros((n,), dtype=self._dtype)
 
@@ -165,7 +165,7 @@ class ModelABC(abc.ABC):
 class Deterministic(ModelABC):
     """Deterministic model."""
 
-    def _compute(self, ix: int, neigh_ixs: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def _compute(self, ix: int, neigh_ixs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         W = self._x[neigh_ixs, :] - self._x[ix, :]
 
         if self._backward_mode not in (None, BackwardMode.NEGATE):
@@ -218,7 +218,7 @@ class Stochastic(ModelABC):
         self,
         ix: int,
         nbhs_ixs: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         v = self._v[ix]
         n_neigh, n_feat = len(nbhs_ixs), self._x.shape[1]
 
@@ -308,7 +308,7 @@ class MonteCarlo(ModelABC):
         self,
         ix: int,
         nbhs_ixs: np.ndarray,
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         n_neigh = len(nbhs_ixs)
         W = self._x[nbhs_ixs, :] - self._x[ix, :]
 

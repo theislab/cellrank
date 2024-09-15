@@ -1,6 +1,7 @@
 import multiprocessing
 import threading
-from typing import Any, Callable, Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Any, Callable, Optional, Union
 
 import joblib as jl
 

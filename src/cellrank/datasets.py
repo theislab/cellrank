@@ -1,7 +1,7 @@
 import enum
 import os
 import pathlib
-from typing import Any, Literal, Tuple, Union
+from typing import Any, Literal, Union
 
 from anndata import AnnData
 from scanpy import read
@@ -42,7 +42,7 @@ _datasets = {
 
 
 def _load_dataset_from_url(
-    fpath: Union[str, pathlib.Path], url: str, expected_shape: Tuple[int, int], **kwargs: Any
+    fpath: Union[str, pathlib.Path], url: str, expected_shape: tuple[int, int], **kwargs: Any
 ) -> AnnData:
     fpath = str(fpath)
     if not fpath.endswith(".h5ad"):

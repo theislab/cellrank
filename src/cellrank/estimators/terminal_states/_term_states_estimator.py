@@ -1,6 +1,7 @@
 import abc
 import types
-from typing import Any, Dict, Literal, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Literal, Optional, Union
 
 import scvelo as scv
 
@@ -92,7 +93,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     @d.dedent
     def set_terminal_states(
         self,
-        states: Union[pd.Series, Dict[str, Sequence[Any]]],
+        states: Union[pd.Series, dict[str, Sequence[Any]]],
         cluster_key: Optional[str] = None,
         allow_overlap: bool = False,
         **kwargs: Any,
@@ -141,7 +142,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     @d.dedent
     def set_initial_states(
         self,
-        states: Union[pd.Series, Dict[str, Sequence[Any]]],
+        states: Union[pd.Series, dict[str, Sequence[Any]]],
         cluster_key: Optional[str] = None,
         allow_overlap: bool = False,
         **kwargs: Any,
@@ -190,7 +191,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     @d.get_sections(base="tse_rename_term_states", sections=["Parameters", "Returns"])
     @d.get_full_description(base="tse_rename_term_states")
     @d.dedent
-    def rename_terminal_states(self, old_new: Dict[str, str]) -> "TermStatesEstimator":
+    def rename_terminal_states(self, old_new: dict[str, str]) -> "TermStatesEstimator":
         """Rename the :attr:`terminal_states`.
 
         Parameters
@@ -244,7 +245,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         return self
 
     @d.dedent
-    def rename_initial_states(self, old_new: Dict[str, str]) -> "TermStatesEstimator":
+    def rename_initial_states(self, old_new: dict[str, str]) -> "TermStatesEstimator":
         """Rename the :attr:`initial_states`.
 
         Parameters
@@ -563,10 +564,10 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
     def _set_categorical_labels(
         self,
-        categories: Union[pd.Series, Dict[str, Any]],
+        categories: Union[pd.Series, dict[str, Any]],
         cluster_key: Optional[str] = None,
         existing: Optional[pd.Series] = None,
-    ) -> Tuple[pd.Series, np.ndarray]:
+    ) -> tuple[pd.Series, np.ndarray]:
         # fmt: off
         if isinstance(categories, dict):
             key = next(iter(categories.keys()))
@@ -625,7 +626,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         states: Optional[pd.Series],
         colors: Optional[np.ndarray],
         probs: Optional[pd.Series] = None,
-        params: Dict[str, Any] = types.MappingProxyType({}),
+        params: dict[str, Any] = types.MappingProxyType({}),
         allow_overlap: bool = False,
     ) -> str:
         # fmt: off

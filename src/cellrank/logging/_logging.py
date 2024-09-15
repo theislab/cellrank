@@ -1,7 +1,8 @@
 import datetime
 import functools
 import logging
-from typing import Iterable, Optional
+from collections.abc import Iterable
+from typing import Optional
 
 __all__ = [
     "print_versions",

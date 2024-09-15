@@ -3,7 +3,8 @@ import enum
 import math
 import pathlib
 import types
-from typing import Any, Literal, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Any, Literal, Optional, Union
 
 from scvelo.plotting import paga
 
@@ -60,7 +61,7 @@ def aggregate_fate_probabilities(
     fmt: str = "0.2f",
     xrot: float = 90,
     legend_kwargs: Mapping[str, Any] = types.MappingProxyType({"loc": "best"}),
-    figsize: Optional[Tuple[float, float]] = None,
+    figsize: Optional[tuple[float, float]] = None,
     dpi: Optional[int] = None,
     save: Optional[Union[str, pathlib.Path]] = None,
     **kwargs: Any,

@@ -1,5 +1,5 @@
 import functools
-from typing import List, Optional, Tuple, TypeVar, Union
+from typing import Optional, TypeVar, Union
 
 import numpy as np
 import scipy.sparse as sp
@@ -72,7 +72,7 @@ def _create_solver(
     solver: Optional[str],
     preconditioner: Optional[str],
     tol: float,
-) -> Tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa
+) -> tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa
     """
     Create a linear system solver.
 
@@ -126,7 +126,7 @@ def _solve_many_sparse_problems_petsc(
     _preconditioner: Optional[str] = None,
     _tol: float = 1e-5,
     _queue: Optional[Queue] = None,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     raise NotImplementedError(f"Not implemented for type `{type(mat_b).__name__!r}`.")
 
 
@@ -138,7 +138,7 @@ def _(
     preconditioner: Optional[str] = None,
     tol: float = 1e-5,
     _queue: Optional[Queue] = None,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
         raise ValueError(f"Expected either a vector or a matrix with `1` column, got `{mat_b.shape}`.")
 
@@ -163,7 +163,7 @@ def _(
     preconditioner: Optional[str],
     tol: float,
     queue: Queue,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     ksp, x, b = _create_solver(mat_a, solver, preconditioner=preconditioner, tol=tol)
     xs, converged = [], 0
 
@@ -194,7 +194,7 @@ def _solve_many_sparse_problems(
     solver: LinSolver,
     tol: float,
     queue: Queue,
-) -> Tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, int]:
     """Solve ``mat_a * x = mat_b`` efficiently using an iterative solver.
 
     This is a utility function which is optimized for the case of ``mat_a`` and ``mat_b`` being sparse,
@@ -382,7 +382,7 @@ def _solve_lin_system(
     defined via columns in ``mat_b``.
     """
 
-    def extractor(res_converged: List[Tuple[np.ndarray, int]]) -> Tuple[np.ndarray, int]:
+    def extractor(res_converged: list[tuple[np.ndarray, int]]) -> tuple[np.ndarray, int]:
         res, converged = zip(*res_converged)
         return np.hstack(res), sum(converged)
 

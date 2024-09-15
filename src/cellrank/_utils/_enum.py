@@ -1,7 +1,7 @@
 import abc
 import enum
 import functools
-from typing import Any, Callable, Dict, Literal, Tuple, Type
+from typing import Any, Callable, Literal
 
 __all__ = ["ModeEnum", "DEFAULT_BACKEND"]
 
@@ -24,7 +24,7 @@ class PrettyEnum(enum.Enum):
         return f"{self.value!s}"
 
 
-def _pretty_raise_enum(cls: Type["ErrorFormatterABC"], func: Callable) -> Callable:
+def _pretty_raise_enum(cls: type["ErrorFormatterABC"], func: Callable) -> Callable:
     @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> "ErrorFormatterABC":
         try:
@@ -49,13 +49,13 @@ class ABCEnumMeta(enum.EnumMeta, abc.ABCMeta):  # noqa: D101
             raise TypeError(f"Can't instantiate class `{cls.__name__}` " f"without `__error_format__` class attribute.")
         return super().__call__(*args, **kwargs)
 
-    def __new__(cls, clsname: str, superclasses: Tuple[type], attributedict: Dict[str, Any]):  # noqa: D102
+    def __new__(cls, clsname: str, superclasses: tuple[type], attributedict: dict[str, Any]):  # noqa: D102
         res = super().__new__(cls, clsname, superclasses, attributedict)
         res.__new__ = _pretty_raise_enum(res, res.__new__)
         return res
 
 
-class ErrorFormatterABC(abc.ABC):  # noqa: D101
+class ErrorFormatterABC:  # noqa: D101
     __error_format__ = "Invalid option `{!r}` for `{}`. Valid options are: `{}`."
 
     @classmethod

@@ -1,6 +1,6 @@
 import os
 import pathlib
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import pytest
 import scvelo as scv
@@ -32,14 +32,9 @@ def _jax_not_installed() -> bool:
 def _rpy2_mgcv_not_installed() -> bool:
     try:
         import rpy2
+        from importlib_metadata import version as get_version
         from packaging import version
         from rpy2.robjects.packages import PackageNotInstalledError, importr
-
-        try:
-            from importlib_metadata import version as get_version
-        except ImportError:
-            # >=Python3.8
-            from importlib.metadata import version as get_version
 
         try:
             assert version.parse(get_version(rpy2.__name__)) >= version.parse("3.3.0")
@@ -102,16 +97,14 @@ def density_normalization(velo_graph, trans_graph):
         Q = np.diag(1.0 / q)
     else:
         Q = sp.spdiags(1.0 / q, 0, trans_graph.shape[0], trans_graph.shape[0])
-    velo_graph = Q @ velo_graph @ Q
-
-    return velo_graph
+    return Q @ velo_graph @ Q
 
 
 def create_kernels(
     adata: AnnData,
     velocity_variances: Optional[str] = None,
     connectivity_variances: Optional[str] = None,
-) -> Tuple[VelocityKernel, ConnectivityKernel]:
+) -> tuple[VelocityKernel, ConnectivityKernel]:
     rng = np.random.default_rng()
     vk = VelocityKernel(adata)
     vk._mat_scaler = adata.obsp.get(velocity_variances, rng.normal(size=(adata.n_obs, adata.n_obs)))
