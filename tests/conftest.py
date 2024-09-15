@@ -147,7 +147,7 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa:
     return adata_cflare[0].copy()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path) -> Optional[GAMR]:
     return _create_gamr_model(adata_gamr)
 

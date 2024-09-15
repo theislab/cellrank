@@ -811,6 +811,7 @@ class TestHeatmap:
             model,
             RAW_GENES[:5],
             "latent_time",
+            clustering_kwargs={"flavor": "igraph", "n_iterations": 2},
             mode="lineages",
             use_raw=True,
             dpi=DPI,
