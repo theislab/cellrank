@@ -148,24 +148,8 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa:
 
 
 @pytest.fixture(scope="session")
-def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path, worker_id: str) -> Optional[GAMR]:
-    if worker_id == "master":
-        model = _create_gamr_model(adata_gamr)
-    else:
-        root_tmp_dir = tmp_path_factory.getbasetemp().parent
-        fn = root_tmp_dir / "model.pickle"
-
-        if fn.is_file():
-            model = GAMR.read(fn)
-        else:
-            model = _create_gamr_model(adata_gamr)
-            if model is not None:
-                model.write(fn)
-
-    if model is None:
-        pytest.skip("Unable to create `cellrank.models.GAMR`.")
-
-    return model
+def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path) -> Optional[GAMR]:
+    return _create_gamr_model(adata_gamr)
 
 
 @pytest.fixture
