@@ -531,9 +531,7 @@ class KernelExpression(IOMixin, abc.ABC):
 
         empirical_velo = np.array(empirical_velo)
         obs_mask = np.isnan(empirical_velo).any(axis=1)
-        empirical_velo = empirical_velo[~obs_mask, :]
-
-        return empirical_velo
+        return empirical_velo[~obs_mask, :]
 
     def _get_vector_field_estimate(self, rep: str) -> np.ndarray:
         """Compute estimate of vector field under one step of the transition matrix.

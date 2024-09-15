@@ -97,9 +97,7 @@ def density_normalization(velo_graph, trans_graph):
         Q = np.diag(1.0 / q)
     else:
         Q = sp.spdiags(1.0 / q, 0, trans_graph.shape[0], trans_graph.shape[0])
-    velo_graph = Q @ velo_graph @ Q
-
-    return velo_graph
+    return Q @ velo_graph @ Q
 
 
 def create_kernels(

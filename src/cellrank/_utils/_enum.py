@@ -55,7 +55,7 @@ class ABCEnumMeta(enum.EnumMeta, abc.ABCMeta):  # noqa: D101
         return res
 
 
-class ErrorFormatterABC(abc.ABC):  # noqa: D101
+class ErrorFormatterABC:  # noqa: D101
     __error_format__ = "Invalid option `{!r}` for `{}`. Valid options are: `{}`."
 
     @classmethod
