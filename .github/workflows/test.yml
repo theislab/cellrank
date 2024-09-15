@@ -42,7 +42,7 @@ jobs:
         python -m pip install tox
 
     - name: Setup Conda
-      if: matrix.os == 'macOS'
+      if: runner.os == 'macOS'
       uses: conda-incubator/setup-miniconda@v3
       with:
         auto-update-conda: true
