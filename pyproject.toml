@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Visualization",
@@ -237,7 +238,7 @@ legacy_tox_ini = """
 # TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
 requires = tox-conda
 isolated_build = true
-envlist = lint-code,py{3.8,3.9,3.10,3.11}-{slepc,noslepc}
+envlist = lint-code,py{3.8,3.9,3.10,3.11,3.12}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
