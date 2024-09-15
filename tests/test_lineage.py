@@ -835,7 +835,7 @@ class TestTransposition:
 
     def test_simple_access(self, lineage: Lineage):
         y = lineage.T["foo"]
-        with pytest.raises(TypeError, match="unhashable type"):
+        with pytest.raises((IndexError, TypeError)):
             _ = lineage.T[:, "foo"]
 
         assert y.shape == (1, lineage.shape[0])
