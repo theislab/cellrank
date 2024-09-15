@@ -46,27 +46,21 @@ class FateProbsProtocol(BaseProtocol):
     _term_states: StatesHolder
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
-        ...
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
 
     @property
-    def terminal_states(self) -> pd.Series:
-        ...
+    def terminal_states(self) -> pd.Series: ...
 
     @property
-    def fate_probabilities(self) -> Optional[Lineage]:
-        ...
+    def fate_probabilities(self) -> Optional[Lineage]: ...
 
     @property
-    def absorption_times(self) -> Optional[pd.DataFrame]:
-        ...
+    def absorption_times(self) -> Optional[pd.DataFrame]: ...
 
     @property
-    def priming_degree(self) -> Optional[pd.Series]:
-        ...
+    def priming_degree(self) -> Optional[pd.Series]: ...
 
-    def __len__(self) -> int:
-        ...
+    def __len__(self) -> int: ...
 
     def _compute_fate_probabilities(
         self,
@@ -81,16 +75,14 @@ class FateProbsProtocol(BaseProtocol):
         tol: float,
         show_progress_bar: bool,
         preconditioner: str,
-    ) -> np.ndarray:
-        ...
+    ) -> np.ndarray: ...
 
     def _rec_trans_states(
         self,
         keys: Optional[Sequence[str]],
         *,
         ctx: Literal["fate_probs", "time_to_absorption"],
-    ) -> RecTransStates:
-        ...
+    ) -> RecTransStates: ...
 
     def _ensure_lineage_object(
         self,
@@ -99,27 +91,23 @@ class FateProbsProtocol(BaseProtocol):
         kind: Literal["macrostates", "term_states", "fate_probs"],
         backward: bool,
         **kwargs: Any,
-    ) -> Lineage:
-        ...
+    ) -> Lineage: ...
 
     def _write_fate_probabilities(
         self,
         fate_probs: Optional[Lineage],
-    ) -> str:
-        ...
+    ) -> str: ...
 
     def _write_absorption_times(
         self,
         abs_times: Optional[pd.DataFrame],
         params: Mapping[str, Any] = types.MappingProxyType({}),
-    ) -> str:
-        ...
+    ) -> str: ...
 
     def _write_lineage_priming(
         self,
         priming_degree: Optional[pd.Series],
-    ) -> str:
-        ...
+    ) -> str: ...
 
     def _plot_continuous(
         self,
@@ -134,8 +122,7 @@ class FateProbsProtocol(BaseProtocol):
         same_plot: bool = True,
         cmap: str = "viridis",
         **kwargs: Any,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class FateProbsMixin:

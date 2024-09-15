@@ -34,20 +34,16 @@ class LinDriversProtocol(BaseProtocol):
         drivers: Optional[pd.DataFrame],
         use_raw: bool,
         params: Mapping[str, Any] = types.MappingProxyType({}),
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @property
-    def eigendecomposition(self) -> Dict[str, Any]:
-        ...
+    def eigendecomposition(self) -> Dict[str, Any]: ...
 
     @property
-    def fate_probabilities(self) -> Optional[Lineage]:
-        ...
+    def fate_probabilities(self) -> Optional[Lineage]: ...
 
     @property
-    def lineage_drivers(self) -> Optional[pd.DataFrame]:
-        ...
+    def lineage_drivers(self) -> Optional[pd.DataFrame]: ...
 
 
 class LinDriversMixin(FateProbsMixin):
@@ -144,7 +140,7 @@ class LinDriversMixin(FateProbsMixin):
 
         # use `cluster_key` and clusters to subset the data
         if clusters is not None:
-            if cluster_key not in self.adata.obs.keys():
+            if cluster_key not in self.adata.obs:
                 raise KeyError(f"Unable to find clusters in `adata.obs[{cluster_key!r}]`.")
             if isinstance(clusters, str):
                 clusters = [clusters]
@@ -157,7 +153,7 @@ class LinDriversMixin(FateProbsMixin):
                     f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
                     f"`adata.obs[{cluster_key!r}]`."
                 )
-            subset_mask = np.in1d(self.adata.obs[cluster_key], clusters)
+            subset_mask = np.isin(self.adata.obs[cluster_key], clusters)
             adata_comp = self.adata[subset_mask]
             lin_probs = fate_probs[subset_mask, :]
         else:

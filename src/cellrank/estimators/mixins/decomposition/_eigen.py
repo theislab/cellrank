@@ -23,13 +23,11 @@ EPS = np.finfo(np.float64).eps
 
 class EigenProtocol(BaseProtocol):
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
-        ...
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
 
     def _write_eigendecomposition(
         self, decomp: Dict[str, Any], params: Mapping[str, Any] = types.MappingProxyType({})
-    ) -> str:
-        ...
+    ) -> str: ...
 
 
 class EigenMixin:

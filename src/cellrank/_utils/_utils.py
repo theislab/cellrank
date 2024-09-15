@@ -216,14 +216,14 @@ def _process_series(
 
     # check the `keys` are all proper categories
     remaining_cat = [b for a in keys_ for b in a]
-    if not np.all(np.in1d(remaining_cat, series_in.cat.categories)):
+    if not np.all(np.isin(remaining_cat, series_in.cat.categories)):
         raise ValueError("Not all keys are proper categories. Check for spelling mistakes in `keys`.")
 
     # remove cats and colors according to keys
     n_remaining = len(remaining_cat)
     removed_cat = list(set(series_in.cat.categories) - set(remaining_cat))
     if process_colors:
-        mask = np.in1d(series_in.cat.categories, remaining_cat)
+        mask = np.isin(series_in.cat.categories, remaining_cat)
         colors_temp = colors_in[mask].copy()
     series_temp = series_in.cat.remove_categories(removed_cat)
 
@@ -243,11 +243,11 @@ def _process_series(
 
             if process_colors:
                 # apply the same to the colors array. We just append new colors at the end
-                color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat)
+                color_mask = np.isin(series_temp.cat.categories[:n_remaining], cat)
                 colors_merge = np.array(colors_temp)[:n_remaining][color_mask]
                 colors_mod[new_cat_name] = _compute_mean_color(colors_merge)
         elif process_colors:
-            color_mask = np.in1d(series_temp.cat.categories[:n_remaining], cat[0])
+            color_mask = np.isin(series_temp.cat.categories[:n_remaining], cat[0])
             colors_mod[cat[0]] = np.array(colors_temp)[:n_remaining][color_mask][0]
 
     # Since we have just appended colors at the end, we must now delete the unused ones
@@ -545,7 +545,7 @@ def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: i
             own_cl = rc_labels[cell]
             neighbors = cols[rows == cell]
             n_cls = rc_labels[neighbors]
-            n_matches = np.sum(np.in1d(n_cls, own_cl))
+            n_matches = np.sum(np.isin(n_cls, own_cl))
             if n_matches < n_matches_min:
                 rc_labels[cell] = None
 
@@ -1145,7 +1145,7 @@ def _series_from_one_hot_matrix(
     if not np.all(membership.sum(axis=1) <= 1):
         raise ValueError("Not all items are one-hot encoded or empty.")
     if (membership.sum(0) == 0).any():
-        logg.warning(f"Detected {np.sum((membership.sum(0) == 0))} empty categories")
+        logg.warning(f"Detected {np.sum(membership.sum(0) == 0)} empty categories")
 
     if index is None:
         index = range(n_samples)

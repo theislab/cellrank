@@ -12,16 +12,13 @@ __all__ = ["IOMixin"]
 
 class IOMixinProtocol(Protocol):
     @property
-    def shape(self) -> Tuple[int, ...]:
-        ...
+    def shape(self) -> Tuple[int, ...]: ...
 
     @property
-    def adata(self) -> AnnData:
-        ...
+    def adata(self) -> AnnData: ...
 
     @adata.setter
-    def adata(self, adata: AnnData) -> None:
-        ...
+    def adata(self, adata: AnnData) -> None: ...
 
 
 class IOMixin:

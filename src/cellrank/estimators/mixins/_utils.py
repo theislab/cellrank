@@ -72,8 +72,7 @@ class BaseProtocol(Protocol):  # noqa: D101
         value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, Dict[str, Any]]] = None,
         copy: bool = True,
         shadow_only: bool = False,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     def _get(
         self,
@@ -84,19 +83,16 @@ class BaseProtocol(Protocol):  # noqa: D101
         dtype: Optional[Union[type, Tuple[type, ...]]] = None,
         copy: bool = True,
         allow_missing: bool = False,
-    ) -> Any:
-        ...
+    ) -> Any: ...
 
     def _create_params(
         self,
         locs: Optional[Mapping[str, Any]] = None,
         func: Optional[Callable] = None,
         remove: Sequence[str] = (),
-    ) -> Dict[str, Any]:
-        ...
+    ) -> Dict[str, Any]: ...
 
-    def _read_params(self, key: str) -> Dict[str, Any]:
-        ...
+    def _read_params(self, key: str) -> Dict[str, Any]: ...
 
 
 @decorator()

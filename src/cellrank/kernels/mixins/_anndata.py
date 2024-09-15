@@ -35,12 +35,10 @@ class AnnDataMixin(abc.ABC):
 
     @adata.setter
     @abc.abstractmethod
-    def adata(self, adata: Optional[AnnData]) -> None:
-        ...
+    def adata(self, adata: Optional[AnnData]) -> None: ...
 
     @abc.abstractmethod
-    def __len__(self) -> int:
-        ...
+    def __len__(self) -> int: ...
 
     @abc.abstractmethod
     @d.get_full_description(base="to_adata")

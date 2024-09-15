@@ -35,8 +35,7 @@ class SchurProtocol(BaseProtocol):
     _schur_matrix: Optional[np.ndarray] = None
     _eigendecomposition: Optional[Dict[str, Any]] = None
 
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
-        ...
+    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
 
     def _write_schur_decomposition(
         self,
@@ -44,8 +43,7 @@ class SchurProtocol(BaseProtocol):
         vectors: np.ndarray,
         matrix: np.ndarray,
         params: Mapping[str, Any] = types.MappingProxyType({}),
-    ) -> str:
-        ...
+    ) -> str: ...
 
 
 class SchurMixin:

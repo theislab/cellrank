@@ -453,7 +453,7 @@ class RealTimeKernel(UnidirectionalKernel):
         tmp.var_names = index
         tmp = tmp[self.adata.obs_names, :][:, self.adata.obs_names]
 
-        obs = pd.concat([obs.get(ix, None) for ix in range(len(blocks))])
+        obs = pd.concat([obs.get(ix) for ix in range(len(blocks))])
         tmp.obs = pd.merge(
             tmp.obs,
             obs,

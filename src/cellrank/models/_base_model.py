@@ -1053,7 +1053,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]]]:
         """
         Get color array.
 
@@ -1237,7 +1237,7 @@ class FailedModel(BaseModel):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]]]:
         return None, "black", ColorType.STR, None
 
     def _return_min_max(self, show_conf_int: bool):
@@ -1344,7 +1344,7 @@ class FittedModel(BaseModel):
         key: Optional[str],
         *,
         same_plot: bool = False,
-    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]],]:
+    ) -> Tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[Dict[str, Any]]]:
         # w_all does not need to be defined
         if same_plot or self.w_all is None or np.allclose(self.w_all, 1.0):
             return None, "black", ColorType.STR, None

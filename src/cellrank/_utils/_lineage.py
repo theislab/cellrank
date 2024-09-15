@@ -318,9 +318,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             return tuple(sorted({name.strip(" ") for name in names.strip(" ,").split(",")}))
 
         keys = [
-            tuple(self._maybe_convert_names(unsplit(mixture), default=mixture))
-            if isinstance(mixture, str)
-            else (mixture,)
+            (
+                tuple(self._maybe_convert_names(unsplit(mixture), default=mixture))
+                if isinstance(mixture, str)
+                else (mixture,)
+            )
             for mixture in mixtures
         ]
         keys = _unique_order_preserving(keys)
@@ -905,9 +907,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
             )
 
             cells = "".join(
-                f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
-                if isinstance(c, int)
-                else _DUMMY_CELL
+                (
+                    f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
+                    if isinstance(c, int)
+                    else _DUMMY_CELL
+                )
                 for c in rng
             )
             return f"<tr>{(names[r] if self._is_transposed else '') + cells}</tr>"
