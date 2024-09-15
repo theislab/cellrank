@@ -231,7 +231,7 @@ def cluster_trends(
         if trends.n_vars != n_points:
             raise RuntimeError(f"Expected to find `{n_points}` points, found `{trends.n_vars}`.")
 
-        random_state = np.random.RandomState(random_state).randint(2**16)
+        random_state = np.random.default_rng(random_state).integers(0, 2**16)
 
         pca_kwargs = dict(pca_kwargs)
         pca_kwargs.setdefault("n_comps", min(50, n_points, len(genes)) - 1)

@@ -1199,7 +1199,7 @@ class TestRealTimeKernel:
             n, m = np.sum(col == src), np.sum(col == tgt)
             expected[src, tgt] = np.eye(n, m)
 
-        rng = np.random.RandomState(13)
+        rng = np.random.default_rng(13)
         ixs = np.arange(adata_large.n_obs)
         rng.shuffle(ixs)
         adata_large = adata_large[ixs].copy()
@@ -1236,7 +1236,7 @@ class TestRealTimeKernel:
         if problem == "temporal":
             problem = moscot.problems.TemporalProblem(adata_large)
         elif problem == "spatiotemporal":
-            rng = np.random.RandomState(42)
+            rng = np.random.default_rng(42)
             adata_large.obsm["spatial"] = rng.normal(size=(adata_large.n_obs, 2))
             problem = moscot.problems.SpatioTemporalProblem(adata_large)
         else:

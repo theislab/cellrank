@@ -101,7 +101,7 @@ class RandomWalk:
         if successive_hits < 0:
             raise ValueError(f"Expected number of successive hits to be positive, found `{successive_hits}`.")
 
-        rs = np.random.RandomState(seed)
+        rs = np.random.default_rng(seed)
         ix = rs.choice(self._ixs, p=self._starting_dist)
         sim, cnt = [ix], -1
 
@@ -336,7 +336,7 @@ class RandomWalk:
     def _should_stop(self, ix: int) -> bool:
         return ix in self._stop_ixs
 
-    def _sample(self, ix: int, *, rs: np.random.RandomState) -> int:
+    def _sample(self, ix: int, *, rs: np.random.Generator) -> int:
         return rs.choice(
             self._ixs,
             p=self._tmat[ix].toarray().squeeze() if self._is_sparse else self._tmat[ix],

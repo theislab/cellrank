@@ -334,7 +334,7 @@ def _perm_test(
     seed: Optional[int] = None,
     queue=None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    rs = np.random.RandomState(None if seed is None else seed + ixs[0])
+    rs = np.random.default_rng(None if seed is None else seed + ixs[0])
     cell_ixs = np.arange(X.shape[1])
     pvals = np.zeros_like(corr, dtype=np.float64)
     corr_bs = np.zeros((len(ixs), X.shape[0], Y.shape[1]))  # perms x genes x lineages
