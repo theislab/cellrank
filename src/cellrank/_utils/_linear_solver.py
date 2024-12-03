@@ -223,11 +223,9 @@ def _solve_many_sparse_problems(
     """
     # initialise solution list and info list
     x_list, n_converged = [], 0
-    kwargs = {} if solver is not sp.linalg.gmres else {"atol": "legacy"}  # get rid of the warning
-
     for b in mat_b:
         # actually call the solver for the current sub-problem
-        x, info = solver(mat_a, b.toarray().flatten(), tol=tol, x0=None, **kwargs)
+        x, info = solver(mat_a, b.toarray().flatten(), rtol=tol, x0=None)
 
         # append solution and info
         x_list.append(np.atleast_1d(x))
