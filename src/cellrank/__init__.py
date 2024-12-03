@@ -1,5 +1,7 @@
 from importlib import metadata
 
+import scipy.sparse as sp
+
 from cellrank import datasets, estimators, kernels, logging, models, pl
 from cellrank._utils._lineage import Lineage
 from cellrank.settings import settings
@@ -14,4 +16,7 @@ try:
 except ImportError:
     md = None
 
-del metadata, md
+# pygam uses `.A`
+sp.spmatrix.A = property(lambda self: self.toarray())
+
+del metadata, md, sp
