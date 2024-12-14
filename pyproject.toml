@@ -57,7 +57,7 @@ dependencies = [
     "pygpcca>=1.0.4",
     "scanpy>=1.7.2",
     "scikit-learn>=0.24.0",
-    "scipy>=1.2.0",
+    "scipy>=1.12.0",
     "scvelo>=0.2.5",
     "seaborn>=0.10.0",
     "wrapt>=1.12.1",
@@ -239,7 +239,7 @@ legacy_tox_ini = """
 # TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
 requires = tox-conda
 isolated_build = true
-envlist = lint-code,py{3.9,3.10,3.11,3.12}-{slepc,noslepc}
+envlist = lint-code,py{3.9,3.10,3.11,3.12,3.13}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
