@@ -20,6 +20,6 @@ except ImportError:
 # pygam uses `.A`
 sp.spmatrix.A = property(lambda self: self.toarray())
 # pygam/utils.py:649: in b_spline_basis
-int = int
+np.int = int  # noqa
 
 del metadata, md, sp, np
