@@ -681,7 +681,7 @@ class TestLineageNormalization:
         lin = lineage.reduce("foo")
 
         assert lin.shape == (10, 1)
-        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_allclose(np.sum(lin, axis=1).X, 1.0)
         np.testing.assert_array_equal(lin.names, ["foo"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo"]].colors)
 
@@ -689,7 +689,7 @@ class TestLineageNormalization:
         lin = lineage.reduce("foo", "bar")
 
         assert lin.shape == (10, 2)
-        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_allclose(np.sum(lin, axis=1).X, 1.0)
         np.testing.assert_array_equal(lin.names, ["foo", "bar"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo", "bar"]].colors)
 
@@ -697,7 +697,7 @@ class TestLineageNormalization:
         lin = lineage.reduce("foo, bar", "baz")
 
         assert lin.shape == (10, 2)
-        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_allclose(np.sum(lin, axis=1).X, 1.0)
         np.testing.assert_array_equal(lin.names, ["bar, foo", "baz"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz"]].colors)
 
@@ -705,7 +705,7 @@ class TestLineageNormalization:
         lin = lineage.reduce("foo, bar")
 
         assert lin.shape == (10, 1)
-        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_allclose(np.sum(lin, axis=1).X, 1.0)
         np.testing.assert_array_equal(lin.names, ["bar, foo"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar"]].colors)
 
@@ -714,7 +714,7 @@ class TestLineageNormalization:
         lin = lineage.reduce("foo, bar", "baz, quux")
 
         assert lin.shape == (10, 2)
-        np.testing.assert_allclose(np.sum(lin, axis=1), 1.0)
+        np.testing.assert_allclose(np.sum(lin, axis=1).X, 1.0)
         np.testing.assert_array_equal(lin.names, ["bar, foo", "baz, quux"])
         np.testing.assert_array_equal(lin.colors, lineage[["foo, bar", "baz, quux"]].colors)
 
