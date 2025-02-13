@@ -1209,7 +1209,8 @@ class TestRealTimeKernel:
         tmat = tmk.transition_matrix
 
         for src, tgt in zip(cats[:-1], cats[1:]):
-            src_mask, tgt_mask = tmk.time == src, tmk.time == tgt
+            src_mask = (tmk.time == src).tolist()
+            tgt_mask = (tmk.time == tgt).tolist()
             np.testing.assert_allclose(tmat[src_mask, :][:, tgt_mask].toarray(), expected[src, tgt])
 
     @pytest.mark.parametrize(
