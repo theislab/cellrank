@@ -119,12 +119,12 @@ class GAM(BaseModel):
                 raise ValueError(f"Expected `expectile` to be in `(0, 1)`, found `{expectile}`.")
             if distribution != "normal" or link != "identity":
                 logg.warning(
-                    f"Expectile GAM works only with `normal` distribution and `identity` link function,"
+                    f"Expectile GAM works only with `normal` distribution and `identity` link function, "
                     f"found `{distribution!r}` distribution and {link!r} link functions."
                 )
             model = ExpectileGAM(term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs)
         else:
-            # doing it like this ensure that user can specify scale
+            # doing it like this ensures that user can specify scale
             gam = _gams[distribution, link]
 
             filtered_kwargs = _filter_kwargs(gam.__init__, **kwargs)
