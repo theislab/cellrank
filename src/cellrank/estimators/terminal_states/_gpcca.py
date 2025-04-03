@@ -578,23 +578,39 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             # that depend on the macrostates, e.g. the terminal states
             g = self.copy(deep=True)
             macrostates = {}
+            comp_failed = {}
             for n_states in range(n_macrostates, 0, -1):
-                g = g.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
-                macrostates[n_states] = g.macrostates.cat.categories
+                try:
+                    g = g.compute_macrostates(n_states=n_states, cluster_key=cluster_key, **kwargs)
+                    macrostates[n_states] = g.macrostates.cat.categories
+                    comp_failed[n_states] = False
+                except ValueError:
+                    comp_failed[n_states] = True
+                    macrostates[n_states] = pd.Series(np.nan, index=self.adata.obs_names)
 
             max_terminal_states = len(terminal_states)
 
             tsi_df = collections.defaultdict(list)
             for n_states, states in macrostates.items():
-                n_terminal_states = (
-                    states.str.replace(r"(_).*", "", regex=True).drop_duplicates().isin(terminal_states).sum()
-                )
+                if comp_failed[n_states] and (n_states == 1):
+                    n_terminal_states = 0
+                elif comp_failed[n_states] and (n_states > 1):
+                    n_terminal_states = np.nan
+                    tsi_df["identified_terminal_states"][-1]
+                else:
+                    n_terminal_states = (
+                        states.str.replace(r"(_).*", "", regex=True).drop_duplicates().isin(terminal_states).sum()
+                    )
                 tsi_df["number_of_macrostates"].append(n_states)
                 tsi_df["identified_terminal_states"].append(n_terminal_states)
 
                 tsi_df["optimal_identification"].append(min(n_states, max_terminal_states))
 
-            tsi_df = AnnData(pd.DataFrame(tsi_df), uns={"terminal_states": terminal_states, "cluster_key": cluster_key})
+            tsi_df = pd.DataFrame(tsi_df)
+            tsi_df.sort_values(by="number_of_macrostates", inplace=True)
+            tsi_df["identified_terminal_states"] = tsi_df["identified_terminal_states"].ffill()
+            tsi_df.sort_values(by="number_of_macrostates", ascending=False, inplace=True)
+            tsi_df = AnnData(tsi_df, uns={"terminal_states": terminal_states, "cluster_key": cluster_key})
             self._tsi = tsi_df
 
         tsi_df = self._tsi.to_df()
