@@ -1,5 +1,6 @@
 from importlib import metadata
 
+import numpy as np
 import scipy.sparse as sp
 
 from cellrank import datasets, estimators, kernels, logging, models, pl
@@ -18,5 +19,7 @@ except ImportError:
 
 # pygam uses `.A`
 sp.spmatrix.A = property(lambda self: self.toarray())
+# pygam/utils.py:649: in b_spline_basis
+np.int = int  # noqa
 
-del metadata, md, sp
+del metadata, md, sp, np

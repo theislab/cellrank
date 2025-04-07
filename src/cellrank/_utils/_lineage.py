@@ -107,7 +107,7 @@ def wrap(numpy_func: Callable) -> Callable:
         else:
             axis = default_axis
 
-        res = np.array(numpy_func(array.X, *args, **kwargs), copy=False)
+        res = np.asarray(numpy_func(array.X, *args, **kwargs))
 
         # handle expand_dim
         if res.ndim > 2:
