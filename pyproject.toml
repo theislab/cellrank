@@ -8,7 +8,8 @@ dynamic = ["version"]
 description = "CellRank: dynamics from multi-view single-cell data"
 readme = "README.rst"
 requires-python = ">=3.9"
-license = {file = "LICENSE"}
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",

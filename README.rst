@@ -15,7 +15,7 @@ CellRank 2: Unified fate mapping in multiview single-cell data
 multi-view single-cell data. See our `documentation`_, and the `CellRank 1`_ and `CellRank 2 manuscript`_ to learn more.
 
 .. important::
-    Please refer to :doc:`our citation guide <https://github.com/theislab/cellrank/blob/main/docs/about/cite.rst>` to cite our software correctly.
+    Please refer to `our citation guide <https://github.com/theislab/cellrank/blob/main/docs/about/cite.rst>`_ to cite our software correctly.
 
 CellRank scales to large cell numbers, is fully compatible with the `scverse`_ ecosystem, and easy to use.
 In the backend, it is powered by `pyGPCCA`_ (`Reuter et al. (2018)`_). Feel
