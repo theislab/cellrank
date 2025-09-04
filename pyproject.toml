@@ -7,7 +7,7 @@ name = "cellrank"
 dynamic = ["version"]
 description = "CellRank: dynamics from multi-view single-cell data"
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 classifiers = [
@@ -20,10 +20,10 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Typing :: Typed",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Mathematics",
     "Topic :: Scientific/Engineering :: Visualization",
@@ -240,7 +240,7 @@ legacy_tox_ini = """
 # TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
 requires = tox-conda
 isolated_build = true
-envlist = lint-code,py{3.9,3.10,3.11,3.12,3.13}-{slepc,noslepc}
+envlist = lint-code,py{3.10,3.11,3.12,3.13}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
