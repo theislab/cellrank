@@ -1005,6 +1005,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         default: Optional[Union[int, str]] = None,
         make_unique: bool = True,
     ) -> Union[int, list[int], list[bool]]:
+        """Convert string indices to their corresponding int indices."""
         from cellrank._utils._utils import _unique_order_preserving
 
         if all(isinstance(n, (bool, np.bool_)) for n in names):
@@ -1016,12 +1017,11 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     name = self._names_to_ixs[name]
                 elif default is not None:
                     if isinstance(default, str):
-                        str_default = str(default)
-                        if str_default not in self._names_to_ixs:
+                        if default not in self._names_to_ixs:
                             raise KeyError(
                                 f"Invalid lineage name: `{name}`. Valid names are: `{[str(n) for n in self.names]}`."
                             )
-                        name = self._names_to_ixs[str_default]
+                        name = self._names_to_ixs[default]
                     else:
                         name = default
                 else:
@@ -1029,8 +1029,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                         f"Invalid lineage name `{name!r}`. Valid names are: `{[str(n) for n in self.names]}`."
                     )
             res.append(name)
+
         if make_unique:
             res = _unique_order_preserving(res)
+
         return res[0] if is_singleton else res
 
     @staticmethod
