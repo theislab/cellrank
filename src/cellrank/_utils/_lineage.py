@@ -1019,13 +1019,15 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
                     if isinstance(default, str):
                         if default not in self._names_to_ixs:
                             raise KeyError(
-                                f"Invalid lineage name: `{name}`. " f"Valid names are: `{list(self.names)}`."
+                                f"Invalid lineage name: `{name}`. Valid names are: `{[str(n) for n in self.names]}`."
                             )
                         name = self._names_to_ixs[default]
                     else:
                         name = default
                 else:
-                    raise KeyError(f"Invalid lineage name `{name!r}`. Valid names are: `{list(self.names)}`.")
+                    raise KeyError(
+                        f"Invalid lineage name `{name!r}`. Valid names are: `{[str(n) for n in self.names]}`."
+                    )
             res.append(name)
 
         if make_unique:
