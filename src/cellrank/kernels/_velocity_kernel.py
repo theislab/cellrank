@@ -92,8 +92,8 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self._xdata = self._extract_data(key=xkey, attr=attr, subset=gene_subset)
         self._vdata = self._extract_data(key=vkey, attr=attr, subset=gene_subset)
         np.testing.assert_array_equal(
-            x=self._xdata.shape,
-            y=self._vdata.shape,
+            self._xdata.shape,
+            self._vdata.shape,
             err_msg=f"Shape mismatch: {self._xdata.shape} vs {self._vdata.shape}",
         )
 
