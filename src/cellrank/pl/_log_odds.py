@@ -257,6 +257,12 @@ def log_odds(
         hue, palette, thresh_mask, sm = get_data(key, thresh)
         show_ylabel = i % ncols == 0
 
+        if hue is None:
+            hue = time_key
+            legend = kwargs.get("legend", False)
+        else:
+            legend = kwargs.get("legend", "auto")
+
         ax = sns.stripplot(
             x=time_key,
             y="log_odds",
@@ -269,6 +275,7 @@ def log_odds(
             size=size,
             alpha=alpha if alpha is not None else None if thresh_mask is None else 0.8,
             ax=ax,
+            legend=legend,
             **kwargs,
         )
         if thresh_mask is not None:
