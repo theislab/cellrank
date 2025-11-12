@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 import numpy as np
@@ -102,7 +104,8 @@ class TestScipyLinearSolver:
 @petsc_slepc_skip
 class TestLinearSolverPETSc:
     def test_create_petsc_matrix_no_a_matrix(self):
-        with pytest.raises(TypeError, match="integer is required"):
+        expected_log = re.escape("int() argument must be a string, a bytes-like object or a real number, not 'tuple'")
+        with pytest.raises(TypeError, match=expected_log):
             _create_petsc_matrix(np.empty((100,)))
 
     def test_create_petsc_matrix_from_dense(self):
