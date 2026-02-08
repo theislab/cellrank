@@ -181,7 +181,7 @@ preconditioner
     We recommend the ``'ilu'`` preconditioner for badly conditioned problems.
 check_sum_tol
     Tolerance for checking whether fate probabilities sum to 1. Fate probabilities are computed by
-    solving a linear system; this tolerance is used to verify the solution is valid. Increase this
+    solving a linear system; this tolerance is used to verify the solution is valid. Increase the argument value
     if the solver converges but the check fails due to numerical precision."""
 which = """\
 which
