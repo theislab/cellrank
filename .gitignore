@@ -171,3 +171,9 @@ tests/figures
 
 # Ruff
 .ruff_cache
+
+# uv
+uv.lock
+
+# Copilot prompts (local-only development aids)
+.github/prompts/
