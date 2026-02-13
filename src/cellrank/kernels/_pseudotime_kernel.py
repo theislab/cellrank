@@ -173,7 +173,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         return self
 
     @property
-    def pseudotime(self) -> np.array | None:
+    def pseudotime(self) -> np.ndarray | None:
         """Pseudotemporal ordering of cells."""
         if self._pseudotime is None:
             return None

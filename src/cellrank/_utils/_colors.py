@@ -152,7 +152,7 @@ def _get_bg_fg_colors(color, sat_scale: float | None = None) -> tuple[str, str]:
 def _map_names_and_colors(
     series_reference: pd.Series,
     series_query: pd.Series,
-    colors_reference: np.array | None = None,
+    colors_reference: np.ndarray | None = None,
     en_cutoff: float | None = None,
 ) -> pd.Series | tuple[pd.Series, list[Any]]:
     """Map annotations and colors from one series to another.

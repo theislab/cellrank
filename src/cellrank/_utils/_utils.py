@@ -140,7 +140,7 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
 
 
 def _process_series(
-    series: pd.Series, keys: list[str] | None, cols: np.array | None = None
+    series: pd.Series, keys: list[str] | None, cols: np.ndarray | None = None
 ) -> pd.Series | tuple[pd.Series, list[str]]:
     """Process :class:`~pandas.Series` of categorical objects.
 
@@ -249,7 +249,7 @@ def _process_series(
     return series_temp
 
 
-def _complex_warning(X: np.array, use: list | int | tuple | range, use_imag: bool = False) -> np.ndarray:
+def _complex_warning(X: np.ndarray, use: list | int | tuple | range, use_imag: bool = False) -> np.ndarray:
     """Check for imaginary components in columns of X specified by ``use``.
 
     Parameters
@@ -996,7 +996,7 @@ def _one_hot(n, cat: int | None = None) -> np.ndarray:
 
 
 def _fuzzy_to_discrete(
-    a_fuzzy: np.array,
+    a_fuzzy: np.ndarray,
     n_most_likely: int = 10,
     remove_overlap: bool = True,
     raise_threshold: float | None = 0.2,
@@ -1095,7 +1095,7 @@ def _fuzzy_to_discrete(
 
 
 def _series_from_one_hot_matrix(
-    membership: np.array,
+    membership: np.ndarray,
     index: Iterable | None = None,
     names: Iterable | None = None,
 ) -> pd.Series:
