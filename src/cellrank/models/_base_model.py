@@ -1016,12 +1016,12 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     @abc.abstractmethod
     @d.dedent
     def copy(self) -> "BaseModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
 
     def __copy__(self) -> "BaseModel":
         return self.copy()
 
-    def __deepcopy__(self, memodict={}) -> "BaseModel":  # noqa
+    def __deepcopy__(self, memodict={}) -> "BaseModel":  # noqa: B006
         # deepcopy expects that `.copy()` makes a really shallow copy (i.e. only references to the arrays)
         # it should also not copy the `.prepared` attribute, since copying is happening mostly during
         # parallelization and it serves as 1 extra sanity check (a precaution that's not necessary, per-se, but highly
@@ -1246,7 +1246,7 @@ class FailedModel(BaseModel):
 
     @d.dedent
     def copy(self) -> "FailedModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
         return FailedModel(self.model.copy(), exc=self._exc)
 
     def __bool__(self):
@@ -1395,7 +1395,7 @@ class FittedModel(BaseModel):
 
     @d.dedent
     def copy(self) -> "FittedModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
         # here we return a deepcopy since it doesn't make sense to make a shallow one
         return FittedModel.from_model(self)
 

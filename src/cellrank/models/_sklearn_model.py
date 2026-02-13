@@ -210,7 +210,7 @@ class SKLearnModel(BaseModel):
 
     @d.dedent
     def copy(self) -> "SKLearnModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
         res = SKLearnModel(self.adata, self._model, weight_name=self._weight_name, ignore_raise=True)
         self._shallowcopy_attributes(res)  # this deepcopies the underlying model
 

@@ -199,7 +199,7 @@ class LineageMeta(type):
     It registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
     """
 
-    __overloaded_functions__ = dict(  # noqa
+    __overloaded_functions__ = dict(  # noqa: C408
         sum=np.sum,
         mean=np.mean,
         min=np.min,
@@ -213,7 +213,7 @@ class LineageMeta(type):
         entropy=st.entropy,
     )
 
-    def __new__(cls, clsname, superclasses, attributedict):  # noqa
+    def __new__(cls, clsname, superclasses, attributedict):
         res = type.__new__(cls, clsname, superclasses, attributedict)
         for attrname, fn in LineageMeta.__overloaded_functions__.items():
             wrapped_fn = _HANDLED_FUNCTIONS.get(fn, None)

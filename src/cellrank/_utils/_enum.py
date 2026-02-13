@@ -44,7 +44,7 @@ def _pretty_raise_enum(cls: type["ErrorFormatterABC"], func: Callable) -> Callab
 
 
 class ABCEnumMeta(enum.EnumMeta, abc.ABCMeta):  # noqa: D101
-    def __call__(cls, *args, **kwargs):  # noqa
+    def __call__(cls, *args, **kwargs):
         if getattr(cls, "__error_format__", None) is None:
             raise TypeError(f"Can't instantiate class `{cls.__name__}` " f"without `__error_format__` class attribute.")
         return super().__call__(*args, **kwargs)

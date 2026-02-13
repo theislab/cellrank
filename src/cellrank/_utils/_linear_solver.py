@@ -72,7 +72,7 @@ def _create_solver(
     solver: Optional[str],
     preconditioner: Optional[str],
     tol: float,
-) -> tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa
+) -> tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa: F821
     """
     Create a linear system solver.
 
@@ -473,8 +473,8 @@ def _solve_lin_system(
 
 def _is_petsc_slepc_available() -> bool:
     try:
-        import petsc4py  # noqa
-        import slepc4py  # noqa
+        import petsc4py  # noqa: F401
+        import slepc4py  # noqa: F401
 
         return True
     except ImportError:

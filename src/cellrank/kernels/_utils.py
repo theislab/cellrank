@@ -49,17 +49,17 @@ def _np_apply_along_axis(func1d, axis: int, arr: np.ndarray) -> np.ndarray:
 
 
 @nb.njit(**jit_kwargs)
-def np_mean(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+def np_mean(array: np.ndarray, axis: int) -> np.ndarray:
     return _np_apply_along_axis(np.mean, axis, array)
 
 
 @nb.njit(**jit_kwargs)
-def np_std(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+def np_std(array: np.ndarray, axis: int) -> np.ndarray:
     return _np_apply_along_axis(np.std, axis, array)
 
 
 @nb.njit(**jit_kwargs)
-def norm(array: np.ndarray, axis: int) -> np.ndarray:  # noqa
+def norm(array: np.ndarray, axis: int) -> np.ndarray:
     return _np_apply_along_axis(np.linalg.norm, axis, array)
 
 

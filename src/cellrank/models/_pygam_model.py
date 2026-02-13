@@ -170,7 +170,7 @@ class GAM(BaseModel):
         Returns
         -------
         Fits the model and returns self.
-        """  # noqa
+        """  # noqa: D400
 
         super().fit(x, y, w, **kwargs)
 
@@ -224,7 +224,7 @@ class GAM(BaseModel):
         Returns
         -------
         %(base_model_predict.returns)s
-        """  # noqa
+        """  # noqa: D400
 
         x_test = self._check(key_added, x_test)
 
@@ -250,7 +250,7 @@ class GAM(BaseModel):
         Returns
         -------
         %(base_model_ci.returns)s
-        """  # noqa
+        """  # noqa: D400
 
         x_test = self._check("_x_test", x_test)
         with warnings.catch_warnings():
@@ -265,7 +265,7 @@ class GAM(BaseModel):
 
     @d.dedent
     def copy(self) -> "BaseModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
         res = GAM(self.adata)
         self._shallowcopy_attributes(res)
         res._grid = copy.deepcopy(self._grid)

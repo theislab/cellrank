@@ -128,7 +128,7 @@ class GAMR(BaseModel):
         Returns
         -------
         %(base_model_prepare.returns)s
-        """  # noqa
+        """  # noqa: D400
 
         if self._family == "nb":
             kwargs["use_raw"] = True
@@ -173,7 +173,7 @@ class GAMR(BaseModel):
         - :attr:`x` - %(base_model_x.summary)s
         - :attr:`y` - %(base_model_y.summary)s
         - :attr:`w` - %(base_model_w.summary)s
-        """  # noqa
+        """  # noqa: D400
 
         import rpy2.robjects as ro
         from rpy2.robjects import pandas2ri
@@ -237,7 +237,7 @@ class GAMR(BaseModel):
         Returns
         -------
         %(base_model_predict.returns)s
-        """  # noqa
+        """  # noqa: D400
         import rpy2.robjects as ro
         from rpy2.robjects import pandas2ri
         from rpy2.robjects.conversion import localconverter
@@ -287,7 +287,7 @@ class GAMR(BaseModel):
         Returns
         -------
         %(base_model_ci.returns)s
-        """  # noqa
+        """  # noqa: D400
 
         # this is 2x as fast as opposed to calling `robjects.r.predict` again
         # on my PC (Michal):
@@ -307,7 +307,7 @@ class GAMR(BaseModel):
 
     @d.dedent
     def copy(self) -> "GAMR":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
         res = GAMR(
             self.adata,
             self._n_knots,
