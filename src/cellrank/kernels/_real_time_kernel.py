@@ -621,7 +621,7 @@ class RealTimeKernel(UnidirectionalKernel):
 def _compute_connectivity_tmat(
     adata: AnnData, density_normalize: bool = True, **kwargs: Any
 ) -> Union[np.ndarray, sp.spmatrix]:
-    from cellrank.kernels import ConnectivityKernel
+    from cellrank.kernels import ConnectivityKernel  # circular import
 
     sc.pp.neighbors(adata, **kwargs)
     return ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize).transition_matrix

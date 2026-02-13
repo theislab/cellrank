@@ -33,7 +33,7 @@ class _RootLogger(logging.RootLogger):
         time: datetime.datetime = None,
         deep: Optional[str] = None,
     ) -> datetime.datetime:
-        from cellrank import settings
+        from cellrank import settings  # circular import
 
         # this will correctly initialize the handles if doing
         # just from cellrank import logging
@@ -127,7 +127,7 @@ def _versions_dependencies(dependencies: Iterable[str]):
 
 def print_versions():
     """Print package versions that might influence the numerical and plotting results."""
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     modules = ["cellrank"] + _DEPENDENCIES_NUMERICS + _DEPENDENCIES_PLOTTING
     print(
@@ -142,7 +142,7 @@ def print_version_and_date():
 
     Useful for starting a notebook so you see when you started working.
     """
-    from cellrank import __version__, settings
+    from cellrank import __version__, settings  # circular import
 
     print(
         f"Running CellRank {__version__}, on {datetime.datetime.now():%Y-%m-%d %H:%M}.",
@@ -183,34 +183,34 @@ def error(
     -------
     The current time.
     """
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     return settings._root_logger.error(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def warning(msg: str, *, time=None, deep=None, extra=None) -> datetime.datetime:
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     return settings._root_logger.warning(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def info(msg: str, *, time=None, deep=None, extra=None) -> datetime.datetime:
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     return settings._root_logger.info(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def hint(msg: str, *, time=None, deep=None, extra=None) -> datetime.datetime:
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     return settings._root_logger.hint(msg, time=time, deep=deep, extra=extra)
 
 
 @_copy_docs_and_signature(error)
 def debug(msg: str, *, time=None, deep=None, extra=None) -> datetime.datetime:
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     return settings._root_logger.debug(msg, time=time, deep=deep, extra=extra)

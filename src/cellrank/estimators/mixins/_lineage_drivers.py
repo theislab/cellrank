@@ -373,7 +373,7 @@ class LinDriversMixin(FateProbsMixin):
         This plot is based on the following
         `notebook <https://github.com/theislab/gastrulation_analysis/blob/main/6_cellrank.ipynb>`_ by *Maren Büttner*.
         """
-        from cellrank.pl._utils import _position_legend
+        from cellrank.pl._utils import _position_legend  # circular import
 
         if use_raw and self.adata.raw is None:
             logg.warning("No raw attribute set. Setting `use_raw=False`")

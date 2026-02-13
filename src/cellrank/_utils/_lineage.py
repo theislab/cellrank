@@ -11,7 +11,10 @@ from typing import Any, Callable, Literal, Optional, TypeVar, Union
 import numpy as np
 import pandas as pd
 import scipy.stats as st
+from numpy.linalg import norm
 from pandas.api.types import infer_dtype
+from scipy.spatial.distance import jensenshannon
+from sklearn.feature_selection import mutual_info_regression
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -302,7 +305,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return obj.T if was_transposed else obj
 
     def _mix_lineages(self, rows, mixtures: Iterable[Union[str, Any]]) -> "Lineage":
-        from cellrank._utils._utils import _unique_order_preserving
+        from cellrank._utils._utils import _unique_order_preserving  # circular import
 
         def unsplit(names: str) -> tuple[str, ...]:
             return tuple(sorted({name.strip(" ") for name in names.strip(" ,").split(",")}))
@@ -582,7 +585,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         -------
         %(just_plots)s
         """
-        from cellrank._utils._utils import save_fig
+        from cellrank._utils._utils import save_fig  # circular import
 
         if len(self.names) == 1:
             raise ValueError("Cannot plot pie chart for only 1 lineage.")
@@ -1006,7 +1009,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         make_unique: bool = True,
     ) -> Union[int, list[int], list[bool]]:
         """Convert string indices to their corresponding int indices."""
-        from cellrank._utils._utils import _unique_order_preserving
+        from cellrank._utils._utils import _unique_order_preserving  # circular import
 
         if all(isinstance(n, (bool, np.bool_)) for n in names):
             return list(names)
@@ -1137,8 +1140,6 @@ def _row_normalize(X: Union[np.ndarray, Lineage]) -> Union[np.ndarray, Lineage]:
 
 
 def _col_normalize(X, norm_ord=2):
-    from numpy.linalg import norm
-
     return X / norm(X, ord=norm_ord, axis=0)
 
 
@@ -1180,15 +1181,11 @@ def _kl_div(reference, query):
 
 def _js_div(reference, query):
     # the js divergence is symmetric
-    from scipy.spatial.distance import jensenshannon
-
     return _point_wise_distance(reference, query, jensenshannon)
 
 
 def _mutual_info(reference, query):
     # mutual information is not symmetric. We don't need to normalise the vectors, it's invariant under scaling.
-    from sklearn.feature_selection import mutual_info_regression
-
     weights = np.zeros((query.shape[1], reference.shape[1]))
     for i, target in enumerate(query.T):
         weights[i, :] = mutual_info_regression(reference, target)

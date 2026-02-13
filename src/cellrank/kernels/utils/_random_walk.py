@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Literal, Optional, Union
 
 import scvelo as scv
+from scvelo.plotting.utils import default_size, plot_outline
 
 import numpy as np
 import pandas as pd
@@ -256,8 +257,6 @@ class RandomWalk:
 
         for ix in [0, -1]:
             ixs = [sim[ix] for sim in sims]
-            from scvelo.plotting.utils import default_size, plot_outline
-
             plot_outline(
                 x=emb[ixs][:, 0],
                 y=emb[ixs][:, 1],
@@ -271,7 +270,7 @@ class RandomWalk:
             )
 
         if ixs_legend_loc not in (None, "none"):
-            from cellrank.pl._utils import _position_legend
+            from cellrank.pl._utils import _position_legend  # circular import
 
             h1 = ax.scatter([], [], color=cmap(0.0), label="start")
             h2 = ax.scatter([], [], color=cmap(1.0), label="stop")

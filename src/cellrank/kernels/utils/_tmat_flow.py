@@ -420,7 +420,7 @@ class FlowPlotter:
         figsize: Optional[tuple[float, float]] = None,
         dpi: Optional[int] = None,
     ) -> plt.Axes:
-        from cellrank.pl._utils import _position_legend
+        from cellrank.pl._utils import _position_legend  # circular import
 
         def r(num: float) -> int:
             return max(0, int(round(num, 2) * 100) - 1)

@@ -1052,7 +1052,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         If ``show = True``, nothing, just plots, otherwise returns the axes object.
         Optionally saves it based on ``save``.
         """
-        from cellrank.pl._utils import _position_legend
+        from cellrank.pl._utils import _position_legend  # circular import
 
         macrostates = self.macrostates
         if macrostates is None:

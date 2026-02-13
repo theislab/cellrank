@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib import cm, colors
 from matplotlib.ticker import FormatStrFormatter
+from mpl_toolkits.axes_grid1 import Divider, Size
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 from anndata import AnnData
@@ -550,8 +551,6 @@ def _get_ax_bbox(fig: plt.Figure, ax: plt.Axes):
 
 
 def _set_ax_height_to_cm(fig: plt.Figure, ax: plt.Axes, height: float) -> None:
-    from mpl_toolkits.axes_grid1 import Divider, Size
-
     height /= 2.54  # cm to inches
 
     bbox = _get_ax_bbox(fig, ax)

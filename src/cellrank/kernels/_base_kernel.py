@@ -14,6 +14,7 @@ from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._key import Key
 from cellrank._utils._utils import _normalize, _read_graph_data, save_fig
 from cellrank.kernels._utils import require_tmat
 from cellrank.kernels.mixins import BidirectionalMixin, IOMixin, UnidirectionalMixin
@@ -377,8 +378,6 @@ class KernelExpression(IOMixin, abc.ABC):
         -------
         %(write_to_adata)s
         """
-        from cellrank._utils._key import Key
-
         if self.adata is None:
             raise ValueError("Underlying annotated data object is not set.")
 

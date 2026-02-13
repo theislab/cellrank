@@ -5,10 +5,12 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
+from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from anndata import AnnData
 
 from cellrank import logging as logg
+from cellrank._utils import Lineage
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._key import Key
@@ -157,8 +159,6 @@ class CytoTRACEKernel(PseudotimeKernel):
         This will not exactly reproduce the results of the original CytoTRACE algorithm :cite:`gulati:20` because we
         allow for any normalization and imputation techniques whereas CytoTRACE has built-in specific methods for that.
         """
-        from cellrank._utils import Lineage
-
         aggregation = CytoTRACEAggregation(aggregation)
 
         if use_raw and self.adata.raw is None:
@@ -231,8 +231,6 @@ class CytoTRACEKernel(PseudotimeKernel):
         ascending: bool = False,
         n_genes: int = 200,
     ) -> tuple[np.ndarray, list[str]]:
-        from sklearn.utils.sparsefuncs import csc_median_axis_0
-
         # fmt: off
         modifier = "negatively" if ascending else "positively"
         if n_genes <= 0:

@@ -831,7 +831,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
             )
 
         if lineage_probability and not isinstance(self, FittedModel) and not np.allclose(self.w, 1.0):
-            from cellrank.pl._utils import _is_any_gam_mgcv
+            from cellrank.pl._utils import _is_any_gam_mgcv  # circular import
 
             model = copy.deepcopy(self)
             model._y = self._reshape_and_retype(self.w).copy()
@@ -898,7 +898,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         is_line: bool = True,
         **kwargs: Any,
     ) -> None:
-        from cellrank.pl._utils import _position_legend
+        from cellrank.pl._utils import _position_legend  # circular import
 
         if loc in ("none", None):
             return

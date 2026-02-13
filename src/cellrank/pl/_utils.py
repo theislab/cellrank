@@ -8,6 +8,7 @@ from typing import Any, Callable, NamedTuple, Optional, TypeVar, Union
 import numpy as np
 import pandas as pd
 from pandas.api.types import infer_dtype
+from sklearn.svm import SVR
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -751,8 +752,6 @@ def _create_callbacks(
     def maybe_sanity_check(callbacks: dict[str, dict[str, Callable]]) -> None:
         if not perform_sanity_check:
             return
-
-        from sklearn.svm import SVR
 
         logg.debug("Performing callback sanity checks")
         for gene in callbacks:

@@ -18,6 +18,7 @@ from cellrank import logging as logg
 from cellrank._utils import Lineage
 from cellrank._utils._docs import d
 from cellrank._utils._utils import _unique_order_preserving, save_fig
+from cellrank.kernels._utils import _ensure_numeric_ordered
 from cellrank.pl._utils import _get_categorical_colors, _position_legend
 
 __all__ = ["log_odds"]
@@ -107,7 +108,6 @@ def log_odds(
     %(just_plots)s
     If ``show = False``, returns the axes object.
     """
-    from cellrank.kernels._utils import _ensure_numeric_ordered
 
     def decorate(ax: Axes, *, title: Optional[str] = None, show_ylabel: bool = True) -> None:
         ax.set_xlabel(time_key, fontsize=fontsize)

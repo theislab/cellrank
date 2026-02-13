@@ -20,6 +20,7 @@ from anndata import AnnData
 from cellrank import logging as logg
 from cellrank._utils._docs import d
 from cellrank._utils._key import Key
+from cellrank._utils._linear_solver import _is_petsc_slepc_available
 from cellrank._utils._utils import _eigengap, save_fig
 from cellrank.estimators.mixins._utils import BaseProtocol, SafeGetter, logger, shadow
 
@@ -144,8 +145,6 @@ class SchurMixin:
         - :attr:`schur_matrix` -  %(schur_matrix.summary)s
         - :attr:`eigendecomposition` - %(eigen.summary)s
         """
-        from cellrank._utils._linear_solver import _is_petsc_slepc_available
-
         if n_components < 2:
             logg.warning(
                 f"Number of Schur vectors `>=2`, but only `{n_components}` " f"were requested. Using `n_components=2`"

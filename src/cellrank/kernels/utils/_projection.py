@@ -29,7 +29,7 @@ class TmatProjection:
     """
 
     def __init__(self, kexpr: "ExpernelExpression", basis: str = "umap"):  # noqa: F821
-        from cellrank.kernels.mixins import ConnectivityMixin
+        from cellrank.kernels.mixins import ConnectivityMixin  # circular import
 
         for kernel in kexpr.kernels:
             if not isinstance(kernel, ConnectivityMixin):
@@ -65,7 +65,7 @@ class TmatProjection:
         -------
         Nothing, just updates :attr:`adata` with the projection and the parameters used for computation.
         """
-        from cellrank.kernels.mixins import ConnectivityMixin
+        from cellrank.kernels.mixins import ConnectivityMixin  # circular import
 
         self._key = Key.uns.kernel(self._kexpr.backward, key=key_added)
         ukey = f"{self._key}_params"

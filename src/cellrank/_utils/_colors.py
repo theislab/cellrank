@@ -9,6 +9,7 @@ from pandas.api.types import infer_dtype
 from matplotlib import cm, colors
 
 from cellrank import logging as logg
+from scanpy.plotting.palettes import vega_20_scanpy
 
 
 def _create_colors(
@@ -83,8 +84,6 @@ def _convert_to_hex_colors(cols: Sequence[Any]) -> list[str]:
 
 
 def _create_categorical_colors(n_categories: Optional[int] = None):
-    from scanpy.plotting.palettes import vega_20_scanpy
-
     cmaps = [
         colors.ListedColormap(vega_20_scanpy),
         cm.Accent,

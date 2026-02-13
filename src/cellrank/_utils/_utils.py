@@ -10,6 +10,7 @@ from typing import Any, Callable, Literal, Optional, TypeVar, Union
 
 import wrapt
 
+import networkx as nx
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
@@ -33,6 +34,7 @@ from cellrank._utils._colors import (
 from cellrank._utils._docs import d
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._linear_solver import _solve_lin_system
+from cellrank._utils._parallelize import parallelize
 
 ColorLike = TypeVar("ColorLike")
 GPCCA = TypeVar("GPCCA")
@@ -299,7 +301,7 @@ def _mat_mat_corr_sparse(
 
 
 def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
-    from cellrank.kernels._utils import np_mean, np_std
+    from cellrank.kernels._utils import np_mean, np_std  # circular import
 
     n = X.shape[1]
 
@@ -462,8 +464,6 @@ def _correlation_test_helper(
         Correlations, p-values, corrected p-values, lower and upper bound of 95% confidence interval.
         Each array if of shape ``(n_genes, n_lineages)``.
     """
-    from cellrank._utils._parallelize import parallelize
-
     def perm_test_extractor(res: Sequence[tuple[np.ndarray, np.ndarray]]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pvals, corr_bs = zip(*res)
         pvals = np.sum(pvals, axis=0) / float(n_perms)
@@ -639,8 +639,6 @@ def _partition(
     -------
     Recurrent and transient classes, respectively.
     """
-    import networkx as nx
-
     start = logg.debug("Partitioning the graph into current and transient classes")
 
     def partition(g):
@@ -669,8 +667,6 @@ def _partition(
 
 def _connected(c: Union[sp.spmatrix, np.ndarray]) -> bool:
     """Check whether the undirected graph is connected."""
-    import networkx as nx
-
     if sp.issparse(c):
         try:
             G = nx.from_scipy_sparse_array(c)
@@ -685,8 +681,6 @@ def _connected(c: Union[sp.spmatrix, np.ndarray]) -> bool:
 
 def _irreducible(d: Union[sp.spmatrix, np.ndarray]) -> bool:
     """Check whether the undirected graph encoded by d is irreducible."""
-    import networkx as nx
-
     G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
     try:
         it = iter(nx.strongly_connected_components(G))
@@ -823,7 +817,7 @@ def save_fig(fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str
     -------
     Just saves the plot.
     """
-    from cellrank import settings
+    from cellrank import settings  # circular import
 
     if os.path.splitext(path)[1] == "":
         path = f"{path}.{ext}"
