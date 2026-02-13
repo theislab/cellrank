@@ -463,7 +463,7 @@ class TestCFLARE:
             return_value=fate_prob,
         )
 
-        with pytest.raises(ValueError, match=r"`1` value\(s\) do not sum to 1 \(rtol=1e-3\)."):
+        with pytest.raises(ValueError, match=r"`1` value\(s\) do not sum to 1 \(check_sum_tol="):
             mc.compute_fate_probabilities()
 
     def test_fate_probs_negative(self, adata_large: AnnData, mocker):

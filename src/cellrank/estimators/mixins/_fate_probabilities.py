@@ -76,6 +76,7 @@ class FateProbsProtocol(BaseProtocol):
         tol: float,
         show_progress_bar: bool,
         preconditioner: str,
+        check_sum_tol: float,
     ) -> np.ndarray: ...
 
     def _rec_trans_states(
@@ -183,6 +184,7 @@ class FateProbsMixin:
         show_progress_bar: bool = True,
         tol: float = 1e-6,
         preconditioner: Optional[str] = None,
+        check_sum_tol: float = 1e-3,
     ) -> None:
         """Compute fate probabilities.
 
@@ -217,6 +219,7 @@ class FateProbsMixin:
             tol=tol,
             show_progress_bar=show_progress_bar,
             preconditioner=preconditioner,
+            check_sum_tol=check_sum_tol,
         )
         fate_probs = Lineage(
             fate_probs,
@@ -451,6 +454,7 @@ class FateProbsMixin:
         tol: float,
         show_progress_bar: bool,
         preconditioner: str,
+        check_sum_tol: float,
     ) -> np.ndarray:
         _abs_classes = _solve_lin_system(
             q,
@@ -477,10 +481,14 @@ class FateProbsMixin:
                 f"specifying a preconditioner as `preconditioner=...` or "
                 f"use a direct solver as `solver='direct'` if the matrix is small."
             )
-        mask = np.isclose(abs_classes.sum(1), 1.0, rtol=1e-3)
+        row_sums = abs_classes.sum(1)
+        mask = np.isclose(row_sums, 1.0, rtol=check_sum_tol)
         if not np.all(mask):
+            bad_sums = row_sums[~mask]
             raise ValueError(
-                f"`{np.sum(~mask)}` value(s) do not sum to 1 (rtol=1e-3). Try decreasing the tolerance as `tol=...`, "
+                f"`{np.sum(~mask)}` value(s) do not sum to 1 (check_sum_tol={check_sum_tol:.0e}). "
+                f"Offending row sums range from {bad_sums.min():.6f} to {bad_sums.max():.6f}. "
+                f"Try decreasing the solver tolerance `tol=...`, increasing `check_sum_tol=...`, "
                 f"specifying a preconditioner as `preconditioner=...` or "
                 f"use a direct solver as `solver='direct'` if the matrix is small."
             )
