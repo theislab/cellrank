@@ -2,7 +2,6 @@ import datetime
 import functools
 import logging
 from collections.abc import Iterable
-from typing import Optional
 
 __all__ = [
     "print_versions",
@@ -29,9 +28,9 @@ class _RootLogger(logging.RootLogger):
         level: int,
         msg: str,
         *,
-        extra: Optional[dict] = None,
+        extra: dict | None = None,
         time: datetime.datetime = None,
-        deep: Optional[str] = None,
+        deep: str | None = None,
     ) -> datetime.datetime:
         from cellrank import settings  # circular import
 
@@ -39,7 +38,7 @@ class _RootLogger(logging.RootLogger):
         # just from cellrank import logging
         settings.verbosity = settings.verbosity
 
-        now = datetime.datetime.now(datetime.timezone.utc)
+        now = datetime.datetime.now(datetime.UTC)
         time_passed: datetime.timedelta = None if time is None else now - time
         extra = {
             **(extra or {}),
@@ -158,8 +157,8 @@ def error(
     msg: str,
     *,
     time: datetime.datetime = None,
-    deep: Optional[str] = None,
-    extra: Optional[dict] = None,
+    deep: str | None = None,
+    extra: dict | None = None,
 ) -> datetime.datetime:
     """
     Log message with specific level and return current time.

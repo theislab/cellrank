@@ -5,25 +5,22 @@ import itertools
 import os
 import types
 import warnings
-from collections.abc import Hashable, Iterable, Sequence
-from typing import Any, Callable, Literal, Optional, TypeVar, Union
-
-import wrapt
+from collections.abc import Callable, Hashable, Iterable, Sequence
+from typing import Any, Literal, TypeVar
 
 import networkx as nx
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import scipy.sparse as sp
 import scipy.stats as st
+import wrapt
+from anndata import AnnData
+from anndata.utils import make_index_unique
+from matplotlib import colors
 from pandas.api.types import infer_dtype
 from sklearn.cluster import KMeans
 from statsmodels.stats.multitest import multipletests
-
-from matplotlib import colors
-
-import scanpy as sc
-from anndata import AnnData
-from anndata.utils import make_index_unique
 
 from cellrank import logging as logg
 from cellrank._utils._colors import (
@@ -64,7 +61,7 @@ class RandomKeys:
         Random seed.
     """
 
-    def __init__(self, adata: AnnData, n: Optional[int] = None, where: str = "obs", seed: int = 0):
+    def __init__(self, adata: AnnData, n: int | None = None, where: str = "obs", seed: int = 0):
         self._adata = adata
         self._where = where
         self._n = n or 1
@@ -77,7 +74,7 @@ class RandomKeys:
         names, seen = [], set(where.keys())
 
         while len(names) != self._n:
-            name = f"RNG_COL_{rng.integers(0, 2 ** 32 - 1)}"
+            name = f"RNG_COL_{rng.integers(0, 2**32 - 1)}"
             if name not in seen:
                 seen.add(name)
                 names.append(name)
@@ -143,8 +140,8 @@ def _min_max_scale(x: np.ndarray) -> np.ndarray:
 
 
 def _process_series(
-    series: pd.Series, keys: Optional[list[str]], cols: Optional[np.array] = None
-) -> Union[pd.Series, tuple[pd.Series, list[str]]]:
+    series: pd.Series, keys: list[str] | None, cols: np.array | None = None
+) -> pd.Series | tuple[pd.Series, list[str]]:
     """Process :class:`~pandas.Series` of categorical objects.
 
     Categories in ``series`` are combined/removed according to ``keys``,
@@ -252,7 +249,7 @@ def _process_series(
     return series_temp
 
 
-def _complex_warning(X: np.array, use: Union[list, int, tuple, range], use_imag: bool = False) -> np.ndarray:
+def _complex_warning(X: np.array, use: list | int | tuple | range, use_imag: bool = False) -> np.ndarray:
     """Check for imaginary components in columns of X specified by ``use``.
 
     Parameters
@@ -319,9 +316,9 @@ def _mat_mat_corr_dense(X: np.ndarray, Y: np.ndarray) -> np.ndarray:
 def _perm_test(
     ixs: np.ndarray,
     corr: np.ndarray,
-    X: Union[np.ndarray, sp.spmatrix],
+    X: np.ndarray | sp.spmatrix,
     Y: np.ndarray,
-    seed: Optional[int] = None,
+    seed: int | None = None,
     queue=None,
 ) -> tuple[np.ndarray, np.ndarray]:
     rs = np.random.default_rng(None if seed is None else seed + ixs[0])
@@ -351,13 +348,13 @@ def _perm_test(
 @d.get_sections(base="correlation_test", sections=["Returns"])
 @d.dedent
 def _correlation_test(
-    X: Union[np.ndarray, sp.spmatrix],
+    X: np.ndarray | sp.spmatrix,
     Y: "Lineage",  # noqa: F821
     gene_names: Sequence[str],
     method: TestMethod = TestMethod.FISHER,
     confidence_level: float = 0.95,
-    n_perms: Optional[int] = None,
-    seed: Optional[int] = None,
+    n_perms: int | None = None,
+    seed: int | None = None,
     **kwargs: Any,
 ) -> pd.DataFrame:
     """Perform a statistical test.
@@ -432,11 +429,11 @@ def _correlation_test(
 
 
 def _correlation_test_helper(
-    X: Union[np.ndarray, sp.spmatrix],
+    X: np.ndarray | sp.spmatrix,
     Y: np.ndarray,
     method: TestMethod = TestMethod.FISHER,
-    n_perms: Optional[int] = None,
-    seed: Optional[int] = None,
+    n_perms: int | None = None,
+    seed: int | None = None,
     confidence_level: float = 0.95,
     **kwargs: Any,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -464,6 +461,7 @@ def _correlation_test_helper(
         Correlations, p-values, corrected p-values, lower and upper bound of 95% confidence interval.
         Each array if of shape ``(n_genes, n_lineages)``.
     """
+
     def perm_test_extractor(res: Sequence[tuple[np.ndarray, np.ndarray]]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         pvals, corr_bs = zip(*res)
         pvals = np.sum(pvals, axis=0) / float(n_perms)
@@ -541,15 +539,14 @@ def _filter_cells(distances: sp.spmatrix, rc_labels: pd.Series, n_matches_min: i
 
     if np.any((freqs_new / freqs_orig) < 0.5):
         logg.warning(
-            "Consider lowering  'n_matches_min' or "
-            "increasing 'n_neighbors_filtering'. This filters out too many cells"
+            "Consider lowering  'n_matches_min' or increasing 'n_neighbors_filtering'. This filters out too many cells"
         )
 
     return rc_labels
 
 
 def _cluster_X(
-    X: Union[np.ndarray, sp.spmatrix],
+    X: np.ndarray | sp.spmatrix,
     n_clusters: int,
     method: Literal["leiden", "kmeans"] = "leiden",
     n_neighbors: int = 20,
@@ -616,8 +613,8 @@ def _eigengap(evals: np.ndarray, alpha: float) -> int:
     return int(np.argmax(J))
 
 
-def _partition(
-    conn: Union[DiGraph, np.ndarray, sp.spmatrix], sort: bool = True
+def _partition[DiGraph](
+    conn: DiGraph | np.ndarray | sp.spmatrix, sort: bool = True
 ) -> tuple[list[list[Any]], list[list[Any]]]:
     """Partition a directed graph into its transient and recurrent classes.
 
@@ -665,7 +662,7 @@ def _partition(
     return maybe_sort(rec_classes), maybe_sort(trans_classes)
 
 
-def _connected(c: Union[sp.spmatrix, np.ndarray]) -> bool:
+def _connected(c: sp.spmatrix | np.ndarray) -> bool:
     """Check whether the undirected graph is connected."""
     if sp.issparse(c):
         try:
@@ -679,7 +676,7 @@ def _connected(c: Union[sp.spmatrix, np.ndarray]) -> bool:
     return nx.is_connected(G)
 
 
-def _irreducible(d: Union[sp.spmatrix, np.ndarray]) -> bool:
+def _irreducible(d: sp.spmatrix | np.ndarray) -> bool:
     """Check whether the undirected graph encoded by d is irreducible."""
     G = nx.DiGraph(d) if not isinstance(d, nx.DiGraph) else d
     try:
@@ -692,7 +689,7 @@ def _irreducible(d: Union[sp.spmatrix, np.ndarray]) -> bool:
 
 
 def _symmetric(
-    matrix: Union[sp.spmatrix, np.ndarray],
+    matrix: sp.spmatrix | np.ndarray,
     ord: str = "fro",
     eps: float = 1e-4,
     only_check_sparsity_pattern: bool = False,
@@ -709,8 +706,8 @@ def _symmetric(
 
 
 def _normalize(
-    X: Union[np.ndarray, sp.spmatrix],
-) -> Union[np.ndarray, sp.spmatrix]:
+    X: np.ndarray | sp.spmatrix,
+) -> np.ndarray | sp.spmatrix:
     """Row-normalizes an array to sum to :math:`1`.
 
     Parameters
@@ -731,8 +728,8 @@ def _normalize(
 
 
 def _get_connectivities(
-    adata: AnnData, mode: str = "connectivities", n_neighbors: Optional[int] = None
-) -> Optional[sp.spmatrix]:
+    adata: AnnData, mode: str = "connectivities", n_neighbors: int | None = None
+) -> sp.spmatrix | None:
     # utility function, copied from scvelo
     if _has_neighs(adata):
         C = _get_neighs(adata, mode)
@@ -746,7 +743,7 @@ def _get_connectivities(
         return C.tocsr().astype(np.float32)
 
 
-def _select_connectivities(connectivities: sp.spmatrix, n_neighbors: Optional[int] = None) -> sp.spmatrix:
+def _select_connectivities(connectivities: sp.spmatrix, n_neighbors: int | None = None) -> sp.spmatrix:
     # utility function, copied from scvelo
     C = connectivities.copy()
     n_counts = (C > 0).sum(1).A1 if sp.issparse(C) else (C > 0).sum(1)
@@ -764,7 +761,7 @@ def _select_connectivities(connectivities: sp.spmatrix, n_neighbors: Optional[in
     return C
 
 
-def _select_distances(dist, n_neighbors: Optional[int] = None) -> sp.spmatrix:
+def _select_distances(dist, n_neighbors: int | None = None) -> sp.spmatrix:
     # utility function, copied from scvelo
     D = dist.copy()
     n_counts = (D > 0).sum(1).A1 if sp.issparse(D) else (D > 0).sum(1)
@@ -782,7 +779,7 @@ def _select_distances(dist, n_neighbors: Optional[int] = None) -> sp.spmatrix:
     return D
 
 
-def _maybe_create_dir(dirpath: Union[str, os.PathLike]) -> None:
+def _maybe_create_dir(dirpath: str | os.PathLike) -> None:
     """Try creating a directory if it does not already exist.
 
     Parameters
@@ -799,7 +796,7 @@ def _maybe_create_dir(dirpath: Union[str, os.PathLike]) -> None:
             os.makedirs(dirpath, exist_ok=True)
 
 
-def save_fig(fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str = "png") -> None:
+def save_fig(fig, path: str | os.PathLike, make_dir: bool = True, ext: str = "png") -> None:
     """Save a plot.
 
     Parameters
@@ -834,7 +831,7 @@ def save_fig(fig, path: Union[str, os.PathLike], make_dir: bool = True, ext: str
 
 
 def _convert_to_categorical_series(
-    term_states: dict[Union[int, str], Sequence[Union[int, str]]], cell_names: list[str]
+    term_states: dict[int | str, Sequence[int | str]], cell_names: list[str]
 ) -> pd.Series:
     """Convert a mapping of terminal states to cells to a :class:`~pandas.Series`.
 
@@ -879,13 +876,13 @@ def _convert_to_categorical_series(
     return term_states
 
 
-def _merge_categorical_series(
+def _merge_categorical_series[ColorLike](
     old: pd.Series,
     new: pd.Series,
-    colors_old: Union[list[ColorLike], np.ndarray, dict[Any, ColorLike]] = None,
-    colors_new: Union[list[ColorLike], np.ndarray, dict[Any, ColorLike]] = None,
+    colors_old: list[ColorLike] | np.ndarray | dict[Any, ColorLike] = None,
+    colors_new: list[ColorLike] | np.ndarray | dict[Any, ColorLike] = None,
     color_overwrite: bool = False,
-) -> Optional[Union[pd.Series, tuple[pd.Series, np.ndarray]]]:
+) -> pd.Series | tuple[pd.Series, np.ndarray] | None:
     """Update categorical :class:`~pandas.Series` with new information.
 
     It **can never remove** old categories, only add to the existing ones.
@@ -912,7 +909,7 @@ def _merge_categorical_series(
 
     def get_color_mapper(
         series: pd.Series,
-        cols: Union[list[ColorLike], np.ndarray, dict[Any, ColorLike]],
+        cols: list[ColorLike] | np.ndarray | dict[Any, ColorLike],
     ):
         if len(series.cat.categories) != len(cols):
             raise ValueError(f"Series ({len(series.cat.categories)}) and colors ({len(colors_new)}) differ in length.")
@@ -930,10 +927,10 @@ def _merge_categorical_series(
         return cols
 
     if not isinstance(old.dtype, pd.CategoricalDtype):
-        raise TypeError(f"Expected old approx. recurrent classes to be categorical, found " f"`{infer_dtype(old)}`.")
+        raise TypeError(f"Expected old approx. recurrent classes to be categorical, found `{infer_dtype(old)}`.")
 
     if not isinstance(new.dtype, pd.CategoricalDtype):
-        raise TypeError(f"Expected new approx. recurrent classes to be categorical, found " f"`{infer_dtype(new)}`.")
+        raise TypeError(f"Expected new approx. recurrent classes to be categorical, found `{infer_dtype(new)}`.")
 
     if (old.index != new.index).any():
         raise ValueError("Index for old and new approx. recurrent classes differ.")
@@ -985,7 +982,7 @@ def _unique_order_preserving(iterable: Iterable[Hashable]) -> list[Hashable]:
     return [i for i in iterable if i not in seen and not seen.add(i)]
 
 
-def _one_hot(n, cat: Optional[int] = None) -> np.ndarray:
+def _one_hot(n, cat: int | None = None) -> np.ndarray:
     """
     One-hot encode cat to a vector of length n.
 
@@ -1002,7 +999,7 @@ def _fuzzy_to_discrete(
     a_fuzzy: np.array,
     n_most_likely: int = 10,
     remove_overlap: bool = True,
-    raise_threshold: Optional[float] = 0.2,
+    raise_threshold: float | None = 0.2,
     check_row_sums: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Map fuzzy clustering to discrete clustering.
@@ -1099,8 +1096,8 @@ def _fuzzy_to_discrete(
 
 def _series_from_one_hot_matrix(
     membership: np.array,
-    index: Optional[Iterable] = None,
-    names: Optional[Iterable] = None,
+    index: Iterable | None = None,
+    names: Iterable | None = None,
 ) -> pd.Series:
     """Create a pandas Series based on a one-hot encoded matrix.
 
@@ -1189,12 +1186,12 @@ def _get_cat_and_null_indices(
 
 
 def _calculate_absorption_time_moments(
-    Q: Union[np.ndarray, sp.spmatrix],
+    Q: np.ndarray | sp.spmatrix,
     trans_indices: np.ndarray,
     n: int,
     calculate_variance: bool = False,
     **kwargs: Any,
-) -> tuple[np.ndarray, Optional[np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray | None]:
     """Calculate the mean time until absorption and optionally its variance.
 
     Parameters
@@ -1391,7 +1388,7 @@ def _check_collection(
     return res
 
 
-def _minmax(data: np.ndarray, perc: Optional[tuple[float, float]] = None) -> tuple[float, float]:
+def _minmax(data: np.ndarray, perc: tuple[float, float] | None = None) -> tuple[float, float]:
     """Return minimum and maximum value of the data.
 
     Parameters
@@ -1411,7 +1408,7 @@ def _minmax(data: np.ndarray, perc: Optional[tuple[float, float]] = None) -> tup
     return float(np.nanmin(data)), float(np.nanmax(data))
 
 
-def _modify_neigh_key(key: Optional[str]) -> str:
+def _modify_neigh_key(key: str | None) -> str:
     if key in (None, "connectivities", "distances"):
         return "neighbors"
 
@@ -1423,7 +1420,7 @@ def _modify_neigh_key(key: Optional[str]) -> str:
     return key
 
 
-def _get_neighs(adata: AnnData, mode: str = "distances", key: Optional[str] = None) -> Union[np.ndarray, sp.spmatrix]:
+def _get_neighs(adata: AnnData, mode: str = "distances", key: str | None = None) -> np.ndarray | sp.spmatrix:
     if key is None:
         res = _read_graph_data(adata, mode)  # legacy behavior
     else:
@@ -1439,7 +1436,7 @@ def _get_neighs(adata: AnnData, mode: str = "distances", key: Optional[str] = No
     return res
 
 
-def _has_neighs(adata: AnnData, key: Optional[str] = None) -> bool:
+def _has_neighs(adata: AnnData, key: str | None = None) -> bool:
     return _modify_neigh_key(key) in adata.uns
 
 
@@ -1447,7 +1444,7 @@ def _get_neighs_params(adata: AnnData, key: str = "neighbors") -> dict[str, Any]
     return adata.uns.get(key, {}).get("params", {})
 
 
-def _read_graph_data(adata: AnnData, key: str) -> Union[np.ndarray, sp.spmatrix]:
+def _read_graph_data(adata: AnnData, key: str) -> np.ndarray | sp.spmatrix:
     """Read graph data from :class:`~anndata.AnnData`.
 
     Parameters
@@ -1493,7 +1490,7 @@ def valuedispatch(func):
     return wrapper
 
 
-def _densify_squeeze(x: Union[sp.spmatrix, np.ndarray], dtype=np.float32) -> np.ndarray:
+def _densify_squeeze(x: sp.spmatrix | np.ndarray, dtype=np.float32) -> np.ndarray:
     if sp.issparse(x):
         x = x.toarray()
     # use np.array instead of asarray to create a copy
@@ -1509,7 +1506,7 @@ def _densify_squeeze(x: Union[sp.spmatrix, np.ndarray], dtype=np.float32) -> np.
 def _gene_symbols_ctx(
     adata: AnnData,
     *,
-    key: Optional[str] = None,
+    key: str | None = None,
     use_raw: bool = False,
     make_unique: bool = False,
 ) -> AnnData:

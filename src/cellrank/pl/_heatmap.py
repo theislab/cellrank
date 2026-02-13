@@ -4,21 +4,19 @@ import math
 import os
 import pathlib
 from collections.abc import Sequence
-from typing import Any, Literal, Optional, Union
-
-import numpy as np
-import pandas as pd
-from scipy.ndimage.filters import convolve
+from typing import Any, Literal
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+from anndata import AnnData
 from matplotlib import cm, colors
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import Divider, Size
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-
-from anndata import AnnData
+from scipy.ndimage.filters import convolve
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -63,37 +61,37 @@ def heatmap(
     model: _input_model_type,
     genes: Sequence[str],
     time_key: str,
-    lineages: Optional[Union[str, Sequence[str]]] = None,
+    lineages: str | Sequence[str] | None = None,
     backward: bool = False,
     mode: Literal["genes", "lineages"] = HeatmapMode.LINEAGES,
-    time_range: Optional[Union[_time_range_type, list[_time_range_type]]] = None,
+    time_range: _time_range_type | list[_time_range_type] | None = None,
     callback: _callback_type = None,
-    cluster_key: Optional[Union[str, Sequence[str]]] = None,
+    cluster_key: str | Sequence[str] | None = None,
     show_fate_probabilities: bool = False,
     cluster_genes: bool = False,
     keep_gene_order: bool = False,
     scale: bool = True,
-    n_convolve: Optional[int] = 5,
+    n_convolve: int | None = 5,
     show_all_genes: bool = False,
     cbar: bool = True,
     lineage_height: float = 0.33,
-    fontsize: Optional[float] = None,
-    xlabel: Optional[str] = None,
-    title: Optional[str] = None,
+    fontsize: float | None = None,
+    xlabel: str | None = None,
+    title: str | None = None,
     cmap: colors.ListedColormap = cm.viridis,
     dendrogram: bool = True,
     return_genes: bool = False,
     return_models: bool = False,
     return_figure: bool = False,
-    n_jobs: Optional[int] = 1,
+    n_jobs: int | None = 1,
     backend: Backend_t = DEFAULT_BACKEND,
     show_progress_bar: bool = True,
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
-    gene_order: Optional[Sequence[str]] = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    save: str | pathlib.Path | None = None,
+    gene_order: Sequence[str] | None = None,
     **kwargs: Any,
-) -> Optional[Union[dict[str, pd.DataFrame], tuple[_return_model_type, dict[str, pd.DataFrame]]]]:
+) -> dict[str, pd.DataFrame] | tuple[_return_model_type, dict[str, pd.DataFrame]] | None:
     """Plot a heatmap of smoothed gene expression along specified lineages.
 
     .. seealso::
@@ -222,7 +220,7 @@ def heatmap(
         x_delta: float,
         cmap: colors.Colormap,
         norm: colors.Normalize,
-        label: Optional[str] = None,
+        label: str | None = None,
     ) -> plt.Axes:
         cax = inset_axes(
             ax,
@@ -351,7 +349,7 @@ def heatmap(
         return fig, None
 
     @_plot_heatmap.register(HeatmapMode.LINEAGES)
-    def _(gene_order: Optional[Sequence[str]] = None) -> tuple[list[plt.Figure], pd.DataFrame]:
+    def _(gene_order: Sequence[str] | None = None) -> tuple[list[plt.Figure], pd.DataFrame]:
         data_t = collections.defaultdict(dict)  # transpose
         for gene, lns in data.items():
             for ln, y in lns.items():

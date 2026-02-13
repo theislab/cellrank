@@ -1,8 +1,8 @@
 import enum
-from typing import Any, Callable, Literal, Optional, Union
+from collections.abc import Callable
+from typing import Any, Literal
 
 import numpy as np
-
 from anndata import AnnData
 
 from cellrank import logging as logg
@@ -78,15 +78,12 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
     @d.dedent
     def compute_transition_matrix(
         self,
-        threshold_scheme: Union[
-            Literal["soft", "hard"],
-            Callable[[float, np.ndarray, np.ndarray], np.ndarray],
-        ] = "hard",
+        threshold_scheme: Literal["soft", "hard"] | Callable[[float, np.ndarray, np.ndarray], np.ndarray] = "hard",
         frac_to_keep: float = 0.3,
         b: float = 10.0,
         nu: float = 0.5,
         check_irreducibility: bool = False,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
@@ -176,7 +173,7 @@ class PseudotimeKernel(ConnectivityMixin, BidirectionalKernel):
         return self
 
     @property
-    def pseudotime(self) -> Optional[np.array]:
+    def pseudotime(self) -> np.array | None:
         """Pseudotemporal ordering of cells."""
         if self._pseudotime is None:
             return None

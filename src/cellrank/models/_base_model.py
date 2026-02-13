@@ -4,24 +4,21 @@ import copy
 import enum
 import re
 import warnings
-from collections.abc import Mapping, Sequence
-from typing import Any, Callable, Optional, Union
-
-import wrapt
-
-import numpy as np
-import pandas as pd
-import scipy.sparse as sp
-from pandas.api.types import infer_dtype
-from scipy.ndimage import convolve
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy.sparse as sp
+import wrapt
+from anndata import AnnData
 from matplotlib import cm, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from anndata import AnnData
+from pandas.api.types import infer_dtype
 from scanpy.plotting._utils import add_colors_for_categorical_sample_annotation
+from scipy.ndimage import convolve
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -33,7 +30,7 @@ from cellrank.kernels.mixins import IOMixin
 __all__ = ["BaseModel"]
 
 _dup_spaces = re.compile(r" +")  # used on repr for underlying model's repr
-ArrayLike = Union[np.ndarray, sp.spmatrix, list, tuple]
+ArrayLike = np.ndarray | sp.spmatrix | list | tuple
 
 
 class UnknownModelError(RuntimeError):
@@ -72,7 +69,7 @@ def _handle_exception(return_type: FailedReturnType, func: Callable) -> Callable
         if not instance._is_bulk:
             raise exc from None
 
-        if kwargs.get("x_test", None) is not None:
+        if kwargs.get("x_test") is not None:
             n_obs = kwargs["x_test"].shape[0]
         elif instance.x_test is not None:
             n_obs = instance.x_test.shape[0]
@@ -166,7 +163,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
 
     def __init__(
         self,
-        adata: Optional[AnnData],
+        adata: AnnData | None,
         model: Any,
     ):
         if not isinstance(adata, AnnData) and not isinstance(self, FittedModel):
@@ -214,7 +211,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         return self._adata
 
     @adata.setter
-    def adata(self, adata: Optional[AnnData]) -> None:
+    def adata(self, adata: AnnData | None) -> None:
         self._adata = adata
 
     @property
@@ -299,15 +296,15 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     def prepare(
         self,
         gene: str,
-        lineage: Optional[str],
+        lineage: str | None,
         time_key: str,
         backward: bool = False,
-        time_range: Optional[Union[float, tuple[float, float]]] = None,
-        data_key: Optional[str] = "X",
+        time_range: float | tuple[float, float] | None = None,
+        data_key: str | None = "X",
         use_raw: bool = False,
-        threshold: Optional[float] = None,
-        weight_threshold: Union[float, tuple[float, float]] = (0.01, 0.01),
-        filter_cells: Optional[float] = None,
+        threshold: float | None = None,
+        weight_threshold: float | tuple[float, float] = (0.01, 0.01),
+        filter_cells: float | None = None,
         n_test_points: int = 200,
     ) -> "BaseModel":
         """Prepare the model to be ready for fitting.
@@ -382,8 +379,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
 
         if not isinstance(time_range, (type(None), float, int, tuple)):
             raise TypeError(
-                f"Expected time range to be either `None`, "
-                f"`float` or `tuple`, found `{type(time_range).__name__!r}`."
+                f"Expected time range to be either `None`, `float` or `tuple`, found `{type(time_range).__name__!r}`."
             )
         if isinstance(time_range, tuple):
             if len(time_range) != 2:
@@ -529,9 +525,9 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     @d.get_full_description(base="base_model_fit")
     def fit(
         self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        w: np.ndarray | None = None,
         **kwargs: Any,
     ) -> "BaseModel":
         """Fit the model.
@@ -571,8 +567,8 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     @d.dedent
     def predict(
         self,
-        x_test: Optional[np.ndarray] = None,
-        key_added: Optional[str] = "_x_test",
+        x_test: np.ndarray | None = None,
+        key_added: str | None = "_x_test",
         **kwargs: Any,
     ) -> np.ndarray:
         """Run the prediction.
@@ -598,7 +594,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     @d.get_summary(base="base_model_ci")
     @d.get_full_description(base="base_model_ci")
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
+    def confidence_interval(self, x_test: np.ndarray | None = None, **kwargs) -> np.ndarray:
         """Calculate the confidence interval.
 
         Use :meth:`default_confidence_interval` function if underlying :attr:`model` has no method
@@ -623,7 +619,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
     @d.dedent
     def default_confidence_interval(
         self,
-        x_test: Optional[np.ndarray] = None,
+        x_test: np.ndarray | None = None,
         **kwargs: Any,
     ) -> np.ndarray:
         """Calculate the confidence interval, if the underlying :attr:`model` has no method for it.
@@ -674,11 +670,11 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         hide_cells: bool = False,
         perc: tuple[float, float] = None,
         fate_prob_cmap: colors.ListedColormap = cm.viridis,
-        cell_color: Optional[str] = None,
+        cell_color: str | None = None,
         lineage_color: str = "black",
         alpha: float = 0.8,
         lineage_alpha: float = 0.2,
-        title: Optional[str] = None,
+        title: str | None = None,
         size: int = 15,
         lw: float = 2,
         cbar: bool = True,
@@ -687,16 +683,16 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         ylabel: str = "expression",
         conf_int: bool = True,
         lineage_probability: bool = False,
-        lineage_probability_conf_int: Union[bool, float] = False,
-        lineage_probability_color: Optional[str] = None,
-        obs_legend_loc: Optional[str] = "best",
+        lineage_probability_conf_int: bool | float = False,
+        lineage_probability_color: str | None = None,
+        obs_legend_loc: str | None = "best",
         dpi: int = None,
         fig: mpl.figure.Figure = None,
         ax: mpl.axes.Axes = None,
         return_fig: bool = False,
-        save: Optional[str] = None,
+        save: str | None = None,
         **kwargs: Any,
-    ) -> Optional[mpl.figure.Figure]:
+    ) -> mpl.figure.Figure | None:
         """Plot the smoothed gene expression.
 
         Parameters
@@ -892,9 +888,9 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
         self,
         fig: mpl.figure.Figure,
         ax: mpl.axes.Axes,
-        mapper: Union[Sequence[Any], Mapping[str, Any]],
-        title: Optional[str] = None,
-        loc: Optional[str] = "best",
+        mapper: Sequence[Any] | Mapping[str, Any],
+        title: str | None = None,
+        loc: str | None = "best",
         is_line: bool = True,
         **kwargs: Any,
     ) -> None:
@@ -939,7 +935,7 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
 
         return np.reshape(arr, (-1, 1)).astype(self._dtype)
 
-    def _check(self, attr_name: Optional[str], arr: Optional[np.ndarray], ndim: int = 2) -> Optional[np.ndarray]:
+    def _check(self, attr_name: str | None, arr: np.ndarray | None, ndim: int = 2) -> np.ndarray | None:
         """Check if the attribute exists with the correct dimension and optionally set it.
 
         Parameters
@@ -1051,10 +1047,10 @@ class BaseModel(IOMixin, abc.ABC, metaclass=BaseModelMeta):
 
     def _get_colors(
         self,
-        key: Optional[str],
+        key: str | None,
         *,
         same_plot: bool = False,
-    ) -> tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[dict[str, Any]]]:
+    ) -> tuple[str | None, str | np.ndarray | None, ColorType, dict[str, Any] | None]:
         """
         Get color array.
 
@@ -1170,7 +1166,7 @@ class FailedModel(BaseModel):
     """
 
     # in a functional programming language like Haskell essentially BaseModel would be a Maybe monad and this Nothing
-    def __init__(self, model: BaseModel, exc: Optional[Union[BaseException, str]] = None):
+    def __init__(self, model: BaseModel, exc: BaseException | str | None = None):
         if not isinstance(model, BaseModel):
             raise TypeError(f"Expected `model` to be of type `BaseModel`, found `{type(model).__name__!r}`.")
         if exc is not None:
@@ -1202,9 +1198,9 @@ class FailedModel(BaseModel):
 
     def fit(
         self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        w: np.ndarray | None = None,
         **kwargs: Any,
     ) -> "FailedModel":
         """Do nothing and return self."""
@@ -1212,18 +1208,18 @@ class FailedModel(BaseModel):
 
     def predict(
         self,
-        x_test: Optional[np.ndarray] = None,
-        key_added: Optional[str] = "_x_test",
+        x_test: np.ndarray | None = None,
+        key_added: str | None = "_x_test",
         **kwargs: Any,
     ) -> np.ndarray:
         """Do nothing."""
 
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
+    def confidence_interval(self, x_test: np.ndarray | None = None, **kwargs) -> np.ndarray:
         """Do nothing."""
 
     def default_confidence_interval(
         self,
-        x_test: Optional[np.ndarray] = None,
+        x_test: np.ndarray | None = None,
         **kwargs: Any,
     ) -> np.ndarray:
         """Do nothing."""
@@ -1235,10 +1231,10 @@ class FailedModel(BaseModel):
 
     def _get_colors(
         self,
-        key: Optional[str],
+        key: str | None,
         *,
         same_plot: bool = False,
-    ) -> tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[dict[str, Any]]]:
+    ) -> tuple[str | None, str | np.ndarray | None, ColorType, dict[str, Any] | None]:
         return None, "black", ColorType.STR, None
 
     def _return_min_max(self, show_conf_int: bool):
@@ -1287,10 +1283,10 @@ class FittedModel(BaseModel):
         self,
         x_test: ArrayLike,
         y_test: ArrayLike,
-        conf_int: Optional[ArrayLike] = None,
-        x_all: Optional[ArrayLike] = None,
-        y_all: Optional[ArrayLike] = None,
-        w_all: Optional[ArrayLike] = None,
+        conf_int: ArrayLike | None = None,
+        x_all: ArrayLike | None = None,
+        y_all: ArrayLike | None = None,
+        w_all: ArrayLike | None = None,
     ):
         super().__init__(None, None)
 
@@ -1302,7 +1298,7 @@ class FittedModel(BaseModel):
 
         if self.y_test.shape != (self.x_test.shape[0],):
             raise ValueError(
-                f"Expected `y_test` to be of shape `({self.x_test.shape[0]},)`, " f"found `{self.y_test.shape}`."
+                f"Expected `y_test` to be of shape `({self.x_test.shape[0]},)`, found `{self.y_test.shape}`."
             )
 
         if conf_int is not None:
@@ -1327,25 +1323,24 @@ class FittedModel(BaseModel):
                 self._w_all = _densify_squeeze(w_all, self._dtype)
                 if self.w_all.ndim != 1 or self.w_all.shape[0] != self.x_all.shape[0]:
                     raise ValueError(
-                        f"Expected `w_all` to be of shape `({self.x_all.shape[0]},)`, " f"found `{self.w_all.shape}`."
+                        f"Expected `w_all` to be of shape `({self.x_all.shape[0]},)`, found `{self.w_all.shape}`."
                     )
             else:
                 logg.debug("Setting `w_all` to an array of `1`")
                 self._w_all = np.ones_like(self.x_all, dtype=np.float64).squeeze(1)
         else:
             logg.debug(
-                "None or partially incomplete `x_all` and `y_all` have been supplied, "
-                "will be ignored during plotting"
+                "None or partially incomplete `x_all` and `y_all` have been supplied, will be ignored during plotting"
             )
 
         self._prepared = True
 
     def _get_colors(
         self,
-        key: Optional[str],
+        key: str | None,
         *,
         same_plot: bool = False,
-    ) -> tuple[Optional[str], Optional[Union[str, np.ndarray]], ColorType, Optional[dict[str, Any]]]:
+    ) -> tuple[str | None, str | np.ndarray | None, ColorType, dict[str, Any] | None]:
         # w_all does not need to be defined
         if same_plot or self.w_all is None or np.allclose(self.w_all, 1.0):
             return None, "black", ColorType.STR, None
@@ -1357,9 +1352,9 @@ class FittedModel(BaseModel):
 
     def fit(
         self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        w: np.ndarray | None = None,
         **kwargs: Any,
     ) -> "FittedModel":
         """Do nothing and return self."""
@@ -1368,26 +1363,26 @@ class FittedModel(BaseModel):
     @d.dedent
     def predict(
         self,
-        x_test: Optional[np.ndarray] = None,
-        key_added: Optional[str] = "_x_test",
+        x_test: np.ndarray | None = None,
+        key_added: str | None = "_x_test",
         **kwargs: Any,
     ) -> np.ndarray:
         """%(base_model_y_test.summary)s."""
         return self._y_test
 
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs) -> np.ndarray:
+    def confidence_interval(self, x_test: np.ndarray | None = None, **kwargs) -> np.ndarray:
         """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""
         if self.conf_int is None:
             raise RuntimeError(
-                "No confidence interval has been supplied. " "Use `conf_int=...` when instantiating this class."
+                "No confidence interval has been supplied. Use `conf_int=...` when instantiating this class."
             )
         return self.conf_int
 
     @d.dedent
     def default_confidence_interval(
         self,
-        x_test: Optional[np.ndarray] = None,
+        x_test: np.ndarray | None = None,
         **kwargs: Any,
     ) -> np.ndarray:
         """%(base_model_conf_int.summary)s Raise a :class:`RuntimeError` if not present."""

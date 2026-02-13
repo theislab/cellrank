@@ -1,12 +1,10 @@
-from collections.abc import Sequence
-from typing import Any, Callable, Literal, Optional, Union
-
-from scvelo.preprocessing.moments import get_moments
+from collections.abc import Callable, Sequence
+from typing import Any, Literal
 
 import numpy as np
 import scipy.sparse as sp
-
 from anndata import AnnData
+from scvelo.preprocessing.moments import get_moments
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
@@ -56,9 +54,9 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self,
         adata: AnnData,
         backward: bool = False,
-        attr: Optional[Literal["layers", "obsm"]] = "layers",
-        xkey: Optional[str] = "Ms",
-        vkey: Optional[str] = "velocity",
+        attr: Literal["layers", "obsm"] | None = "layers",
+        xkey: str | None = "Ms",
+        vkey: str | None = "velocity",
         **kwargs: Any,
     ):
         super().__init__(
@@ -69,14 +67,14 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
             attr=attr,
             **kwargs,
         )
-        self._logits: Optional[np.ndarray] = None
+        self._logits: np.ndarray | None = None
 
     def _read_from_adata(
         self,
-        xkey: Optional[str] = "Ms",
-        vkey: Optional[str] = "velocity",
-        attr: Optional[Literal["layers", "obsm"]] = "layers",
-        gene_subset: Optional[Union[str, Sequence[str]]] = None,
+        xkey: str | None = "Ms",
+        vkey: str | None = "velocity",
+        attr: Literal["layers", "obsm"] | None = "layers",
+        gene_subset: str | Sequence[str] | None = None,
         **kwargs: Any,
     ) -> None:
         super()._read_from_adata(**kwargs)
@@ -113,13 +111,11 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         self,
         model: Literal["deterministic", "stochastic", "monte_carlo"] = VelocityModel.DETERMINISTIC,
         backward_mode: Literal["transpose", "negate"] = BackwardMode.TRANSPOSE,
-        similarity: Union[
-            Literal["correlation", "cosine", "dot_product"],
-            Callable[[np.ndarray, np.ndarray, float], tuple[np.ndarray, np.ndarray]],
-        ] = Similarity.CORRELATION,
-        softmax_scale: Optional[float] = None,
+        similarity: Literal["correlation", "cosine", "dot_product"]
+        | Callable[[np.ndarray, np.ndarray, float], tuple[np.ndarray, np.ndarray]] = Similarity.CORRELATION,
+        softmax_scale: float | None = None,
         n_samples: int = 1000,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         **kwargs: Any,
     ) -> "VelocityKernel":
         """Compute transition matrix based on velocity directions on the local manifold.
@@ -181,11 +177,11 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
 
     def _create_model(
         self,
-        model: Union[str, VelocityModel],
+        model: str | VelocityModel,
         backward_mode: Literal["negate", "transpose"],
-        similarity: Union[str, Similarity, Callable],
+        similarity: str | Similarity | Callable,
         n_samples: int = 1000,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         **kwargs: Any,
     ):
         model = VelocityModel(model)
@@ -247,7 +243,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
 
     def _estimate_softmax_scale(
         self,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: Backend_t = DEFAULT_BACKEND,
         **kwargs,
     ) -> float:
@@ -257,9 +253,9 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
 
     def _extract_data(
         self,
-        key: Optional[str] = None,
-        attr: Optional[Union[None, Literal["layers", "obsm"]]] = None,
-        subset: Optional[Union[str, Sequence[str]]] = None,
+        key: str | None = None,
+        attr: None | Literal["layers", "obsm"] | None = None,
+        subset: str | Sequence[str] | None = None,
         dtype: np.dtype = np.float64,
     ) -> np.ndarray:
         if key in (None, "X"):
@@ -284,7 +280,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         return data.toarray() if sp.issparse(data) else data
 
     @property
-    def logits(self) -> Optional[np.ndarray]:
+    def logits(self) -> np.ndarray | None:
         """Array of shape ``(n_cells, n_cells)`` containing the unnormalized transition matrix."""
         return self._logits
 

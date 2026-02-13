@@ -2,20 +2,17 @@ import contextlib
 import pathlib
 import types
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, Optional, Union
-
-import scvelo as scv
-
-import numpy as np
-import pandas as pd
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import scvelo as scv
+from anndata import AnnData, Raw
 from matplotlib import patheffects, rc_context
 from matplotlib.axes import Axes
 from matplotlib.patches import ArrowStyle
-
-import scanpy as sc
-from anndata import AnnData, Raw
 
 from cellrank import logging as logg
 from cellrank._utils._colors import _create_categorical_colors
@@ -32,7 +29,7 @@ __all__ = ["LinDriversMixin"]
 class LinDriversProtocol(BaseProtocol):
     def _write_lineage_drivers(
         self,
-        drivers: Optional[pd.DataFrame],
+        drivers: pd.DataFrame | None,
         use_raw: bool,
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> None: ...
@@ -41,10 +38,10 @@ class LinDriversProtocol(BaseProtocol):
     def eigendecomposition(self) -> dict[str, Any]: ...
 
     @property
-    def fate_probabilities(self) -> Optional[Lineage]: ...
+    def fate_probabilities(self) -> Lineage | None: ...
 
     @property
-    def lineage_drivers(self) -> Optional[pd.DataFrame]: ...
+    def lineage_drivers(self) -> pd.DataFrame | None: ...
 
 
 class LinDriversMixin(FateProbsMixin):
@@ -52,7 +49,7 @@ class LinDriversMixin(FateProbsMixin):
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        self._lineage_drivers: Optional[pd.DataFrame] = None
+        self._lineage_drivers: pd.DataFrame | None = None
 
     @d.get_full_description(base="lineage_drivers")
     @d.get_sections(base="lineage_drivers", sections=["Parameters", "Returns"])
@@ -60,15 +57,15 @@ class LinDriversMixin(FateProbsMixin):
     @inject_docs(tm=TestMethod)
     def compute_lineage_drivers(
         self: LinDriversProtocol,
-        lineages: Optional[Union[str, Sequence]] = None,
+        lineages: str | Sequence | None = None,
         method: Literal["fisher", "perm_test"] = TestMethod.FISHER,
-        cluster_key: Optional[str] = None,
-        clusters: Optional[Union[str, Sequence]] = None,
-        layer: Optional[str] = None,
+        cluster_key: str | None = None,
+        clusters: str | Sequence | None = None,
+        layer: str | None = None,
         use_raw: bool = False,
         confidence_level: float = 0.95,
         n_perms: int = 1000,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         **kwargs: Any,
     ) -> pd.DataFrame:
         """Compute driver genes per lineage.
@@ -151,8 +148,7 @@ class LinDriversMixin(FateProbsMixin):
 
             if any(cluster_mask):
                 raise KeyError(
-                    f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in "
-                    f"`adata.obs[{cluster_key!r}]`."
+                    f"Clusters `{list(np.array(clusters)[cluster_mask])}` not found in `adata.obs[{cluster_key!r}]`."
                 )
             subset_mask = np.isin(self.adata.obs[cluster_key], clusters)
             adata_comp = self.adata[subset_mask]
@@ -206,11 +202,11 @@ class LinDriversMixin(FateProbsMixin):
         n_genes: int = 8,
         use_raw: bool = False,
         ascending: bool = False,
-        ncols: Optional[int] = None,
+        ncols: int | None = None,
         title_fmt: str = "{gene} qval={qval:.4e}",
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
+        save: str | pathlib.Path | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot lineage drivers.
@@ -242,11 +238,11 @@ class LinDriversMixin(FateProbsMixin):
         def prepare_format(
             gene: str,
             *,
-            pval: Optional[float],
-            qval: Optional[float],
-            corr: Optional[float],
+            pval: float | None,
+            qval: float | None,
+            corr: float | None,
         ) -> dict[str, Any]:
-            kwargs: dict[str, Optional[Union[str, float]]] = {}
+            kwargs: dict[str, str | float | None] = {}
             if "{gene" in title_fmt:
                 kwargs["gene"] = gene
             if "{pval" in title_fmt:
@@ -315,20 +311,20 @@ class LinDriversMixin(FateProbsMixin):
         self: LinDriversProtocol,
         lineage_x: str,
         lineage_y: str,
-        color: Optional[str] = None,
-        gene_sets: Optional[dict[str, Sequence[str]]] = None,
-        gene_sets_colors: Optional[Sequence[str]] = None,
+        color: str | None = None,
+        gene_sets: dict[str, Sequence[str]] | None = None,
+        gene_sets_colors: Sequence[str] | None = None,
         use_raw: bool = False,
         cmap: str = "RdYlBu_r",
         fontsize: int = 12,
         adjust_text: bool = False,
-        legend_loc: Optional[str] = "best",
-        figsize: Optional[tuple[float, float]] = (4, 4),
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        legend_loc: str | None = "best",
+        figsize: tuple[float, float] | None = (4, 4),
+        dpi: int | None = None,
+        save: str | pathlib.Path | None = None,
         show: bool = True,
         **kwargs: Any,
-    ) -> Optional[Axes]:
+    ) -> Axes | None:
         """Show scatter plot of gene-correlations between two lineages.
 
         Optionally, a :class:`dict` of gene names can be passed to highlight in the plot.
@@ -387,7 +383,7 @@ class LinDriversMixin(FateProbsMixin):
         if color is not None:
             if not isinstance(color, str):
                 raise TypeError(
-                    "Expected `color` to be either of type `str` or `None`, " f"found `{type(color).__name__}`."
+                    f"Expected `color` to be either of type `str` or `None`, found `{type(color).__name__}`."
                 )
             if color not in adata.var and color not in adata.varm[dkey]:
                 raise KeyError(
@@ -454,8 +450,7 @@ class LinDriversMixin(FateProbsMixin):
                     gene_sets_colors = _create_categorical_colors(len(gene_sets))
             if len(gene_sets_colors) != len(gene_sets):
                 raise ValueError(
-                    f"Expected `gene_sets_colors` to be of length `{len(gene_sets)}`, "
-                    f"found `{len(gene_sets_colors)}`."
+                    f"Expected `gene_sets_colors` to be of length `{len(gene_sets)}`, found `{len(gene_sets_colors)}`."
                 )
 
             path_effect = [
@@ -520,7 +515,7 @@ class LinDriversMixin(FateProbsMixin):
     @shadow
     def _write_fate_probabilities(
         self: LinDriversProtocol,
-        fate_probs: Optional[Lineage],
+        fate_probs: Lineage | None,
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         self._write_lineage_drivers(None, use_raw=False, log=False)
@@ -533,7 +528,7 @@ class LinDriversMixin(FateProbsMixin):
     @shadow
     def _write_lineage_drivers(
         self: LinDriversProtocol,
-        drivers: Optional[pd.DataFrame],
+        drivers: pd.DataFrame | None,
         use_raw: bool,
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
@@ -543,7 +538,7 @@ class LinDriversMixin(FateProbsMixin):
         self.params[key] = dict(params)
         # fmt: on
 
-        return f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n" f"       `.lineage_drivers`\n" "    Finish"
+        return f"Adding `adata.{'raw.' if use_raw else ''}varm[{key!r}]`\n       `.lineage_drivers`\n    Finish"
 
     def _read_fate_probabilities(self: LinDriversProtocol, adata: AnnData) -> bool:
         ok = super()._read_fate_probabilities(adata)
@@ -567,7 +562,7 @@ class LinDriversMixin(FateProbsMixin):
 
     @property
     @d.dedent
-    def lineage_drivers(self) -> Optional[pd.DataFrame]:
+    def lineage_drivers(self) -> pd.DataFrame | None:
         """Potential lineage drivers.
 
         Computes Pearson correlation of each gene with fate probabilities for every terminal state. High Pearson

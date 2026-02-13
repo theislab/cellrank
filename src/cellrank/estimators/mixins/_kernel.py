@@ -1,8 +1,7 @@
-from typing import Any, Optional, TypeVar, Union
+from typing import Any, TypeVar
 
 import numpy as np
 import scipy.sparse as sp
-
 from anndata import AnnData
 
 __all__ = ["KernelMixin"]
@@ -34,14 +33,14 @@ class KernelMixin:
         return self.kernel.shape
 
     @adata.setter
-    def adata(self, adata: Optional[AnnData]) -> None:
+    def adata(self, adata: AnnData | None) -> None:
         self.kernel.adata = adata
 
     def __len__(self) -> int:
         return self._n_obs
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]:
+    def transition_matrix(self) -> np.ndarray | sp.spmatrix:
         """Transition matrix of the :attr:`kernel`."""
         return self.kernel.transition_matrix
 

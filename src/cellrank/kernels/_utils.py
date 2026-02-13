@@ -1,14 +1,13 @@
-from typing import Any, Callable
-
-import wrapt
+from collections.abc import Callable
+from typing import Any
 
 import numba as nb
 import numpy as np
 import pandas as pd
+import wrapt
+from anndata import AnnData
 from numba import prange
 from pandas.api.types import infer_dtype
-
-from anndata import AnnData
 
 from cellrank import logging as logg
 
@@ -133,7 +132,7 @@ def _ensure_numeric_ordered(adata: AnnData, key: str) -> pd.Series:
     if not np.issubdtype(np.asarray(exp_time).dtype, np.number):
         try:
             exp_time = np.asarray(exp_time).astype(float)
-        except Exception as e:  # noqa: BLE001/Cannot interpret
+        except Exception as e:  # noqa: BLE001
             raise TypeError(
                 f"Unable to convert `adata.obs[{key!r}]` of type `{infer_dtype(adata.obs[key])}` to `float`."
             ) from e

@@ -1,18 +1,15 @@
 import abc
 import types
 from collections.abc import Sequence
-from typing import Any, Literal, Optional, Union
-
-import scvelo as scv
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype
-
-from matplotlib.colors import to_hex
-
+import scvelo as scv
 from anndata import AnnData
+from matplotlib.colors import to_hex
+from pandas.api.types import infer_dtype
 
 from cellrank import logging as logg
 from cellrank._utils._colors import (
@@ -53,7 +50,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
     def __init__(
         self,
-        object: Union[AnnData, np.ndarray, sp.spmatrix, KernelExpression],
+        object: AnnData | np.ndarray | sp.spmatrix | KernelExpression,
         **kwargs: Any,
     ):
         super().__init__(object=object, **kwargs)
@@ -62,7 +59,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
     @property
     @d.get_summary(base="tse_term_states")
-    def terminal_states(self) -> Optional[pd.Series]:
+    def terminal_states(self) -> pd.Series | None:
         """Categorical annotation of terminal states.
 
         By default, all transient cells will be labeled as `NaN`.
@@ -71,13 +68,13 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
     @property
     @d.get_summary(base="tse_term_states_probs")
-    def terminal_states_probabilities(self) -> Optional[pd.Series]:
+    def terminal_states_probabilities(self) -> pd.Series | None:
         """Probability to be a terminal state."""
         return self._term_states.probs
 
     @property
     @d.get_summary(base="tse_init_states")
-    def initial_states(self) -> Optional[pd.Series]:
+    def initial_states(self) -> pd.Series | None:
         """Categorical annotation of initial states.
 
         By default, all transient cells will be labeled as `NaN`.
@@ -86,15 +83,15 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
     @property
     @d.get_summary(base="tse_init_states_probs")
-    def initial_states_probabilities(self) -> Optional[pd.Series]:
+    def initial_states_probabilities(self) -> pd.Series | None:
         """Probability to be an initial state."""
         return self._init_states.probs
 
     @d.dedent
     def set_terminal_states(
         self,
-        states: Union[pd.Series, dict[str, Sequence[Any]]],
-        cluster_key: Optional[str] = None,
+        states: pd.Series | dict[str, Sequence[Any]],
+        cluster_key: str | None = None,
         allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "TermStatesEstimator":
@@ -142,8 +139,8 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     @d.dedent
     def set_initial_states(
         self,
-        states: Union[pd.Series, dict[str, Sequence[Any]]],
-        cluster_key: Optional[str] = None,
+        states: pd.Series | dict[str, Sequence[Any]],
+        cluster_key: str | None = None,
         allow_overlap: bool = False,
         **kwargs: Any,
     ) -> "TermStatesEstimator":
@@ -303,13 +300,13 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     def plot_macrostates(
         self,
         which: Literal["all", "initial", "terminal"],
-        states: Optional[Union[str, Sequence[str]]] = None,
-        color: Optional[str] = None,
+        states: str | Sequence[str] | None = None,
+        color: str | None = None,
         discrete: bool = True,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
         time_key: str = "latent_time",
         same_plot: bool = True,
-        title: Optional[Union[str, Sequence[str]]] = None,
+        title: str | Sequence[str] | None = None,
         cmap: str = "viridis",
         **kwargs: Any,
     ) -> None:
@@ -349,7 +346,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         %(just_plots)s
         """
         if which == "all":
-            obj: Optional[StatesHolder] = getattr(self, "_macrostates", None)
+            obj: StatesHolder | None = getattr(self, "_macrostates", None)
             if obj is None:
                 raise RuntimeError(f"`{type(self).__name__}` cannot plot macrostates.")
         elif which == "initial":
@@ -358,7 +355,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
             obj = self._term_states
         else:
             raise ValueError(
-                f"Unable to plot `{which!r}` states. " f"Valid options are: `{['all', 'initial', 'terminal']}`."
+                f"Unable to plot `{which!r}` states. Valid options are: `{['all', 'initial', 'terminal']}`."
             )
 
         name = "macrostates" if which == "macro" else f"{which} states"
@@ -401,11 +398,11 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     def _plot_discrete(
         self,
         _data: pd.Series,
-        _colors: Optional[np.ndarray] = None,
-        _title: Optional[str] = None,
-        states: Optional[Union[str, Sequence[str]]] = None,
-        color: Optional[str] = None,
-        title: Optional[Union[str, Sequence[str]]] = None,
+        _colors: np.ndarray | None = None,
+        _title: str | None = None,
+        states: str | Sequence[str] | None = None,
+        color: str | None = None,
+        title: str | Sequence[str] | None = None,
         same_plot: bool = True,
         cmap: str = "viridis",
         **kwargs: Any,
@@ -470,13 +467,13 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     def _plot_continuous(
         self,
         _data: Lineage,
-        _colors: Optional[np.ndarray] = None,
-        _title: Optional[str] = None,
-        states: Optional[Union[str, Sequence[str]]] = None,
-        color: Optional[str] = None,
+        _colors: np.ndarray | None = None,
+        _title: str | None = None,
+        states: str | Sequence[str] | None = None,
+        color: str | None = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
         time_key: str = "latent_time",
-        title: Optional[Union[str, Sequence[str]]] = None,
+        title: str | Sequence[str] | None = None,
         same_plot: bool = True,
         cmap: str = "viridis",
         **kwargs: Any,
@@ -564,9 +561,9 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
     def _set_categorical_labels(
         self,
-        categories: Union[pd.Series, dict[str, Any]],
-        cluster_key: Optional[str] = None,
-        existing: Optional[pd.Series] = None,
+        categories: pd.Series | dict[str, Any],
+        cluster_key: str | None = None,
+        existing: pd.Series | None = None,
     ) -> tuple[pd.Series, np.ndarray]:
         # fmt: off
         if isinstance(categories, dict):
@@ -623,9 +620,9 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
     def _write_states(
         self,
         which: Literal["initial", "terminal"],
-        states: Optional[pd.Series],
-        colors: Optional[np.ndarray],
-        probs: Optional[pd.Series] = None,
+        states: pd.Series | None,
+        colors: np.ndarray | None,
+        probs: pd.Series | None = None,
         params: dict[str, Any] = types.MappingProxyType({}),
         allow_overlap: bool = False,
     ) -> str:

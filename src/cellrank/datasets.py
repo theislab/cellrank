@@ -1,7 +1,7 @@
 import enum
 import os
 import pathlib
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 from anndata import AnnData
 from scanpy import read
@@ -42,7 +42,7 @@ _datasets = {
 
 
 def _load_dataset_from_url(
-    fpath: Union[str, pathlib.Path], url: str, expected_shape: tuple[int, int], **kwargs: Any
+    fpath: str | pathlib.Path, url: str, expected_shape: tuple[int, int], **kwargs: Any
 ) -> AnnData:
     fpath = str(fpath)
     if not fpath.endswith(".h5ad"):
@@ -75,7 +75,7 @@ def _load_dataset_from_url(
 
 
 def pancreas(
-    path: Union[str, pathlib.Path] = "datasets/endocrinogenesis_day15.5.h5ad",
+    path: str | pathlib.Path = "datasets/endocrinogenesis_day15.5.h5ad",
     kind: Literal["raw", "preprocessed", "preprocessed-kernel"] = "raw",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
@@ -118,7 +118,7 @@ def pancreas(
 
 
 def lung(
-    path: Union[str, pathlib.Path] = "datasets/lung_regeneration.h5ad",
+    path: str | pathlib.Path = "datasets/lung_regeneration.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Regeneration of murine lung epithelial cells at 13 time points from :cite:`strunz:20`.
@@ -148,7 +148,7 @@ def lung(
 @inject_docs(s=ReprogrammingSubset)
 @d.dedent
 def reprogramming_morris(
-    path: Union[str, pathlib.Path] = "datasets/reprogramming_morris.h5ad",
+    path: str | pathlib.Path = "datasets/reprogramming_morris.h5ad",
     subset: Literal["full", "48k", "85k"] = ReprogrammingSubset.FULL,
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
@@ -200,7 +200,7 @@ def reprogramming_morris(
 
 @d.dedent
 def reprogramming_schiebinger(
-    path: Union[str, pathlib.Path] = "datasets/reprogramming_schiebinger.h5ad",
+    path: str | pathlib.Path = "datasets/reprogramming_schiebinger.h5ad",
     subset_to_serum: bool = False,
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
@@ -246,7 +246,7 @@ def reprogramming_schiebinger(
 
 @d.dedent
 def zebrafish(
-    path: Union[str, pathlib.Path] = "datasets/zebrafish.h5ad",
+    path: str | pathlib.Path = "datasets/zebrafish.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """Zebrafish embryogenesis assayed using drop-seq from :cite:`farrell:18`.
@@ -270,7 +270,7 @@ def zebrafish(
 
 @d.dedent
 def bone_marrow(
-    path: Union[str, pathlib.Path] = "datasets/bone_marrow.h5ad",
+    path: str | pathlib.Path = "datasets/bone_marrow.h5ad",
     **kwargs: Any,
 ) -> AnnData:  # pragma: no cover
     """sc-RNA-seq dataset early human hematopoiesis (CD34+ bone marrow cells) assayed using 10X Chromium.

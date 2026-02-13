@@ -2,17 +2,15 @@ import copy
 import enum
 import os
 from collections.abc import Sequence
-from typing import Optional, Union
-
-import pytest
-from _helpers import assert_array_nan_equal, assert_estimators_equal
+from typing import Optional
 
 import numpy as np
 import pandas as pd
+import pytest
 import scipy.sparse as sp
-from pandas.testing import assert_frame_equal, assert_series_equal
-
+from _helpers import assert_array_nan_equal, assert_estimators_equal
 from anndata import AnnData
+from pandas.testing import assert_frame_equal, assert_series_equal
 
 import cellrank as cr
 from cellrank._utils import Lineage
@@ -21,7 +19,7 @@ from cellrank.kernels import ConnectivityKernel, VelocityKernel
 
 
 # fmt: off
-class State(str, enum.Enum):
+class State(enum.StrEnum):
     SCHUR = "schur"
     MACRO = "macro"
     TERM = "term"
@@ -57,7 +55,7 @@ class State(str, enum.Enum):
         return None
 
     @property
-    def key(self) -> Optional[str]:
+    def key(self) -> str | None:
         bwd = False
         if self.value == "schur":
             return f"schur_decomposition_{Key.backward(bwd)}"
@@ -72,7 +70,7 @@ class State(str, enum.Enum):
         return None
 
     @property
-    def attr_keys(self) -> Optional[Sequence[tuple[str, str]]]:
+    def attr_keys(self) -> Sequence[tuple[str, str]] | None:
         bwd = False
         if self.value == "schur":
             key1 = Key.uns.eigen(bwd)
@@ -100,7 +98,7 @@ class State(str, enum.Enum):
         return None
 
     @property
-    def attrs(self) -> Optional[Sequence[tuple[str, type]]]:
+    def attrs(self) -> Sequence[tuple[str, type]] | None:
         if self.value == "schur":
             return ("_eigendecomposition", dict), ("_schur_vectors", np.ndarray), ("_schur_matrix", np.ndarray)
         if self.value == "macro":
@@ -246,7 +244,7 @@ def _fit_gpcca(adata, state: str, backward: bool = False) -> cr.estimators.GPCCA
 
 def _assert_params(
     g: cr.estimators.GPCCA,
-    state: Optional[State],
+    state: State | None,
     fwd: bool = False,
     init: bool = True,
 ) -> None:
@@ -265,7 +263,7 @@ def _assert_params(
         _assert_params(g, state.prev, fwd=False)
 
 
-def _assert_adata(adata: AnnData, state: Optional[State], fwd: bool = False, init: bool = True) -> None:
+def _assert_adata(adata: AnnData, state: State | None, fwd: bool = False, init: bool = True) -> None:
     if state is None:
         return
 
@@ -288,7 +286,7 @@ def _assert_adata(adata: AnnData, state: Optional[State], fwd: bool = False, ini
 
 def _assert_gpcca_attrs(
     g: cr.estimators.GPCCA,
-    state: Optional[State] = None,
+    state: State | None = None,
     fwd: bool = False,
     init: bool = True,
 ) -> None:
@@ -594,7 +592,7 @@ class TestGPCCA:
             mc.set_terminal_states(states=["foobar"])
 
     @pytest.mark.parametrize("values", ["Astrocytes", ["Astrocytes", "OPC"]])
-    def test_set_terminal_states_clusters(self, adata_large: AnnData, values: Union[str, list[str]]):
+    def test_set_terminal_states_clusters(self, adata_large: AnnData, values: str | list[str]):
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
         terminal_kernel = 0.8 * vk + 0.2 * ck
@@ -930,7 +928,7 @@ class TestGPCCA:
         assert np.asarray(drivers.iloc[drivers.index != gene].isnull()).sum() == 0
 
     @pytest.mark.parametrize("keys", ["0", ["0", "1"], ["0", "1, 2"]])
-    def test_compute_time_to_absorption(self, adata_large: AnnData, keys: Union[str, Sequence[str]]):
+    def test_compute_time_to_absorption(self, adata_large: AnnData, keys: str | Sequence[str]):
         n_states = 3
         n_expected = 1 if isinstance(keys, str) else len(keys)
         ck = ConnectivityKernel(adata_large).compute_transition_matrix()
@@ -953,7 +951,7 @@ class TestGPCCASerialization:
 
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers",)])
-    def test_to_adata_keep(self, adata_large: AnnData, keep: Union[str, Sequence[str]], copy: bool):
+    def test_to_adata_keep(self, adata_large: AnnData, keep: str | Sequence[str], copy: bool):
         g = _fit_gpcca(adata_large, State.MACRO)
         adata = g.to_adata(keep=keep, copy=copy)
         if "X" in keep:
@@ -1151,7 +1149,7 @@ class TestGPCCAIO:
             _ = cr.estimators.GPCCA.read(os.path.join(tmpdir, "foo.pkl"), adata=adata)
 
     @pytest.mark.parametrize("verbose", [None, False])
-    def test_compute_schur_verbosity(self, adata_large: AnnData, verbose: Optional[bool], capsys):
+    def test_compute_schur_verbosity(self, adata_large: AnnData, verbose: bool | None, capsys):
         _ = pytest.importorskip("petsc4py")
         _ = pytest.importorskip("slepc4py")
 

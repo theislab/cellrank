@@ -1,11 +1,10 @@
 import copy
 import enum
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-
 from anndata import AnnData
 
 from cellrank._utils._docs import d, inject_docs
@@ -64,7 +63,7 @@ class GAMR(BaseModel):
         distribution: str = "gaussian",
         basis: str = "cr",
         knotlocs: Literal["auto", "density"] = KnotLocs.AUTO,
-        offset: Optional[Union[np.ndarray, Literal["default"]]] = "default",
+        offset: np.ndarray | Literal["default"] | None = "default",
         smoothing_penalty: float = 1.0,
         **kwargs: Any,
     ):
@@ -94,7 +93,7 @@ class GAMR(BaseModel):
         if distribution == "nb" and offset is not None:
             if not isinstance(offset, (np.ndarray, str)):
                 raise TypeError(
-                    f"Expected `offset` to be either `'default'` or `numpy.ndarray`," f"got `{type(offset).__name__}`."
+                    f"Expected `offset` to be either `'default'` or `numpy.ndarray`,got `{type(offset).__name__}`."
                 )
 
             if isinstance(offset, str):
@@ -129,7 +128,6 @@ class GAMR(BaseModel):
         -------
         %(base_model_prepare.returns)s
         """  # noqa: D400
-
         if self._family == "nb":
             kwargs["use_raw"] = True
         prepared = super().prepare(*args, **kwargs)
@@ -155,9 +153,9 @@ class GAMR(BaseModel):
     @d.dedent
     def fit(
         self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        w: np.ndarray | None = None,
         **kwargs: Any,
     ) -> "GAMR":
         """%(base_model_fit.full_desc)s
@@ -174,7 +172,6 @@ class GAMR(BaseModel):
         - :attr:`y` - %(base_model_y.summary)s
         - :attr:`w` - %(base_model_w.summary)s
         """  # noqa: D400
-
         import rpy2.robjects as ro
         from rpy2.robjects import pandas2ri
         from rpy2.robjects.conversion import localconverter
@@ -207,7 +204,7 @@ class GAMR(BaseModel):
 
         return self
 
-    def _get_x_test(self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test") -> pd.DataFrame:
+    def _get_x_test(self, x_test: np.ndarray | None = None, key_added: str = "_x_test") -> pd.DataFrame:
         newdata = pd.DataFrame(self._check(key_added, x_test), columns=["x"])
 
         if "offset" in self._design_mat:
@@ -218,9 +215,9 @@ class GAMR(BaseModel):
     @d.dedent
     def predict(
         self,
-        x_test: Optional[np.ndarray] = None,
+        x_test: np.ndarray | None = None,
         key_added: str = "_x_test",
-        level: Optional[float] = None,
+        level: float | None = None,
         **kwargs,
     ) -> np.ndarray:
         """%(base_model_predict.full_desc)s
@@ -272,7 +269,7 @@ class GAMR(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, level: float = 0.95, **kwargs) -> np.ndarray:
+    def confidence_interval(self, x_test: np.ndarray | None = None, level: float = 0.95, **kwargs) -> np.ndarray:
         """%(base_model_ci.summary)s
 
         Internally, this method calls :meth:`~cellrank.models.GAMR.predict` to extract the confidence interval,
@@ -288,7 +285,6 @@ class GAMR(BaseModel):
         -------
         %(base_model_ci.returns)s
         """  # noqa: D400
-
         # this is 2x as fast as opposed to calling `robjects.r.predict` again
         # on my PC (Michal):
         #   -`.predict` take ~6.5ms (without se=True, it's ~5.5ms, 20% slowdown)
@@ -337,7 +333,7 @@ class GAMR(BaseModel):
         self._lib, self._lib_name = _maybe_import_r_lib(self._lib_name, raise_exc=True)
 
 
-def _maybe_import_r_lib(name: str, raise_exc: bool = False) -> tuple[Optional[Any], Optional[str]]:
+def _maybe_import_r_lib(name: str, raise_exc: bool = False) -> tuple[Any | None, str | None]:
     global _r_lib, _r_lib_name
 
     if name == _r_lib_name and _r_lib is not None:

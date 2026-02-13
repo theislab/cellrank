@@ -1,16 +1,14 @@
 import pathlib
 import types
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union
-
-import numpy as np
-import pandas as pd
+from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
-from matplotlib import cm
-
+import numpy as np
+import pandas as pd
 from anndata import AnnData
+from matplotlib import cm
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -43,45 +41,45 @@ __all__ = ["gene_trends"]
 def gene_trends(
     adata: AnnData,
     model: _input_model_type,
-    genes: Union[str, Sequence[str]],
+    genes: str | Sequence[str],
     time_key: str,
-    lineages: Optional[Union[str, Sequence[str]]] = None,
+    lineages: str | Sequence[str] | None = None,
     backward: bool = False,
     data_key: str = "X",
-    time_range: Optional[Union[_time_range_type, list[_time_range_type]]] = None,
+    time_range: _time_range_type | list[_time_range_type] | None = None,
     transpose: bool = False,
     callback: _callback_type = None,
-    conf_int: Union[bool, float] = True,
+    conf_int: bool | float = True,
     same_plot: bool = False,
     hide_cells: bool = False,
-    perc: Optional[Union[tuple[float, float], Sequence[tuple[float, float]]]] = None,
-    lineage_cmap: Optional[matplotlib.colors.ListedColormap] = None,
+    perc: tuple[float, float] | Sequence[tuple[float, float]] | None = None,
+    lineage_cmap: matplotlib.colors.ListedColormap | None = None,
     fate_prob_cmap: matplotlib.colors.ListedColormap = cm.viridis,
-    cell_color: Optional[str] = None,
+    cell_color: str | None = None,
     cell_alpha: float = 0.6,
     lineage_alpha: float = 0.2,
     size: float = 15,
     lw: float = 2,
     cbar: bool = True,
     margins: float = 0.015,
-    sharex: Optional[Union[str, bool]] = None,
-    sharey: Optional[Union[str, bool]] = None,
-    gene_as_title: Optional[bool] = None,
-    legend_loc: Optional[str] = "best",
-    obs_legend_loc: Optional[str] = "best",
+    sharex: str | bool | None = None,
+    sharey: str | bool | None = None,
+    gene_as_title: bool | None = None,
+    legend_loc: str | None = "best",
+    obs_legend_loc: str | None = "best",
     ncols: int = 2,
-    suptitle: Optional[str] = None,
+    suptitle: str | None = None,
     return_models: bool = False,
-    n_jobs: Optional[int] = 1,
+    n_jobs: int | None = 1,
     backend: Backend_t = DEFAULT_BACKEND,
     show_progress_bar: bool = True,
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    save: str | pathlib.Path | None = None,
     return_figure: bool = False,
     plot_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
     **kwargs: Any,
-) -> Optional[_return_model_type]:
+) -> _return_model_type | None:
     """Plot gene expression trends along lineages.
 
     .. seealso::
@@ -257,7 +255,7 @@ def gene_trends(
         ncols = len(lineages)
 
     plot_kwargs = dict(plot_kwargs)
-    if plot_kwargs.get("xlabel", None) is None:
+    if plot_kwargs.get("xlabel") is None:
         plot_kwargs["xlabel"] = time_key
 
     fig, axes = plt.subplots(

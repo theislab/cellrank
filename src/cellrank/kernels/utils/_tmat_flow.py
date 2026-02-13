@@ -1,20 +1,18 @@
 import dataclasses
 from collections.abc import Mapping, Sequence
-from typing import Any, Optional, Union
+from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
+from anndata import AnnData
+from matplotlib.collections import PolyCollection
+from matplotlib.colors import to_rgb
 from pandas.api.types import infer_dtype
 from scipy.interpolate import interp1d
 from statsmodels.nonparametric.smoothers_lowess import lowess
-
-import matplotlib.pyplot as plt
-from matplotlib.collections import PolyCollection
-from matplotlib.colors import to_rgb
-
-from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils._colors import _create_categorical_colors
@@ -24,7 +22,7 @@ from cellrank.kernels._utils import _ensure_numeric_ordered
 
 __all__ = ["FlowPlotter"]
 
-Numeric_t = Union[float, int]
+Numeric_t = float | int
 
 
 @dataclasses.dataclass(frozen=True)
@@ -55,7 +53,7 @@ class FlowPlotter:
     def __init__(
         self,
         adata: AnnData,
-        tmat: Union[np.ndarray, sp.spmatrix],
+        tmat: np.ndarray | sp.spmatrix,
         cluster_key: str,
         time_key: str,
     ):
@@ -64,11 +62,11 @@ class FlowPlotter:
         self._ckey = cluster_key
         self._tkey = time_key
 
-        self._cluster: Optional[str] = None
-        self._clusters: Optional[Sequence[Any]] = None
+        self._cluster: str | None = None
+        self._clusters: Sequence[Any] | None = None
 
-        self._flow: Optional[pd.DataFrame] = None
-        self._cmat: Optional[pd.DataFrame] = None
+        self._flow: pd.DataFrame | None = None
+        self._cmat: pd.DataFrame | None = None
 
         if self._ckey not in self._adata.obs:
             raise KeyError(f"Unable to find clusters in `adata.obs[{self._ckey!r}]`.")
@@ -82,8 +80,8 @@ class FlowPlotter:
     def prepare(
         self,
         cluster: str,
-        clusters: Optional[Sequence[Any]] = None,
-        time_points: Optional[Sequence[Numeric_t]] = None,
+        clusters: Sequence[Any] | None = None,
+        time_points: Sequence[Numeric_t] | None = None,
     ) -> "FlowPlotter":
         """Prepare itself for plotting by computing flow and contingency matrix.
 
@@ -145,7 +143,7 @@ class FlowPlotter:
     def compute_flow(
         self,
         time_points: Sequence[tuple[Numeric_t, Numeric_t]],
-        cluster: Optional[str] = None,
+        cluster: str | None = None,
     ) -> pd.DataFrame:
         """Compute outgoing flow.
 
@@ -216,12 +214,12 @@ class FlowPlotter:
         self,
         min_flow: float = 0,
         remove_empty_clusters: bool = True,
-        ascending: Optional[bool] = False,
+        ascending: bool | None = False,
         alpha: float = 0.8,
-        xticks_step_size: Optional[int] = 1,
-        legend_loc: Optional[str] = "upper right out",
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
+        xticks_step_size: int | None = 1,
+        legend_loc: str | None = "upper right out",
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
     ) -> plt.Axes:
         """Plot outgoing flow.
 
@@ -275,8 +273,8 @@ class FlowPlotter:
             self._cmat = cmat
 
     def _get_time_subset(
-        self, t1: Numeric_t, t2: Numeric_t, cluster: Optional[str] = None
-    ) -> tuple[Union[np.ndarray, sp.spmatrix], pd.Series, pd.Series]:
+        self, t1: Numeric_t, t2: Numeric_t, cluster: str | None = None
+    ) -> tuple[np.ndarray | sp.spmatrix, pd.Series, pd.Series]:
         if cluster is None:
             row_ixs = np.where(self.time == t1)[0]
         else:
@@ -307,7 +305,7 @@ class FlowPlotter:
         self._cmat.columns = tmp
         return old_times
 
-    def _order_clusters(self, cluster: str, ascending: Optional[bool] = False) -> tuple[list[Any], list[Any]]:
+    def _order_clusters(self, cluster: str, ascending: bool | None = False) -> tuple[list[Any], list[Any]]:
         if ascending is not None:
             tmp = [[], []]
             total_flow = self._flow.loc[(slice(None), cluster), :].sum().sort_values(ascending=ascending)
@@ -412,13 +410,13 @@ class FlowPlotter:
     def _plot(
         self,
         old_times: Sequence[Numeric_t],
-        ascending: Optional[bool],
+        ascending: bool | None,
         min_flow: float = 0,
         alpha: float = 0.8,
-        xticks_step_size: Optional[int] = 1,
-        legend_loc: Optional[str] = "upper right out",
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
+        xticks_step_size: int | None = 1,
+        legend_loc: str | None = "upper right out",
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
     ) -> plt.Axes:
         from cellrank.pl._utils import _position_legend  # circular import
 
@@ -538,5 +536,5 @@ class FlowPlotter:
         )
 
 
-def _lcdf(x: Union[int, float, np.ndarray], loc: float = 0.5, scale: float = 0.2) -> float:
+def _lcdf(x: int | float | np.ndarray, loc: float = 0.5, scale: float = 0.2) -> float:
     return st.logistic.cdf(x, loc=loc, scale=scale)

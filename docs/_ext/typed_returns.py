@@ -11,9 +11,9 @@ def process_return(lines: Iterable[str]) -> Iterator[str]:
         if m:
             # Once this is in scanpydoc, we can use the fancy hover stuff
             if m["param"]:
-                yield f'**{m["param"]}** : :class:`~{m["type"]}`'
+                yield f"**{m['param']}** : :class:`~{m['type']}`"
             else:
-                yield f':class:`~{m["type"]}`'
+                yield f":class:`~{m['type']}`"
         else:
             yield line
 

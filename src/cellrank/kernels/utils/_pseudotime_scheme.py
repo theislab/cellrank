@@ -1,5 +1,6 @@
 import abc
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
@@ -73,7 +74,7 @@ class ThresholdSchemeABC(abc.ABC):
         self,
         conn: sp.csr_matrix,
         pseudotime: np.ndarray,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
         **kwargs: Any,

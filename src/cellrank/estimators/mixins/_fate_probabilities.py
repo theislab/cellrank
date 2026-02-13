@@ -1,13 +1,12 @@
 import types
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, NamedTuple, Optional, Union
+from typing import Any, Literal, NamedTuple
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype
-
 from anndata import AnnData
+from pandas.api.types import infer_dtype
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -34,8 +33,8 @@ __all__ = ["FateProbsMixin"]
 
 
 class RecTransStates(NamedTuple):
-    q: Union[np.ndarray, sp.spmatrix]
-    s: Union[np.ndarray, sp.spmatrix]
+    q: np.ndarray | sp.spmatrix
+    s: np.ndarray | sp.spmatrix
     trans_indices: np.ndarray
     rec_indices: np.ndarray
     name_to_ixs: dict[str, np.ndarray]
@@ -47,31 +46,31 @@ class FateProbsProtocol(BaseProtocol):
     _term_states: StatesHolder
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
+    def transition_matrix(self) -> np.ndarray | sp.spmatrix: ...
 
     @property
     def terminal_states(self) -> pd.Series: ...
 
     @property
-    def fate_probabilities(self) -> Optional[Lineage]: ...
+    def fate_probabilities(self) -> Lineage | None: ...
 
     @property
-    def absorption_times(self) -> Optional[pd.DataFrame]: ...
+    def absorption_times(self) -> pd.DataFrame | None: ...
 
     @property
-    def priming_degree(self) -> Optional[pd.Series]: ...
+    def priming_degree(self) -> pd.Series | None: ...
 
     def __len__(self) -> int: ...
 
     def _compute_fate_probabilities(
         self,
-        q: Union[np.ndarray, sp.spmatrix],
-        s: Union[np.ndarray, sp.spmatrix],
+        q: np.ndarray | sp.spmatrix,
+        s: np.ndarray | sp.spmatrix,
         trans_indices: np.ndarray,
         term_states: np.ndim,
         solver: str,
         use_petsc: bool,
-        n_jobs: Optional[int],
+        n_jobs: int | None,
         backend: str,
         tol: float,
         show_progress_bar: bool,
@@ -81,14 +80,14 @@ class FateProbsProtocol(BaseProtocol):
 
     def _rec_trans_states(
         self,
-        keys: Optional[Sequence[str]],
+        keys: Sequence[str] | None,
         *,
         ctx: Literal["fate_probs", "time_to_absorption"],
     ) -> RecTransStates: ...
 
     def _ensure_lineage_object(
         self,
-        obj: Union[str, np.ndarray, Lineage],
+        obj: str | np.ndarray | Lineage,
         *,
         kind: Literal["macrostates", "term_states", "fate_probs"],
         backward: bool,
@@ -97,30 +96,30 @@ class FateProbsProtocol(BaseProtocol):
 
     def _write_fate_probabilities(
         self,
-        fate_probs: Optional[Lineage],
+        fate_probs: Lineage | None,
     ) -> str: ...
 
     def _write_absorption_times(
         self,
-        abs_times: Optional[pd.DataFrame],
+        abs_times: pd.DataFrame | None,
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str: ...
 
     def _write_lineage_priming(
         self,
-        priming_degree: Optional[pd.Series],
+        priming_degree: pd.Series | None,
     ) -> str: ...
 
     def _plot_continuous(
         self,
         _data: Lineage,
-        _colors: Optional[np.ndarray] = None,
-        _title: Optional[str] = None,
-        states: Optional[Union[str, Sequence[str]]] = None,
-        color: Optional[str] = None,
+        _colors: np.ndarray | None = None,
+        _title: str | None = None,
+        states: str | Sequence[str] | None = None,
+        color: str | None = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
-        time_key: Optional[str] = None,
-        title: Optional[Union[str, Sequence[str]]] = None,
+        time_key: str | None = None,
+        title: str | Sequence[str] | None = None,
         same_plot: bool = True,
         cmap: str = "viridis",
         **kwargs: Any,
@@ -133,13 +132,13 @@ class FateProbsMixin:
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
-        self._fate_probabilities: Optional[Lineage] = None
-        self._absorption_times: Optional[pd.DataFrame] = None
-        self._priming_degree: Optional[pd.Series] = None
+        self._fate_probabilities: Lineage | None = None
+        self._absorption_times: pd.DataFrame | None = None
+        self._priming_degree: pd.Series | None = None
 
     @property
     @d.get_summary(base="fate_probs")
-    def fate_probabilities(self) -> Optional[Lineage]:
+    def fate_probabilities(self) -> Lineage | None:
         """Fate probabilities.
 
         Informally, given a (finite, discrete) Markov chain with a set of transient states :math:`T` and
@@ -154,7 +153,7 @@ class FateProbsMixin:
 
     @property
     @d.get_summary(base="abs_times")
-    def absorption_times(self) -> Optional[pd.DataFrame]:
+    def absorption_times(self) -> pd.DataFrame | None:
         """Mean and variance of the time until absorption.
 
         Related to conditional mean first passage times. Corresponds to the expectation of the time until absorption,
@@ -164,7 +163,7 @@ class FateProbsMixin:
 
     @property
     @d.get_summary(base="priming_degree")
-    def priming_degree(self) -> Optional[pd.Series]:
+    def priming_degree(self) -> pd.Series | None:
         """Priming degree.
 
         Given a cell :math:`i` and a set of terminal states, this quantifies how committed vs. naive cell :math:`i` is,
@@ -176,14 +175,14 @@ class FateProbsMixin:
     @d.dedent
     def compute_fate_probabilities(
         self: FateProbsProtocol,
-        keys: Optional[Sequence[str]] = None,
-        solver: Union[str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]] = "gmres",
+        keys: Sequence[str] | None = None,
+        solver: str | Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"] = "gmres",
         use_petsc: bool = True,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         tol: float = 1e-6,
-        preconditioner: Optional[str] = None,
+        preconditioner: str | None = None,
         check_sum_tol: float = 1e-3,
     ) -> None:
         """Compute fate probabilities.
@@ -237,12 +236,12 @@ class FateProbsMixin:
     @d.dedent
     def plot_fate_probabilities(
         self: FateProbsProtocol,
-        states: Optional[Union[str, Sequence[str]]] = None,
-        color: Optional[str] = None,
+        states: str | Sequence[str] | None = None,
+        color: str | None = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
-        time_key: Optional[str] = None,
+        time_key: str | None = None,
         same_plot: bool = True,
-        title: Optional[Union[str, Sequence[str]]] = None,
+        title: str | Sequence[str] | None = None,
         cmap: str = "viridis",
         **kwargs: Any,
     ) -> None:
@@ -292,15 +291,15 @@ class FateProbsMixin:
     @d.dedent
     def compute_absorption_times(
         self: FateProbsProtocol,
-        keys: Optional[Sequence[str]] = None,
+        keys: Sequence[str] | None = None,
         calculate_variance: bool = False,
-        solver: Union[str, Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"]] = "gmres",
+        solver: str | Literal["direct", "gmres", "lgmres", "bicgstab", "gcrotmk"] = "gmres",
         use_petsc: bool = True,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: Backend_t = DEFAULT_BACKEND,
-        show_progress_bar: Optional[bool] = None,
+        show_progress_bar: bool | None = None,
         tol: float = 1e-6,
-        preconditioner: Optional[str] = None,
+        preconditioner: str | None = None,
     ) -> None:
         """Compute the mean time to absorption and optionally its variance.
 
@@ -352,7 +351,7 @@ class FateProbsMixin:
     def compute_lineage_priming(
         self: FateProbsProtocol,
         method: Literal["kl_divergence", "entropy"] = "kl_divergence",
-        early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
+        early_cells: Mapping[str, Sequence[str]] | Sequence[str] | None = None,
     ) -> pd.Series:
         """%(lin_pd.full_desc)s
 
@@ -379,7 +378,7 @@ class FateProbsMixin:
                 raise KeyError(f"Unable to find clusters in `adata.obs[{key!r}]`.")
             if not isinstance(self.adata.obs[key].dtype, pd.CategoricalDtype):
                 raise TypeError(
-                    f"Expected `adata.obs[{key!r}]` to be categorical, " f"found `{infer_dtype(self.adata.obs[key])}`."
+                    f"Expected `adata.obs[{key!r}]` to be categorical, found `{infer_dtype(self.adata.obs[key])}`."
                 )
             early_cells = self.adata.obs[key].isin(early_cells[key])
         elif early_cells is not None:
@@ -394,7 +393,7 @@ class FateProbsMixin:
 
     def _rec_trans_states(
         self: FateProbsProtocol,
-        keys: Optional[Sequence[str]] = None,
+        keys: Sequence[str] | None = None,
         *,
         ctx: Literal["fate_probs", "time_to_absorption"],
     ) -> RecTransStates:
@@ -443,13 +442,13 @@ class FateProbsMixin:
 
     def _compute_fate_probabilities(
         self: FateProbsProtocol,
-        q: Union[np.ndarray, sp.spmatrix],
-        s: Union[np.ndarray, sp.spmatrix],
+        q: np.ndarray | sp.spmatrix,
+        s: np.ndarray | sp.spmatrix,
         trans_indices: np.ndarray,
         term_states: np.ndim,
         solver: str,
         use_petsc: bool,
-        n_jobs: Optional[int],
+        n_jobs: int | None,
         backend: str,
         tol: float,
         show_progress_bar: bool,
@@ -499,7 +498,7 @@ class FateProbsMixin:
     @shadow
     def _write_fate_probabilities(
         self: FateProbsProtocol,
-        fate_probs: Optional[Lineage],
+        fate_probs: Lineage | None,
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         # fmt: off
@@ -509,13 +508,13 @@ class FateProbsMixin:
         self.params[key] = dict(params)
         # fmt: on
 
-        return f"Adding `adata.obsm[{key!r}]`\n" f"       `.fate_probabilities`\n" f"    Finish"
+        return f"Adding `adata.obsm[{key!r}]`\n       `.fate_probabilities`\n    Finish"
 
     @logger
     @shadow
     def _write_absorption_times(
         self: FateProbsProtocol,
-        abs_times: Optional[pd.DataFrame],
+        abs_times: pd.DataFrame | None,
         params: Mapping[str, Any] = types.MappingProxyType({}),
     ) -> str:
         key = Key.obsm.abs_times(self.backward)
@@ -526,7 +525,7 @@ class FateProbsMixin:
 
     @logger
     @shadow
-    def _write_lineage_priming(self: FateProbsProtocol, priming_degree: Optional[pd.Series]) -> str:
+    def _write_lineage_priming(self: FateProbsProtocol, priming_degree: pd.Series | None) -> str:
         self._priming_degree = priming_degree
         key = Key.obs.priming_degree(self.backward)
         self._set("_priming_degree", self.adata.obs, key=key, value=priming_degree)
@@ -579,7 +578,7 @@ class FateProbsMixin:
 
     def _ensure_lineage_object(
         self: FateProbsProtocol,
-        obj: Union[str, np.ndarray, Lineage],
+        obj: str | np.ndarray | Lineage,
         *,
         kind: Literal["macrostates", "term_states", "fate_probs"],
         backward: bool,

@@ -1,5 +1,5 @@
 import functools
-from typing import Optional, TypeVar, Union
+from typing import TypeVar
 
 import numpy as np
 import scipy.sparse as sp
@@ -30,7 +30,7 @@ PETScMat = TypeVar("PETScMat")
 Queue = TypeVar("Queue")
 
 
-def _create_petsc_matrix(mat: Union[np.ndarray, sp.spmatrix], as_dense: bool = False) -> PETScMat:
+def _create_petsc_matrix(mat: np.ndarray | sp.spmatrix, as_dense: bool = False) -> PETScMat:
     """Create a PETSc matrix from :mod:`numpy` or :mod:`scipy.sparse` matrix.
 
     Parameters
@@ -68,9 +68,9 @@ def _create_petsc_matrix(mat: Union[np.ndarray, sp.spmatrix], as_dense: bool = F
 
 
 def _create_solver(
-    mat_a: Union[np.ndarray, sp.spmatrix],
-    solver: Optional[str],
-    preconditioner: Optional[str],
+    mat_a: np.ndarray | sp.spmatrix,
+    solver: str | None,
+    preconditioner: str | None,
     tol: float,
 ) -> tuple["petsc4py.PETSc.KSP", "petsc4py.PETSc.Vec", "petsc4py.PETScVec"]:  # noqa: F821
     """
@@ -119,25 +119,25 @@ def _create_solver(
 
 
 @functools.singledispatch
-def _solve_many_sparse_problems_petsc(
+def _solve_many_sparse_problems_petsc[Queue](
     mat_b: sp.csc_matrix,
-    _mat_a: Union[np.ndarray, sp.spmatrix],
-    _solver: Optional[str] = None,
-    _preconditioner: Optional[str] = None,
+    _mat_a: np.ndarray | sp.spmatrix,
+    _solver: str | None = None,
+    _preconditioner: str | None = None,
     _tol: float = 1e-5,
-    _queue: Optional[Queue] = None,
+    _queue: Queue | None = None,
 ) -> tuple[np.ndarray, int]:
     raise NotImplementedError(f"Not implemented for type `{type(mat_b).__name__!r}`.")
 
 
 @_solve_many_sparse_problems_petsc.register(np.ndarray)
-def _(
+def _[Queue](
     mat_b: np.ndarray,
-    mat_a: Union[np.ndarray, sp.spmatrix],
-    solver: Optional[str] = None,
-    preconditioner: Optional[str] = None,
+    mat_a: np.ndarray | sp.spmatrix,
+    solver: str | None = None,
+    preconditioner: str | None = None,
     tol: float = 1e-5,
-    _queue: Optional[Queue] = None,
+    _queue: Queue | None = None,
 ) -> tuple[np.ndarray, int]:
     if mat_b.ndim not in (1, 2) or (mat_b.ndim == 2 and mat_b.shape[1] != 1):
         raise ValueError(f"Expected either a vector or a matrix with `1` column, got `{mat_b.shape}`.")
@@ -156,11 +156,11 @@ def _(
 
 
 @_solve_many_sparse_problems_petsc.register(sp.csc_matrix)
-def _(
+def _[Queue](
     mat_b: sp.csc_matrix,
-    mat_a: Union[np.ndarray, sp.spmatrix],
-    solver: Optional[str],
-    preconditioner: Optional[str],
+    mat_a: np.ndarray | sp.spmatrix,
+    solver: str | None,
+    preconditioner: str | None,
     tol: float,
     queue: Queue,
 ) -> tuple[np.ndarray, int]:
@@ -188,7 +188,7 @@ def _(
     return np.stack(xs, axis=1), converged
 
 
-def _solve_many_sparse_problems(
+def _solve_many_sparse_problems[LinSolver, Queue](
     mat_b: sp.spmatrix,
     mat_a: sp.spmatrix,
     solver: LinSolver,
@@ -241,8 +241,8 @@ def _solve_many_sparse_problems(
 
 
 def _petsc_direct_solve(
-    mat_a: Union[np.ndarray, sp.spmatrix],
-    mat_b: Optional[Union[sp.spmatrix, np.ndarray]] = None,
+    mat_a: np.ndarray | sp.spmatrix,
+    mat_b: sp.spmatrix | np.ndarray | None = None,
     tol: float = 1e-5,
     **kwargs,
 ) -> np.ndarray:
@@ -321,12 +321,12 @@ def _petsc_direct_solve(
 
 
 def _solve_lin_system(
-    mat_a: Union[np.ndarray, sp.spmatrix],
-    mat_b: Union[np.ndarray, sp.spmatrix],
+    mat_a: np.ndarray | sp.spmatrix,
+    mat_b: np.ndarray | sp.spmatrix,
     solver: str = _DEFAULT_SOLVER,
     use_petsc: bool = False,
-    preconditioner: Optional[str] = None,
-    n_jobs: Optional[int] = None,
+    preconditioner: str | None = None,
+    n_jobs: int | None = None,
     backend: str = DEFAULT_BACKEND,
     tol: float = 1e-5,
     use_eye: bool = False,

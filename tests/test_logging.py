@@ -4,7 +4,6 @@ import io
 import sys
 
 import pytest
-
 from scanpy import Verbosity
 
 from cellrank import logging as logg

@@ -1,15 +1,13 @@
 import pathlib
 import types
 from collections.abc import Mapping
-from typing import Any, Literal, Optional, Union
-
-import numpy as np
-import scipy.sparse as sp
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FormatStrFormatter, MultipleLocator
-
+import numpy as np
+import scipy.sparse as sp
 from anndata import AnnData
+from matplotlib.ticker import FormatStrFormatter, MultipleLocator
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -24,7 +22,7 @@ EPS = np.finfo(np.float64).eps
 
 class EigenProtocol(BaseProtocol):
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
+    def transition_matrix(self) -> np.ndarray | sp.spmatrix: ...
 
     def _write_eigendecomposition(
         self, decomp: dict[str, Any], params: Mapping[str, Any] = types.MappingProxyType({})
@@ -40,7 +38,7 @@ class EigenMixin:
 
     @property
     @d.get_summary(base="eigen")
-    def eigendecomposition(self) -> Optional[dict[str, Any]]:
+    def eigendecomposition(self) -> dict[str, Any] | None:
         """Eigendecomposition of the :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex. We
@@ -66,7 +64,7 @@ class EigenMixin:
         which: Literal["LR", "LM"] = "LR",
         alpha: float = 1.0,
         only_evals: bool = False,
-        ncv: Optional[int] = None,
+        ncv: int | None = None,
     ) -> "EigenMixin":
         """Compute eigendecomposition of the :attr:`transition_matrix`.
 
@@ -149,16 +147,16 @@ class EigenMixin:
     @d.dedent
     def plot_spectrum(
         self,
-        n: Optional[int] = None,
-        real_only: Optional[bool] = None,
+        n: int | None = None,
+        real_only: bool | None = None,
         show_eigengap: bool = True,
         show_all_xticks: bool = True,
-        legend_loc: Optional[str] = None,
-        title: Optional[str] = None,
+        legend_loc: str | None = None,
+        title: str | None = None,
         marker: str = ".",
-        figsize: Optional[tuple[float, float]] = (5, 5),
+        figsize: tuple[float, float] | None = (5, 5),
         dpi: int = 100,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        save: str | pathlib.Path | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot the top eigenvalues in a real or a complex plane.
@@ -229,9 +227,9 @@ class EigenMixin:
         self,
         n: int,
         dpi: int = 100,
-        figsize: Optional[tuple[float, float]] = None,
-        legend_loc: Optional[str] = None,
-        title: Optional[str] = None,
+        figsize: tuple[float, float] | None = None,
+        legend_loc: str | None = None,
+        title: str | None = None,
         marker: str = ".",
         **kwargs: Any,
     ) -> plt.Figure:
@@ -287,9 +285,9 @@ class EigenMixin:
         show_eigengap: bool = True,
         show_all_xticks: bool = True,
         dpi: int = 100,
-        figsize: Optional[tuple[float, float]] = None,
-        legend_loc: Optional[str] = None,
-        title: Optional[str] = None,
+        figsize: tuple[float, float] | None = None,
+        legend_loc: str | None = None,
+        title: str | None = None,
         marker: str = ".",
         **kwargs: Any,
     ) -> plt.Figure:
@@ -355,7 +353,7 @@ class EigenMixin:
         params = params or decomp.get("params", {})
         self.params[key] = dict(params)
 
-        return f"Adding `adata.uns[{key!r}]`\n" f"       `.eigendecomposition`\n" "    Finish"
+        return f"Adding `adata.uns[{key!r}]`\n       `.eigendecomposition`\n    Finish"
 
     def _read_eigendecomposition(self: EigenProtocol, adata: AnnData, allow_missing: bool = True) -> bool:
         key = Key.uns.eigen(self.backward)

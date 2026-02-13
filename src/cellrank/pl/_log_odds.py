@@ -1,18 +1,16 @@
 import copy
 import pathlib
 from collections.abc import Iterable, Sequence
-from typing import Any, Optional, Union
-
-import numpy as np
-import pandas as pd
+from typing import Any
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
+from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, to_hex
-
-from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -28,29 +26,29 @@ __all__ = ["log_odds"]
 def log_odds(
     adata: AnnData,
     lineage_1: str,
-    lineage_2: Optional[str] = None,
+    lineage_2: str | None = None,
     time_key: str = "exp_time",
     backward: bool = False,
-    keys: Optional[Union[str, Sequence[str]]] = None,
-    threshold: Optional[Union[float, Sequence]] = None,
+    keys: str | Sequence[str] | None = None,
+    threshold: float | Sequence | None = None,
     threshold_color: str = "red",
-    layer: Optional[str] = None,
+    layer: str | None = None,
     use_raw: bool = False,
     size: float = 2.0,
     cmap: str = "viridis",
-    alpha: Optional[float] = 0.8,
-    ncols: Optional[int] = None,
-    fontsize: Optional[Union[float, str]] = None,
-    xticks_step_size: Optional[int] = 1,
-    legend_loc: Optional[str] = "best",
-    jitter: Union[bool, float] = True,
-    seed: Optional[int] = None,
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
+    alpha: float | None = 0.8,
+    ncols: int | None = None,
+    fontsize: float | str | None = None,
+    xticks_step_size: int | None = 1,
+    legend_loc: str | None = "best",
+    jitter: bool | float = True,
+    seed: int | None = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    save: str | pathlib.Path | None = None,
     show: bool = True,
     **kwargs: Any,
-) -> Optional[Union[Axes, Sequence[Axes]]]:
+) -> Axes | Sequence[Axes] | None:
     """Plot log-odds ratio between trajectories.
 
     This plotting function is geared towards time-series datasets that have been analyzed
@@ -109,7 +107,7 @@ def log_odds(
     If ``show = False``, returns the axes object.
     """
 
-    def decorate(ax: Axes, *, title: Optional[str] = None, show_ylabel: bool = True) -> None:
+    def decorate(ax: Axes, *, title: str | None = None, show_ylabel: bool = True) -> None:
         ax.set_xlabel(time_key, fontsize=fontsize)
         ax.set_title(title, fontdict={"fontsize": fontsize})
         ax.set_ylabel(ylabel if show_ylabel else "", fontsize=fontsize)
@@ -129,8 +127,8 @@ def log_odds(
 
     def get_data(
         key: str,
-        thresh: Optional[float] = None,
-    ) -> tuple[Optional[str], Optional[np.ndarray], Optional[np.ndarray], ScalarMappable]:
+        thresh: float | None = None,
+    ) -> tuple[str | None, np.ndarray | None, np.ndarray | None, ScalarMappable]:
         try:
             _, palette = _get_categorical_colors(adata, key)
             df[key] = adata.obs[key].values[mask]

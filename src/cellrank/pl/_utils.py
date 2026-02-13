@@ -2,20 +2,18 @@ import collections
 import copy
 import itertools
 import pathlib
-from collections.abc import Mapping, Sequence
-from typing import Any, Callable, NamedTuple, Optional, TypeVar, Union
-
-import numpy as np
-import pandas as pd
-from pandas.api.types import infer_dtype
-from sklearn.svm import SVR
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, NamedTuple, TypeVar
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from anndata import AnnData
 from matplotlib import cm, colors
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from anndata import AnnData
+from pandas.api.types import infer_dtype
+from sklearn.svm import SVR
 
 from cellrank import logging as logg
 from cellrank._utils._colors import _create_categorical_colors
@@ -32,11 +30,11 @@ Queue = TypeVar("Queue")
 Graph = TypeVar("Graph")
 
 
-_ERROR_INCOMPLETE_SPEC = "No options were specified for {}. " "Consider specifying a fallback model using '*'."
-_time_range_type = Optional[Union[float, tuple[Optional[float], Optional[float]]]]
+_ERROR_INCOMPLETE_SPEC = "No options were specified for {}. Consider specifying a fallback model using '*'."
+_time_range_type = float | tuple[float | None, float | None] | None
 _return_model_type = Mapping[str, Mapping[str, BaseModel]]
-_input_model_type = Union[BaseModel, _return_model_type]
-_callback_type = Optional[Union[Callable, Mapping[str, Mapping[str, Callable]]]]
+_input_model_type = BaseModel | _return_model_type
+_callback_type = Callable | Mapping[str, Mapping[str, Callable]] | None
 
 
 class BulkRes(NamedTuple):
@@ -44,7 +42,7 @@ class BulkRes(NamedTuple):
     y_test: np.ndarray
 
 
-def _is_any_gam_mgcv(models: Union[BaseModel, dict[str, dict[str, BaseModel]]]) -> bool:
+def _is_any_gam_mgcv(models: BaseModel | dict[str, dict[str, BaseModel]]) -> bool:
     """Return whether any models to be fit are from R's `mgcv` package.
 
     Parameters
@@ -61,9 +59,7 @@ def _is_any_gam_mgcv(models: Union[BaseModel, dict[str, dict[str, BaseModel]]]) 
     )
 
 
-def _create_models(
-    model: _input_model_type, obs: Sequence[str], lineages: Sequence[Optional[str]]
-) -> _return_model_type:
+def _create_models(model: _input_model_type, obs: Sequence[str], lineages: Sequence[str | None]) -> _return_model_type:
     """Create models for each gene and lineage.
 
     Parameters
@@ -78,7 +74,7 @@ def _create_models(
     The created models.
     """
 
-    def process_lineages(obs_name: str, lin_names: Union[BaseModel, dict[Optional[str], Any]]):
+    def process_lineages(obs_name: str, lin_names: BaseModel | dict[str | None, Any]):
         if isinstance(lin_names, BaseModel):
             # sharing the same models for all lineages
             for lin_name in lineages:
@@ -166,14 +162,14 @@ def _create_models(
     return models
 
 
-def _fit_bulk_helper(
+def _fit_bulk_helper[Queue](
     genes: Sequence[str],
     models: _input_model_type,
     callbacks: _callback_type,
-    lineages: Sequence[Optional[str]],
-    time_range: Sequence[Union[float, tuple[float, float]]],
+    lineages: Sequence[str | None],
+    time_range: Sequence[float | tuple[float, float]],
     return_models: bool = False,
-    queue: Optional[Queue] = None,
+    queue: Queue | None = None,
     **kwargs,
 ) -> dict[str, dict[str, BaseModel]]:
     """Fit model for given genes and lineages.
@@ -205,8 +201,7 @@ def _fit_bulk_helper(
     """
     if len(lineages) != len(time_range):
         raise ValueError(
-            f"Expected `lineage` and `time_range` to be of same length, "
-            f"found `{len(lineages)}` != `{len(time_range)}`."
+            f"Expected `lineage` and `time_range` to be of same length, found `{len(lineages)}` != `{len(time_range)}`."
         )
 
     conf_int = return_models and kwargs.pop("conf_int", False)
@@ -245,8 +240,8 @@ def _fit_bulk_helper(
 def _fit_bulk(
     models: Mapping[str, Mapping[str, Callable]],
     callbacks: Mapping[str, Mapping[str, Callable]],
-    genes: Union[str, Sequence[str]],
-    lineages: Union[str, Sequence[str]],
+    genes: str | Sequence[str],
+    lineages: str | Sequence[str],
     time_range: _time_range_type,
     parallel_kwargs: dict,
     return_models: bool = False,
@@ -324,7 +319,7 @@ def _fit_bulk(
 def _filter_models(
     models, return_models: bool = False, filter_all_failed: bool = True
 ) -> tuple[_return_model_type, _return_model_type, Sequence[str], Sequence[str]]:
-    def is_valid(x: Union[BaseModel, BulkRes]) -> bool:
+    def is_valid(x: BaseModel | BulkRes) -> bool:
         if return_models:
             assert isinstance(x, BaseModel), f"Expected `BaseModel`, found `{type(x).__name__!r}`."
             return bool(x)
@@ -374,20 +369,20 @@ def _trends_helper(
     models: dict[str, dict[str, Any]],
     gene: str,
     transpose: bool = False,
-    lineage_names: Optional[Sequence[str]] = None,
+    lineage_names: Sequence[str] | None = None,
     same_plot: bool = False,
-    sharey: Union[str, bool] = False,
+    sharey: str | bool = False,
     show_ylabel: bool = True,
-    show_lineage: Union[bool, np.ndarray] = True,
-    show_xticks_and_label: Union[bool, np.ndarray] = True,
-    lineage_cmap: Optional[Union[mpl.colors.ListedColormap, Sequence]] = None,
-    lineage_probability_color: Optional[str] = None,
+    show_lineage: bool | np.ndarray = True,
+    show_xticks_and_label: bool | np.ndarray = True,
+    lineage_cmap: mpl.colors.ListedColormap | Sequence | None = None,
+    lineage_probability_color: str | None = None,
     fate_prob_cmap=cm.viridis,
     gene_as_title: bool = False,
-    cell_color: Optional[str] = None,
-    legend_loc: Optional[str] = "best",
+    cell_color: str | None = None,
+    legend_loc: str | None = "best",
     fig: mpl.figure.Figure = None,
-    axes: Union[mpl.axes.Axes, Sequence[mpl.axes.Axes]] = None,
+    axes: mpl.axes.Axes | Sequence[mpl.axes.Axes] = None,
     **kwargs: Any,
 ) -> None:
     """Plot an expression gene for some lineages.
@@ -669,7 +664,7 @@ def _position_legend(ax: mpl.axes.Axes, legend_loc: str, **kwargs) -> mpl.legend
         loc += " left" if rest else " right"
     else:
         raise ValueError(
-            f"Invalid legend position on x-axis: `{width!r}`. " f"Valid options are: `'left', 'center', 'right'`."
+            f"Invalid legend position on x-axis: `{width!r}`. Valid options are: `'left', 'center', 'right'`."
         )
 
     if rest:
@@ -685,10 +680,10 @@ def _get_backend(model, backend: str) -> str:
 @d.dedent
 def _create_callbacks(
     adata: AnnData,
-    callback: Optional[Callable],
+    callback: Callable | None,
     obs: Sequence[str],
-    lineages: Sequence[Optional[str]],
-    perform_sanity_check: Optional[bool] = None,
+    lineages: Sequence[str | None],
+    perform_sanity_check: bool | None = None,
     **kwargs,
 ) -> dict[str, dict[str, Callable]]:
     """Create models for each gene and lineage.
@@ -714,7 +709,7 @@ def _create_callbacks(
     The created callbacks.
     """
 
-    def process_lineages(obs_name: str, lin_names: Optional[Union[Callable, dict[Optional[str], Any]]]) -> None:
+    def process_lineages(obs_name: str, lin_names: Callable | dict[str | None, Any] | None) -> None:
         if lin_names is None:
             lin_names = _default_model_callback
 
@@ -761,13 +756,13 @@ def _create_callbacks(
                 try:
                     model = cb(dummy_model, gene=gene, lineage=lineage, **kwargs)
                     assert model is dummy_model, (
-                        "Creation of new models is not allowed. " "Ensure that callback returns the same model."
+                        "Creation of new models is not allowed. Ensure that callback returns the same model."
                     )
                     assert model.prepared, "Model is not prepared. Ensure that callback calls `.prepare()`."
                     assert model._gene == gene, f"Callback modified the gene from `{gene!r}` to `{model._gene!r}`."
-                    assert (
-                        model._lineage == lineage
-                    ), f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
+                    assert model._lineage == lineage, (
+                        f"Callback modified the lineage from `{lineage!r}` to `{model._lineage!r}`."
+                    )
                     if isinstance(model, FailedModel):
                         model.reraise()
                 except Exception as e:  # noqa: BLE001
@@ -804,7 +799,7 @@ def _create_callbacks(
         )
 
     if callable(callback):
-        callbacks = {o: {lin: callback for lin in lineages} for o in obs}
+        callbacks = {o: dict.fromkeys(lineages, callback) for o in obs}
         maybe_sanity_check(callbacks)
         return callbacks
 
@@ -826,8 +821,7 @@ def _create_callbacks(
                 process_lineages(obs_name, callback.get(obs_name, obs_rest_callback))
         else:
             raise TypeError(
-                f"Expected the gene fallback callback to be `callable`, "
-                f"found `{type(obs_rest_callback).__name__!r}`."
+                f"Expected the gene fallback callback to be `callable`, found `{type(obs_rest_callback).__name__!r}`."
             )
     else:
         raise TypeError(
@@ -856,10 +850,10 @@ def _default_model_callback(model: BaseModel, **kwargs) -> BaseModel:
 def composition(
     adata: AnnData,
     key: str,
-    fontsize: Optional[str] = None,
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[float] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
+    fontsize: str | None = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: float | None = None,
+    save: str | pathlib.Path | None = None,
     **kwargs: Any,
 ) -> None:
     """Plot a pie chart for categorical annotation.
@@ -977,8 +971,7 @@ def _get_categorical_colors(adata: AnnData, cluster_key: str) -> tuple[np.ndarra
         raise KeyError(f"Unable to find data in `adata.obs[{cluster_key!r}].`")
     if not isinstance(adata.obs[cluster_key].dtype, pd.CategoricalDtype):
         raise TypeError(
-            f"Expected `adata.obs[{cluster_key!r}]` to be categorical, "
-            f"found `{infer_dtype(adata.obs[cluster_key])}`."
+            f"Expected `adata.obs[{cluster_key!r}]` to be categorical, found `{infer_dtype(adata.obs[cluster_key])}`."
         )
 
     color_key = f"{cluster_key}_colors"
@@ -994,8 +987,8 @@ def _get_categorical_colors(adata: AnnData, cluster_key: str) -> tuple[np.ndarra
 
 def _get_sorted_colors(
     adata: AnnData,
-    cluster_key: Union[str, Sequence[str]],
-    time_key: Optional[str] = None,
+    cluster_key: str | Sequence[str],
+    time_key: str | None = None,
     tmin: float = -np.inf,
     tmax: float = np.inf,
 ) -> list[np.ndarray]:

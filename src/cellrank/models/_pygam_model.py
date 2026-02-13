@@ -4,8 +4,10 @@ import enum
 import types
 import warnings
 from collections.abc import Mapping
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
+import numpy as np
+from anndata import AnnData
 from pygam import GAM as pGAM
 from pygam import (
     ExpectileGAM,
@@ -16,10 +18,6 @@ from pygam import (
     PoissonGAM,
     s,
 )
-
-import numpy as np
-
-from anndata import AnnData
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -93,13 +91,13 @@ class GAM(BaseModel):
     def __init__(
         self,
         adata: AnnData,
-        n_knots: Optional[int] = 6,
+        n_knots: int | None = 6,
         spline_order: int = 3,
         distribution: Literal["normal", "binomial", "poisson", "gamma", "gaussian", "inv_gauss"] = "gamma",
         link: Literal["identity", "logit", "inverse", "log", "inv_squared"] = "log",
         max_iter: int = 2000,
-        expectile: Optional[float] = None,
-        grid: Optional[Union[str, Mapping[str, Any]]] = None,
+        expectile: float | None = None,
+        grid: str | Mapping[str, Any] | None = None,
         spline_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ):
@@ -130,7 +128,7 @@ class GAM(BaseModel):
             filtered_kwargs = _filter_kwargs(gam.__init__, **kwargs)
             if len(kwargs) != len(filtered_kwargs):
                 raise TypeError(
-                    f"Invalid arguments `{list(set(kwargs) - set(filtered_kwargs))}` " f"for `{type(gam).__name__!r}`."
+                    f"Invalid arguments `{list(set(kwargs) - set(filtered_kwargs))}` for `{type(gam).__name__!r}`."
                 )
 
             filtered_kwargs["link"] = link
@@ -156,9 +154,9 @@ class GAM(BaseModel):
     @d.dedent
     def fit(
         self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        w: np.ndarray | None = None,
         **kwargs: Any,
     ) -> "GAM":
         """%(base_model_fit.full_desc)s
@@ -171,7 +169,6 @@ class GAM(BaseModel):
         -------
         Fits the model and returns self.
         """  # noqa: D400
-
         super().fit(x, y, w, **kwargs)
 
         with warnings.catch_warnings():
@@ -211,8 +208,8 @@ class GAM(BaseModel):
     @d.dedent
     def predict(
         self,
-        x_test: Optional[np.ndarray] = None,
-        key_added: Optional[str] = "_x_test",
+        x_test: np.ndarray | None = None,
+        key_added: str | None = "_x_test",
         **kwargs: Any,
     ) -> np.ndarray:
         """%(base_model_predict.full_desc)s
@@ -225,7 +222,6 @@ class GAM(BaseModel):
         -------
         %(base_model_predict.returns)s
         """  # noqa: D400
-
         x_test = self._check(key_added, x_test)
 
         with warnings.catch_warnings():
@@ -240,7 +236,7 @@ class GAM(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray:
+    def confidence_interval(self, x_test: np.ndarray | None = None, **kwargs: Any) -> np.ndarray:
         """%(base_model_ci.summary)s
 
         Parameters
@@ -251,7 +247,6 @@ class GAM(BaseModel):
         -------
         %(base_model_ci.returns)s
         """  # noqa: D400
-
         x_test = self._check("_x_test", x_test)
         with warnings.catch_warnings():
             warnings.filterwarnings(

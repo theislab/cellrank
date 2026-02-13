@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Optional
+from typing import Any
 
 from anndata import AnnData
 
@@ -35,7 +35,7 @@ class AnnDataMixin(abc.ABC):
 
     @adata.setter
     @abc.abstractmethod
-    def adata(self, adata: Optional[AnnData]) -> None: ...
+    def adata(self, adata: AnnData | None) -> None: ...
 
     @abc.abstractmethod
     def __len__(self) -> int: ...
