@@ -216,10 +216,6 @@ ignore_roles = [
     "cite",
 ]
 
-[tool.doc8]
-max_line_length = 120
-ignore-path = "docs/release/**.rst"
-
 [tool.tox]
 legacy_tox_ini = """
 [tox]
