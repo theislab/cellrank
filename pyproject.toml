@@ -7,7 +7,7 @@ name = "cellrank"
 dynamic = ["version"]
 description = "CellRank: dynamics from multi-view single-cell data"
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 classifiers = [
@@ -20,8 +20,6 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Typing :: Typed",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -107,8 +105,11 @@ include-package-data = true
 [tool.setuptools_scm]
 
 [tool.ruff]
-target-version = "py39"
 line-length = 120
+src = ["src"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 exclude = [
