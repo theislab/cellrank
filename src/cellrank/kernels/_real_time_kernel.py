@@ -3,17 +3,15 @@ import os
 import pathlib
 import types
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, Literal, Optional, Union
-
-from tqdm.auto import tqdm
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
-from pandas.api.types import infer_dtype
-
 import scanpy as sc
+import scipy.sparse as sp
 from anndata import AnnData
+from pandas.api.types import infer_dtype
+from tqdm.auto import tqdm
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
@@ -37,8 +35,8 @@ class SelfTransitions(ModeEnum):
 
 
 Key_t = tuple[Any, Any]
-Threshold_t = Union[int, float, Literal["auto", "auto_local"]]
-Coupling_t = Union[np.ndarray, sp.spmatrix, AnnData]
+Threshold_t = int | float | Literal["auto", "auto_local"]
+Coupling_t = np.ndarray | sp.spmatrix | AnnData
 
 
 # TODO(michalk8): subclass the `ExperimentalTimeKernel`
@@ -80,12 +78,12 @@ class RealTimeKernel(UnidirectionalKernel):
         self,
         adata: AnnData,
         time_key: str,
-        couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]] = None,
+        couplings: Mapping[Key_t, Coupling_t | None] | None = None,
         policy: Literal["sequential", "triu"] = "sequential",
         **kwargs: Any,
     ):
         super().__init__(adata, time_key=time_key, **kwargs)
-        self._obs: Optional[pd.DataFrame] = None
+        self._obs: pd.DataFrame | None = None
         self._couplings, self._reference = self._get_default_coupling(couplings, policy)
 
     def _read_from_adata(
@@ -126,19 +124,17 @@ class RealTimeKernel(UnidirectionalKernel):
             raise KeyError(f"Key `{src, tgt}` not found in the `couplings`.")
         if self.couplings[src, tgt] is None:
             raise ValueError(
-                f"Coupling for `{src, tgt}` is not computed. " f"Consider overriding the `compute_coupling` method."
+                f"Coupling for `{src, tgt}` is not computed. Consider overriding the `compute_coupling` method."
             )
         return self.couplings[src, tgt]
 
     @inject_docs(st=SelfTransitions)
     def compute_transition_matrix(
         self,
-        threshold: Optional[Threshold_t] = "auto",
-        self_transitions: Union[
-            Literal["uniform", "diagonal", "connectivities", "all"],
-            Sequence[Any],
-        ] = SelfTransitions.CONNECTIVITIES,
-        conn_weight: Optional[float] = None,
+        threshold: Threshold_t | None = "auto",
+        self_transitions: Literal["uniform", "diagonal", "connectivities", "all"]
+        | Sequence[Any] = SelfTransitions.CONNECTIVITIES,
+        conn_weight: float | None = None,
         conn_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> "RealTimeKernel":
@@ -214,8 +210,8 @@ class RealTimeKernel(UnidirectionalKernel):
     @classmethod
     def from_moscot(
         cls,
-        problem: "Union[TemporalProblem, LineageProblem, SpatioTemporalProblem]",
-        sparse_mode: Optional[Literal["threshold", "percentile", "min_row"]] = None,
+        problem: "TemporalProblem | LineageProblem | SpatioTemporalProblem",
+        sparse_mode: Literal["threshold", "percentile", "min_row"] | None = None,
         sparsify_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         copy: bool = False,
         **kwargs: Any,
@@ -297,7 +293,7 @@ class RealTimeKernel(UnidirectionalKernel):
     def from_wot(
         cls,
         adata: AnnData,
-        path: Union[str, pathlib.Path],
+        path: str | pathlib.Path,
         time_key: str,
         **kwargs: Any,
     ) -> "RealTimeKernel":
@@ -349,8 +345,8 @@ class RealTimeKernel(UnidirectionalKernel):
     def _restich_couplings(
         self,
         couplings: Mapping[Key_t, AnnData],
-        self_transitions: Union[str, SelfTransitions, Sequence[Any]] = SelfTransitions.DIAGONAL,
-        conn_weight: Optional[float] = None,
+        self_transitions: str | SelfTransitions | Sequence[Any] = SelfTransitions.DIAGONAL,
+        conn_weight: float | None = None,
         **kwargs: Any,
     ) -> AnnData:
         """Group individual transport maps into 1 matrix aligned with :attr:`adata`.
@@ -381,7 +377,7 @@ class RealTimeKernel(UnidirectionalKernel):
             self_transitions = tuple(self_transitions)
         else:
             raise TypeError(
-                f"Expected `self_transitions` to be a `str` or a `Sequence`, " f"found `{type(self_transitions)}`."
+                f"Expected `self_transitions` to be a `str` or a `Sequence`, found `{type(self_transitions)}`."
             )
         self._validate_couplings(couplings)
 
@@ -459,7 +455,7 @@ class RealTimeKernel(UnidirectionalKernel):
         couplings: dict[Key_t, AnnData],
         threshold: Threshold_t,
         copy: bool = False,
-    ) -> Optional[Mapping[Key_t, AnnData]]:
+    ) -> Mapping[Key_t, AnnData] | None:
         """Remove small non-zero values from :attr:`transition_matrix`.
 
         .. warning::
@@ -530,7 +526,7 @@ class RealTimeKernel(UnidirectionalKernel):
         Possibly reordered transport maps.
         """
 
-        def assert_same(expected: Sequence[Any], actual: Sequence[Any], msg: Optional[str] = None) -> None:
+        def assert_same(expected: Sequence[Any], actual: Sequence[Any], msg: str | None = None) -> None:
             try:
                 pd.testing.assert_series_equal(
                     pd.Series(sorted(expected)),
@@ -580,13 +576,13 @@ class RealTimeKernel(UnidirectionalKernel):
 
     def _get_default_coupling(
         self,
-        couplings: Optional[Mapping[Key_t, Optional[Coupling_t]]],
+        couplings: Mapping[Key_t, Coupling_t | None] | None,
         policy: Literal["sequential", "triu"],
-    ) -> tuple[dict[Key_t, Optional[Coupling_t]], Any]:
+    ) -> tuple[dict[Key_t, Coupling_t | None], Any]:
         cats = self._time.cat.categories
         if policy == "sequential":
             if couplings is None:
-                couplings = {(src, tgt): None for src, tgt in zip(cats[:-1], cats[1:])}
+                couplings = dict.fromkeys(zip(cats[:-1], cats[1:]))
             reference = sorted(k for ks in couplings for k in ks)[-1]
         elif policy == "triu":
             if couplings is None:
@@ -608,20 +604,20 @@ class RealTimeKernel(UnidirectionalKernel):
         return self._time
 
     @property
-    def couplings(self) -> Optional[dict[Key_t, AnnData]]:
+    def couplings(self) -> dict[Key_t, AnnData] | None:
         """Optimal transport couplings."""
         return self._couplings
 
     @property
-    def obs(self) -> Optional[pd.DataFrame]:
+    def obs(self) -> pd.DataFrame | None:
         """Cell-level metadata."""
         return self._obs
 
 
 def _compute_connectivity_tmat(
     adata: AnnData, density_normalize: bool = True, **kwargs: Any
-) -> Union[np.ndarray, sp.spmatrix]:
-    from cellrank.kernels import ConnectivityKernel
+) -> np.ndarray | sp.spmatrix:
+    from cellrank.kernels import ConnectivityKernel  # circular import
 
     sc.pp.neighbors(adata, **kwargs)
     return ConnectivityKernel(adata).compute_transition_matrix(density_normalize=density_normalize).transition_matrix

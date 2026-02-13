@@ -1,188 +1,167 @@
 [build-system]
-requires = ["setuptools>=61", "setuptools-scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
+
+requires = [ "setuptools>=61", "setuptools-scm[toml]>=6.2" ]
 
 [project]
 name = "cellrank"
-dynamic = ["version"]
 description = "CellRank: dynamics from multi-view single-cell data"
 readme = "README.rst"
-requires-python = ">=3.10"
-license = "BSD-3-Clause"
-license-files = ["LICENSE"]
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Natural Language :: English",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: Microsoft :: Windows",
-    "Typing :: Typed",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Topic :: Scientific/Engineering :: Bio-Informatics",
-    "Topic :: Scientific/Engineering :: Mathematics",
-    "Topic :: Scientific/Engineering :: Visualization",
-]
 keywords = [
-    "single-cell",
-    "bio-informatics",
-    "RNA velocity",
-    "Markov chain",
-    "GPCCA",
+  "bio-informatics",
+  "GPCCA",
+  "Markov chain",
+  "RNA velocity",
+  "single-cell",
 ]
-authors = [
-    {name = "Marius Lange"},
-    {name = "Michal Klein"},
-    {name = "Philipp Weiler"},
-]
+license = "BSD-3-Clause"
+license-files = [ "LICENSE" ]
 maintainers = [
-    {name = "Michal Klein", email = "info@cellrank.org"}
+  { name = "Michal Klein", email = "info@cellrank.org" },
 ]
 
-
+authors = [
+  { name = "Marius Lange" },
+  { name = "Michal Klein" },
+  { name = "Philipp Weiler" },
+]
+requires-python = ">=3.12"
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Scientific/Engineering :: Mathematics",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Typing :: Typed",
+]
+dynamic = [ "version" ]
 dependencies = [
-    "anndata>=0.9",
-    "docrep>=0.3.0",
-    "joblib>=0.13.1",
-    "matplotlib>=3.5.0",
-    "networkx>=2.2",
-    "numba>=0.51.0,!=0.57.0",
-    "numpy>=1.22.0",
-    "pandas>=1.5.0",
-    "pygam>=0.8.0",
-    "pygpcca>=1.0.4",
-    "scanpy>=1.7.2",
-    "scikit-learn>=1.6.0",
-    "scipy>=1.12.0",
-    "scvelo>=0.2.5",
-    "seaborn>=0.10.0",
-    "wrapt>=1.12.1",
+  "anndata>=0.9",
+  "docrep>=0.3",
+  "joblib>=0.13.1",
+  "matplotlib>=3.5",
+  "networkx>=2.2",
+  "numba>=0.51,!=0.57",
+  "numpy>=1.22",
+  "pandas>=1.5",
+  "pygam>=0.8",
+  "pygpcca>=1.0.4",
+  "scanpy>=1.7.2",
+  "scikit-learn>=1.6",
+  "scipy>=1.12",
+  "scvelo>=0.2.5",
+  "seaborn>=0.10",
+  "wrapt>=1.12.1",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pre-commit>=3.0.0",
-    "tox>=4",
+optional-dependencies.dev = [
+  "pre-commit>=3",
+  "tox>=4",
 ]
-test = [
-    "pytest>=8",
-    "pytest-mock>=3.5.0",
-    "pytest-cov>=4",
-    "pytest-xdist",
-    "coverage[toml]>=7",
-    "zarr<3",
-    "igraph",
-    "leidenalg",
-    "Pillow",
-    "jax",
+optional-dependencies.docs = [
+  "furo>=2022.9.29",
+  "myst-nb>=0.17.1",
+  "sphinx>=5.1.1",
+  "sphinx-autodoc-typehints>=1.10.3",
+  "sphinx-copybutton>=0.5",
+  "sphinx-design>=0.3",
+  "sphinx-tippy>=0.4.1",
+  "sphinxcontrib-bibtex>=2.3",
+  "sphinxcontrib-spelling>=7.6.2",
 ]
-docs = [
-    "sphinx>=5.1.1",
-    "furo>=2022.09.29",
-    "myst-nb>=0.17.1",
-    "sphinx-tippy>=0.4.1",
-    "sphinx-autodoc-typehints>=1.10.3",
-    "sphinx_copybutton>=0.5.0",
-    "sphinx_design>=0.3.0",
-    "sphinxcontrib-bibtex>=2.3.0",
-    "sphinxcontrib-spelling>=7.6.2",
+optional-dependencies.test = [
+  "coverage[toml]>=7",
+  "igraph",
+  "jax",
+  "leidenalg",
+  "pillow",
+  "pytest>=8",
+  "pytest-cov>=4",
+  "pytest-mock>=3.5",
+  "pytest-xdist",
+  "zarr<3",
 ]
-
-[project.urls]
-Homepage = "https://github.com/theislab/cellrank"
-Download = "https://cellrank.readthedocs.io/en/latest/installation.html"
-"Bug Tracker" = "https://github.com/theislab/cellrank/issues"
-Documentation = "https://cellrank.readthedocs.io"
-"Source Code" = "https://github.com/theislab/cellrank"
+urls."Bug Tracker" = "https://github.com/theislab/cellrank/issues"
+urls.Documentation = "https://cellrank.readthedocs.io"
+urls.Download = "https://cellrank.readthedocs.io/en/latest/installation.html"
+urls.Homepage = "https://github.com/theislab/cellrank"
+urls."Source Code" = "https://github.com/theislab/cellrank"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 include-package-data = true
 
 [tool.setuptools_scm]
 
 [tool.ruff]
-target-version = "py39"
 line-length = 120
+src = [ "src" ]
 
-[tool.ruff.lint]
-exclude = [
-    ".eggs",
-    ".git",
-    ".ruff_cache",
-    ".tox",
-    "__pypackages__",
-    "_build",
-    "build",
-    "dist",
+format.docstring-code-format = true
+lint.select = [
+  "B",   # flake8-bugbear
+  "BLE", # flake8-blind-except
+  "C4",  # flake8-comprehensions
+  "D",   # flake8-docstrings
+  "E",   # pycodestyle
+  "F",   # pyflakes
+  "I",   # isort
+  "NPY", # NumPy-specific rules
+  "PT",  # flake8-pytest-style
+  "Q",   # flake8-quotes
+  "RET", # flake8-raise
+  "SIM", # flake8-simplify
+  "T20", # flake8-print
+  "TID", # flake8-tidy-imports
+  "UP",  # pyupgrade
+  "W",   # pycodestyle
 ]
-ignore = [
-    "PT011",  # TODO/
-    # Do not implicitly `return None` in function able to return non-`None` value
-    "RET502",
-    # Missing explicit `return` at the end of function able to return non-`None` value
-    "RET503",
-    # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
-    "E731",
-    # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
-    "E741",
-    # Missing docstring in public package
-    "D104",
-    # Missing docstring in public module
-    "D100",
-    # Missing docstring in __init__
-    "D107",
-    # Missing docstring in magic method
-    "D105",
+lint.ignore = [
+  # `zip()` without an explicit `strict=` parameter (67 pre-existing, fix separately)
+  "B905",
+  # Missing docstring in public module
+  "D100",
+  # Missing docstring in public package
+  "D104",
+  # Missing docstring in magic method
+  "D105",
+  # Missing docstring in __init__
+  "D107",
+  # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
+  "E731",
+  # allow I, O, l as variable names -> I is the identity matrix, i, j, k, l is reasonable indexing notation
+  "E741",
+  "PT011", # TODO/
+  # Do not implicitly `return None` in function able to return non-`None` value
+  "RET502",
+  # Missing explicit `return` at the end of function able to return non-`None` value
+  "RET503",
 ]
-select = [
-    "D", # flake8-docstrings
-    "E", # pycodestyle
-    "F", # pyflakes
-    "W", # pycodestyle
-    "Q", # flake8-quotes
-    "SIM", # flake8-simplify
-    "NPY",  # NumPy-specific rules
-    "PT",  # flake8-pytest-style
-    "TID",  # flake8-tidy-imports
-    "B", # flake8-bugbear
-    "UP", # pyupgrade
-    "C4", # flake8-comprehensions
-    "BLE", # flake8-blind-except
-    "T20",  # flake8-print
-    "RET", # flake8-raise
+lint.exclude = [
+  ".eggs",
+  ".git",
+  ".ruff_cache",
+  ".tox",
+  "__pypackages__",
+  "_build",
+  "build",
+  "dist",
 ]
-unfixable = ["B", "C4", "BLE", "T20", "RET"]
-[tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D"]
-"*/__init__.py" = ["F401"]
-"docs/*" = ["D"]
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-[tool.ruff.lint.flake8-quotes]
-inline-quotes = "double"
-
-[tool.black]
-line-length = 120
-target-version = ['py39']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-include_trailing_comma = true
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GENERIC", "NUMERIC", "PLOTTING", "BIO", "FIRSTPARTY", "LOCALFOLDER"]
-# also contains what we import in notebooks
-known_generic = ["wrapt", "joblib"]
-known_numeric = ["numpy", "numba", "scipy", "jax", "pandas", "sklearn", "networkx", "statsmodels"]
-known_bio = ["anndata", "scanpy"]
-known_plotting = ["IPython", "matplotlib", "mpl_toolkits", "seaborn"]
+lint.per-file-ignores."*/__init__.py" = [ "F401" ]
+lint.per-file-ignores."docs/*" = [ "D" ]
+lint.per-file-ignores."tests/*" = [ "D" ]
+lint.unfixable = [ "B", "BLE", "C4", "RET", "T20" ]
+lint.flake8-quotes.inline-quotes = "double"
+lint.flake8-tidy-imports.ban-relative-imports = "all"
+lint.pydocstyle.convention = "numpy"
 
 [tool.pytest.ini_options]
 testpaths = "tests"
@@ -191,48 +170,23 @@ xfail_strict = true
 [tool.coverage.run]
 branch = true
 parallel = true
-source = ["src/"]
+source = [ "src/" ]
 omit = [
-    "*/__init__.py",
+  "*/__init__.py",
 ]
 
 [tool.coverage.report]
 exclude_lines = [
-    '\#.*pragma:\s*no.?cover',
-    "^if __name__ == .__main__.:$",
-    '^\s*raise AssertionError\b',
-    '^\s*raise NotImplementedError\b',
-    '^\s*return NotImplemented\b',
+  '\#.*pragma:\s*no.?cover',
+  "^if __name__ == .__main__.:$",
+  '^\s*raise AssertionError\b',
+  '^\s*raise NotImplementedError\b',
+  '^\s*return NotImplemented\b',
 ]
 precision = 2
 show_missing = true
 skip_empty = true
 sort = "Miss"
-
-[tool.rstcheck]
-ignore_directives = [
-    "toctree",
-    "currentmodule",
-    "autosummary",
-    "module",
-    "automodule",
-    "autoclass",
-    "bibliography",
-    "grid",
-]
-ignore_roles = [
-    "mod",
-    "class",
-    "attr",
-    "func",
-    "meth",
-    "doc",
-    "cite",
-]
-
-[tool.doc8]
-max_line_length = 120
-ignore-path = "docs/release/**.rst"
 
 [tool.tox]
 legacy_tox_ini = """
@@ -240,7 +194,7 @@ legacy_tox_ini = """
 # TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
 requires = tox-conda
 isolated_build = true
-envlist = lint-code,py{3.10,3.11,3.12,3.13}-{slepc,noslepc}
+envlist = lint-code,py{3.12,3.13}-{slepc,noslepc}
 skip_missing_interpreters = true
 
 [testenv]
@@ -322,3 +276,24 @@ commands = biber --tool --output_file={toxinidir}{/}docs{/}references.bib --nolo
     --output_legacy_dates --output-field-replace=journaltitle:journal,thesis:phdthesis,institution:school \
     {toxinidir}{/}docs{/}references.bib
 """
+
+[tool.rstcheck]
+ignore_directives = [
+  "toctree",
+  "currentmodule",
+  "autosummary",
+  "module",
+  "automodule",
+  "autoclass",
+  "bibliography",
+  "grid",
+]
+ignore_roles = [
+  "mod",
+  "class",
+  "attr",
+  "func",
+  "meth",
+  "doc",
+  "cite",
+]

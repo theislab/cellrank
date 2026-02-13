@@ -1,17 +1,15 @@
 import pathlib
 import types
 from collections.abc import Sequence
-from typing import Any, Optional, Union
-
-import numpy as np
-from sklearn.preprocessing import StandardScaler
+from typing import Any
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap, is_color_like
-from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
-
+import numpy as np
 import scanpy as sc
 from anndata import AnnData
+from matplotlib.colors import ListedColormap, is_color_like
+from matplotlib.gridspec import GridSpec, GridSpecFromSubplotSpec
+from sklearn.preprocessing import StandardScaler
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -49,30 +47,30 @@ def cluster_trends(
     time_key: str,
     backward: bool = False,
     time_range: _time_range_type = None,
-    clusters: Optional[Sequence[str]] = None,
+    clusters: Sequence[str] | None = None,
     n_points: int = 200,
-    covariate_key: Optional[Union[str, Sequence[str]]] = None,
+    covariate_key: str | Sequence[str] | None = None,
     ratio: float = 0.05,
-    cmap: Optional[str] = "viridis",
+    cmap: str | None = "viridis",
     norm: bool = True,
     recompute: bool = False,
     callback: _callback_type = None,
     ncols: int = 3,
-    sharey: Union[str, bool] = False,
-    key: Optional[str] = None,
-    random_state: Optional[int] = None,
+    sharey: str | bool = False,
+    key: str | None = None,
+    random_state: int | None = None,
     show_progress_bar: bool = True,
-    n_jobs: Optional[int] = 1,
+    n_jobs: int | None = 1,
     backend: Backend_t = DEFAULT_BACKEND,
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    save: str | pathlib.Path | None = None,
     pca_kwargs: dict = types.MappingProxyType({"svd_solver": "arpack"}),
     neighbors_kwargs: dict = types.MappingProxyType({"use_rep": "X"}),
     clustering_kwargs: dict = types.MappingProxyType({}),
     return_models: bool = False,
     **kwargs: Any,
-) -> Optional[_return_model_type]:
+) -> _return_model_type | None:
     """Cluster and plot gene expression trends within a lineage.
 
     .. seealso::
@@ -140,7 +138,7 @@ def cluster_trends(
       shape ``(n_genes, n_points)`` containing the clustered genes.
     """
 
-    def plot_cluster(row: int, col: int, cluster: str, sharey_ax: Optional[str] = None) -> Optional[plt.Axes]:
+    def plot_cluster(row: int, col: int, cluster: str, sharey_ax: str | None = None) -> plt.Axes | None:
         gss = GridSpecFromSubplotSpec(
             row_delta,
             1,
@@ -264,7 +262,7 @@ def cluster_trends(
     for c in clusters:
         if c not in trends.obs["clusters"].cat.categories:
             raise ValueError(
-                f"Invalid cluster name `{c!r}`. " f"Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
+                f"Invalid cluster name `{c!r}`. Valid options are `{list(trends.obs['clusters'].cat.categories)}`."
             )
 
     nrows = int(np.ceil(len(clusters) / ncols))

@@ -1,8 +1,7 @@
-from typing import Any, Optional, Union
+from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
-
 from anndata import AnnData
 
 from cellrank import logging as logg
@@ -56,9 +55,9 @@ class PrecomputedKernel(UnidirectionalKernel):
 
     def __init__(
         self,
-        object: Union[str, bool, np.ndarray, sp.spmatrix, AnnData, KernelExpression],
-        adata: Optional[AnnData] = None,
-        obsp_key: Optional[str] = None,
+        object: str | bool | np.ndarray | sp.spmatrix | AnnData | KernelExpression,
+        adata: AnnData | None = None,
+        obsp_key: str | None = None,
         **kwargs: Any,
     ):
         if isinstance(object, AnnData):
@@ -85,8 +84,8 @@ class PrecomputedKernel(UnidirectionalKernel):
     def _from_adata(
         self,
         adata: AnnData,
-        obsp_key: Optional[str] = None,
-        backward: Optional[bool] = _SENTINEL,
+        obsp_key: str | None = None,
+        backward: bool | None = _SENTINEL,
         copy: bool = False,
     ) -> None:
         if obsp_key is None:
@@ -134,9 +133,9 @@ class PrecomputedKernel(UnidirectionalKernel):
 
     def _from_matrix(
         self,
-        matrix: Union[np.ndarray, sp.spmatrix],
-        adata: Optional[AnnData] = None,
-        backward: Optional[bool] = None,
+        matrix: np.ndarray | sp.spmatrix,
+        adata: AnnData | None = None,
+        backward: bool | None = None,
         copy: bool = False,
     ) -> None:
         # fmt: off
@@ -144,7 +143,7 @@ class PrecomputedKernel(UnidirectionalKernel):
             logg.warning(f"Creating empty `AnnData` object of shape `{matrix.shape[0], 1}`")
             adata = AnnData(sp.csr_matrix((matrix.shape[0], 1)))
         super().__init__(adata)
-        self._backward: Optional[bool] = backward
+        self._backward: bool | None = backward
         self.transition_matrix = matrix.copy() if copy else matrix
         self.params["origin"] = "array"
         # fmt: on
@@ -154,6 +153,6 @@ class PrecomputedKernel(UnidirectionalKernel):
         return self
 
     @property
-    def backward(self) -> Optional[bool]:
+    def backward(self) -> bool | None:
         """Direction of the process."""
         return self._backward

@@ -4,14 +4,11 @@ import pickle
 import unittest
 from html import parser
 
-import pytest
-
 import numpy as np
 import pandas as pd
-
-from matplotlib import colors
-
+import pytest
 from anndata import AnnData, read_h5ad, read_zarr
+from matplotlib import colors
 
 from cellrank import Lineage
 from cellrank._utils._colors import _compute_mean_color, _create_categorical_colors

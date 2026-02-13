@@ -1,20 +1,18 @@
 import itertools
 import pathlib
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
-import scvelo as scv
-
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype
-
-import matplotlib.pyplot as plt
+import scvelo as scv
+from anndata import AnnData
 from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap, to_hex
-
-from anndata import AnnData
+from pandas.api.types import infer_dtype
+from scvelo.plotting.utils import default_size, plot_outline
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -24,7 +22,7 @@ from cellrank.kernels._utils import _get_basis
 
 __all__ = ["RandomWalk"]
 
-Indices_t = Optional[Union[Sequence[str], Mapping[str, Union[str, Sequence[str], tuple[float, float]]]]]
+Indices_t = Sequence[str] | Mapping[str, str | Sequence[str] | tuple[float, float]] | None
 
 
 @d.dedent
@@ -45,9 +43,9 @@ class RandomWalk:
     def __init__(
         self,
         adata: AnnData,
-        transition_matrix: Union[np.ndarray, sp.spmatrix],
-        start_ixs: Optional[Sequence[int]] = None,
-        stop_ixs: Optional[Sequence[int]] = None,
+        transition_matrix: np.ndarray | sp.spmatrix,
+        start_ixs: Sequence[int] | None = None,
+        stop_ixs: Sequence[int] | None = None,
     ):
         if transition_matrix.ndim != 2 or (transition_matrix.shape[0] != transition_matrix.shape[1]):
             raise ValueError(f"Expected transition matrix to be a square matrix, found `{transition_matrix.ndim}`.")
@@ -77,8 +75,8 @@ class RandomWalk:
     @d.get_sections(base="rw_sim", sections=["Parameters"])
     def simulate_one(
         self,
-        max_iter: Union[int, float] = 0.25,
-        seed: Optional[int] = None,
+        max_iter: int | float = 0.25,
+        seed: int | None = None,
         successive_hits: int = 0,
     ) -> np.ndarray:
         """Simulate one random walk.
@@ -118,10 +116,10 @@ class RandomWalk:
     def _simulate_many(
         self,
         sims: np.ndarray,
-        max_iter: Union[int, float] = 0.25,
-        seed: Optional[int] = None,
+        max_iter: int | float = 0.25,
+        seed: int | None = None,
         successive_hits: int = 0,
-        queue: Optional[Any] = None,
+        queue: Any | None = None,
     ) -> list[np.ndarray]:
         res = []
         for s in sims:
@@ -143,10 +141,10 @@ class RandomWalk:
     def simulate_many(
         self,
         n_sims: int,
-        max_iter: Union[int, float] = 0.25,
-        seed: Optional[int] = None,
+        max_iter: int | float = 0.25,
+        seed: int | None = None,
         successive_hits: int = 0,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
     ) -> list[np.ndarray]:
@@ -189,13 +187,13 @@ class RandomWalk:
         self,
         sims: list[np.ndarray],
         basis: str = "umap",
-        cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
+        cmap: str | LinearSegmentedColormap = "gnuplot",
         linewidth: float = 1.0,
         linealpha: float = 0.3,
-        ixs_legend_loc: Optional[str] = None,
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        ixs_legend_loc: str | None = None,
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
+        save: str | pathlib.Path | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot simulated random walks.
@@ -256,8 +254,6 @@ class RandomWalk:
 
         for ix in [0, -1]:
             ixs = [sim[ix] for sim in sims]
-            from scvelo.plotting.utils import default_size, plot_outline
-
             plot_outline(
                 x=emb[ixs][:, 0],
                 y=emb[ixs][:, 1],
@@ -271,7 +267,7 @@ class RandomWalk:
             )
 
         if ixs_legend_loc not in (None, "none"):
-            from cellrank.pl._utils import _position_legend
+            from cellrank.pl._utils import _position_legend  # circular import
 
             h1 = ax.scatter([], [], color=cmap(0.0), label="start")
             h2 = ax.scatter([], [], color=cmap(1.0), label="stop")
@@ -283,7 +279,7 @@ class RandomWalk:
         if save is not None:
             save_fig(fig, save)
 
-    def _normalize_ixs(self, ixs: Indices_t, *, kind: Literal["start", "stop"]) -> Optional[np.ndarray]:
+    def _normalize_ixs(self, ixs: Indices_t, *, kind: Literal["start", "stop"]) -> np.ndarray | None:
         if ixs is None:
             return None
 
@@ -313,9 +309,7 @@ class RandomWalk:
             ixs = np.where(np.isin(self._adata.obs_names, ixs))[0]
         elif isinstance(ixs[0], bool):
             if len(ixs) != self._adata.n_obs:
-                raise ValueError(
-                    f"Expected `bool` {kind} indices of length" f"`{self._adata.n_obs}`, found `{len(ixs)}`."
-                )
+                raise ValueError(f"Expected `bool` {kind} indices of length`{self._adata.n_obs}`, found `{len(ixs)}`.")
             ixs = np.where(ixs)[0]
         elif isinstance(ixs[0], int):
             ixs = list(set(ixs))
@@ -343,7 +337,7 @@ class RandomWalk:
             p=self._tmat[ix].toarray().squeeze() if self._is_sparse else self._tmat[ix],
         )
 
-    def _max_iter(self, max_iter: Union[int, float]) -> int:
+    def _max_iter(self, max_iter: int | float) -> int:
         if isinstance(max_iter, float):
             max_iter = int(np.ceil(max_iter * len(self._ixs)))
         if max_iter <= 1:

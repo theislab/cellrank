@@ -1,7 +1,8 @@
 import abc
 import enum
 import math
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
@@ -33,11 +34,8 @@ class ModelABC(abc.ABC):
         conn: sp.spmatrix,
         x: np.ndarray,
         v: np.ndarray,
-        similarity: Union[
-            SimilarityABC,
-            Callable[[np.ndarray, np.ndarray, float], tuple[np.ndarray, np.ndarray]],
-        ],
-        backward_mode: Optional[BackwardMode] = None,
+        similarity: SimilarityABC | Callable[[np.ndarray, np.ndarray, float], tuple[np.ndarray, np.ndarray]],
+        backward_mode: BackwardMode | None = None,
         softmax_scale: float = 1.0,
         dtype: np.dtype = np.float64,
     ):
@@ -55,7 +53,7 @@ class ModelABC(abc.ABC):
 
     def __call__(
         self,
-        n_jobs: Optional[int] = None,
+        n_jobs: int | None = None,
         backend: Backend_t = DEFAULT_BACKEND,
         show_progress_bar: bool = True,
         **kwargs: Any,
@@ -99,7 +97,7 @@ class ModelABC(abc.ABC):
     def _reconstruct_output(
         self,
         data: np.ndarray,
-        ixs: Optional[np.ndarray] = None,
+        ixs: np.ndarray | None = None,
     ) -> sp.csr_matrix:
         """Transform :class:`~numpy.ndarray` into :class:`~scipy.sparse.csr_matrix`.
 
@@ -295,7 +293,7 @@ class MonteCarlo(ModelABC):
         vmean: np.ndarray,
         vvar: np.ndarray,
         n_samples: int = 1,
-        seed: Optional[int] = None,
+        seed: int | None = None,
         dtype: np.dtype = np.float64,
         **kwargs: Any,
     ):

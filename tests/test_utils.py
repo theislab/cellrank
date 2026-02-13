@@ -1,14 +1,12 @@
-from typing import Any, Optional
-
-import pytest
-from _helpers import assert_array_nan_equal, create_model, jax_not_installed_skip
+from typing import Any
 
 import numba as nb
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
-
+import pytest
 import scanpy as sc
+import scipy.sparse as sp
+from _helpers import assert_array_nan_equal, create_model, jax_not_installed_skip
 from anndata import AnnData
 from anndata.utils import make_index_unique
 
@@ -935,7 +933,7 @@ class TestParallelize:
 class TestGeneSymbolsCtxManager:
     @pytest.mark.parametrize("use_raw", [False, True])
     @pytest.mark.parametrize("key", ["symbol", "foo", None])
-    def test_gene_symbols_manager(self, adata: AnnData, key: Optional[str], use_raw: bool):
+    def test_gene_symbols_manager(self, adata: AnnData, key: str | None, use_raw: bool):
         if key == "foo":
             with pytest.raises(KeyError), _gene_symbols_ctx(adata, key=key):
                 pass

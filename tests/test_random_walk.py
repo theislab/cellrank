@@ -1,7 +1,5 @@
-import pytest
-
 import numpy as np
-
+import pytest
 from anndata import AnnData
 
 from cellrank.kernels.utils import RandomWalk

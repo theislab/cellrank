@@ -1,17 +1,13 @@
 import pathlib
 import warnings
-from typing import Optional
-
-import pytest
-from _helpers import create_model
-
-import numpy as np
-from numba.core.errors import NumbaPerformanceWarning
 
 import matplotlib
-
+import numpy as np
+import pytest
 import scanpy as sc
+from _helpers import create_model
 from anndata import AnnData
+from numba.core.errors import NumbaPerformanceWarning
 
 import cellrank as cr
 from cellrank.estimators import CFLARE, GPCCA
@@ -92,7 +88,7 @@ def _create_gpcca(*, backward: bool = False) -> tuple[AnnData, GPCCA]:
     return adata, mc
 
 
-def _create_gamr_model(_adata: AnnData) -> Optional[GAMR]:
+def _create_gamr_model(_adata: AnnData) -> GAMR | None:
     try:
         m = GAMR(_adata)
         m.prepare(_adata.var_names[0], "0", "latent_time").fit()
@@ -148,7 +144,7 @@ def adata_gamr(adata_cflare=_create_cflare(backward=False)) -> AnnData:  # noqa:
 
 
 @pytest.fixture
-def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path) -> Optional[GAMR]:
+def gamr_model(adata_gamr: AnnData, tmp_path_factory: pathlib.Path) -> GAMR | None:
     return _create_gamr_model(adata_gamr)
 
 

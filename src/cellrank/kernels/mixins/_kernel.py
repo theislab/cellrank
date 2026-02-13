@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
@@ -30,7 +30,7 @@ class ConnectivityMixin:
         if check_symmetric and not _symmetric(self.connectivities):
             logg.warning("kNN graph is not symmetric")
 
-    def _density_normalize(self, matrix: Union[np.ndarray, sp.spmatrix]) -> Union[np.ndarray, sp.spmatrix]:
+    def _density_normalize(self, matrix: np.ndarray | sp.spmatrix) -> np.ndarray | sp.spmatrix:
         """
         Density normalization by the underlying kNN graph.
 

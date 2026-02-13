@@ -1,19 +1,16 @@
 import os
 import pathlib
-from typing import Optional, Union
-
-import pytest
-import scvelo as scv
-from PIL import Image
 
 import numpy as np
 import pandas as pd
-import scipy.sparse as sp
-from pandas.testing import assert_frame_equal, assert_series_equal
-from sklearn.svm import SVR
-
+import pytest
 import scanpy as sc
+import scipy.sparse as sp
+import scvelo as scv
 from anndata import AnnData
+from pandas.testing import assert_frame_equal, assert_series_equal
+from PIL import Image
+from sklearn.svm import SVR
 
 import cellrank as cr
 from cellrank._utils._utils import _connected
@@ -54,7 +51,7 @@ def bias_knn(
     pseudotime: pd.Series,
     n_neighbors: int,
     k: int = 3,
-    frac_to_keep: Optional[float] = None,
+    frac_to_keep: float | None = None,
 ) -> sp.csr_matrix:
     # frac_to_keep=None mimics original impl. (which mimics Palantir)
     k_thresh = max(0, min(int(np.floor(n_neighbors / k)) - 1, 30))
@@ -102,8 +99,8 @@ def density_normalization(velo_graph, trans_graph):
 
 def create_kernels(
     adata: AnnData,
-    velocity_variances: Optional[str] = None,
-    connectivity_variances: Optional[str] = None,
+    velocity_variances: str | None = None,
+    connectivity_variances: str | None = None,
 ) -> tuple[VelocityKernel, ConnectivityKernel]:
     rng = np.random.default_rng()
     vk = VelocityKernel(adata)
@@ -133,8 +130,8 @@ def create_failed_model(adata: AnnData) -> cr.models.FailedModel:
 
 
 def resize_images_to_same_sizes(
-    expected_image_path: Union[str, pathlib.Path],
-    actual_image_path: Union[str, pathlib.Path],
+    expected_image_path: str | pathlib.Path,
+    actual_image_path: str | pathlib.Path,
     kind: str = "actual_to_expected",
 ) -> None:
     if not os.path.isfile(actual_image_path):
@@ -155,7 +152,7 @@ def resize_images_to_same_sizes(
             )
 
 
-def assert_array_nan_equal(actual: Union[np.ndarray, pd.Series], expected: Union[np.ndarray, pd.Series]) -> None:
+def assert_array_nan_equal(actual: np.ndarray | pd.Series, expected: np.ndarray | pd.Series) -> None:
     """
     Test is 2 arrays or :class:`pandas.Series` are equal.
 

@@ -4,15 +4,13 @@ import itertools
 import pathlib
 import pickle
 
-import pytest
-from _helpers import assert_models_equal, create_model, gamr_skip
-from pygam import ExpectileGAM
-
 import numpy as np
+import pytest
 import scipy.stats as st
-from sklearn.svm import SVR
-
+from _helpers import assert_models_equal, create_model, gamr_skip
 from anndata import AnnData
+from pygam import ExpectileGAM
+from sklearn.svm import SVR
 
 from cellrank._utils import Lineage
 from cellrank._utils._key import Key

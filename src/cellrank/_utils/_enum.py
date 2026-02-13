@@ -1,7 +1,8 @@
 import abc
 import enum
 import functools
-from typing import Any, Callable, Literal
+from collections.abc import Callable
+from typing import Any, Literal
 
 __all__ = ["ModeEnum", "DEFAULT_BACKEND"]
 
@@ -44,9 +45,9 @@ def _pretty_raise_enum(cls: type["ErrorFormatterABC"], func: Callable) -> Callab
 
 
 class ABCEnumMeta(enum.EnumMeta, abc.ABCMeta):  # noqa: D101
-    def __call__(cls, *args, **kwargs):  # noqa
+    def __call__(cls, *args, **kwargs):
         if getattr(cls, "__error_format__", None) is None:
-            raise TypeError(f"Can't instantiate class `{cls.__name__}` " f"without `__error_format__` class attribute.")
+            raise TypeError(f"Can't instantiate class `{cls.__name__}` without `__error_format__` class attribute.")
         return super().__call__(*args, **kwargs)
 
     def __new__(cls, clsname: str, superclasses: tuple[type], attributedict: dict[str, Any]):  # noqa: D102

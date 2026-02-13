@@ -1,14 +1,15 @@
 import enum
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 import scipy.stats as st
-
 from anndata import AnnData
+from sklearn.utils.sparsefuncs import csc_median_axis_0
 
 from cellrank import logging as logg
+from cellrank._utils import Lineage
 from cellrank._utils._docs import d, inject_docs
 from cellrank._utils._enum import ModeEnum
 from cellrank._utils._key import Key
@@ -99,7 +100,7 @@ class CytoTRACEKernel(PseudotimeKernel):
         try:
             super()._read_from_adata(time_key=time_key, **kwargs)
         except KeyError as e:
-            self._pseudotime: Optional[np.ndarray] = None
+            self._pseudotime: np.ndarray | None = None
             if "Unable to find pseudotime" not in str(e):
                 raise
             super(PseudotimeKernel, self)._read_from_adata(**kwargs)
@@ -108,7 +109,7 @@ class CytoTRACEKernel(PseudotimeKernel):
     @inject_docs(ct=CytoTRACEAggregation)
     def compute_cytotrace(
         self,
-        layer: Optional[str] = "Ms",
+        layer: str | None = "Ms",
         aggregation: Literal["mean", "median", "hmean", "gmean"] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
         n_genes: int = 200,
@@ -157,8 +158,6 @@ class CytoTRACEKernel(PseudotimeKernel):
         This will not exactly reproduce the results of the original CytoTRACE algorithm :cite:`gulati:20` because we
         allow for any normalization and imputation techniques whereas CytoTRACE has built-in specific methods for that.
         """
-        from cellrank._utils import Lineage
-
         aggregation = CytoTRACEAggregation(aggregation)
 
         if use_raw and self.adata.raw is None:
@@ -226,13 +225,11 @@ class CytoTRACEKernel(PseudotimeKernel):
         self,
         gene_corr: pd.Series,
         *,
-        layer: Optional[str] = None,
+        layer: str | None = None,
         aggregation: CytoTRACEAggregation.MEAN,
         ascending: bool = False,
         n_genes: int = 200,
     ) -> tuple[np.ndarray, list[str]]:
-        from sklearn.utils.sparsefuncs import csc_median_axis_0
-
         # fmt: off
         modifier = "negatively" if ascending else "positively"
         if n_genes <= 0:
@@ -251,7 +248,7 @@ class CytoTRACEKernel(PseudotimeKernel):
 
         if len(top_genes) != n_genes:
             logg.warning(
-                f"Unable to get requested top {modifier} correlated `{n_genes}`. " f"Using top `{len(top_genes)}` genes"
+                f"Unable to get requested top {modifier} correlated `{n_genes}`. Using top `{len(top_genes)}` genes"
             )
 
         # fmt: off

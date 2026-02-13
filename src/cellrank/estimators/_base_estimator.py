@@ -2,13 +2,12 @@ import abc
 import contextlib
 import copy as copy_
 import inspect
-from collections.abc import Mapping, Sequence
-from typing import Any, Callable, Literal, Optional, Union
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-
 from anndata import AnnData
 
 from cellrank._utils._docs import d
@@ -47,7 +46,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
 
     def __init__(
         self,
-        object: Union[str, bool, np.ndarray, sp.spmatrix, AnnData, KernelExpression],
+        object: str | bool | np.ndarray | sp.spmatrix | AnnData | KernelExpression,
         **kwargs: Any,
     ):
         if isinstance(object, KernelExpression):
@@ -102,10 +101,10 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
 
     def _set(
         self,
-        attr: Optional[str] = None,
-        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
-        key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, dict[str, Any]]] = None,
+        attr: str | None = None,
+        obj: pd.DataFrame | Mapping[str, Any] | None = None,
+        key: str | None = None,
+        value: np.ndarray | pd.Series | pd.DataFrame | Lineage | AnnData | dict[str, Any] | None = None,
         copy: bool = True,
         shadow_only: bool = False,
     ) -> None:
@@ -159,10 +158,10 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
     def _get(
         self,
         *,
-        obj: Union[pd.DataFrame, Mapping[str, Any]],
+        obj: pd.DataFrame | Mapping[str, Any],
         key: str,
-        shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
-        dtype: Optional[Union[type, tuple[type, ...]]] = None,
+        shadow_attr: Literal["obs", "obsm", "var", "varm", "uns"] | None = None,
+        dtype: type | tuple[type, ...] | None = None,
         copy: bool = True,
         allow_missing: bool = False,
     ) -> Any:
@@ -237,8 +236,8 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
 
     def _create_params(
         self,
-        locs: Optional[Mapping[str, Any]] = None,
-        func: Optional[Callable] = None,
+        locs: Mapping[str, Any] | None = None,
+        func: Callable | None = None,
         remove: Sequence[str] = (),
     ) -> dict[str, Any]:
         """Create parameters of interest from a function call.
@@ -299,9 +298,9 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
     @d.dedent
     def to_adata(
         self,
-        keep: Union[Literal["all"], Sequence[Attr_t]] = ("X", "raw"),
+        keep: Literal["all"] | Sequence[Attr_t] = ("X", "raw"),
         *,
-        copy: Union[bool, Sequence[Attr_t]] = True,
+        copy: bool | Sequence[Attr_t] = True,
     ) -> AnnData:
         """%(to_adata.full_desc)s
 
@@ -374,13 +373,13 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
             else:
                 keep = [keep]
         if not isinstance(keep, Mapping):
-            keep = {attr: True for attr in keep}
+            keep = dict.fromkeys(keep, True)
         if isinstance(copy, bool):
-            copy = {attr: copy for attr in keep}
+            copy = dict.fromkeys(keep, copy)
         elif isinstance(copy, str):
             copy = [copy]
         if not isinstance(copy, Mapping):
-            copy = {attr: True for attr in copy}
+            copy = dict.fromkeys(copy, True)
         # fmt: on
 
         for attr, keys in keep.items():

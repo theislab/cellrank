@@ -1,14 +1,13 @@
 import enum
 from collections.abc import Sequence
-from typing import Any, Optional, Union
+from typing import Any
 
 import numba as nb
 import numpy as np
 import scipy.sparse as sp
+from anndata import AnnData
 from numba import prange
 from sklearn.utils.sparsefuncs import csc_median_axis_0
-
-from anndata import AnnData
 
 import cellrank.logging as logg
 from cellrank._utils._docs import d, inject_docs
@@ -29,7 +28,7 @@ class NormMode(ModeEnum):  # noqa: D101
 
 
 @d.dedent
-def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = True) -> Union[np.ndarray, sp.spmatrix]:
+def _extract_data(data: AnnData, layer: str | None = None, use_raw: bool = True) -> np.ndarray | sp.spmatrix:
     """Extract expression data from an object.
 
     Parameters
@@ -56,8 +55,7 @@ def _extract_data(data: AnnData, layer: Optional[str] = None, use_raw: bool = Tr
         elif layer is not None:
             if layer not in data.layers:
                 raise KeyError(
-                    f"Layer `{layer!s}` not found in `adata.layers`. "
-                    f"Valid options are: `{list(data.layers.keys())}`."
+                    f"Layer `{layer!s}` not found in `adata.layers`. Valid options are: `{list(data.layers.keys())}`."
                 )
             x = data.layers[layer]
         else:
@@ -116,12 +114,12 @@ def _rankdata(a: np.ndarray, method: str = "average") -> np.ndarray:
 
 @inject_docs(m=NormMode)
 def _calculate_norm_factors(
-    data: Union[AnnData, np.ndarray, sp.spmatrix],
+    data: AnnData | np.ndarray | sp.spmatrix,
     method: str = NormMode.TMM,
-    layer: Optional[str] = None,
+    layer: str | None = None,
     use_raw: bool = True,
-    library_size: Optional[np.ndarray] = None,
-    ref_ix: Optional[int] = None,
+    library_size: np.ndarray | None = None,
+    ref_ix: int | None = None,
     logratio_trim: float = 0.3,
     sum_trim: float = 0.05,
     weight: bool = True,
@@ -211,9 +209,9 @@ def _dispatch_computation(mode, *_args, **_kwargs):
 
 @_dispatch_computation.register(NormMode.TMM)
 def _(
-    x: Union[np.ndarray, sp.spmatrix],
+    x: np.ndarray | sp.spmatrix,
     library_size: np.ndarray,
-    ref_ix: Optional[int] = None,
+    ref_ix: int | None = None,
     **kwargs,
 ) -> np.ndarray:
     if ref_ix is None:
@@ -242,7 +240,7 @@ def _(
 
 
 @_dispatch_computation.register(NormMode.UPPER_QUANT)
-def _calc_factor_quant(x: Union[np.ndarray, sp.spmatrix], library_size: np.ndarray, p: float, **_) -> np.ndarray:
+def _calc_factor_quant(x: np.ndarray | sp.spmatrix, library_size: np.ndarray, p: float, **_) -> np.ndarray:
     # unused, because we fix the reference cell to 0
 
     library_size = np.array(library_size).reshape((-1, 1))
@@ -276,7 +274,7 @@ def _calc_factor_quant_sparse_helper(
 
 
 @_dispatch_computation.register(NormMode.RLE)
-def _(x: Union[np.ndarray, sp.spmatrix], **_) -> np.ndarray:
+def _(x: np.ndarray | sp.spmatrix, **_) -> np.ndarray:
     # unused
 
     # log 0 -> inf -> masked out anyway, so we select only genes in every cell
@@ -296,14 +294,14 @@ def _(x: Union[np.ndarray, sp.spmatrix], **_) -> np.ndarray:
 
 
 @_dispatch_computation.register(NormMode.NONE)
-def _(x: Union[np.ndarray, sp.spmatrix], **_) -> np.ndarray:
+def _(x: np.ndarray | sp.spmatrix, **_) -> np.ndarray:
     # unused
     return np.ones((x.shape[0],), dtype=x.dtype)
 
 
 def _calc_factor_weighted(
     ixs: np.ndarray,
-    obs_: Union[np.ndarray, sp.spmatrix],
+    obs_: np.ndarray | sp.spmatrix,
     obs_lib_size_: np.ndarray,
     ref: np.ndarray,
     ref_lib_size: float,
@@ -385,11 +383,11 @@ def _calc_factor_weighted_helper(
 
     f = (np.nansum(log_r[mask] / v[mask]) / np.nansum(1.0 / v[mask])) if weight else np.nanmean(log_r[mask])
 
-    return 2 ** f if np.isfinite(f) else 1.0
+    return 2**f if np.isfinite(f) else 1.0
 
 
 def _get_knotlocs(
-    pseudotime: Union[np.ndarray, Sequence],
+    pseudotime: np.ndarray | Sequence,
     n_knots: int,
     uniform: bool = False,
 ) -> np.ndarray:
@@ -458,10 +456,10 @@ def _get_knotlocs(
 @inject_docs(key=_OFFSET_KEY)
 @d.dedent
 def _get_offset(
-    adata: Union[AnnData, np.ndarray, sp.spmatrix],
-    layer: Optional[str] = None,
+    adata: AnnData | np.ndarray | sp.spmatrix,
+    layer: str | None = None,
     use_raw: bool = True,
-    ref_ix: Optional[int] = None,
+    ref_ix: int | None = None,
     recompute: bool = False,
     **kwargs,
 ) -> np.ndarray:

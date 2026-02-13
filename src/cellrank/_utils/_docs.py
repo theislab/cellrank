@@ -201,7 +201,7 @@ def inject_docs(**kwargs: Any):
         obj.__doc__ = textwrap.dedent(kwargs["__doc__"])
         return obj
 
-    if isinstance(kwargs.get("__doc__", None), str) and len(kwargs) == 1:
+    if isinstance(kwargs.get("__doc__"), str) and len(kwargs) == 1:
         return decorator2
 
     return decorator

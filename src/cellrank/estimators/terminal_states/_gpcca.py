@@ -5,21 +5,19 @@ import pathlib
 import types
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.sparse as sp
-from pandas.api.types import infer_dtype
-
-import matplotlib.pyplot as plt
 import seaborn as sns
+from anndata import AnnData
 from matplotlib.axes import Axes
 from matplotlib.colorbar import ColorbarBase
 from matplotlib.colors import ListedColormap, Normalize
 from matplotlib.ticker import StrMethodFormatter
-
-from anndata import AnnData
+from pandas.api.types import infer_dtype
 
 from cellrank import logging as logg
 from cellrank._utils._colors import _create_categorical_colors, _get_black_or_white
@@ -82,25 +80,25 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def __init__(
         self,
-        object: Union[str, bool, np.ndarray, sp.spmatrix, AnnData, KernelExpression],
+        object: str | bool | np.ndarray | sp.spmatrix | AnnData | KernelExpression,
         **kwargs: Any,
     ):
         super().__init__(object=object, **kwargs)
         self._macrostates = StatesHolder()
-        self._coarse_init_dist: Optional[pd.Series] = None
-        self._coarse_stat_dist: Optional[pd.Series] = None
-        self._coarse_tmat: Optional[pd.DataFrame] = None
-        self._tsi: Optional[AnnData] = None
+        self._coarse_init_dist: pd.Series | None = None
+        self._coarse_stat_dist: pd.Series | None = None
+        self._coarse_tmat: pd.DataFrame | None = None
+        self._tsi: AnnData | None = None
 
     @property
     @d.get_summary(base="gpcca_macro")
-    def macrostates(self) -> Optional[pd.Series]:
+    def macrostates(self) -> pd.Series | None:
         """Macrostates of the transition matrix."""
         return self._macrostates.assignment
 
     @property
     @d.get_summary(base="gpcca_macro_memberships")
-    def macrostates_memberships(self) -> Optional[Lineage]:
+    def macrostates_memberships(self) -> Lineage | None:
         """Macrostate memberships.
 
         Soft assignment of microstates (cells) to macrostates.
@@ -109,7 +107,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @property
     @d.get_summary(base="gpcca_init_states_memberships")
-    def initial_states_memberships(self) -> Optional[Lineage]:
+    def initial_states_memberships(self) -> Lineage | None:
         """Initial states memberships.
 
         Soft assignment of cells to initial states.
@@ -118,7 +116,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @property
     @d.get_summary(base="gpcca_term_states_memberships")
-    def terminal_states_memberships(self) -> Optional[Lineage]:
+    def terminal_states_memberships(self) -> Lineage | None:
         """Terminal states memberships.
 
         Soft assignment of cells to terminal states.
@@ -127,19 +125,19 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     @property
     @d.get_summary(base="gpcca_coarse_init")
-    def coarse_initial_distribution(self) -> Optional[pd.Series]:
+    def coarse_initial_distribution(self) -> pd.Series | None:
         """Coarse-grained initial distribution."""
         return self._coarse_init_dist
 
     @property
     @d.get_summary(base="gpcca_coarse_stat")
-    def coarse_stationary_distribution(self) -> Optional[pd.Series]:
+    def coarse_stationary_distribution(self) -> pd.Series | None:
         """Coarse-grained stationary distribution."""
         return self._coarse_stat_dist
 
     @property
     @d.get_summary(base="gpcca_coarse_tmat")
-    def coarse_T(self) -> Optional[pd.DataFrame]:
+    def coarse_T(self) -> pd.DataFrame | None:
         """Coarse-grained transition matrix."""
         return self._coarse_tmat
 
@@ -147,9 +145,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def compute_macrostates(
         self,
-        n_states: Optional[Union[int, Sequence[int]]] = None,
-        n_cells: Optional[int] = 30,
-        cluster_key: Optional[str] = None,
+        n_states: int | Sequence[int] | None = None,
+        n_cells: int | None = 30,
+        cluster_key: str | None = None,
         **kwargs: Any,
     ) -> "GPCCA":
         """Compute the macrostates.
@@ -243,9 +241,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         method: Literal["stability", "top_n", "eigengap", "eigengap_coarse"] = TermStatesMethod.STABILITY,
         n_cells: int = 30,
-        alpha: Optional[float] = 1,
+        alpha: float | None = 1,
         stability_threshold: float = 0.96,
-        n_states: Optional[int] = None,
+        n_states: int | None = None,
         allow_overlap: bool = False,
     ) -> "GPCCA":
         """Automatically select terminal states from macrostates.
@@ -378,10 +376,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def set_terminal_states(
         self,
-        states: Optional[Union[str, Sequence[str], dict[str, Sequence[str]], pd.Series]] = None,
+        states: str | Sequence[str] | dict[str, Sequence[str]] | pd.Series | None = None,
         n_cells: int = 30,
         allow_overlap: bool = False,
-        cluster_key: Optional[str] = None,
+        cluster_key: str | None = None,
         **kwargs: Any,
     ) -> "GPCCA":
         """Set the :attr:`terminal_states`.
@@ -459,10 +457,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def set_initial_states(
         self,
-        states: Optional[Union[str, Sequence[str], dict[str, Sequence[str]], pd.Series]] = None,
+        states: str | Sequence[str] | dict[str, Sequence[str]] | pd.Series | None = None,
         n_cells: int = 30,
         allow_overlap: bool = False,
-        cluster_key: Optional[str] = None,
+        cluster_key: str | None = None,
         **kwargs: Any,
     ) -> "GPCCA":
         """Set the :attr:`initial_states`.
@@ -541,8 +539,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def tsi(
         self,
         n_macrostates: int,
-        terminal_states: Optional[list[str]] = None,
-        cluster_key: Optional[str] = None,
+        terminal_states: list[str] | None = None,
+        cluster_key: str | None = None,
         **kwargs: Any,
     ) -> float:
         """Compute terminal state identification (TSI) score.
@@ -622,12 +620,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def plot_tsi(
         self,
-        n_macrostates: Optional[int] = None,
+        n_macrostates: int | None = None,
         x_offset: tuple[float, float] = (0.2, 0.2),
         y_offset: tuple[float, float] = (0.1, 0.1),
         figsize: tuple[float, float] = (6, 4),
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, Path]] = None,
+        dpi: int | None = None,
+        save: str | Path | None = None,
         **kwargs: Any,
     ) -> Axes:
         """Plot terminal state identificiation (TSI).
@@ -718,9 +716,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     @d.dedent
     def fit(
         self,
-        n_states: Optional[Union[int, Sequence[int]]] = None,
-        n_cells: Optional[int] = 30,
-        cluster_key: Optional[str] = None,
+        n_states: int | Sequence[int] | None = None,
+        n_cells: int | None = 30,
+        cluster_key: str | None = None,
         **kwargs: Any,
     ) -> "GPCCA":
         """
@@ -752,15 +750,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         show_stationary_dist: bool = True,
         show_initial_dist: bool = False,
-        order: Optional[Literal["stability", "incoming", "outgoing", "stat_dist"]] = "stability",
-        cmap: Union[str, ListedColormap] = "viridis",
+        order: Literal["stability", "incoming", "outgoing", "stat_dist"] | None = "stability",
+        cmap: str | ListedColormap = "viridis",
         xtick_rotation: float = 45,
         annotate: bool = True,
         show_cbar: bool = True,
-        title: Optional[str] = None,
+        title: str | None = None,
         figsize: tuple[float, float] = (8, 8),
         dpi: int = 80,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        save: str | pathlib.Path | None = None,
         text_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ) -> None:
@@ -801,8 +799,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         """
 
         def order_matrix(
-            order: Optional[CoarseTOrder],
-        ) -> tuple[pd.DataFrame, Optional[pd.Series], Optional[pd.Series]]:
+            order: CoarseTOrder | None,
+        ) -> tuple[pd.DataFrame, pd.Series | None, pd.Series | None]:
             coarse_T = self.coarse_T
             init_d = self.coarse_initial_distribution
             stat_d = self.coarse_stationary_distribution
@@ -1020,14 +1018,14 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         self,
         key: str,
         width: float = 0.8,
-        title: Optional[str] = None,
+        title: str | None = None,
         labelrot: float = 45,
-        legend_loc: Optional[str] = "upper right out",
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        legend_loc: str | None = "upper right out",
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
+        save: str | pathlib.Path | None = None,
         show: bool = True,
-    ) -> Optional[Axes]:
+    ) -> Axes | None:
         """Plot histogram of macrostates over categorical annotations.
 
         Parameters
@@ -1052,7 +1050,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         If ``show = True``, nothing, just plots, otherwise returns the axes object.
         Optionally saves it based on ``save``.
         """
-        from cellrank.pl._utils import _position_legend
+        from cellrank.pl._utils import _position_legend  # circular import
 
         macrostates = self.macrostates
         if macrostates is None:
@@ -1061,7 +1059,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
             raise KeyError(f"Data not found in `adata.obs[{key!r}]`.")
         if not isinstance(self.adata.obs[key].dtype, pd.CategoricalDtype):
             raise TypeError(
-                f"Expected `adata.obs[{key!r}]` to be `categorical`, " f"found `{infer_dtype(self.adata.obs[key])}`."
+                f"Expected `adata.obs[{key!r}]` to be `categorical`, found `{infer_dtype(self.adata.obs[key])}`."
             )
 
         mask = ~macrostates.isnull()
@@ -1122,12 +1120,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         if not show:
             return ax
 
-    def _n_states(self, n_states: Optional[Union[int, Sequence[int]]]) -> int:
+    def _n_states(self, n_states: int | Sequence[int] | None) -> int:
         if n_states is None:
             if self.eigendecomposition is None:
                 raise RuntimeError(
-                    "Compute eigendecomposition first as `.compute_eigendecomposition()` or "
-                    "supply `n_states != None`."
+                    "Compute eigendecomposition first as `.compute_eigendecomposition()` or supply `n_states != None`."
                 )
             return self.eigendecomposition["eigengap"] + 1
 
@@ -1164,11 +1161,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def _create_states(
         self,
-        probs: Union[np.ndarray, Lineage],
+        probs: np.ndarray | Lineage,
         n_cells: int,
         check_row_sums: bool = False,
         return_not_enough_cells: bool = False,
-    ) -> Union[pd.Series, tuple[pd.Series, np.ndarray]]:
+    ) -> pd.Series | tuple[pd.Series, np.ndarray]:
         if n_cells <= 0:
             raise ValueError(f"Expected `n_cells` to be positive, found `{n_cells}`.")
 
@@ -1201,8 +1198,8 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
 
     def _compute_one_macrostate(
         self,
-        n_cells: Optional[int],
-        cluster_key: Optional[str],
+        n_cells: int | None,
+        cluster_key: str | None,
     ) -> None:
         start = logg.info("For 1 macrostate, stationary distribution is computed")
 
@@ -1225,10 +1222,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def _set_macrostates(
         self,
         memberships: np.ndarray,
-        n_cells: Optional[int] = 30,
+        n_cells: int | None = 30,
         cluster_key: str = "clusters",
         check_row_sums: bool = True,
-        time: Optional[datetime.datetime] = None,
+        time: datetime.datetime | None = None,
         params: dict[str, Any] = types.MappingProxyType({}),
     ) -> None:
         """Map fuzzy clustering to pre-computed annotations to get names and colors.
@@ -1285,7 +1282,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         groups = groups[groups != n_cells].to_dict()
         if len(groups):
             logg.warning(
-                f"The following terminal states have different number " f"of cells than requested ({n_cells}): {groups}"
+                f"The following terminal states have different number of cells than requested ({n_cells}): {groups}"
             )
 
         self._write_macrostates(
@@ -1363,10 +1360,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def _write_states(
         self,
         which: Literal["initial", "terminal"],
-        states: Optional[pd.Series],
-        colors: Optional[np.ndarray],
-        probs: Optional[pd.Series] = None,
-        memberships: Optional[Lineage] = None,
+        states: pd.Series | None,
+        colors: np.ndarray | None,
+        probs: pd.Series | None = None,
+        memberships: Lineage | None = None,
         params: dict[str, Any] = types.MappingProxyType({}),
         allow_overlap: bool = False,
     ) -> str:

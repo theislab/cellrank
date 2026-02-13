@@ -5,20 +5,21 @@ import inspect
 import itertools
 import pathlib
 import types
-from collections.abc import Iterable, Mapping
-from typing import Any, Callable, Literal, Optional, TypeVar, Union
+from collections.abc import Callable, Iterable, Mapping
+from typing import Any, Literal, TypeVar, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-from pandas.api.types import infer_dtype
-
-import matplotlib.pyplot as plt
-from matplotlib import colors
-
 from anndata import AnnData
 from anndata._io.specs.methods import H5Group, ZarrGroup, write_basic
 from anndata._io.specs.registry import _REGISTRY, IOSpec
+from matplotlib import colors
+from numpy.linalg import norm
+from pandas.api.types import infer_dtype
+from scipy.spatial.distance import jensenshannon
+from sklearn.feature_selection import mutual_info_regression
 
 from cellrank import logging as logg
 from cellrank._utils._colors import (
@@ -140,7 +141,7 @@ def wrap(numpy_func: Callable) -> Callable:
             return lin.T if is_t else lin
 
         raise RuntimeError(
-            f"Unable to interpret result of function `{fname}` called " f"with args `{args}`, kwargs: `{kwargs}`."
+            f"Unable to interpret result of function `{fname}` called with args `{args}`, kwargs: `{kwargs}`."
         )
 
     params = inspect.signature(numpy_func).parameters
@@ -196,7 +197,7 @@ class LineageMeta(type):
     It registers functions which are handled by us and overloads common attributes, such as `.sum` with these functions.
     """
 
-    __overloaded_functions__ = dict(  # noqa
+    __overloaded_functions__ = dict(  # noqa: C408
         sum=np.sum,
         mean=np.mean,
         min=np.min,
@@ -210,7 +211,7 @@ class LineageMeta(type):
         entropy=st.entropy,
     )
 
-    def __new__(cls, clsname, superclasses, attributedict):  # noqa
+    def __new__(cls, clsname, superclasses, attributedict):
         res = type.__new__(cls, clsname, superclasses, attributedict)
         for attrname, fn in LineageMeta.__overloaded_functions__.items():
             wrapped_fn = _HANDLED_FUNCTIONS.get(fn, None)
@@ -238,7 +239,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         input_array: np.ndarray,
         *,
         names: Iterable[str],
-        colors: Optional[Iterable[ColorLike]] = None,
+        colors: Iterable[ColorLike] | None = None,
     ) -> "Lineage":
         """Create and return a new object."""
         if not isinstance(input_array, np.ndarray):
@@ -301,8 +302,8 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         return obj.T if was_transposed else obj
 
-    def _mix_lineages(self, rows, mixtures: Iterable[Union[str, Any]]) -> "Lineage":
-        from cellrank._utils._utils import _unique_order_preserving
+    def _mix_lineages(self, rows, mixtures: Iterable[str | Any]) -> "Lineage":
+        from cellrank._utils._utils import _unique_order_preserving  # circular import
 
         def unsplit(names: str) -> tuple[str, ...]:
             return tuple(sorted({name.strip(" ") for name in names.strip(" ,").split(",")}))
@@ -465,7 +466,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return self._colors
 
     @colors.setter
-    def colors(self, value: Optional[Iterable[ColorLike]]) -> None:
+    def colors(self, value: Iterable[ColorLike] | None) -> None:
         if value is None:
             value = _create_categorical_colors(self._n_lineages)
         elif not isinstance(value, Iterable):
@@ -501,7 +502,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def priming_degree(
         self,
         method: Literal["kl_divergence", "entropy"] = "kl_divergence",
-        early_cells: Optional[np.ndarray] = None,
+        early_cells: np.ndarray | None = None,
     ) -> np.ndarray:
         """Compute the degree of lineage priming.
 
@@ -554,12 +555,12 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def plot_pie(
         self,
         reduction: Callable,
-        title: Optional[str] = None,
-        legend_loc: Optional[str] = "on data",
+        title: str | None = None,
+        legend_loc: str | None = "on data",
         legend_kwargs: Mapping = types.MappingProxyType({}),
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[float] = None,
-        save: Optional[Union[pathlib.Path, str]] = None,
+        figsize: tuple[float, float] | None = None,
+        dpi: float | None = None,
+        save: pathlib.Path | str | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot a pie chart visualizing aggregated lineage probabilities.
@@ -582,7 +583,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         -------
         %(just_plots)s
         """
-        from cellrank._utils._utils import save_fig
+        from cellrank._utils._utils import save_fig  # circular import
 
         if len(self.names) == 1:
             raise ValueError("Cannot plot pie chart for only 1 lineage.")
@@ -647,7 +648,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         normalize_weights: Literal["scale", "softmax"] = NormWeights.SOFTMAX,
         softmax_scale: float = 1.0,
         return_weights: bool = False,
-    ) -> Union["Lineage", tuple["Lineage", Optional[pd.DataFrame]]]:
+    ) -> Union["Lineage", tuple["Lineage", pd.DataFrame | None]]:
         """Subset states and normalize them so that they again sum to :math:`1`.
 
         Parameters
@@ -798,7 +799,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         cls,
         adata: AnnData,
         backward: bool = False,
-        estimator_backward: Optional[bool] = None,
+        estimator_backward: bool | None = None,
         kind: Literal["macrostates", "term_states", "fate_probs"] = LinKind.FATE_PROBS,
         copy: bool = False,
     ) -> "Lineage":
@@ -840,7 +841,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
         if key not in adata.obsm:
             raise KeyError(f"Unable to find lineage data in `adata.obsm[{key!r}]`.")
-        data: Union[np.ndarray, Lineage] = adata.obsm[key]
+        data: np.ndarray | Lineage = adata.obsm[key]
         if copy:
             data = copy_.copy(data)
         if isinstance(data, Lineage):
@@ -859,17 +860,15 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         else:
             states = list(states.cat.categories)
             if len(states) != data.shape[1]:
-                logg.warning(
-                    f"Expected to find `{data.shape[1]}` names, found `{len(states)}`. " f"Using default names"
-                )
+                logg.warning(f"Expected to find `{data.shape[1]}` names, found `{len(states)}`. Using default names")
         if states is None or len(states) != data.shape[1]:
             states = [str(i) for i in range(data.shape[1])]
 
         colors = adata.uns.get(ckey, None)
         if colors is None:
-            logg.warning(f"Unable to find colors in `adata.uns[{ckey!r}]`. " f"Using default colors")
+            logg.warning(f"Unable to find colors in `adata.uns[{ckey!r}]`. Using default colors")
         elif len(colors) != data.shape[1]:
-            logg.warning(f"Expected to find `{data.shape[1]}` colors, found `{len(colors)}`. " f"Using default colors")
+            logg.warning(f"Expected to find `{data.shape[1]}` colors, found `{len(colors)}`. Using default colors")
             colors = None
 
         return Lineage(data, names=states, colors=colors)
@@ -879,10 +878,10 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         return LineageView(self)
 
     def __repr__(self) -> str:
-        return f'{super().__repr__()[:-1]},\n  names([{", ".join(self.names)}]))'
+        return f"{super().__repr__()[:-1]},\n  names([{', '.join(self.names)}]))"
 
     def __str__(self):
-        return f'{super().__str__()}\n names=[{", ".join(self.names)}]'
+        return f"{super().__str__()}\n names=[{', '.join(self.names)}]"
 
     @property
     def _fmt(self) -> Callable[[Any], str]:
@@ -898,7 +897,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
             cells = "".join(
                 (
-                    f"<td style='text-align: right;'>" f"{self._fmt(self.X[r, c])}" f"</td>"
+                    f"<td style='text-align: right;'>{self._fmt(self.X[r, c])}</td>"
                     if isinstance(c, int)
                     else _DUMMY_CELL
                 )
@@ -941,9 +940,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
         if self._is_transposed:
             header = ""
         return (
-            f"<div style='scoped' class='rendered_html'>"
-            f"<table class='dataframe'>{header}{body}</table>{metadata}"
-            f"</div>"
+            f"<div style='scoped' class='rendered_html'><table class='dataframe'>{header}{body}</table>{metadata}</div>"
         )
 
     def __format__(self, format_spec):
@@ -990,7 +987,7 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     def __copy__(self):
         return self.copy()
 
-    def _check_axis1_shape(self, array: Iterable[Union[str, ColorLike]], msg: str) -> list[Union[str, ColorLike]]:
+    def _check_axis1_shape(self, array: Iterable[str | ColorLike], msg: str) -> list[str | ColorLike]:
         """Check whether the size of the 1D array has the correct length."""
         array = list(array)
         if len(array) != self._n_lineages:
@@ -1000,13 +997,13 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
 
     def _maybe_convert_names(
         self,
-        names: Iterable[Union[int, str, bool]],
+        names: Iterable[int | str | bool],
         is_singleton: bool = False,
-        default: Optional[Union[int, str]] = None,
+        default: int | str | None = None,
         make_unique: bool = True,
-    ) -> Union[int, list[int], list[bool]]:
+    ) -> int | list[int] | list[bool]:
         """Convert string indices to their corresponding int indices."""
-        from cellrank._utils._utils import _unique_order_preserving
+        from cellrank._utils._utils import _unique_order_preserving  # circular import
 
         if all(isinstance(n, (bool, np.bool_)) for n in names):
             return list(names)
@@ -1038,9 +1035,9 @@ class Lineage(np.ndarray, metaclass=LineageMeta):
     @staticmethod
     def _prepare_annotation(
         array: list[str],
-        checker: Optional[Callable] = None,
-        transformer: Optional[Callable] = None,
-        checker_msg: Optional[str] = None,
+        checker: Callable | None = None,
+        transformer: Callable | None = None,
+        checker_msg: str | None = None,
     ) -> np.ndarray:
         if checker is not None:
             assert checker_msg, "Please provide a message when `checker` is not `None`."
@@ -1130,15 +1127,13 @@ def _softmax(X, beta: float = 1):
     return np.exp(X * beta) / np.expand_dims(np.sum(np.exp(X * beta), axis=1), -1)
 
 
-def _row_normalize(X: Union[np.ndarray, Lineage]) -> Union[np.ndarray, Lineage]:
+def _row_normalize(X: np.ndarray | Lineage) -> np.ndarray | Lineage:
     if isinstance(X, Lineage):
         return X / X.sum(1)  # lineage is shape-preserving
     return X / X.sum(1, keepdims=True)
 
 
 def _col_normalize(X, norm_ord=2):
-    from numpy.linalg import norm
-
     return X / norm(X, ord=norm_ord, axis=0)
 
 
@@ -1180,15 +1175,11 @@ def _kl_div(reference, query):
 
 def _js_div(reference, query):
     # the js divergence is symmetric
-    from scipy.spatial.distance import jensenshannon
-
     return _point_wise_distance(reference, query, jensenshannon)
 
 
 def _mutual_info(reference, query):
     # mutual information is not symmetric. We don't need to normalise the vectors, it's invariant under scaling.
-    from sklearn.feature_selection import mutual_info_regression
-
     weights = np.zeros((query.shape[1], reference.shape[1]))
     for i, target in enumerate(query.T):
         weights[i, :] = mutual_info_regression(reference, target)
@@ -1203,7 +1194,7 @@ def _mutual_info(reference, query):
 def _write_lineage(
     f: Any,
     k: str,
-    elem: Union[Lineage, LineageView],
+    elem: Lineage | LineageView,
     _writer: Any,
     dataset_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
 ) -> None:

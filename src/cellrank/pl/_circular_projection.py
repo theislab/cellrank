@@ -1,20 +1,17 @@
 import enum
 import pathlib
 import types
-from collections.abc import Mapping, Sequence
-from typing import Any, Callable, Literal, Optional, Union
-
-import scvelo as scv
-
-import numpy as np
-import pandas as pd
-from sklearn.metrics import pairwise_distances
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scvelo as scv
+from anndata import AnnData
 from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
-
-from anndata import AnnData
+from sklearn.metrics import pairwise_distances
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -38,11 +35,11 @@ class LabelRot(ModeEnum):
     BEST = enum.auto()
 
 
-Metric_T = Union[str, Callable, np.ndarray, pd.DataFrame]
+Metric_T = str | Callable | np.ndarray | pd.DataFrame
 _N = 200
 
 
-def _get_distances(data: Union[np.ndarray, Lineage], metric: Metric_T) -> np.ndarray:
+def _get_distances(data: np.ndarray | Lineage, metric: Metric_T) -> np.ndarray:
     if isinstance(data, Lineage):
         data = data.X
 
@@ -71,24 +68,24 @@ def _get_optimal_order(data: Lineage, metric: Metric_T) -> tuple[float, np.ndarr
 @d.dedent
 def circular_projection(
     adata: AnnData,
-    keys: Union[str, Sequence[str]],
+    keys: str | Sequence[str],
     backward: bool = False,
-    lineages: Optional[Union[str, Sequence[str]]] = None,
-    early_cells: Optional[Union[Mapping[str, Sequence[str]], Sequence[str]]] = None,
-    lineage_order: Optional[Literal["default", "optimal"]] = None,
-    metric: Union[str, Callable, np.ndarray, pd.DataFrame] = "correlation",
+    lineages: str | Sequence[str] | None = None,
+    early_cells: Mapping[str, Sequence[str]] | Sequence[str] | None = None,
+    lineage_order: Literal["default", "optimal"] | None = None,
+    metric: str | Callable | np.ndarray | pd.DataFrame = "correlation",
     normalize_by_mean: bool = True,
     ncols: int = 4,
     space: float = 0.25,
     use_raw: bool = False,
     text_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
     label_distance: float = 1.25,
-    label_rot: Union[Literal["default", "best"], float] = "best",
+    label_rot: Literal["default", "best"] | float = "best",
     show_edges: bool = True,
-    key_added: Optional[str] = None,
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
+    key_added: str | None = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    save: str | pathlib.Path | None = None,
     **kwargs: Any,
 ) -> None:
     r"""Visualize fate probabilities in a circular embedding :cite:`velten:17,jaitin:14`.

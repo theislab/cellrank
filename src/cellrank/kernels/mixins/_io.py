@@ -1,7 +1,7 @@
 import contextlib
 import pathlib
 import pickle
-from typing import Optional, Protocol, Union
+from typing import Protocol
 
 from anndata import AnnData
 
@@ -40,7 +40,7 @@ class IOMixin:
 
     def write(
         self,
-        fname: Union[str, pathlib.Path],
+        fname: str | pathlib.Path,
         write_adata: bool = True,
     ) -> None:
         """Serialize self to a file using :mod:`pickle`.
@@ -66,7 +66,7 @@ class IOMixin:
                 pickle.dump(self, fout)
 
     @staticmethod
-    def read(fname: Union[str, pathlib.Path], adata: Optional[AnnData] = None, copy: bool = False) -> "IOMixin":
+    def read(fname: str | pathlib.Path, adata: AnnData | None = None, copy: bool = False) -> "IOMixin":
         """De-serialize self from a file.
 
         Parameters
@@ -93,9 +93,7 @@ class IOMixin:
                 return obj
 
             if not isinstance(adata, AnnData):
-                raise TypeError(
-                    "This object was saved without its `adata` object. " "Please supply one as `adata=...`."
-                )
+                raise TypeError("This object was saved without its `adata` object. Please supply one as `adata=...`.")
 
             if obj.shape[0] != len(adata):
                 raise ValueError(f"Expected `adata` to be of length `{len(adata)}`, found `{obj.shape[0]}`.")

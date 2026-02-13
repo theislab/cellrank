@@ -1,11 +1,9 @@
 import os
 
-import pytest
-from _helpers import assert_estimators_equal
-
 import numpy as np
 import pandas as pd
-
+import pytest
+from _helpers import assert_estimators_equal
 from anndata import AnnData
 
 import cellrank as cr

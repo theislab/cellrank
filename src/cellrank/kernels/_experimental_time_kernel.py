@@ -1,13 +1,11 @@
 import abc
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
-
+from anndata import AnnData
 from matplotlib.colors import Normalize, to_hex
 from matplotlib.pyplot import get_cmap
-
-from anndata import AnnData
 
 from cellrank._utils._docs import d
 from cellrank.kernels._base_kernel import BidirectionalKernel
@@ -67,7 +65,7 @@ class ExperimentalTimeKernel(BidirectionalKernel, abc.ABC):
         self,
         cluster: str,
         cluster_key: str,
-        time_key: Optional[str] = None,
+        time_key: str | None = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:

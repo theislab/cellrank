@@ -1,23 +1,18 @@
 import copy
 import enum
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import (
     Any,
-    Callable,
     Literal,
     NamedTuple,
-    Optional,
     Protocol,
     TypeVar,
-    Union,
 )
-
-from wrapt import decorator
 
 import numpy as np
 import pandas as pd
-
 from anndata import AnnData
+from wrapt import decorator
 
 from cellrank import logging as logg
 from cellrank._utils._enum import ModeEnum
@@ -33,10 +28,10 @@ __all__ = [
 
 
 class StatesHolder(NamedTuple):  # noqa: D101
-    assignment: Optional[pd.Series] = None
-    probs: Optional[pd.Series] = None
-    colors: Optional[np.ndarray] = None
-    memberships: Optional[Lineage] = None
+    assignment: pd.Series | None = None
+    probs: pd.Series | None = None
+    colors: np.ndarray | None = None
+    memberships: Lineage | None = None
 
     def set(self, **kwargs: Any) -> "StatesHolder":  # noqa: D102
         return self._replace(**kwargs)
@@ -62,10 +57,10 @@ class BaseProtocol(Protocol):  # noqa: D101
 
     def _set(
         self,
-        attr: Optional[str] = None,
-        obj: Optional[Union[pd.DataFrame, Mapping[str, Any]]] = None,
-        key: Optional[str] = None,
-        value: Optional[Union[np.ndarray, pd.Series, pd.DataFrame, Lineage, AnnData, dict[str, Any]]] = None,
+        attr: str | None = None,
+        obj: pd.DataFrame | Mapping[str, Any] | None = None,
+        key: str | None = None,
+        value: np.ndarray | pd.Series | pd.DataFrame | Lineage | AnnData | dict[str, Any] | None = None,
         copy: bool = True,
         shadow_only: bool = False,
     ) -> None: ...
@@ -73,18 +68,18 @@ class BaseProtocol(Protocol):  # noqa: D101
     def _get(
         self,
         *,
-        obj: Union[pd.DataFrame, Mapping[str, Any]],
+        obj: pd.DataFrame | Mapping[str, Any],
         key: str,
-        shadow_attr: Optional[Literal["obs", "obsm", "var", "varm", "uns"]] = None,
-        dtype: Optional[Union[type, tuple[type, ...]]] = None,
+        shadow_attr: Literal["obs", "obsm", "var", "varm", "uns"] | None = None,
+        dtype: type | tuple[type, ...] | None = None,
         copy: bool = True,
         allow_missing: bool = False,
     ) -> Any: ...
 
     def _create_params(
         self,
-        locs: Optional[Mapping[str, Any]] = None,
-        func: Optional[Callable] = None,
+        locs: Mapping[str, Any] | None = None,
+        func: Callable | None = None,
         remove: Sequence[str] = (),
     ) -> dict[str, Any]: ...
 
@@ -140,8 +135,8 @@ class SafeGetter:
     has been encountered.
     """
 
-    def __init__(self, obj: Any, allowed: Union[type, Sequence[type]] = ()):
-        self._exc_type: Optional[TypeVar[Exception]] = None
+    def __init__(self, obj: Any, allowed: type | Sequence[type] = ()):
+        self._exc_type: TypeVar[Exception] | None = None
         self._obj = obj
         if not isinstance(allowed, Iterable):
             allowed = (allowed,)

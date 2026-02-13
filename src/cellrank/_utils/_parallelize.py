@@ -1,10 +1,9 @@
 import multiprocessing
 import threading
-from collections.abc import Sequence
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import joblib as jl
-
 import numpy as np
 import scipy.sparse as sp
 
@@ -13,14 +12,14 @@ __all__ = ["parallelize", "_get_n_cores"]
 
 def parallelize(
     callback: Callable[[Any], Any],
-    collection: Union[sp.spmatrix, Sequence[Any]],
-    n_jobs: Optional[int] = None,
-    n_split: Optional[int] = None,
+    collection: sp.spmatrix | Sequence[Any],
+    n_jobs: int | None = None,
+    n_split: int | None = None,
     unit: str = "",
     as_array: bool = True,
     use_ixs: bool = False,
     backend: str = "loky",
-    extractor: Optional[Callable[[Any], Any]] = None,
+    extractor: Callable[[Any], Any] | None = None,
     show_progress_bar: bool = True,
 ) -> Any:
     """Parallelize function call over a collection of elements.
@@ -135,7 +134,7 @@ def parallelize(
     return wrapper
 
 
-def _get_n_cores(n_cores: Optional[int], n_jobs: Optional[int]) -> int:
+def _get_n_cores(n_cores: int | None, n_jobs: int | None) -> int:
     """Make number of cores a positive integer.
 
     Parameters
