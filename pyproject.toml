@@ -145,6 +145,7 @@ select = [
     "E", # pycodestyle
     "F", # pyflakes
     "W", # pycodestyle
+    "I", # isort
     "Q", # flake8-quotes
     "SIM", # flake8-simplify
     "NPY",  # NumPy-specific rules
@@ -168,21 +169,6 @@ convention = "numpy"
 ban-relative-imports = "all"
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = "double"
-
-[tool.black]
-line-length = 120
-target-version = ['py39']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-include_trailing_comma = true
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "GENERIC", "NUMERIC", "PLOTTING", "BIO", "FIRSTPARTY", "LOCALFOLDER"]
-# also contains what we import in notebooks
-known_generic = ["wrapt", "joblib"]
-known_numeric = ["numpy", "numba", "scipy", "jax", "pandas", "sklearn", "networkx", "statsmodels"]
-known_bio = ["anndata", "scanpy"]
-known_plotting = ["IPython", "matplotlib", "mpl_toolkits", "seaborn"]
 
 [tool.pytest.ini_options]
 testpaths = "tests"
