@@ -103,7 +103,7 @@ class SKLearnModel(BaseModel):
             x, y = check_X_y(
                 X=self.x,
                 y=self.y,
-                force_all_finite="allow-nan",
+                ensure_all_finite="allow-nan",
                 copy=False,
                 estimator=self.model,
             )
