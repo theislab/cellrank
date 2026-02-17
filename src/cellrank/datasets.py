@@ -28,15 +28,15 @@ class ReprogrammingSubset(ModeEnum):
 
 # fmt: off
 _datasets = {
-    "pancreas": ("https://figshare.com/ndownloader/files/25060877", (2531, 27998)),
-    "pancreas_preprocessed": ("https://figshare.com/ndownloader/files/25030028", (2531, 2000)),
-    "pancreas_preprocessed_vk": ("https://figshare.com/ndownloader/files/41325411", (2531, 5974)),
-    "lung": ("https://figshare.com/ndownloader/files/25038224", (24882, 24051)),
-    "reprogramming_morris": ("https://figshare.com/ndownloader/files/25503773", (104679, 22630)),
-    "zebrafish": ("https://figshare.com/ndownloader/files/27265280", (2434, 23974)),
-    "reprogramming_schiebinger": ("https://figshare.com/ndownloader/files/28618734", (236285, 19089)),
-    "reprogramming_schiebinger_serum_subset": ("https://figshare.com/ndownloader/files/35858033", (165892, 19089)),
-    "bone_marrow": ("https://figshare.com/ndownloader/files/35826944", (5780, 27876)),
+    "pancreas": ("https://ndownloader.figshare.com/files/25060877", (2531, 27998)),
+    "pancreas_preprocessed": ("https://ndownloader.figshare.com/files/25030028", (2531, 2000)),
+    "pancreas_preprocessed_vk": ("https://ndownloader.figshare.com/files/41325411", (2531, 5974)),
+    "lung": ("https://ndownloader.figshare.com/files/25038224", (24882, 24051)),
+    "reprogramming_morris": ("https://ndownloader.figshare.com/files/25503773", (104679, 22630)),
+    "zebrafish": ("https://ndownloader.figshare.com/files/27265280", (2434, 23974)),
+    "reprogramming_schiebinger": ("https://ndownloader.figshare.com/files/28618734", (236285, 19089)),
+    "reprogramming_schiebinger_serum_subset": ("https://ndownloader.figshare.com/files/35858033", (165892, 19089)),
+    "bone_marrow": ("https://ndownloader.figshare.com/files/35826944", (5780, 27876)),
 }
 # fmt: on
 
