@@ -150,6 +150,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states: Optional[Union[int, Sequence[int]]] = None,
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
+        optimizer: str = "Nelder-Mead",
         **kwargs: Any,
     ) -> "GPCCA":
         """Compute the macrostates.
@@ -163,6 +164,11 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
+        optimizer
+            Optimization method for the GPCCA rotation matrix. Valid options are
+            ``'Nelder-Mead'``, ``'L-BFGS-B'``, ``'BFGS'``, and ``'CG'``.
+            For ``n_states > 15``, gradient-based optimizers (e.g. ``'L-BFGS-B'``)
+            are strongly recommended as Nelder-Mead scales poorly.
         kwargs
             Keyword arguments for :meth:`compute_schur`.
 
@@ -198,9 +204,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 f"Schur vectors `{self._gpcca._p_X.shape[1]}`. Recomputing the decomposition"
             )
 
+        if n_states > 15 and optimizer == "Nelder-Mead":
+            logg.warning(
+                f"Using Nelder-Mead with `n_states={n_states}` may be very slow. "
+                f"Consider using a gradient-based optimizer: 'L-BFGS-B', 'BFGS', or 'CG'"
+            )
+
         start = logg.info(f"Computing `{n_states}` macrostates")
         try:
-            self._gpcca = self._gpcca.optimize(m=n_states)
+            self._gpcca = self._gpcca.optimize(m=n_states, method=optimizer)
         except ValueError as e:
             if "will split complex conjugate eigenvalues" not in str(e):
                 raise
@@ -211,7 +223,7 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 f"Unable to compute macrostates with `n_states={n_states}` because it will "
                 f"split complex conjugate eigenvalues. Using `n_states={n_states + 1}`"
             )
-            self._gpcca = self._gpcca.optimize(m=n_states + 1)
+            self._gpcca = self._gpcca.optimize(m=n_states + 1, method=optimizer)
 
         self._set_macrostates(
             memberships=self._gpcca.memberships,
