@@ -150,9 +150,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states: Optional[Union[int, Sequence[int]]] = None,
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
+        optimizer: str = "CG",
+        n_starts: int = 10,
+        perturbation_scale: float = 0.1,
+        seed: Optional[int] = None,
         **kwargs: Any,
     ) -> "GPCCA":
-        """Compute the macrostates.
+        r"""Compute the macrostates.
 
         Parameters
         ----------
@@ -163,6 +167,28 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         %(n_cells)s
         cluster_key
             If a key to cluster labels is given, names and colors of the states will be associated with the clusters.
+        optimizer
+            Optimization method for the GPCCA rotation matrix. Valid options are
+            ``'CG'``, ``'L-BFGS-B'``, ``'BFGS'``, and ``'Nelder-Mead'``.
+            ``'CG'`` (conjugate gradient) uses an analytical Jacobian and scales
+            as :math:`O(n \cdot m^2)` per iteration, where *n* is the number of
+            cells and *m* is the number of macrostates.
+            ``'Nelder-Mead'`` is derivative-free and was the original default.
+            It optimizes over :math:`O(m^2)` rotation parameters and becomes
+            impractical for ``n_states > 15``.
+        n_starts
+            Number of optimization runs. The first run uses the deterministic
+            ISA initialization; subsequent runs perturb the initial rotation
+            matrix on the SO(k) manifold and keep the result with the best
+            crispness. Set to ``1`` to disable perturbation (fully
+            deterministic).
+        perturbation_scale
+            Angular scale for the rotation perturbation (only used when
+            ``n_starts > 1``). Recommended range is 0.05-0.2; larger values
+            risk producing degenerate solutions.
+        seed
+            Random seed for reproducibility of the perturbations
+            (only used when ``n_starts > 1``).
         kwargs
             Keyword arguments for :meth:`compute_schur`.
 
@@ -198,9 +224,21 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 f"Schur vectors `{self._gpcca._p_X.shape[1]}`. Recomputing the decomposition"
             )
 
+        if n_states > 15 and optimizer == "Nelder-Mead":
+            logg.warning(
+                f"Using Nelder-Mead with `n_states={n_states}` may be very slow. "
+                f"Consider using optimizer='CG' (the default) or another gradient-based optimizer"
+            )
+
         start = logg.info(f"Computing `{n_states}` macrostates")
         try:
-            self._gpcca = self._gpcca.optimize(m=n_states)
+            self._gpcca = self._gpcca.optimize(
+                m=n_states,
+                method=optimizer,
+                n_starts=n_starts,
+                perturbation_scale=perturbation_scale,
+                seed=seed,
+            )
         except ValueError as e:
             if "will split complex conjugate eigenvalues" not in str(e):
                 raise
@@ -211,7 +249,13 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
                 f"Unable to compute macrostates with `n_states={n_states}` because it will "
                 f"split complex conjugate eigenvalues. Using `n_states={n_states + 1}`"
             )
-            self._gpcca = self._gpcca.optimize(m=n_states + 1)
+            self._gpcca = self._gpcca.optimize(
+                m=n_states + 1,
+                method=optimizer,
+                n_starts=n_starts,
+                perturbation_scale=perturbation_scale,
+                seed=seed,
+            )
 
         self._set_macrostates(
             memberships=self._gpcca.memberships,
@@ -721,6 +765,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         n_states: Optional[Union[int, Sequence[int]]] = None,
         n_cells: Optional[int] = 30,
         cluster_key: Optional[str] = None,
+        optimizer: str = "CG",
+        n_starts: int = 10,
+        perturbation_scale: float = 0.1,
+        seed: Optional[int] = None,
         **kwargs: Any,
     ) -> "GPCCA":
         """
@@ -744,7 +792,15 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         # call explicitly since `compute_macrostates` doesn't handle the case
         # when `minChi` is used for `n_states` and `self._gpcca` is uninitialized
         _ = self.compute_schur(n, **kwargs)
-        return self.compute_macrostates(n_states=n_states, cluster_key=cluster_key, n_cells=n_cells)
+        return self.compute_macrostates(
+            n_states=n_states,
+            cluster_key=cluster_key,
+            n_cells=n_cells,
+            optimizer=optimizer,
+            n_starts=n_starts,
+            perturbation_scale=perturbation_scale,
+            seed=seed,
+        )
 
     @d.dedent
     @inject_docs(o=CoarseTOrder)

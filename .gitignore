@@ -162,6 +162,10 @@ cython_debug/
 
 # VS Code
 .vscode/
+.github/prompts/
+
+# uv
+uv.lock
 
 # documentation
 docs/api/_autosummary
