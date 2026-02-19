@@ -171,3 +171,9 @@ tests/figures
 
 # Ruff
 .ruff_cache
+
+# uv (library — don't commit lock files)
+uv.lock
+
+# other
+.github/prompts/*
