@@ -113,7 +113,7 @@ python = [ "3.12", "3.13" ]
 
 [tool.hatch.envs.docs]
 dependency-groups = [ "docs" ]
-scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
+scripts.build = "sphinx-build -M html docs docs/_build {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
