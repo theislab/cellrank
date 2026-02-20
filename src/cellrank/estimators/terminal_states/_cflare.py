@@ -1,10 +1,9 @@
 from collections.abc import Sequence
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
 import scipy.stats as st
-
 from anndata import AnnData
 
 from cellrank import logging as logg
@@ -61,18 +60,18 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     @d.dedent
     def predict(
         self,
-        use: Optional[Union[int, Sequence[int]]] = None,
-        percentile: Optional[int] = 98,
+        use: int | Sequence[int] | None = None,
+        percentile: int | None = 98,
         method: Literal["leiden", "kmeans"] = "leiden",
-        cluster_key: Optional[str] = None,
-        n_clusters_kmeans: Optional[int] = None,
+        cluster_key: str | None = None,
+        n_clusters_kmeans: int | None = None,
         n_neighbors: int = 20,
         resolution: float = 0.1,
         n_matches_min: int = 0,
         n_neighbors_filtering: int = 15,
-        basis: Optional[str] = None,
+        basis: str | None = None,
         n_comps: int = 5,
-        scale: Optional[bool] = None,
+        scale: bool | None = None,
     ) -> "CFLARE":
         """Find approximate recurrent classes of the Markov chain.
 
@@ -123,7 +122,7 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
 
-        def convert_use(use: Optional[Union[int, Sequence[int], np.ndarray]]) -> list[int]:
+        def convert_use(use: int | Sequence[int] | np.ndarray | None) -> list[int]:
             if method not in ["kmeans", "leiden"]:
                 raise ValueError(f"Invalid method `{method!r}`. Valid options are `leiden` or `kmeans`.")
 

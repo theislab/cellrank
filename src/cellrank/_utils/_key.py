@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 __all__ = ["Key"]
 
@@ -17,15 +18,15 @@ class Key:
     """Class which manages keys in :class:`anndata.AnnData`."""
 
     @classmethod
-    def backward(cls, bwd: Optional[bool]) -> str:
+    def backward(cls, bwd: bool | None) -> str:
         return "bwd" if bwd else "fwd"
 
     @classmethod
-    def where(cls, bwd: Optional[bool]) -> str:
+    def where(cls, bwd: bool | None) -> str:
         return "from" if bwd else "to"
 
     @classmethod
-    def initial(cls, bwd: Optional[bool]) -> str:
+    def initial(cls, bwd: bool | None) -> str:
         return "initial" if bwd else "terminal"
 
     @classmethod
@@ -38,16 +39,16 @@ class Key:
             return f"{key}_probs"
 
         @classmethod
-        def macrostates(cls, bwd: Optional[bool]) -> str:
+        def macrostates(cls, bwd: bool | None) -> str:
             return f"macrostates_{Key.backward(bwd)}"
 
         @classmethod
-        def term_states(cls, estim_bwd: Optional[bool], *, bwd: bool = False) -> str:
+        def term_states(cls, estim_bwd: bool | None, *, bwd: bool = False) -> str:
             states = "init_states" if bwd else "term_states"
             return f"{states}_{Key.backward(estim_bwd)}"
 
         @classmethod
-        def priming_degree(cls, bwd: Optional[bool]) -> str:
+        def priming_degree(cls, bwd: bool | None) -> str:
             return f"priming_degree_{Key.backward(bwd)}"
 
     class obsm:
@@ -56,33 +57,33 @@ class Key:
             return f"{key}_memberships"
 
         @classmethod
-        def schur_vectors(cls, bwd: Optional[bool]) -> str:
+        def schur_vectors(cls, bwd: bool | None) -> str:
             return f"schur_vectors_{Key.backward(bwd)}"
 
         @classmethod
-        def macrostates(cls, bwd: Optional[bool]) -> str:
+        def macrostates(cls, bwd: bool | None) -> str:
             return f"macrostates_{Key.backward(bwd)}"
 
         @classmethod
-        def fate_probs(cls, bwd: Optional[bool]) -> str:
+        def fate_probs(cls, bwd: bool | None) -> str:
             return f"lineages_{Key.backward(bwd)}"
 
         @classmethod
-        def abs_times(cls, bwd: Optional[bool]) -> str:
+        def abs_times(cls, bwd: bool | None) -> str:
             return f"absorption_times_{Key.backward(bwd)}"
 
     class varm:
         @classmethod
-        def lineage_drivers(cls, bwd: Optional[bool]):
+        def lineage_drivers(cls, bwd: bool | None):
             return Key.initial(bwd) + "_lineage_drivers"
 
     class uns:
         @classmethod
-        def kernel(cls, bwd: Optional[bool], key: Optional[str] = None) -> str:
+        def kernel(cls, bwd: bool | None, key: str | None = None) -> str:
             return key if key is not None else f"T_{Key.backward(bwd)}"
 
         @classmethod
-        def estimator(cls, bwd: Optional[bool], key: Optional[str] = None) -> str:
+        def estimator(cls, bwd: bool | None, key: str | None = None) -> str:
             return key if key is not None else f"{Key.backward(bwd)}_estimator"
 
         @classmethod
@@ -94,13 +95,13 @@ class Key:
             return f"{key}_colors"
 
         @classmethod
-        def eigen(cls, bwd: Optional[bool]) -> str:
+        def eigen(cls, bwd: bool | None) -> str:
             return f"eigendecomposition_{Key.backward(bwd)}"
 
         @classmethod
-        def schur_matrix(cls, bwd: Optional[bool]) -> str:
+        def schur_matrix(cls, bwd: bool | None) -> str:
             return f"schur_matrix_{Key.backward(bwd)}"
 
         @classmethod
-        def coarse(cls, bwd: Optional[bool]) -> str:
+        def coarse(cls, bwd: bool | None) -> str:
             return f"coarse_{Key.backward(bwd)}"

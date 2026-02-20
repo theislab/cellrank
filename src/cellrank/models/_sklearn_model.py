@@ -1,13 +1,12 @@
 import inspect
 import warnings
 from collections.abc import Iterable
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
+from anndata import AnnData
 from sklearn.base import BaseEstimator
 from sklearn.utils import check_X_y
-
-from anndata import AnnData
 
 from cellrank._utils._docs import d
 from cellrank.models import BaseModel
@@ -42,7 +41,7 @@ class SKLearnModel(BaseModel):
         self,
         adata: AnnData,
         model: BaseEstimator,
-        weight_name: Optional[str] = None,
+        weight_name: str | None = None,
         ignore_raise: bool = False,
     ):
         if not isinstance(model, BaseEstimator):
@@ -78,9 +77,9 @@ class SKLearnModel(BaseModel):
     @d.dedent
     def fit(
         self,
-        x: Optional[np.ndarray] = None,
-        y: Optional[np.ndarray] = None,
-        w: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        y: np.ndarray | None = None,
+        w: np.ndarray | None = None,
         **kwargs: Any,
     ) -> "SKLearnModel":
         """%(base_model_fit.full_desc)s
@@ -112,7 +111,7 @@ class SKLearnModel(BaseModel):
         return self
 
     @d.dedent
-    def predict(self, x_test: Optional[np.ndarray] = None, key_added: str = "_x_test", **kwargs) -> np.ndarray:
+    def predict(self, x_test: np.ndarray | None = None, key_added: str = "_x_test", **kwargs) -> np.ndarray:
         """%(base_model_predict.full_desc)s
 
         Parameters
@@ -131,7 +130,7 @@ class SKLearnModel(BaseModel):
         return self.y_test
 
     @d.dedent
-    def confidence_interval(self, x_test: Optional[np.ndarray] = None, **kwargs: Any) -> np.ndarray:
+    def confidence_interval(self, x_test: np.ndarray | None = None, **kwargs: Any) -> np.ndarray:
         """%(base_model_ci.full_desc)s
 
         Parameters
@@ -154,8 +153,8 @@ class SKLearnModel(BaseModel):
         self,
         func_names: Iterable[str],
         use_default: bool = False,
-        default: Optional[str] = None,
-    ) -> Optional[str]:
+        default: str | None = None,
+    ) -> str | None:
         """Find a function in :attr:`model` from given names.
 
         If :obj:`None` is found, use the ``default`` or raise a :class:`RuntimeError`.
@@ -180,7 +179,7 @@ class SKLearnModel(BaseModel):
             return default
         raise RuntimeError(f"Unable to find function and no default specified, searched for `{list(func_names)}`.")
 
-    def _find_arg_name(self, func_name: Optional[str], param_names: Iterable[str]) -> Optional[str]:
+    def _find_arg_name(self, func_name: str | None, param_names: Iterable[str]) -> str | None:
         """Find an argument in :attr:`model`'s ``func_name``.
 
         Parameters
@@ -210,7 +209,7 @@ class SKLearnModel(BaseModel):
 
     @d.dedent
     def copy(self) -> "SKLearnModel":
-        """%(copy)s"""  # noqa
+        """%(copy)s"""  # noqa: D400, D401
         res = SKLearnModel(self.adata, self._model, weight_name=self._weight_name, ignore_raise=True)
         self._shallowcopy_attributes(res)  # this deepcopies the underlying model
 

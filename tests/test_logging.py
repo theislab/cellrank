@@ -4,7 +4,6 @@ import io
 import sys
 
 import pytest
-
 from scanpy import Verbosity
 
 from cellrank import logging as logg
@@ -84,6 +83,10 @@ class TestLogging:
             @property
             def timezone(self):
                 return datetime.timezone
+
+            @property
+            def UTC(self):
+                return datetime.UTC
 
         settings.logfile = sys.stderr
         t = IncTime()

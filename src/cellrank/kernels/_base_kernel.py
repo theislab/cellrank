@@ -1,19 +1,18 @@
 import abc
 import copy
 import pathlib
-from collections.abc import Sequence
-from typing import Any, Callable, Optional, Union
-
-import numpy as np
-import scipy.sparse as sp
+from collections.abc import Callable, Sequence
+from typing import Any, Optional, Union
 
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap
-
+import numpy as np
+import scipy.sparse as sp
 from anndata import AnnData
+from matplotlib.colors import LinearSegmentedColormap
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d, inject_docs
+from cellrank._utils._key import Key
 from cellrank._utils._utils import _normalize, _read_graph_data, save_fig
 from cellrank.kernels._utils import require_tmat
 from cellrank.kernels.mixins import BidirectionalMixin, IOMixin, UnidirectionalMixin
@@ -22,7 +21,7 @@ from cellrank.kernels.utils._random_walk import Indices_t
 
 __all__ = ["Kernel", "UnidirectionalKernel", "BidirectionalKernel"]
 
-Tmat_t = Union[np.ndarray, sp.spmatrix]
+Tmat_t = np.ndarray | sp.spmatrix
 
 
 class KernelExpression(IOMixin, abc.ABC):
@@ -68,7 +67,7 @@ class KernelExpression(IOMixin, abc.ABC):
 
     @adata.setter
     @abc.abstractmethod
-    def adata(self, value: Optional[AnnData]) -> None:
+    def adata(self, value: AnnData | None) -> None:
         pass
 
     @property
@@ -83,7 +82,7 @@ class KernelExpression(IOMixin, abc.ABC):
 
     @property
     @abc.abstractmethod
-    def backward(self) -> Optional[bool]:
+    def backward(self) -> bool | None:
         """Direction of the process."""
 
     @abc.abstractmethod
@@ -103,19 +102,19 @@ class KernelExpression(IOMixin, abc.ABC):
         cluster: str,
         cluster_key: str,
         time_key: str,
-        clusters: Optional[Sequence[Any]] = None,
-        time_points: Optional[Sequence[Union[int, float]]] = None,
+        clusters: Sequence[Any] | None = None,
+        time_points: Sequence[int | float] | None = None,
         min_flow: float = 0,
         remove_empty_clusters: bool = True,
-        ascending: Optional[bool] = False,
-        legend_loc: Optional[str] = "upper right out",
-        alpha: Optional[float] = 0.8,
-        xticks_step_size: Optional[int] = 1,
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        ascending: bool | None = False,
+        legend_loc: str | None = "upper right out",
+        alpha: float | None = 0.8,
+        xticks_step_size: int | None = 1,
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
+        save: str | pathlib.Path | None = None,
         show: bool = True,
-    ) -> Optional[plt.Axes]:
+    ) -> plt.Axes | None:
         """Visualize outgoing flow from a cluster of cells :cite:`mittnenzweig:21`.
 
         Parameters
@@ -173,22 +172,22 @@ class KernelExpression(IOMixin, abc.ABC):
     def plot_random_walks(
         self,
         n_sims: int = 100,
-        max_iter: Union[int, float] = 0.25,
-        seed: Optional[int] = None,
+        max_iter: int | float = 0.25,
+        seed: int | None = None,
         successive_hits: int = 0,
         start_ixs: Indices_t = None,
         stop_ixs: Indices_t = None,
         basis: str = "umap",
-        cmap: Union[str, LinearSegmentedColormap] = "gnuplot",
+        cmap: str | LinearSegmentedColormap = "gnuplot",
         linewidth: float = 1.0,
         linealpha: float = 0.3,
-        ixs_legend_loc: Optional[str] = None,
-        n_jobs: Optional[int] = None,
+        ixs_legend_loc: str | None = None,
+        n_jobs: int | None = None,
         backend: str = "loky",
         show_progress_bar: bool = True,
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[int] = None,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
+        save: str | pathlib.Path | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot random walks in an embedding.
@@ -261,10 +260,10 @@ class KernelExpression(IOMixin, abc.ABC):
     def plot_projection(
         self,
         basis: str = "umap",
-        key_added: Optional[str] = None,
+        key_added: str | None = None,
         recompute: bool = False,
         stream: bool = True,
-        connectivities: Optional[sp.spmatrix] = None,
+        connectivities: sp.spmatrix | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot :attr:`transition_matrix` as a stream or a grid plot.
@@ -362,7 +361,7 @@ class KernelExpression(IOMixin, abc.ABC):
     @inject_docs()  # gets rid of {{}} in %(write_to_adata)s
     @d.dedent
     @require_tmat
-    def write_to_adata(self, key: Optional[str] = None, copy: bool = False) -> None:
+    def write_to_adata(self, key: str | None = None, copy: bool = False) -> None:
         """Write the transition matrix and parameters used for computation to the underlying :attr:`adata` object.
 
         Parameters
@@ -377,8 +376,6 @@ class KernelExpression(IOMixin, abc.ABC):
         -------
         %(write_to_adata)s
         """
-        from cellrank._utils._key import Key
-
         if self.adata is None:
             raise ValueError("Underlying annotated data object is not set.")
 
@@ -392,7 +389,7 @@ class KernelExpression(IOMixin, abc.ABC):
         self.adata.obsp[key] = self.transition_matrix.copy() if copy else self.transition_matrix
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.csr_matrix]:
+    def transition_matrix(self) -> np.ndarray | sp.csr_matrix:
         """Row-normalized transition matrix."""
         if self._parent is None and self._transition_matrix is None:
             self.compute_transition_matrix()
@@ -443,7 +440,7 @@ class KernelExpression(IOMixin, abc.ABC):
             return self._params
         return {f"{k!r}:{i}": k.params for i, k in enumerate(self.kernels)}
 
-    def _reuse_cache(self, expected_params: dict[str, Any], *, time: Optional[Any] = None) -> bool:
+    def _reuse_cache(self, expected_params: dict[str, Any], *, time: Any | None = None) -> bool:
         # fmt: off
         try:
             if expected_params == self._params:
@@ -601,7 +598,7 @@ class Kernel(KernelExpression, abc.ABC):
         Keyword arguments for the parent.
     """
 
-    def __init__(self, adata: AnnData, parent: Optional[KernelExpression] = None, **kwargs: Any):
+    def __init__(self, adata: AnnData, parent: KernelExpression | None = None, **kwargs: Any):
         super().__init__(parent=parent, **kwargs)
         self._adata = adata
         self._n_obs = adata.n_obs
@@ -616,7 +613,7 @@ class Kernel(KernelExpression, abc.ABC):
         return self._adata
 
     @adata.setter
-    def adata(self, adata: Optional[AnnData]) -> None:
+    def adata(self, adata: AnnData | None) -> None:
         if adata is None:
             self._adata = None
             return
@@ -710,7 +707,7 @@ class Kernel(KernelExpression, abc.ABC):
         return f"n={n}, {params}" if params else f"n={n}"
 
     @property
-    def transition_matrix(self) -> Union[np.ndarray, sp.csr_matrix]:
+    def transition_matrix(self) -> np.ndarray | sp.csr_matrix:
         """Row-normalized transition matrix."""
         return self._transition_matrix
 
@@ -755,20 +752,20 @@ class BidirectionalKernel(BidirectionalMixin, Kernel, abc.ABC):
 
 
 class Constant(UnidirectionalKernel):
-    def __init__(self, adata: AnnData, value: Union[int, float]):
+    def __init__(self, adata: AnnData, value: int | float):
         super().__init__(adata)
         self.transition_matrix = value
 
-    def compute_transition_matrix(self, value: Union[int, float]) -> "Constant":
+    def compute_transition_matrix(self, value: int | float) -> "Constant":
         self.transition_matrix = value
         return self
 
     @property
-    def transition_matrix(self) -> Union[int, float]:
+    def transition_matrix(self) -> int | float:
         return self._transition_matrix
 
     @transition_matrix.setter
-    def transition_matrix(self, value: Union[int, float]) -> None:
+    def transition_matrix(self, value: int | float) -> None:
         if not isinstance(value, (int, float, np.integer, np.floating)):
             raise TypeError(f"Value must be a `float` or `int`, found `{type(value).__name__}`.")
         if value <= 0:
@@ -810,7 +807,7 @@ class Constant(UnidirectionalKernel):
 
 
 class NaryKernelExpression(BidirectionalMixin, KernelExpression):
-    def __init__(self, *kexprs: KernelExpression, parent: Optional[KernelExpression] = None):
+    def __init__(self, *kexprs: KernelExpression, parent: KernelExpression | None = None):
         super().__init__(parent=parent)
         self._validate(kexprs)
 
@@ -820,7 +817,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
 
     @property
     @abc.abstractmethod
-    def _initial_value(self) -> Union[int, float, Tmat_t]:
+    def _initial_value(self) -> int | float | Tmat_t:
         pass
 
     @property
@@ -868,7 +865,7 @@ class NaryKernelExpression(BidirectionalMixin, KernelExpression):
         return self[0].adata
 
     @adata.setter
-    def adata(self, adata: Optional[AnnData]) -> None:
+    def adata(self, adata: AnnData | None) -> None:
         # allow resetting (use for temp. pickling without adata)
         for kexpr in self:
             kexpr.adata = adata
@@ -952,7 +949,7 @@ class KernelAdd(NaryKernelExpression):
         return "+"
 
     @property
-    def _initial_value(self) -> Union[int, float, Tmat_t]:
+    def _initial_value(self) -> int | float | Tmat_t:
         return 0.0
 
 
@@ -983,7 +980,7 @@ class KernelMul(NaryKernelExpression):
         return [k for k in self if isinstance(k, Constant)]
 
     @property
-    def _split_const(self) -> tuple[Optional[Constant], Optional[KernelExpression]]:
+    def _split_const(self) -> tuple[Constant | None, KernelExpression | None]:
         """Return a constant and the other expression, iff this expression is of length 2 and contains a constant."""
         if not self._bin_consts:
             return None, None
@@ -997,5 +994,5 @@ class KernelMul(NaryKernelExpression):
         return "*"
 
     @property
-    def _initial_value(self) -> Union[int, float, Tmat_t]:
+    def _initial_value(self) -> int | float | Tmat_t:
         return 1.0

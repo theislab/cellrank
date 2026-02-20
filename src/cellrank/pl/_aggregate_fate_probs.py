@@ -4,21 +4,18 @@ import math
 import pathlib
 import types
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal, Optional, Union
-
-from scvelo.plotting import paga
-
-import numpy as np
-import pandas as pd
-import scipy.sparse as sp
+from typing import Any, Literal
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy.sparse as sp
 import seaborn as sns
-from matplotlib import cm, colors
-
 from anndata import AnnData
+from matplotlib import cm, colors
 from scanpy.plotting import violin
+from scvelo.plotting import paga
 
 from cellrank import logging as logg
 from cellrank._utils import Lineage
@@ -51,19 +48,19 @@ def aggregate_fate_probabilities(
     adata: AnnData,
     mode: Literal["bar", "paga", "paga_pie", "violin", "heatmap", "clustermap"] = AggregationMode.PAGA_PIE,
     backward: bool = False,
-    lineages: Optional[Union[str, Sequence[str]]] = None,
-    cluster_key: Optional[str] = "clusters",
-    clusters: Optional[Union[str, Sequence[str]]] = None,
-    basis: Optional[str] = None,
+    lineages: str | Sequence[str] | None = None,
+    cluster_key: str | None = "clusters",
+    clusters: str | Sequence[str] | None = None,
+    basis: str | None = None,
     cbar: bool = True,
-    ncols: Optional[int] = None,
+    ncols: int | None = None,
     sharey: bool = False,
     fmt: str = "0.2f",
     xrot: float = 90,
     legend_kwargs: Mapping[str, Any] = types.MappingProxyType({"loc": "best"}),
-    figsize: Optional[tuple[float, float]] = None,
-    dpi: Optional[int] = None,
-    save: Optional[Union[str, pathlib.Path]] = None,
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    save: str | pathlib.Path | None = None,
     **kwargs: Any,
 ) -> None:
     """Plot aggregate lineage probabilities at a cluster level.

@@ -2,23 +2,22 @@ import copy
 import itertools
 import pathlib
 import pickle
-from typing import Callable, Literal, Optional
+from collections.abc import Callable
+from typing import Literal
 
+import numpy as np
+import pandas as pd
 import pytest
+import scanpy as sc
+import scipy.sparse as sp
 from _helpers import (
     bias_knn,
     create_kernels,
     jax_not_installed_skip,
     random_transition_matrix,
 )
-
-import numpy as np
-import pandas as pd
-import scipy.sparse as sp
-from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
-
-import scanpy as sc
 from anndata import AnnData, read_h5ad
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 from scanpy import Neighbors
 
 import cellrank as cr
@@ -379,7 +378,7 @@ class TestKernel:
         ],
     )
     @pytest.mark.parametrize("key_added", [None, "foo"])
-    def test_kernel_reads_correct_connectivities(self, adata: AnnData, key_added: Optional[str], clazz: type):
+    def test_kernel_reads_correct_connectivities(self, adata: AnnData, key_added: str | None, clazz: type):
         if clazz is VelocityKernel and key_added == "foo":
             pytest.skip("`get_moments` in scVelo doesn't support specifying key")
         del adata.uns["neighbors"]
@@ -984,7 +983,7 @@ class TestComputeProjection:
         }
 
     @pytest.mark.parametrize("key_added", [None, "foo"])
-    def test_key_added(self, adata: AnnData, key_added: Optional[str]):
+    def test_key_added(self, adata: AnnData, key_added: str | None):
         ck = cr.kernels.ConnectivityKernel(adata).compute_transition_matrix()
         ck.plot_projection(basis="umap", key_added=key_added)
 
@@ -1158,7 +1157,7 @@ class TestRealTimeKernel:
         tmk = RealTimeKernel(adata, time_key="exp_time", policy=policy)
 
         if policy == "sequential":
-            assert tmk.couplings == {key: None for key in zip(cats[:-1], cats[1:])}
+            assert tmk.couplings == dict.fromkeys(zip(cats[:-1], cats[1:]))
         else:
             assert tmk.couplings == {(src, tgt): None for (src, tgt) in itertools.product(cats, cats) if src < tgt}
 
@@ -1225,7 +1224,7 @@ class TestRealTimeKernel:
         self,
         adata_large: AnnData,
         problem: str,
-        sparse_mode: Optional[str],
+        sparse_mode: str | None,
         policy: str,
     ):
         moscot = pytest.importorskip("moscot")

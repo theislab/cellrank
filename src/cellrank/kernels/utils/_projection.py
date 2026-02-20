@@ -1,11 +1,10 @@
 import warnings
-from typing import Any, Optional
-
-import scvelo as scv
-from scvelo.tools.velocity_embedding import quiver_autoscale
+from typing import Any
 
 import numpy as np
 import scipy.sparse as sp
+import scvelo as scv
+from scvelo.tools.velocity_embedding import quiver_autoscale
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
@@ -29,24 +28,23 @@ class TmatProjection:
     """
 
     def __init__(self, kexpr: "ExpernelExpression", basis: str = "umap"):  # noqa: F821
-        from cellrank.kernels.mixins import ConnectivityMixin
+        from cellrank.kernels.mixins import ConnectivityMixin  # circular import
 
         for kernel in kexpr.kernels:
             if not isinstance(kernel, ConnectivityMixin):
                 logg.warning(
-                    f"{kernel!r} is not a kNN based kernel. "
-                    f"The embedding projection works best for kNN-based kernels"
+                    f"{kernel!r} is not a kNN based kernel. The embedding projection works best for kNN-based kernels"
                 )
                 break
         self._kexpr = kexpr
         self._basis = basis[2:] if basis.startswith("X_") else basis
-        self._key: Optional[str] = None
+        self._key: str | None = None
 
     def project(
         self,
-        key_added: Optional[str] = None,
+        key_added: str | None = None,
         recompute: bool = False,
-        connectivities: Optional[sp.spmatrix] = None,
+        connectivities: sp.spmatrix | None = None,
     ) -> None:
         """Project transition matrix onto an embedding.
 
@@ -65,7 +63,7 @@ class TmatProjection:
         -------
         Nothing, just updates :attr:`adata` with the projection and the parameters used for computation.
         """
-        from cellrank.kernels.mixins import ConnectivityMixin
+        from cellrank.kernels.mixins import ConnectivityMixin  # circular import
 
         self._key = Key.uns.kernel(self._kexpr.backward, key=key_added)
         ukey = f"{self._key}_params"

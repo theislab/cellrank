@@ -3,23 +3,21 @@ import io
 import pathlib
 import types
 from collections.abc import Mapping
-from typing import Any, Literal, Optional, Union
-
-from pygpcca import GPCCA
-from pygpcca._sorted_schur import _check_conj_split
-
-import numpy as np
-import scipy.sparse as sp
+from typing import Any, Literal
 
 import matplotlib.pyplot as plt
+import numpy as np
+import scipy.sparse as sp
 import seaborn as sns
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
 from anndata import AnnData
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from pygpcca import GPCCA
+from pygpcca._sorted_schur import _check_conj_split
 
 from cellrank import logging as logg
 from cellrank._utils._docs import d
 from cellrank._utils._key import Key
+from cellrank._utils._linear_solver import _is_petsc_slepc_available
 from cellrank._utils._utils import _eigengap, save_fig
 from cellrank.estimators.mixins._utils import BaseProtocol, SafeGetter, logger, shadow
 
@@ -29,14 +27,14 @@ EPS = np.finfo(np.float64).eps
 
 
 class SchurProtocol(BaseProtocol):
-    _gpcca: Optional[GPCCA] = None
-    _invalid_n_states: Optional[np.ndarray] = None
+    _gpcca: GPCCA | None = None
+    _invalid_n_states: np.ndarray | None = None
 
-    schur_vectors: Optional[np.ndarray] = None
-    _schur_matrix: Optional[np.ndarray] = None
-    _eigendecomposition: Optional[dict[str, Any]] = None
+    schur_vectors: np.ndarray | None = None
+    _schur_matrix: np.ndarray | None = None
+    _eigendecomposition: dict[str, Any] | None = None
 
-    def transition_matrix(self) -> Union[np.ndarray, sp.spmatrix]: ...
+    def transition_matrix(self) -> np.ndarray | sp.spmatrix: ...
 
     def _write_schur_decomposition(
         self,
@@ -52,17 +50,17 @@ class SchurMixin:
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        self._gpcca: Optional[GPCCA] = None
-        self._invalid_n_states: Optional[np.ndarray] = None
+        self._gpcca: GPCCA | None = None
+        self._invalid_n_states: np.ndarray | None = None
 
-        self._schur_vectors: Optional[np.ndarray] = None
-        self._schur_matrix: Optional[np.ndarray] = None
-        self._eigendecomposition: Optional[dict[str, Any]] = None
+        self._schur_vectors: np.ndarray | None = None
+        self._schur_matrix: np.ndarray | None = None
+        self._eigendecomposition: dict[str, Any] | None = None
 
     @property
     @d.get_summary(base="schur_vectors")
     @d.get_extended_summary(base="schur_vectors")
-    def schur_vectors(self) -> Optional[np.ndarray]:
+    def schur_vectors(self) -> np.ndarray | None:
         """Real Schur vectors of the transition matrix.
 
         The real Schur decomposition is a generalization of the Eigendecomposition and can be computed for any
@@ -77,7 +75,7 @@ class SchurMixin:
     @property
     @d.get_summary(base="schur_matrix")
     @d.dedent
-    def schur_matrix(self) -> Optional[np.ndarray]:
+    def schur_matrix(self) -> np.ndarray | None:
         """Schur matrix.
 
         %(schur_vectors.summary_ext)s
@@ -86,7 +84,7 @@ class SchurMixin:
 
     @property
     @d.get_summary(base="eigen")
-    def eigendecomposition(self) -> Optional[dict[str, Any]]:
+    def eigendecomposition(self) -> dict[str, Any] | None:
         """Eigendecomposition of the :attr:`transition_matrix`.
 
         For non-symmetric real matrices, left and right eigenvectors will in general be different and complex.
@@ -109,11 +107,11 @@ class SchurMixin:
     def compute_schur(
         self: SchurProtocol,
         n_components: int = 20,
-        initial_distribution: Optional[np.ndarray] = None,
+        initial_distribution: np.ndarray | None = None,
         method: Literal["krylov", "brandts"] = "krylov",
         which: Literal["LR", "LM"] = "LR",
         alpha: float = 1.0,
-        verbose: Optional[bool] = None,
+        verbose: bool | None = None,
     ) -> "SchurMixin":
         """Compute the Schur decomposition.
 
@@ -144,11 +142,9 @@ class SchurMixin:
         - :attr:`schur_matrix` -  %(schur_matrix.summary)s
         - :attr:`eigendecomposition` - %(eigen.summary)s
         """
-        from cellrank._utils._linear_solver import _is_petsc_slepc_available
-
         if n_components < 2:
             logg.warning(
-                f"Number of Schur vectors `>=2`, but only `{n_components}` " f"were requested. Using `n_components=2`"
+                f"Number of Schur vectors `>=2`, but only `{n_components}` were requested. Using `n_components=2`"
             )
             n_components = 2
 
@@ -207,11 +203,11 @@ class SchurMixin:
     @d.dedent
     def plot_schur_matrix(
         self,
-        title: Optional[str] = "schur matrix",
+        title: str | None = "schur matrix",
         cmap: str = "viridis",
-        figsize: Optional[tuple[float, float]] = None,
-        dpi: Optional[float] = 80,
-        save: Optional[Union[str, pathlib.Path]] = None,
+        figsize: tuple[float, float] | None = None,
+        dpi: float | None = 80,
+        save: str | pathlib.Path | None = None,
         **kwargs: Any,
     ) -> None:
         """Plot the Schur matrix.

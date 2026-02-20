@@ -1,8 +1,14 @@
 import os
 import pathlib
-from typing import Callable, Literal, Union
+from collections.abc import Callable
+from typing import Literal
 
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import pytest
+import scipy.sparse as sp
 import scvelo as scv
 from _helpers import (
     create_failed_model,
@@ -10,17 +16,9 @@ from _helpers import (
     gamr_skip,
     resize_images_to_same_sizes,
 )
-
-import numpy as np
-import pandas as pd
-import scipy.sparse as sp
-
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
+from anndata import AnnData
 from matplotlib.testing import setup
 from matplotlib.testing.compare import compare_images
-
-from anndata import AnnData
 
 import cellrank as cr
 from cellrank._utils import Lineage
@@ -72,10 +70,10 @@ scv.set_figure_params(transparent=True)
 def compare(
     *,
     kind: Literal["adata", "gpcca", "bwd", "gpcca_bwd", "cflare", "lineage", "gamr"] = "adata",
-    dirname: Union[str, pathlib.Path] = None,
+    dirname: str | pathlib.Path = None,
     tol: int = TOL,
 ) -> Callable:
-    def _compare_images(expected_path: Union[str, pathlib.Path], actual_path: Union[str, pathlib.Path]) -> None:
+    def _compare_images(expected_path: str | pathlib.Path, actual_path: str | pathlib.Path) -> None:
         resize_images_to_same_sizes(expected_path, actual_path)
         res = compare_images(expected_path, actual_path, tol=tol)
         assert res is None, res
