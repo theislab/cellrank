@@ -13,41 +13,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint ${{ matrix.lint-kind }}
+  lint-code:
+    name: Lint code
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        lint-kind: [code, docs]
-
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: true
     - name: Set up Python 3.12
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
 
     - name: Cache pre-commit
-      if: ${{ matrix.lint-kind == 'code' }}
       uses: actions/cache@v4
       with:
         path: ~/.cache/pre-commit
         key: pre-commit-${{ env.pythonLocation }}-${{ hashFiles('**/.pre-commit-config.yaml') }}
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install tox
+    - name: Install pre-commit
+      run: python -m pip install pre-commit
 
-    - name: Install PyEnchant
-      if: ${{ matrix.lint-kind == 'docs' }}
-      run: |
-        sudo apt-get update -y
-        sudo apt-get install libenchant-2-dev
-
-    - name: Lint ${{ matrix.lint-kind }}
-      run: |
-        tox -e lint-${{ matrix.lint-kind }}
+    - name: Run pre-commit
+      run: pre-commit run --all-files
