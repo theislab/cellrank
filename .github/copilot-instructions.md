@@ -73,23 +73,21 @@ via `_restitch_couplings()`, with configurable self-transition blocks.
 **GPCCA workflow** (the standard path):
 ```python
 g = cr.estimators.GPCCA(kernel)
-g.compute_schur(n_components=10)  # Schur decomposition
-g.compute_macrostates(n_states=5)  # soft clustering via pyGPCCA
-g.predict_terminal_states()  # classify macrostates automatically
-# OR: g.set_terminal_states(states=["Alpha", "Beta"])  # set manually from prior knowledge
-g.compute_fate_probabilities()  # absorption probabilities → Lineage
-g.compute_lineage_drivers()  # genes correlated with fate
+g.compute_schur(n_components=10)
+g.compute_macrostates(n_states=5)
+g.predict_terminal_states()
+# OR: g.set_terminal_states(states=["Alpha", "Beta"])
+g.compute_fate_probabilities()
+g.compute_lineage_drivers()
 ```
 
 Many users set terminal states manually via `set_terminal_states()` based on
 prior biological knowledge, rather than relying on automatic prediction.
 
 **Mixin architecture** — `GPCCA` inherits from 4 mixins in `estimators/mixins/`:
-- `SchurMixin` (`decomposition/_schur.py`) — Schur decomposition, `"brandts"` (dense)
-  or `"krylov"` (sparse, requires PETSc/SLEPc)
+- `SchurMixin` (`decomposition/_schur.py`) — Schur decomposition
 - `EigenMixin` (`decomposition/_eigen.py`) — standard eigendecomposition
-- `FateProbsMixin` (`_fate_probabilities.py`) — absorption probabilities via
-  $(I - Q)x = S$ linear system; optional PETSc solver for large problems
+- `FateProbsMixin` (`_fate_probabilities.py`) — absorption probabilities
 - `LineageDriversMixin` (`_lineage_drivers.py`) — gene-fate correlations
 
 ### `models/` — Gene Trend Fitting
@@ -111,10 +109,8 @@ Six main plotting functions: `aggregate_fate_probabilities`, `circular_projectio
 ### `_utils/` — Core Utilities
 
 - **`Lineage`** (`_lineage.py`) — NumPy ndarray subclass for fate probabilities
-  (cells × terminal states). Has named columns, colors, distance methods
-  (Wasserstein, KL, cosine). Overloads numpy operations to preserve metadata.
-- **`_linear_solver.py`** — iterative solvers (GMRES, BiCGSTAB) + optional
-  PETSc/SLEPc for large sparse systems
+  (cells × terminal states). Has named columns, colors, distance methods.
+- **`_linear_solver.py`** — iterative solvers (GMRES, BiCGSTAB) + optional PETSc/SLEPc
 - **`_parallelize.py`** — joblib-based parallelization helper
 - **`_key.py`** — standardized AnnData key naming (e.g., `terminal_states_fwd`)
 
@@ -140,7 +136,7 @@ CellRank's GPCCA estimator delegates to the
 [pyGPCCA](https://github.com/msmdev/pyGPCCA) library (installed as `pygpcca`,
 local checkout at `../pyGPCCA/`). It implements the GPCCA algorithm: sorted real
 Schur decomposition followed by rotation optimization to identify metastable
-(macro-) states as fuzzy clusters. See the pyGPCCA repo for algorithm details.
+(macro-) states as fuzzy clusters.
 
 ## Testing
 
@@ -165,11 +161,9 @@ estimators with `VelocityKernel + ConnectivityKernel`.
 **Running tests**:
 ```bash
 source .venv/bin/activate
-# Current: tox-based (will migrate to hatch)
 tox -e py312-noslepc                          # standard tests
 tox -e py312-slepc                            # PETSc/SLEPc tests (needs conda)
-# Or directly with pytest for quick iteration:
-python -m pytest tests/test_kernels.py -v -x  # single file, stop on first failure
+python -m pytest tests/test_kernels.py -v -x  # quick iteration
 ```
 
 **109 skips expected**: PETSc/SLEPc and R tests skip when deps not installed.
@@ -183,6 +177,8 @@ python -m pytest tests/test_kernels.py -v -x  # single file, stop on first failu
 - **Shadow AnnData**: estimators maintain an internal AnnData copy for
   serialization; `to_adata()` exports it
 - **Bidirectional kernels**: `~kernel` flips direction (forward ↔ backward)
+- **Logging**: Use `from cellrank import logging as logg` (not stdlib logging)
+- **Key naming**: Use helpers in `_utils/_key.py` for AnnData keys
 
 ## Optional Dependencies
 
@@ -197,18 +193,6 @@ python -m pytest tests/test_kernels.py -v -x  # single file, stop on first failu
 | `wot` | RealTimeKernel.from_wot() | Waddington-OT format |
 
 Currently no pip extras for these — install manually.
-
-## Conventions
-
-- **Docstrings**: NumPy format, types in signatures not docstrings
-- **Type hints**: Modern syntax (`str | None`, not `Optional[str]`) — Python ≥ 3.12
-- **Imports**: All at module top level except:
-  - Circular imports (marked with `# circular import` comment)
-  - Optional deps behind guards (`petsc4py`, `moscot`, `jax`, `rpy2`, `scvelo`)
-- **Line length**: 120 characters (ruff)
-- **Pre-commit**: ruff (lint/format), biome (JSON), pyproject-fmt
-- **Logging**: Use `from cellrank import logging as logg` (not stdlib logging)
-- **Key naming**: Use helpers in `_utils/_key.py` for AnnData keys
 
 ## Related Projects
 
