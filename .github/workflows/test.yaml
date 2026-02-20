@@ -1,0 +1,141 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+  - cron: 0 5 1,15 * *
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  # Read the hatch-test matrix from pyproject.toml so it stays the single
+  # source of truth for Python versions and dep variants.
+  get-environments:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.get-envs.outputs.envs }}
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        filter: blob:none
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@v7
+    - name: Get test environments
+      id: get-envs
+      run: |
+        ENVS_JSON=$(uvx hatch env show --json | jq -c 'to_entries
+          | map(
+              select(.key | startswith("hatch-test"))
+              | {
+                  name: .key,
+                  label: (if (.key | contains("pre")) then .key + " (pre-release deps)" else .key end),
+                  python: .value.python
+                }
+            )')
+        echo "envs=${ENVS_JSON}" | tee $GITHUB_OUTPUT
+
+  test:
+    needs: get-environments
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        env: ${{ fromJSON(needs.get-environments.outputs.envs) }}
+        include:
+        - os: macos-15
+          env:
+            name: hatch-test.py3.12-stable
+            label: hatch-test.py3.12-stable (macOS)
+            python: '3.12'
+
+    name: ${{ matrix.env.label }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ contains(matrix.env.name, 'pre') }}
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        filter: blob:none
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@v7
+      with:
+        python-version: ${{ matrix.env.python }}
+
+    - name: Create hatch environment
+      run: uvx hatch env create ${{ matrix.env.name }}
+    - name: List installed packages
+      run: uvx hatch run ${{ matrix.env.name }}:uv pip list
+    - name: Run tests
+      env:
+        MPLBACKEND: agg
+      run: uvx hatch run ${{ matrix.env.name }}:run-cov -v --color=yes -n auto
+    - name: Generate coverage report
+      run: |
+        test -f .coverage || uvx hatch run ${{ matrix.env.name }}:cov-combine
+        uvx hatch run ${{ matrix.env.name }}:cov-report
+        uvx hatch run ${{ matrix.env.name }}:coverage xml
+    - name: Upload coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: false
+
+  test-slepc:
+    runs-on: ubuntu-latest
+    name: PETSc / SLEPc
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        filter: blob:none
+        fetch-depth: 0
+    - uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        environments: slepc
+    - name: Run tests
+      run: pixi run -e slepc test
+    - name: Upload coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: slepc
+        fail_ci_if_error: false
+
+  test-r:
+    runs-on: ubuntu-latest
+    name: R / GAMR
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        filter: blob:none
+        fetch-depth: 0
+    - uses: prefix-dev/setup-pixi@v0.8.8
+      with:
+        environments: r
+    - name: Run tests
+      run: pixi run -e r test
+    - name: Upload coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: r
+        fail_ci_if_error: false
+
+  check:
+    name: All tests pass
+    if: always()
+    needs: [get-environments, test, test-slepc, test-r]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: re-actors/alls-green@release/v1
+      with:
+        allowed-failures: test-slepc,test-r
+        jobs: ${{ toJSON(needs) }}

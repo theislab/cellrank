@@ -6,6 +6,19 @@ name = "cellrank"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-arm64"]
 
+# Shared test dependencies (pixi doesn't install dependency-groups from
+# editable PyPI packages, so test deps must be declared here).
+[feature.test.dependencies]
+pytest = ">=8"
+pytest-cov = ">=4"
+pytest-mock = ">=3.5"
+pytest-xdist = "*"
+coverage = ">=7"
+igraph = "*"
+leidenalg = "*"
+pillow = "*"
+zarr = "<3"
+
 [feature.slepc.dependencies]
 petsc = "*"
 slepc = "*"
@@ -17,7 +30,7 @@ mpi4py = "*"
 cellrank = { path = ".", editable = true }
 
 [feature.slepc.tasks]
-test = "pytest tests/ -v -m petsc"
+test = "pytest tests/ -v --cov --cov-report=xml"
 
 [feature.r.dependencies]
 r-mgcv = "*"
@@ -27,8 +40,8 @@ rpy2 = "*"
 cellrank = { path = ".", editable = true }
 
 [feature.r.tasks]
-test = "pytest tests/ -v -m r"
+test = "pytest tests/ -v --cov --cov-report=xml"
 
 [environments]
-slepc = ["slepc"]
-r = ["r"]
+slepc = ["test", "slepc"]
+r = ["test", "r"]
