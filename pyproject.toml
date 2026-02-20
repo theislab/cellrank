@@ -116,7 +116,7 @@ python = [ "3.12", "3.14" ]
 deps = [ "pre" ]
 python = [ "3.14" ]
 
-[tool.hatch.envs.hatch-test.overrides.matrix.deps.env-vars]
+[[tool.hatch.envs.hatch-test.overrides.matrix.deps.env-vars]]
 key = "UV_PRERELEASE"
 value = "allow"
 if = [ "pre" ]
