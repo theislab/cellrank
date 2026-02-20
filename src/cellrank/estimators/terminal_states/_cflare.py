@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Sequence
 from typing import Any, Literal
 
@@ -38,9 +39,20 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
     %(base_estimator.parameters)s
     """
 
+    def __init__(self, *args: Any, **kwargs: Any):
+        warnings.warn(
+            "CFLARE is deprecated and will be removed in CellRank 3.0. Use `cellrank.estimators.GPCCA` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)
+
     @d.dedent
     def fit(self, k: int = 20, **kwargs: Any) -> "TermStatesEstimator":
         """Prepare self for terminal states prediction.
+
+        .. deprecated:: 2.1
+            Will be removed in CellRank 3.0. Use :meth:`compute_eigendecomposition` directly.
 
         Parameters
         ----------
@@ -55,6 +67,12 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
 
         - :attr:`eigendecomposition` - %(eigen.summary)s
         """
+        warnings.warn(
+            "`CFLARE.fit()` is deprecated and will be removed in CellRank 3.0. "
+            "Use `CFLARE.compute_eigendecomposition()` directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.compute_eigendecomposition(k=k, only_evals=False, **kwargs)
 
     @d.dedent
@@ -74,6 +92,10 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         scale: bool | None = None,
     ) -> "CFLARE":
         """Find approximate recurrent classes of the Markov chain.
+
+        .. deprecated:: 2.1
+            Will be removed in CellRank 3.0. The entire :class:`CFLARE` estimator is
+            deprecated. Use :class:`cellrank.estimators.GPCCA` instead.
 
         Filter to obtain recurrent states from left eigenvectors.
         Cluster to obtain approximate recurrent classes from right eigenvectors.
@@ -121,6 +143,12 @@ class CFLARE(TermStatesEstimator, LinDriversMixin, EigenMixin):
         - :attr:`terminal_states` - %(tse_term_states.summary)s
         - :attr:`terminal_states_probabilities` - %(tse_term_states_probs.summary)s
         """
+        warnings.warn(
+            "`CFLARE.predict()` is deprecated and will be removed in CellRank 3.0. "
+            "Use `cellrank.estimators.GPCCA` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
         def convert_use(use: int | Sequence[int] | np.ndarray | None) -> list[int]:
             if method not in ["kmeans", "leiden"]:
