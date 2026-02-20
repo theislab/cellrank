@@ -1,3 +1,4 @@
+import warnings
 from collections.abc import Callable, Sequence
 from typing import Any, Literal
 
@@ -142,6 +143,14 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         Returns self and updates :attr:`transition_matrix`, :attr:`logits` and :attr:`params`.
         """
         start = logg.info(f"Computing transition matrix using `{model!r}` model")
+
+        if VelocityModel(model) != VelocityModel.DETERMINISTIC:
+            warnings.warn(
+                f"model={model!r} is deprecated and will be removed in CellRank 3.0. "
+                "Use model='deterministic' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         # fmt: off
         params = {"model": str(model), "similarity": str(similarity), "softmax_scale": softmax_scale}

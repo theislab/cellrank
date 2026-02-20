@@ -3,6 +3,7 @@ import datetime
 import enum
 import pathlib
 import types
+import warnings
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, Literal
@@ -223,6 +224,9 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
     def predict(self, *args: Any, **kwargs: Any) -> "GPCCA":
         """Alias for :meth:`predict_terminal_states`.
 
+        .. deprecated:: 2.1
+            Will be removed in CellRank 3.0. Use :meth:`predict_terminal_states` directly.
+
         Parameters
         ----------
         args
@@ -234,6 +238,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         Same as :meth:`predict_terminal_states`.
         """
+        warnings.warn(
+            "`GPCCA.predict()` is deprecated and will be removed in CellRank 3.0. "
+            "Use `GPCCA.predict_terminal_states()` directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.predict_terminal_states(*args, **kwargs)
 
     @d.dedent
@@ -724,6 +734,10 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         """
         Prepare self for terminal states prediction.
 
+        .. deprecated:: 2.1
+            Will be removed in CellRank 3.0. Use :meth:`compute_schur` and
+            :meth:`compute_macrostates` directly.
+
         Parameters
         ----------
         %(gpcca_compute_macro.parameters)s
@@ -732,6 +746,12 @@ class GPCCA(TermStatesEstimator, LinDriversMixin, SchurMixin, EigenMixin):
         -------
         %(gpcca_compute_macro.returns)s
         """
+        warnings.warn(
+            "`GPCCA.fit()` is deprecated and will be removed in CellRank 3.0. "
+            "Use `GPCCA.compute_schur()` and `GPCCA.compute_macrostates()` directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if n_states is None:
             self.compute_eigendecomposition()
             n_states = self.eigendecomposition["eigengap"] + 1

@@ -71,6 +71,10 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
     def fit(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
         """Fit the estimator.
 
+        .. deprecated:: 2.1
+            Will be removed in CellRank 3.0. Use the individual methods directly
+            (e.g., :meth:`compute_schur`, :meth:`compute_macrostates`).
+
         Parameters
         ----------
         args
@@ -86,6 +90,10 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
     @abc.abstractmethod
     def predict(self, *args: Any, **kwargs: Any) -> "BaseEstimator":
         """Run the prediction.
+
+        .. deprecated:: 2.1
+            Will be removed in CellRank 3.0. Use the individual methods directly
+            (e.g., :meth:`predict_terminal_states`).
 
         Parameters
         ----------
