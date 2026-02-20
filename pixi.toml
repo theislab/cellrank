@@ -18,6 +18,10 @@ igraph = "*"
 leidenalg = "*"
 pillow = "*"
 zarr = "<3"
+# Install pygpcca from conda-forge to avoid the jinja2==3.0.3 pin in the
+# PyPI distribution (pygpcca 1.0.4 on PyPI pins jinja2 exactly; conda-forge
+# version doesn't, so it's compatible with whatever jinja2 conda provides).
+pygpcca = ">=1.0.4"
 
 [feature.slepc.dependencies]
 petsc = "*"
