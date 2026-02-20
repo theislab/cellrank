@@ -52,7 +52,7 @@ dependencies = [
   "numba>=0.51,!=0.57",
   "numpy>=1.22",
   "pandas>=1.5",
-  "pygam>=0.8",
+  "pygam>=0.10",
   "pygpcca>=1.0.4",
   "scanpy>=1.7.2",
   "scikit-learn>=1.6",
