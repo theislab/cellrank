@@ -1,7 +1,6 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-
-requires = [ "setuptools>=61", "setuptools-scm[toml]>=6.2" ]
+build-backend = "hatchling.build"
+requires = [ "hatch-vcs", "hatchling" ]
 
 [project]
 name = "cellrank"
@@ -62,22 +61,17 @@ dependencies = [
   "wrapt>=1.12.1",
 ]
 
-optional-dependencies.dev = [
+urls."Bug Tracker" = "https://github.com/theislab/cellrank/issues"
+urls.Documentation = "https://cellrank.readthedocs.io"
+urls.Download = "https://cellrank.readthedocs.io/en/latest/installation.html"
+urls.Homepage = "https://github.com/theislab/cellrank"
+urls."Source Code" = "https://github.com/theislab/cellrank"
+
+[dependency-groups]
+dev = [
   "pre-commit>=3",
-  "tox>=4",
 ]
-optional-dependencies.docs = [
-  "furo>=2022.9.29",
-  "myst-nb>=0.17.1",
-  "sphinx>=5.1.1",
-  "sphinx-autodoc-typehints>=1.10.3",
-  "sphinx-copybutton>=0.5",
-  "sphinx-design>=0.3",
-  "sphinx-tippy>=0.4.1",
-  "sphinxcontrib-bibtex>=2.3",
-  "sphinxcontrib-spelling>=7.6.2",
-]
-optional-dependencies.test = [
+test = [
   "coverage[toml]>=7",
   "igraph",
   "jax",
@@ -89,17 +83,39 @@ optional-dependencies.test = [
   "pytest-xdist",
   "zarr<3",
 ]
-urls."Bug Tracker" = "https://github.com/theislab/cellrank/issues"
-urls.Documentation = "https://cellrank.readthedocs.io"
-urls.Download = "https://cellrank.readthedocs.io/en/latest/installation.html"
-urls.Homepage = "https://github.com/theislab/cellrank"
-urls."Source Code" = "https://github.com/theislab/cellrank"
+docs = [
+  "furo>=2022.9.29",
+  "myst-nb>=0.17.1",
+  "sphinx>=5.1.1",
+  "sphinx-autodoc-typehints>=1.10.3",
+  "sphinx-copybutton>=0.5",
+  "sphinx-design>=0.3",
+  "sphinx-tippy>=0.4.1",
+  "sphinxcontrib-bibtex>=2.3",
+  "sphinxcontrib-spelling>=7.6.2",
+]
 
-[tool.setuptools]
-package-dir = { "" = "src" }
-include-package-data = true
+[tool.hatch.build.targets.wheel]
+packages = [ "src/cellrank" ]
 
-[tool.setuptools_scm]
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.envs.default]
+installer = "uv"
+dependency-groups = [ "dev" ]
+
+[tool.hatch.envs.hatch-test]
+dependency-groups = [ "test" ]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+python = [ "3.12", "3.13" ]
+
+[tool.hatch.envs.docs]
+dependency-groups = [ "docs" ]
+scripts.build = "sphinx-build -M html docs docs/_build {args}"
+scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
+scripts.clean = "git clean -fdX -- {args:docs}"
 
 [tool.ruff]
 line-length = 120
@@ -187,95 +203,6 @@ precision = 2
 show_missing = true
 skip_empty = true
 sort = "Miss"
-
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-# TODO(michalk8): upgrade to `tox>=4.0` once `tox-conda` supports it
-requires = tox-conda
-isolated_build = true
-envlist = lint-code,py{3.12,3.13}-{slepc,noslepc}
-skip_missing_interpreters = true
-
-[testenv]
-conda_deps =
-    py: r-mgcv
-    py: rpy2
-    slepc: mpi4py
-    slepc: petsc4py
-    slepc: slepc4py
-conda_channels=
-    conda-forge
-extras = test
-passenv = PYTEST_* CI
-commands =
-    python -m pytest {tty:--color=yes} {posargs: \
-        --cov={envsitepackagesdir}{/}cellrank --cov-config={toxinidir}{/}pyproject.toml \
-        --no-cov-on-fail --cov-report=xml --cov-report=term-missing:skip-covered}
-
-[testenv:lint-code]
-description = Lint the code.
-deps = pre-commit>=3.0.0
-skip_install = true
-commands =
-    pre-commit run --all-files --show-diff-on-failure
-
-[testenv:lint-docs]
-description = Lint the documentation.
-deps =
-extras = docs
-ignore_errors = true
-allowlist_externals = make
-passenv = PYENCHANT_LIBRARY_PATH
-setenv = SPHINXOPTS = -W -q --keep-going
-changedir = {toxinidir}{/}docs
-commands =
-    # make linkcheck {posargs}
-    # make spelling {posargs}
-
-[testenv:clean-docs]
-description = Remove the documentation.
-deps =
-skip_install = true
-changedir = {toxinidir}{/}docs
-allowlist_externals = make
-commands =
-    make clean
-
-[testenv:build-docs]
-description = Build the documentation.
-deps =
-extras = docs
-allowlist_externals = make
-changedir = {toxinidir}{/}docs
-commands =
-    make html {posargs}
-commands_post =
-    python -c 'import pathlib; print("Documentation is under:", pathlib.Path("{toxinidir}") / "docs" / "_build" / "html" / "index.html")'
-
-[testenv:build-package]
-description = Build the package.
-deps =
-    build
-    twine
-allowlist_externals = rm
-commands =
-    rm -rf {toxinidir}{/}dist
-    python -m build --sdist --wheel --outdir {toxinidir}{/}dist{/} {posargs:}
-    python -m twine check {toxinidir}{/}dist{/}*
-commands_post =
-    python -c 'import pathlib; print(f"Package is under:", pathlib.Path("{toxinidir}") / "dist")'
-
-[testenv:format-references]
-description = Format references.bib.
-deps =
-skip_install = true
-allowlist_externals = biber
-commands = biber --tool --output_file={toxinidir}{/}docs{/}references.bib --nolog \
-    --output_align --output_indent=2 --output_fieldcase=lower \
-    --output_legacy_dates --output-field-replace=journaltitle:journal,thesis:phdthesis,institution:school \
-    {toxinidir}{/}docs{/}references.bib
-"""
 
 [tool.rstcheck]
 ignore_directives = [

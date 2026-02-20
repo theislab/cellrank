@@ -1,4 +1,0 @@
-prune tests
-prune docs
-prune .github
-include LICENSE
