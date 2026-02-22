@@ -309,6 +309,10 @@ def assert_estimators_equal(
                         check_arrays(v2, v1)
                     else:
                         assert v2 == v1, (v2, v1, attr, k)
+        elif isinstance(actual_val, AnnData):
+            assert actual_val is not expected_val, attr
+            assert actual_val.shape == expected_val.shape, (actual_val.shape, expected_val.shape, attr)
+            check_arrays(actual_val.to_df(), expected_val.to_df())
         elif attr not in ("_kernel", "_gpcca", "_adata", "_shadow_adata"):
             assert actual_val == expected_val, (actual_val, expected_val, attr)
         else:

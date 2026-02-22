@@ -89,9 +89,9 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
 
-  test-slepc:
+  test-conda:
     runs-on: ubuntu-latest
-    name: PETSc / SLEPc
+    name: PETSc / SLEPc + R
     steps:
     - uses: actions/checkout@v6
       with:
@@ -99,43 +99,23 @@ jobs:
         fetch-depth: 0
     - uses: prefix-dev/setup-pixi@v0.8.8
       with:
-        environments: slepc
+        environments: conda
     - name: Run tests
-      run: pixi run -e slepc test
+      run: pixi run -e conda test
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        flags: slepc
-        fail_ci_if_error: false
-
-  test-r:
-    runs-on: ubuntu-latest
-    name: R / GAMR
-    steps:
-    - uses: actions/checkout@v6
-      with:
-        filter: blob:none
-        fetch-depth: 0
-    - uses: prefix-dev/setup-pixi@v0.8.8
-      with:
-        environments: r
-    - name: Run tests
-      run: pixi run -e r test
-    - name: Upload coverage
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: r
+        flags: conda
         fail_ci_if_error: false
 
   check:
     name: All tests pass
     if: always()
-    needs: [get-environments, test, test-slepc, test-r]
+    needs: [get-environments, test, test-conda]
     runs-on: ubuntu-latest
     steps:
     - uses: re-actors/alls-green@release/v1
       with:
-        allowed-failures: test-slepc,test-r
+        allowed-failures: test-conda
         jobs: ${{ toJSON(needs) }}
