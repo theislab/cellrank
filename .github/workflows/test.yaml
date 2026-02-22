@@ -114,7 +114,7 @@ jobs:
         pygpcca pygam scipy
     - name: Install cellrank + test dependencies
       run: |
-        pip install --no-deps -e .
+        pip install -e .
         pip install pytest pytest-cov pytest-mock pytest-timeout coverage igraph leidenalg pillow 'zarr<3'
     - name: List installed packages
       run: conda list
