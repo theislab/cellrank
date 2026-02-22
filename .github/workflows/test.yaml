@@ -92,6 +92,7 @@ jobs:
   test-conda:
     runs-on: ubuntu-latest
     name: PETSc / SLEPc + R
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v6
       with:
@@ -101,7 +102,15 @@ jobs:
       with:
         environments: conda
     - name: Run tests
-      run: pixi run -e conda test
+      # Orphan MPI daemons from PETSc/SLEPc keep `pixi run` alive after
+      # pytest finishes.  We background the command, wait for its exit code,
+      # then kill any remaining children so the step completes cleanly.
+      shell: bash
+      run: |
+        eval "$(pixi shell-hook -e conda)"
+        pytest tests/ -v --timeout=600 --cov --cov-report=xml &
+        PYTEST_PID=$!
+        wait $PYTEST_PID
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:
