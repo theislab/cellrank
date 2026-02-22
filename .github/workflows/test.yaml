@@ -92,25 +92,36 @@ jobs:
   test-conda:
     runs-on: ubuntu-latest
     name: PETSc / SLEPc + R
-    timeout-minutes: 15
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
     - uses: actions/checkout@v6
       with:
         filter: blob:none
         fetch-depth: 0
-    - uses: prefix-dev/setup-pixi@v0.8.8
+    - uses: conda-incubator/setup-miniconda@v3
       with:
-        environments: conda
-    - name: Run tests
-      # Orphan MPI daemons from PETSc/SLEPc keep `pixi run` alive after
-      # pytest finishes.  We background the command, wait for its exit code,
-      # then kill any remaining children so the step completes cleanly.
-      shell: bash
+        miniforge-version: latest
+        python-version: '3.12'
+        channels: conda-forge
+    - name: Install conda dependencies
+      run: >-
+        conda install --yes
+        petsc slepc petsc4py slepc4py mpi4py
+        rpy2 r-mgcv
+        pygpcca pygam scipy
+    - name: Install cellrank + test dependencies
       run: |
-        eval "$(pixi shell-hook -e conda)"
-        pytest tests/ -v --timeout=600 --cov --cov-report=xml &
-        PYTEST_PID=$!
-        wait $PYTEST_PID
+        pip install --no-deps -e .
+        pip install pytest pytest-cov pytest-mock pytest-timeout coverage igraph leidenalg pillow 'zarr<3'
+    - name: List installed packages
+      run: conda list
+    - name: Run tests
+      env:
+        MPLBACKEND: agg
+      run: python -m pytest tests/ -v --timeout=600 --cov --cov-report=xml
     - name: Upload coverage
       uses: codecov/codecov-action@v5
       with:
