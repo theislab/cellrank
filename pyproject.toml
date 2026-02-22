@@ -109,7 +109,17 @@ dependency-groups = [ "dev" ]
 dependency-groups = [ "test" ]
 
 [[tool.hatch.envs.hatch-test.matrix]]
-python = [ "3.12", "3.13" ]
+deps = [ "stable" ]
+python = [ "3.12", "3.14" ]
+
+[[tool.hatch.envs.hatch-test.matrix]]
+deps = [ "pre" ]
+python = [ "3.14" ]
+
+[[tool.hatch.envs.hatch-test.overrides.matrix.deps.env-vars]]
+key = "UV_PRERELEASE"
+value = "allow"
+if = [ "pre" ]
 
 [tool.hatch.envs.docs]
 dependency-groups = [ "docs" ]

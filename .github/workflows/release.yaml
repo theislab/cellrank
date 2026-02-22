@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Upload release to PyPI
+    runs-on: ubuntu-latest
+    environment:
+      name: deployment
+      url: https://pypi.org/p/cellrank
+    permissions:
+      id-token: write
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        filter: blob:none
+        fetch-depth: 0
+    - uses: astral-sh/setup-uv@v7
+    - name: Build package
+      run: uv build
+    - name: Publish package
+      uses: pypa/gh-action-pypi-publish@release/v1
