@@ -1122,9 +1122,12 @@ def _plot_color_gradients(
 ) -> None:
     """Plot fate probabilities as overlapping color gradients on an embedding.
 
-    Each lineage is drawn as a separate scatter layer whose per-cell alpha
-    is proportional to the fate probability.  Layers are stacked so that
-    high-probability cells appear on top.
+    Uses the same pairwise diverging-colormap technique as scvelo: for each
+    pair of lineages, cells are colored on a diverging scale from
+    ``color_A → transparent → color_B``.  Uncertain cells (low probability
+    for both lineages) become transparent and let the grey background show
+    through.  Only cells whose two dominant lineages match the current pair
+    are drawn, so each cell is plotted at most once per pair.
 
     Parameters
     ----------
@@ -1141,48 +1144,89 @@ def _plot_color_gradients(
         ``legend_loc``, ``show``, ``save`` are extracted; the rest is
         ignored).
     """
+    from matplotlib.colors import LinearSegmentedColormap
+
     coords = adata.obsm[f"X_{basis}"]
 
     figsize = kwargs.pop("figsize", None)
     dpi = kwargs.pop("dpi", None)
     s = kwargs.pop("size", kwargs.pop("s", None))
     if s is None:
-        s = 120_000 / adata.n_obs
+        s = (120_000 / adata.n_obs + 20) / 2
     show = kwargs.pop("show", None)
     _save = kwargs.pop("save", None)
     legend_loc = kwargs.pop("legend_loc", "right")
 
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
-    # Background: all cells in light grey
-    ax.scatter(coords[:, 0], coords[:, 1], c="lightgrey", s=s, edgecolors="none")
+    # Probability matrix: cells × lineages, clipped to [0, ∞)
+    vals = np.clip(data.X, 0, None)
+    names = list(data.names)
+    colors = list(data.colors)
+    n_lineages = len(names)
 
-    handles = []
-    for name, lineage_color in zip(data.names, data.colors):
-        col = data[:, name].X.ravel()
-        rgba = to_rgba(lineage_color)
+    # Background: all cells in light grey, very faint
+    ax.scatter(coords[:, 0], coords[:, 1], c="lightgrey", s=s, alpha=0.2, marker=".", edgecolors="none")
 
-        # Normalize values to [0, 1] for alpha blending
-        vmin, vmax = np.nanmin(col), np.nanmax(col)
-        norm = (col - vmin) / (vmax - vmin) if vmax > vmin else np.zeros_like(col)
+    # For each cell, find its top-2 lineage indices
+    sorted_idx = np.argsort(vals, axis=1)[:, ::-1][:, :2]  # (n_cells, 2)
 
-        # Per-cell RGBA with alpha proportional to probability
-        cell_colors = np.broadcast_to(np.array(rgba), (len(col), 4)).copy()
-        cell_colors[:, 3] = norm
+    # Pairwise diverging colormap layers (scvelo approach)
+    for id0 in range(n_lineages):
+        for id1 in range(id0 + 1, n_lineages):
+            # Only cells whose top-2 lineages include this pair
+            cell_mask = np.array(
+                [(id0 in row and id1 in row) for row in sorted_idx],
+                dtype=bool,
+            )
+            if np.sum(cell_mask) < 2:
+                continue
 
-        # Sort by value so high-probability cells appear on top
-        order = np.argsort(norm)
-        ax.scatter(
-            coords[order, 0],
-            coords[order, 1],
-            c=cell_colors[order],
-            s=s,
-            edgecolors="none",
+            # Diverging value: positive → id1, negative → id0
+            c_vals = vals[cell_mask, id1] - vals[cell_mask, id0]
+            c_coords = coords[cell_mask]
+
+            # Build diverging colormap: color_A → transparent white → color_B
+            rgba_a = np.array(to_rgba(colors[id0]))
+            rgba_b = np.array(to_rgba(colors[id1]))
+            cmap_colors = [
+                (*rgba_a[:3], 1.0),  # fully opaque color A
+                (1.0, 1.0, 1.0, 0.0),  # transparent white in the middle
+                (*rgba_b[:3], 1.0),  # fully opaque color B
+            ]
+            cmap = LinearSegmentedColormap.from_list(f"_cr_{id0}_{id1}", cmap_colors, N=256)
+
+            # Normalise to [-1, 1] symmetric range, then map to [0, 1] for cmap
+            abs_max = np.max(np.abs(c_vals)) if np.max(np.abs(c_vals)) > 0 else 1.0
+            c_normed = (c_vals / abs_max + 1) / 2  # map [-1,1] → [0,1]
+
+            # Sort so high-magnitude cells are on top
+            order = np.argsort(np.abs(c_vals))
+            ax.scatter(
+                c_coords[order, 0],
+                c_coords[order, 1],
+                c=c_normed[order],
+                cmap=cmap,
+                vmin=0,
+                vmax=1,
+                s=s,
+                marker=".",
+                edgecolors="none",
+            )
+
+    # Legend
+    handles = [
+        plt.Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor=c,
+            label=n,
+            markersize=8,
         )
-        handles.append(
-            plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=lineage_color, label=name, markersize=8)
-        )
-
+        for n, c in zip(names, colors)
+    ]
     if legend_loc not in (None, "none", "None", False):
         if legend_loc == "right":
             ax.legend(handles=handles, frameon=False, loc="center left", bbox_to_anchor=(1.0, 0.5))
