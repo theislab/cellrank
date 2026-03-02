@@ -4,6 +4,7 @@ import itertools
 import logging
 import pathlib
 import time as _time
+import warnings
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, NamedTuple, TypeVar
 
@@ -210,29 +211,36 @@ def _fit_bulk_helper[Queue](
     conf_int = return_models and kwargs.pop("conf_int", False)
     res = {}
 
-    for gene in genes:
-        res[gene] = {}
-        for ln, tr in zip(lineages, time_range):
-            cb = callbacks[gene][ln]
-            model = models[gene][ln]
-            model._is_bulk = True
+    with warnings.catch_warnings():
+        # pygam triggers harmless RuntimeWarnings (divide by zero in log,
+        # invalid value in reduce/divide) during fit/predict for degenerate
+        # genes; show each unique warning once instead of flooding output.
+        warnings.filterwarnings("once", category=RuntimeWarning, module=r"pygam\.")
+        warnings.filterwarnings("once", category=RuntimeWarning, message="invalid value encountered")
 
-            model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs)
-            model = model.fit()
-            # GAMR is a bit faster if we don't need the conf int
-            # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
-            if not conf_int:
-                model.predict()
-            elif _is_any_gam_mgcv(model):
-                model.predict(level=conf_int if isinstance(conf_int, float) else 0.95)
-            else:
-                model.predict()
-                model.confidence_interval()
+        for gene in genes:
+            res[gene] = {}
+            for ln, tr in zip(lineages, time_range):
+                cb = callbacks[gene][ln]
+                model = models[gene][ln]
+                model._is_bulk = True
 
-            res[gene][ln] = model if return_models else BulkRes(model.x_test, model.y_test)
+                model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs)
+                model = model.fit()
+                # GAMR is a bit faster if we don't need the conf int
+                # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
+                if not conf_int:
+                    model.predict()
+                elif _is_any_gam_mgcv(model):
+                    model.predict(level=conf_int if isinstance(conf_int, float) else 0.95)
+                else:
+                    model.predict()
+                    model.confidence_interval()
 
-        if queue is not None:
-            queue.put(1)
+                res[gene][ln] = model if return_models else BulkRes(model.x_test, model.y_test)
+
+            if queue is not None:
+                queue.put(1)
 
     if queue is not None:
         queue.put(None)
@@ -1151,8 +1159,6 @@ def _plot_color_gradients(
         ``legend_loc``, ``show``, ``save`` are extracted; the rest is
         ignored).
     """
-    from matplotlib.colors import LinearSegmentedColormap
-
     coords = adata.obsm[f"X_{basis}"]
 
     figsize = kwargs.pop("figsize", None)
@@ -1169,7 +1175,7 @@ def _plot_color_gradients(
     # Probability matrix: cells × lineages, clipped to [0, ∞)
     vals = np.clip(data.X, 0, None)
     names = list(data.names)
-    colors = list(data.colors)
+    lin_colors = list(data.colors)
     n_lineages = len(names)
 
     # Background: all cells in light grey, very faint
@@ -1194,14 +1200,14 @@ def _plot_color_gradients(
             c_coords = coords[cell_mask]
 
             # Build diverging colormap: color_A → transparent white → color_B
-            rgba_a = np.array(to_rgba(colors[id0]))
-            rgba_b = np.array(to_rgba(colors[id1]))
+            rgba_a = np.array(to_rgba(lin_colors[id0]))
+            rgba_b = np.array(to_rgba(lin_colors[id1]))
             cmap_colors = [
                 (*rgba_a[:3], 1.0),  # fully opaque color A
                 (1.0, 1.0, 1.0, 0.0),  # transparent white in the middle
                 (*rgba_b[:3], 1.0),  # fully opaque color B
             ]
-            cmap = LinearSegmentedColormap.from_list(f"_cr_{id0}_{id1}", cmap_colors, N=256)
+            cmap = colors.LinearSegmentedColormap.from_list(f"_cr_{id0}_{id1}", cmap_colors, N=256)
 
             # Normalise to [-1, 1] symmetric range, then map to [0, 1] for cmap
             abs_max = np.max(np.abs(c_vals)) if np.max(np.abs(c_vals)) > 0 else 1.0
@@ -1232,7 +1238,7 @@ def _plot_color_gradients(
             label=n,
             markersize=8,
         )
-        for n, c in zip(names, colors)
+        for n, c in zip(names, lin_colors)
     ]
     if legend_loc not in (None, "none", "None", False):
         if legend_loc == "right":
