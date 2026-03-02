@@ -1071,6 +1071,7 @@ def _plot_time_scatter(
     s = kwargs.pop("size", kwargs.pop("s", 1))
     show = kwargs.pop("show", None)
     _save = kwargs.pop("save", None)
+    legend_loc = kwargs.pop("legend_loc", "best")
 
     fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, dpi=dpi, squeeze=False)
     axes_flat = axes.ravel()
@@ -1089,7 +1090,13 @@ def _plot_time_scatter(
                     mask = (obs_data == cat).values
                     kw = {"c": palette[j]} if palette is not None and j < len(palette) else {}
                     ax.scatter(x[mask], y[mask], s=s, alpha=0.8, label=cat, edgecolors="none", **kw)
-                ax.legend(fontsize="x-small", frameon=False)
+                if legend_loc not in (None, "none", "None", False):
+                    legend_kw: dict[str, Any] = {"fontsize": "x-small", "frameon": False}
+                    if legend_loc in ("right", "right margin"):
+                        legend_kw.update(loc="center left", bbox_to_anchor=(1.0, 0.5))
+                    else:
+                        legend_kw["loc"] = legend_loc
+                    ax.legend(**legend_kw)
             else:
                 scatter = ax.scatter(x, y, c=obs_data.values, cmap=cmap, s=s, alpha=0.8, edgecolors="none")
                 plt.colorbar(scatter, ax=ax)

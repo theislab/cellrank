@@ -222,6 +222,11 @@ def circular_projection(
     y = np.sum(X * angle_vec_cos, axis=1)
     adata.obsm[key_added] = np.c_[x, y]
 
+    # scvelo's "right" placed the legend outside the axes; scanpy calls
+    # that "right margin".  Remap so existing user code keeps working.
+    if kwargs.get("legend_loc") == "right":
+        kwargs["legend_loc"] = "right margin"
+
     nrows = int(np.ceil(len(keys) / ncols))
     fig, ax = plt.subplots(
         nrows=nrows,

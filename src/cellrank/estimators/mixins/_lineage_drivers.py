@@ -286,6 +286,9 @@ class LinDriversMixin(FateProbsMixin):
         axes = np.ravel([axes])
 
         basis = kwargs.pop("basis", "umap")
+        # scvelo compat: "right" means "right margin" in scanpy
+        if kwargs.get("legend_loc") == "right":
+            kwargs["legend_loc"] = "right margin"
         _i = 0
         for _i, (gene, ax) in enumerate(zip(genes.index, axes)):
             data = genes.loc[gene]

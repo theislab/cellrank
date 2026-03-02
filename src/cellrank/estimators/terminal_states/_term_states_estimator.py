@@ -443,6 +443,9 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
         same_plot = same_plot or len(names) == 1
         kwargs.setdefault("legend_loc", "on data")
+        # scvelo compat: "right" means "right margin" in scanpy
+        if kwargs.get("legend_loc") == "right":
+            kwargs["legend_loc"] = "right margin"
         kwargs.pop("color_map", None)
         kwargs.pop("dpi", None)  # handled at figure level, not by sc.pl.embedding
         save = kwargs.pop("save", None)
@@ -577,6 +580,9 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
             )
         elif mode == PlotMode.EMBEDDING:
             kwargs.setdefault("legend_loc", "on data")
+            # scvelo compat: "right" means "right margin" in scanpy
+            if kwargs.get("legend_loc") == "right":
+                kwargs["legend_loc"] = "right margin"
 
             if same_plot:
                 if color:
