@@ -309,6 +309,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         discrete: bool = True,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
         time_key: str = "latent_time",
+        basis: str = "umap",
         same_plot: bool = True,
         title: str | Sequence[str] | None = None,
         cmap: str = "viridis",
@@ -335,6 +336,8 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
             Whether to plot the probabilities in an embedding or along the pseudotime.
         time_key
             Key in :attr:`~anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = {m.TIME!r}``.
+        basis
+            Key in :attr:`~anndata.AnnData.obsm` for the embedding to use, e.g. ``'umap'`` or ``'tsne'``.
         title
             Title of the plot.
         same_plot
@@ -380,6 +383,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 _title=name,
                 states=states,
                 color=color,
+                basis=basis,
                 same_plot=same_plot,
                 title=title,
                 cmap=cmap,
@@ -393,6 +397,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
             color=color,
             mode=mode,
             time_key=time_key,
+            basis=basis,
             same_plot=same_plot,
             title=title,
             cmap=cmap,
@@ -406,6 +411,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         _title: str | None = None,
         states: str | Sequence[str] | None = None,
         color: str | None = None,
+        basis: str = "umap",
         title: str | Sequence[str] | None = None,
         same_plot: bool = True,
         cmap: str = "viridis",
@@ -442,7 +448,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         save = kwargs.pop("save", None)
         show = kwargs.pop("show", None)
         kwargs["cmap"] = cmap
-        basis = kwargs.pop("basis", "umap")
+        basis = kwargs.pop("basis", basis)
         size = kwargs.get("size", 120_000 / self.adata.n_obs)
 
         # fmt: off
@@ -505,6 +511,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         color: str | None = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
         time_key: str = "latent_time",
+        basis: str = "umap",
         title: str | Sequence[str] | None = None,
         same_plot: bool = True,
         cmap: str = "viridis",
@@ -540,7 +547,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
         # fmt: off
         color = [] if color is None else (color,) if isinstance(color, str) else color
         color = _unique_order_preserving(color)
-        basis = kwargs.pop("basis", "umap")
+        basis = kwargs.pop("basis", basis)
         kwargs.pop("color_map", None)
         save = kwargs.pop("save", None)
         show = kwargs.pop("show", None)

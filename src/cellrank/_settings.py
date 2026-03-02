@@ -32,6 +32,7 @@ def _setup_logger() -> logging.Logger:
         )
         root.addHandler(handler)
         root.setLevel(logging.INFO)
+    root.propagate = False
     return root
 
 
