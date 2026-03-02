@@ -467,6 +467,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 title = [title]
 
             kwargs.setdefault("na_color", "#dedede")
+            kwargs.setdefault("na_in_legend", False)
             axes = sc.pl.embedding(
                 self.adata,
                 basis=basis,
@@ -484,6 +485,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 if mask.any():
                     adata_sub = self.adata[mask].copy()
                     for ax, key in zip(axes_list[len(color):], keys):
+                        ax_title = ax.get_title()
                         sc.pl.embedding(
                             adata_sub,
                             basis=basis,
@@ -495,6 +497,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                             legend_loc="none",
                             size=size,
                         )
+                        ax.set_title(ax_title)
 
         if save is not None:
             save_fig(plt.gcf(), save)
