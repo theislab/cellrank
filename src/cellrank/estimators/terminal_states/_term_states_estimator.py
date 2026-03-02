@@ -577,7 +577,6 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
             )
         elif mode == PlotMode.EMBEDDING:
             kwargs.setdefault("legend_loc", "on data")
-            kwargs.pop("dpi", None)  # handled at figure level, not by sc.pl.embedding
 
             if same_plot:
                 if color:
@@ -587,6 +586,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
                 _plot_color_gradients(self.adata, _data, basis=basis, title=title,
                                       save=save, show=show, **kwargs)
             else:
+                kwargs.pop("dpi", None)  # handled at figure level, not by sc.pl.embedding
                 title = [f"{_title} {state}" for state in states] if title is None else title
                 if isinstance(title, str):
                     title = [title]

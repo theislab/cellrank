@@ -1138,20 +1138,24 @@ def _plot_color_gradients(
         Plot title (list with a single element or string).
     kwargs
         Additional keyword arguments (``figsize``, ``dpi``, ``size``,
-        ``show`` are extracted; the rest is ignored).
+        ``legend_loc``, ``show``, ``save`` are extracted; the rest is
+        ignored).
     """
     coords = adata.obsm[f"X_{basis}"]
 
     figsize = kwargs.pop("figsize", None)
     dpi = kwargs.pop("dpi", None)
     s = kwargs.pop("size", kwargs.pop("s", None))
+    if s is None:
+        s = 120_000 / adata.n_obs
     show = kwargs.pop("show", None)
     _save = kwargs.pop("save", None)
+    legend_loc = kwargs.pop("legend_loc", "right")
 
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
 
     # Background: all cells in light grey
-    ax.scatter(coords[:, 0], coords[:, 1], c="lightgrey", s=s or 1, edgecolors="none")
+    ax.scatter(coords[:, 0], coords[:, 1], c="lightgrey", s=s, edgecolors="none")
 
     handles = []
     for name, lineage_color in zip(data.names, data.colors):
@@ -1172,14 +1176,28 @@ def _plot_color_gradients(
             coords[order, 0],
             coords[order, 1],
             c=cell_colors[order],
-            s=s or 1,
+            s=s,
             edgecolors="none",
         )
         handles.append(
             plt.Line2D([0], [0], marker="o", color="w", markerfacecolor=lineage_color, label=name, markersize=8)
         )
 
-    ax.legend(handles=handles, frameon=False)
+    if legend_loc not in (None, "none", "None", False):
+        if legend_loc == "right":
+            ax.legend(handles=handles, frameon=False, loc="center left", bbox_to_anchor=(1.0, 0.5))
+        elif legend_loc == "right margin":
+            ax.legend(handles=handles, frameon=False, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        elif legend_loc == "on data":
+            # Place labels at centroid of high-probability cells
+            for name in data.names:
+                col = data[:, name].X.ravel()
+                top_mask = col > np.percentile(col, 90)
+                if top_mask.any():
+                    cx, cy = coords[top_mask, 0].mean(), coords[top_mask, 1].mean()
+                    ax.text(cx, cy, name, fontsize=8, fontweight="bold", ha="center", va="center")
+        else:
+            ax.legend(handles=handles, frameon=False, loc=legend_loc)
     if title:
         ax.set_title(title[0] if isinstance(title, list) else title)
     ax.set_xticks([])
