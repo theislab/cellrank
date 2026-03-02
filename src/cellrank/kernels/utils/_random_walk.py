@@ -156,7 +156,7 @@ class RandomWalk:
         ----------
         n_sims
             Number of random walks to simulate.
-        %(rw_sim.params)s
+        %(rw_sim.parameters)s
         %(parallel)s
 
         Returns
