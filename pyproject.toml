@@ -88,7 +88,6 @@ test = [
   "pytest-cov>=6",
   "pytest-mock>=3.14",
   "pytest-xdist",
-  "zarr<3",
 ]
 docs = [
   "furo>=2024.8.6",
