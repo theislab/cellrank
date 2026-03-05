@@ -57,8 +57,9 @@ class CytoTRACEKernel(PseudotimeKernel):
     --------
     .. code-block::
 
-        import scvelo as scv
+        import scanpy as sc
         import cellrank as cr
+        from cellmapper import CellMapper
 
         adata = cr.datasets.pancreas()
 
@@ -66,18 +67,16 @@ class CytoTRACEKernel(PseudotimeKernel):
         sc.pp.normalize_total(adata)
         sc.pp.log1p(adata)
         sc.pp.highly_variable_genes(adata)
+        sc.pp.pca(adata)
+        sc.pp.neighbors(adata)
 
-        # CytoTRACE by default uses imputed data - a simple way to compute
-        # k-NN imputed data is to use scVelo's moments function.
-        # However, note that this function expects `spliced` counts because
-        # it's designed for RNA velocity, so we're using a simple hack here:
-        if 'spliced' not in adata.layers or 'unspliced' not in adata.layers:
-            adata.layers['spliced'] = adata.X
-            adata.layers['unspliced'] = adata.X
-        scv.pp.moments(adata)
+        # CytoTRACE by default uses imputed data.
+        adata.layers["imputed"] = (
+            CellMapper(adata).map(layer_key="X", use_rep="X_pca").query_imputed.X.copy()
+        )
 
         ctk = cr.kernels.CytoTRACEKernel(adata)
-        ckt = ctk.compute_cytotrace().compute_transition_matrix()
+        ctk = ctk.compute_cytotrace().compute_transition_matrix()
     """
 
     def __init__(
@@ -111,7 +110,7 @@ class CytoTRACEKernel(PseudotimeKernel):
     @inject_docs(ct=CytoTRACEAggregation)
     def compute_cytotrace(
         self,
-        layer: str | None = "Ms",
+        layer: str | None = "imputed",
         aggregation: Literal["mean", "median", "hmean", "gmean"] = CytoTRACEAggregation.MEAN,
         use_raw: bool = False,
         n_genes: int = 200,

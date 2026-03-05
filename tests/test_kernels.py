@@ -1053,12 +1053,12 @@ class TestCytoTRACEKernel:
 
     @pytest.mark.parametrize("agg", list(CytoTRACEAggregation))
     def test_aggregation(self, adata: AnnData, agg: CytoTRACEAggregation):
-        _ = CytoTRACEKernel(adata).compute_cytotrace(aggregation=agg)
+        _ = CytoTRACEKernel(adata).compute_cytotrace(aggregation=agg, layer="Ms")
         assert adata.uns[Key.cytotrace("params")]["aggregation"] == agg
 
     @pytest.mark.parametrize("use_raw", [False, True])
     def test_raw(self, adata: AnnData, use_raw: bool):
-        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw)
+        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, layer="Ms")
         assert adata.uns[Key.cytotrace("params")]["use_raw"] == use_raw
 
     @pytest.mark.parametrize("copy", [False, True])
