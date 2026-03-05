@@ -298,6 +298,8 @@ def _fit_bulk(
         raise ValueError(f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`.")
 
     n_jobs = parallel_kwargs.pop("n_jobs", 1)
+    backend = parallel_kwargs.pop("backend", DEFAULT_BACKEND)
+    show_progress_bar = parallel_kwargs.pop("show_progress_bar", True)
 
     _start = _time.perf_counter()
     logger.info("Computing trends using %d core(s)", n_jobs)
@@ -306,6 +308,8 @@ def _fit_bulk(
         genes,
         unit="gene" if kwargs.get("data_key", "gene") != "obs" else "obs",
         n_jobs=n_jobs,
+        backend=backend,
+        show_progress_bar=show_progress_bar,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
     )(
         models=models,
