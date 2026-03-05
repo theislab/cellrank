@@ -1,6 +1,8 @@
 import collections
+import contextlib
 import copy
 import enum
+import io
 import logging
 import types
 from collections.abc import Mapping
@@ -143,6 +145,7 @@ class GAM(BaseModel):
                 **_filter_kwargs(gam.__init__, **filtered_kwargs),
             )
         super().__init__(adata, model=model)
+        self._converged: bool = True
 
         if grid is None:
             self._grid = None
@@ -177,23 +180,28 @@ class GAM(BaseModel):
             # use default search
             grid = {} if not isinstance(self._grid, dict) else self._grid
             try:
-                self.model.gridsearch(
-                    self.x,
-                    self.y,
-                    weights=self.w,
-                    keep_best=True,
-                    progress=False,
-                    **grid,
-                    **kwargs,
-                )
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.model.gridsearch(
+                        self.x,
+                        self.y,
+                        weights=self.w,
+                        keep_best=True,
+                        progress=False,
+                        **grid,
+                        **kwargs,
+                    )
                 return self
             except Exception as e:  # noqa: BLE001
                 # workaround for: https://github.com/dswah/pyGAM/issues/273
-                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    self.model.fit(self.x, self.y, weights=self.w, **kwargs)
                 logger.error("Grid search failed, reason: `%s`. Fitting with default values", e)
 
         try:
-            self.model.fit(self.x, self.y, weights=self.w, **kwargs)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
+            self._converged = "did not converge" not in buf.getvalue()
             return self
         except Exception as e:  # noqa: BLE001
             raise RuntimeError(

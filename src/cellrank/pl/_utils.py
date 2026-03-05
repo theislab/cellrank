@@ -321,6 +321,12 @@ def _fit_bulk(
     )
     logger.info("    Finish (%.2fs)", _time.perf_counter() - _start)
 
+    n_failed = sum(
+        1 for gene_models in models.values() for m in gene_models.values() if getattr(m, "_converged", True) is False
+    )
+    if n_failed:
+        logger.warning("%d/%d GAM fit(s) did not converge", n_failed, sum(len(v) for v in models.values()))
+
     return _filter_models(models, return_models=return_models, filter_all_failed=filter_all_failed)
 
 
