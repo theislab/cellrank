@@ -4,7 +4,6 @@ import itertools
 import logging
 import pathlib
 import time as _time
-import warnings
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, NamedTuple, TypeVar
 
@@ -211,33 +210,26 @@ def _fit_bulk_helper[Queue](
     conf_int = return_models and kwargs.pop("conf_int", False)
     res = {}
 
-    with warnings.catch_warnings():
-        # pygam triggers harmless RuntimeWarnings (divide by zero in log,
-        # invalid value in reduce/divide) during fit/predict for degenerate
-        # genes; show each unique warning once instead of flooding output.
-        warnings.filterwarnings("once", category=RuntimeWarning, module=r"pygam\.")
-        warnings.filterwarnings("once", category=RuntimeWarning, message="invalid value encountered")
+    for gene in genes:
+        res[gene] = {}
+        for ln, tr in zip(lineages, time_range):
+            cb = callbacks[gene][ln]
+            model = models[gene][ln]
+            model._is_bulk = True
 
-        for gene in genes:
-            res[gene] = {}
-            for ln, tr in zip(lineages, time_range):
-                cb = callbacks[gene][ln]
-                model = models[gene][ln]
-                model._is_bulk = True
+            model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs)
+            model = model.fit()
+            # GAMR is a bit faster if we don't need the conf int
+            # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
+            if not conf_int:
+                model.predict()
+            elif _is_any_gam_mgcv(model):
+                model.predict(level=conf_int if isinstance(conf_int, float) else 0.95)
+            else:
+                model.predict()
+                model.confidence_interval()
 
-                model = cb(model, gene=gene, lineage=ln, time_range=tr, **kwargs)
-                model = model.fit()
-                # GAMR is a bit faster if we don't need the conf int
-                # if it's needed, `.predict` will calculate it and `confidence_interval` will do nothing
-                if not conf_int:
-                    model.predict()
-                elif _is_any_gam_mgcv(model):
-                    model.predict(level=conf_int if isinstance(conf_int, float) else 0.95)
-                else:
-                    model.predict()
-                    model.confidence_interval()
-
-                res[gene][ln] = model if return_models else BulkRes(model.x_test, model.y_test)
+            res[gene][ln] = model if return_models else BulkRes(model.x_test, model.y_test)
 
             if queue is not None:
                 queue.put(1)

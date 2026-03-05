@@ -180,11 +180,6 @@ class GAM(BaseModel):
                 category=DeprecationWarning,
                 message=".* is a deprecated alias for the builtin",
             )
-            warnings.filterwarnings(
-                "once",
-                category=RuntimeWarning,
-                module=r"pygam\.",
-            )
             if self._grid is not None:
                 # use default search
                 grid = {} if not isinstance(self._grid, dict) else self._grid
