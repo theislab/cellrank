@@ -3,7 +3,6 @@ import copy
 import enum
 import logging
 import types
-import warnings
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -174,39 +173,33 @@ class GAM(BaseModel):
         """  # noqa: D400
         super().fit(x, y, w, **kwargs)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                category=DeprecationWarning,
-                message=".* is a deprecated alias for the builtin",
-            )
-            if self._grid is not None:
-                # use default search
-                grid = {} if not isinstance(self._grid, dict) else self._grid
-                try:
-                    self.model.gridsearch(
-                        self.x,
-                        self.y,
-                        weights=self.w,
-                        keep_best=True,
-                        progress=False,
-                        **grid,
-                        **kwargs,
-                    )
-                    return self
-                except Exception as e:  # noqa: BLE001
-                    # workaround for: https://github.com/dswah/pyGAM/issues/273
-                    self.model.fit(self.x, self.y, weights=self.w, **kwargs)
-                    logger.error("Grid search failed, reason: `%s`. Fitting with default values", e)
-
+        if self._grid is not None:
+            # use default search
+            grid = {} if not isinstance(self._grid, dict) else self._grid
             try:
-                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
+                self.model.gridsearch(
+                    self.x,
+                    self.y,
+                    weights=self.w,
+                    keep_best=True,
+                    progress=False,
+                    **grid,
+                    **kwargs,
+                )
                 return self
             except Exception as e:  # noqa: BLE001
-                raise RuntimeError(
-                    f"Unable to fit `{type(self).__name__}` for gene "
-                    f"`{self._gene!r}` in lineage `{self._lineage!r}`. Reason: `{e}`"
-                ) from e
+                # workaround for: https://github.com/dswah/pyGAM/issues/273
+                self.model.fit(self.x, self.y, weights=self.w, **kwargs)
+                logger.error("Grid search failed, reason: `%s`. Fitting with default values", e)
+
+        try:
+            self.model.fit(self.x, self.y, weights=self.w, **kwargs)
+            return self
+        except Exception as e:  # noqa: BLE001
+            raise RuntimeError(
+                f"Unable to fit `{type(self).__name__}` for gene "
+                f"`{self._gene!r}` in lineage `{self._lineage!r}`. Reason: `{e}`"
+            ) from e
 
     @d.dedent
     def predict(
@@ -227,13 +220,7 @@ class GAM(BaseModel):
         """  # noqa: D400
         x_test = self._check(key_added, x_test)
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                category=DeprecationWarning,
-                message=".* is a deprecated alias for the builtin",
-            )
-            self._y_test = self.model.predict(x_test, **kwargs)
+        self._y_test = self.model.predict(x_test, **kwargs)
         self._y_test = np.squeeze(self._y_test).astype(self._dtype)
 
         return self.y_test
@@ -251,13 +238,7 @@ class GAM(BaseModel):
         %(base_model_ci.returns)s
         """  # noqa: D400
         x_test = self._check("_x_test", x_test)
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                category=DeprecationWarning,
-                message=".* is a deprecated alias for the builtin",
-            )
-            self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(self._dtype)
+        self._conf_int = self.model.confidence_intervals(x_test, **kwargs).astype(self._dtype)
 
         return self.conf_int
 
