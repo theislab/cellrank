@@ -379,8 +379,6 @@ class TestKernel:
     )
     @pytest.mark.parametrize("key_added", [None, "foo"])
     def test_kernel_reads_correct_connectivities(self, adata: AnnData, key_added: str | None, clazz: type):
-        if clazz is VelocityKernel and key_added == "foo":
-            pytest.skip("`get_moments` in scVelo doesn't support specifying key")
         del adata.uns["neighbors"]
         del adata.obsp["connectivities"]
         del adata.obsp["distances"]
