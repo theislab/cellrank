@@ -1,4 +1,4 @@
 [submodule "docs/notebooks"]
 	path = docs/notebooks
-	url = https://github.com/theislab/cellrank_notebooks
+	url = https://github.com/scverse/cellrank_notebooks
 	branch = main
