@@ -9,8 +9,8 @@
 # CellRank 2: Unified fate mapping in multiview single-cell data
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/_static/img/dark_mode_overview.png">
-  <img alt="CellRank overview" src="docs/_static/img/light_mode_overview.png" width="600px" align="center">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/scverse/cellrank/main/docs/_static/img/dark_mode_overview.png">
+  <img alt="CellRank overview" src="https://raw.githubusercontent.com/scverse/cellrank/main/docs/_static/img/light_mode_overview.png" width="600px" align="center">
 </picture>
 
 **CellRank** is a modular framework to study cellular dynamics based on Markov state modeling of
