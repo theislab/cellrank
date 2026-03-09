@@ -1096,7 +1096,7 @@ class TestCytoTRACEKernel:
 
     def test_raw_less_genes(self, adata: AnnData):
         adata.raw = adata.raw.to_adata()[:, :20]
-        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=True, n_genes=31)
+        _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=True, n_genes=31, layer="Ms")
         assert adata.uns[Key.cytotrace("params")] == {
             "layer": "Ms",
             "aggregation": "mean",
@@ -1110,9 +1110,9 @@ class TestCytoTRACEKernel:
         n_genes = min(adata.raw.n_vars if use_raw else adata.n_vars, n_genes)
         if n_genes <= 0:
             with pytest.raises(ValueError, match=r"Expected .* genes to be positive"):
-                _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, n_genes=n_genes)
+                _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, n_genes=n_genes, layer="Ms")
         else:
-            _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, n_genes=n_genes)
+            _ = CytoTRACEKernel(adata).compute_cytotrace(use_raw=use_raw, n_genes=n_genes, layer="Ms")
             assert adata.var[Key.cytotrace("correlates")].sum() == n_genes
             assert adata.uns[Key.cytotrace("params")]["n_genes"] == n_genes
 
@@ -1528,7 +1528,7 @@ class TestKernelIO:
 
         k1 = clazz(adata, **kwargs)
         if isinstance(k1, CytoTRACEKernel):
-            k1 = k1.compute_cytotrace()
+            k1 = k1.compute_cytotrace(layer="Ms")
         k1 = k1.compute_transition_matrix()
         k1.write_to_adata(key=key)
 
