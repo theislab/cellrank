@@ -38,7 +38,7 @@ We outline the most important changes here. For a more detailed account, please 
 - Removal of the `cellrank.external`: anyone wishing to contribute to CellRank can do this now directly via
   {mod}`cellrank.kernels` and {mod}`cellrank.estimators`. We welcome any contribution to CellRank,
   see our {doc}`contribution guide <../contributing>`, and feel free to get in touch via an
-  [issue](https://github.com/theislab/cellrank/issues/new/choose) or [email](mailto:info@cellrank.org).
+  [issue](https://github.com/theislab/cellrank/issues/new/choose).
 - Replacement of the old `cellrank.external.WOTKernel` with a new {class}`cellrank.kernels.RealTimeKernel`: this is
   CellRank's interface with {mod}`moscot`, enabling us to analyze large-scale time-course studies with additional
   spatial or lineage readout {cite}`klein:23,lange:23`. In addition, the {class}`~cellrank.kernels.RealTimeKernel`

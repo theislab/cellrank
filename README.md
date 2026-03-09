@@ -44,7 +44,7 @@ See the [installation guide](https://cellrank.readthedocs.io/en/latest/installat
 ## Related packages
 
 If you like CellRank, check out these packages from the same authors.
-All except RegVelo are part of the [scverse ecosystem].
+Almost all are part of the [scverse ecosystem].
 
 | Package | Description | Reference |
 |---------|-------------|-----------|
@@ -74,5 +74,5 @@ All except RegVelo are part of the [scverse ecosystem].
 [pyGPCCA]: https://github.com/msmdev/pyGPCCA
 [CellRank 1]: https://www.nature.com/articles/s41592-021-01346-6
 [CellRank 2]: https://doi.org/10.1038/s41592-024-02303-9
-[documentation]: https://cellrank.org
+[documentation]: https://cellrank.readthedocs.io/en/latest/
 [issue]: https://github.com/theislab/cellrank/issues/new/choose
