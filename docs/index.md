@@ -63,10 +63,6 @@ CellRank scales to large cell numbers, is fully compatible with the [scverse] ec
 backend, it is powered by the [pyGPCCA package](https://github.com/msmdev/pyGPCCA) {cite}`reuter:19,reuter:22`. Feel
 free to open an [issue] if you encounter a bug, need our help or just want to make a comment/suggestion.
 
-:::{important}
-If you're moving from CellRank 1 to CellRank 2, check out {doc}`../about/version2`.
-:::
-
 ## CellRank's key applications
 
 - Estimate differentiation direction based on a varied number of biological priors, including

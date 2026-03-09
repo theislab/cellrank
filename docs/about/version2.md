@@ -1,4 +1,4 @@
-# Moving to CellRank 2
+# Moving from v1 to v2
 
 The original CellRank version (v1) {cite}`lange:22` was a framework to analyze cellular dynamics based on RNA velocity
 {cite}`manno:18,bergen:20` and gene expression similarity. Based on a
