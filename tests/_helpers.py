@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 import scanpy as sc
 import scipy.sparse as sp
-import scvelo as scv
 from anndata import AnnData
 from pandas.testing import assert_frame_equal, assert_series_equal
 from PIL import Image
@@ -362,6 +361,8 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     -------
     The created adata object.
     """
+    import scvelo as scv
+
     np.random.seed(42)  # noqa: NPY002
     adata = scv.datasets.toy_data(n_obs=n_obs)
     adata.obs_names_make_unique()
