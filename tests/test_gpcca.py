@@ -1,5 +1,6 @@
 import copy
 import enum
+import logging
 import os
 from collections.abc import Sequence
 from typing import Optional
@@ -1156,7 +1157,19 @@ class TestGPCCAIO:
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4.0)
         g = cr.estimators.GPCCA(vk)
 
-        g.compute_schur(n_components=10, method="krylov", verbose=verbose)
+        # Flush any stdout captured so far (e.g. CellRank INFO logs from
+        # compute_transition_matrix, which go to stdout via RichHandler).
+        capsys.readouterr()
+
+        # Silence CellRank's own log output so we only capture SLEPc's
+        # iteration details, which verbose=False should suppress.
+        cr_logger = logging.getLogger("cellrank")
+        prev_level = cr_logger.level
+        cr_logger.setLevel(logging.WARNING)
+        try:
+            g.compute_schur(n_components=10, method="krylov", verbose=verbose)
+        finally:
+            cr_logger.setLevel(prev_level)
         out, _ = capsys.readouterr()
 
         assert not len(out)

@@ -103,7 +103,7 @@ class VelocityKernel(ConnectivityMixin, BidirectionalKernel):
         if np.any(nans):
             self._xdata = self._xdata[:, ~nans]
             self._vdata = self._vdata[:, ~nans]
-        W = _row_normalize_connectivities(self.adata)
+        W = _row_normalize_connectivities(self.connectivities)
         self._vexp, self._vvar = _knn_moments(W, self._vdata)
         self._vexp = self._vexp.astype(np.float64, copy=False)
         self._vvar = self._vvar.astype(np.float64, copy=False)

@@ -89,6 +89,7 @@ test = [
   "pytest-cov>=6",
   "pytest-mock>=3.14",
   "pytest-xdist",
+  "scvelo>=0.3",
 ]
 docs = [
   "furo>=2024.8.6",
@@ -246,5 +247,7 @@ ignore_roles = [
 ]
 
 [tool.uv]
+# Include test deps in `uv sync` so local dev has them (e.g. adjusttext, pytest)
+default-groups = [ "dev", "test" ]
 # pygpcca 1.0.4 incorrectly pins jinja2==3.0.3; override until next release
 override-dependencies = [ "jinja2>=3.1" ]

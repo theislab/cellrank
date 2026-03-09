@@ -239,6 +239,9 @@ class RandomWalk:
         # scVelo accepted color="none" to skip coloring; scanpy does not.
         if kwargs.get("color") == "none":
             kwargs.pop("color")
+        # scvelo compat: "right" means "right margin" in scanpy
+        if kwargs.get("legend_loc") == "right":
+            kwargs["legend_loc"] = "right margin"
         sc.pl.embedding(self._adata, basis=basis, show=False, ax=ax, **kwargs)
 
         logger.info("Plotting random walks")

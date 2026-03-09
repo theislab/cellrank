@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 from anndata import AnnData
 from matplotlib import cm, colors
+from matplotlib.colors import to_rgba
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from pandas.api.types import infer_dtype
 from sklearn.svm import SVR
@@ -230,8 +231,8 @@ def _fit_bulk_helper[Queue](
 
             res[gene][ln] = model if return_models else BulkRes(model.x_test, model.y_test)
 
-        if queue is not None:
-            queue.put(1)
+            if queue is not None:
+                queue.put(1)
 
     if queue is not None:
         queue.put(None)
@@ -297,6 +298,8 @@ def _fit_bulk(
         raise ValueError(f"Expected time ranges to be of length `{len(lineages)}`, found `{len(time_range)}`.")
 
     n_jobs = parallel_kwargs.pop("n_jobs", 1)
+    backend = parallel_kwargs.pop("backend", DEFAULT_BACKEND)
+    show_progress_bar = parallel_kwargs.pop("show_progress_bar", True)
 
     _start = _time.perf_counter()
     logger.info("Computing trends using %d core(s)", n_jobs)
@@ -305,6 +308,8 @@ def _fit_bulk(
         genes,
         unit="gene" if kwargs.get("data_key", "gene") != "obs" else "obs",
         n_jobs=n_jobs,
+        backend=backend,
+        show_progress_bar=show_progress_bar,
         extractor=lambda modelss: {k: v for m in modelss for k, v in m.items()},
     )(
         models=models,
@@ -315,6 +320,12 @@ def _fit_bulk(
         **kwargs,
     )
     logger.info("    Finish (%.2fs)", _time.perf_counter() - _start)
+
+    n_failed = sum(
+        1 for gene_models in models.values() for m in gene_models.values() if getattr(m, "_converged", True) is False
+    )
+    if n_failed:
+        logger.warning("%d/%d GAM fit(s) did not converge", n_failed, sum(len(v) for v in models.values()))
 
     return _filter_models(models, return_models=return_models, filter_all_failed=filter_all_failed)
 
@@ -1023,3 +1034,237 @@ def _get_sorted_colors(
             res.append(np.asarray(adata.obs[ck])[order])
 
     return res
+
+
+def _plot_time_scatter(
+    adata: AnnData,
+    x: np.ndarray,
+    ys: list[np.ndarray],
+    *,
+    color: list[str] | None = None,
+    title: list[str] | None = None,
+    xlabel: str = "",
+    ylabel: str = "probability",
+    cmap: str = "viridis",
+    **kwargs: Any,
+) -> None:
+    """Plot fate probability vs pseudotime as multi-panel scatter.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    x
+        X-axis values (e.g. pseudotime).
+    ys
+        List of arrays, one per panel, for the y-axis.
+    color
+        Column names in ``adata.obs`` to color by, one per panel or one shared.
+    title
+        Title for each panel.
+    xlabel
+        X-axis label.
+    ylabel
+        Y-axis label.
+    cmap
+        Colormap for continuous color values.
+    kwargs
+        Additional keyword arguments (``figsize``, ``dpi``, ``size``, ``show``
+        are extracted; the rest is ignored).
+    """
+    n_panels = len(ys)
+    ncols = min(4, n_panels)
+    nrows = int(np.ceil(n_panels / ncols))
+
+    figsize = kwargs.pop("figsize", (6 * ncols, 4 * nrows))
+    dpi = kwargs.pop("dpi", None)
+    s = kwargs.pop("size", kwargs.pop("s", 1))
+    show = kwargs.pop("show", None)
+    _save = kwargs.pop("save", None)
+    legend_loc = kwargs.pop("legend_loc", "best")
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, dpi=dpi, squeeze=False)
+    axes_flat = axes.ravel()
+
+    color_per = None
+    if color is not None:
+        color_per = color * n_panels if len(color) == 1 else list(color)
+
+    for i, (y, ax) in enumerate(zip(ys, axes_flat)):
+        c = color_per[i] if color_per else None
+        if c is not None and c in adata.obs:
+            obs_data = adata.obs[c]
+            if isinstance(obs_data.dtype, pd.CategoricalDtype):
+                palette = adata.uns.get(f"{c}_colors", None)
+                for j, cat in enumerate(obs_data.cat.categories):
+                    mask = (obs_data == cat).values
+                    kw = {"c": palette[j]} if palette is not None and j < len(palette) else {}
+                    ax.scatter(x[mask], y[mask], s=s, alpha=0.8, label=cat, edgecolors="none", **kw)
+                if legend_loc not in (None, "none", "None", False):
+                    legend_kw: dict[str, Any] = {"fontsize": "x-small", "frameon": False}
+                    if legend_loc in ("right", "right margin"):
+                        legend_kw.update(loc="center left", bbox_to_anchor=(1.0, 0.5))
+                    else:
+                        legend_kw["loc"] = legend_loc
+                    ax.legend(**legend_kw)
+            else:
+                scatter = ax.scatter(x, y, c=obs_data.values, cmap=cmap, s=s, alpha=0.8, edgecolors="none")
+                plt.colorbar(scatter, ax=ax)
+        else:
+            scatter = ax.scatter(x, y, c=y, cmap=cmap, s=s, alpha=0.8, edgecolors="none")
+            plt.colorbar(scatter, ax=ax)
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        if title and i < len(title):
+            ax.set_title(title[i])
+
+    for j in range(n_panels, len(axes_flat)):
+        axes_flat[j].remove()
+
+    plt.tight_layout()
+    if _save is not None:
+        save_fig(fig, _save)
+    if show is True or (show is None and _save is None):
+        plt.show()
+
+
+def _plot_color_gradients(
+    adata: AnnData,
+    data: Any,
+    *,
+    basis: str = "umap",
+    title: list[str] | None = None,
+    **kwargs: Any,
+) -> None:
+    """Plot fate probabilities as overlapping color gradients on an embedding.
+
+    Uses the same pairwise diverging-colormap technique as scvelo: for each
+    pair of lineages, cells are colored on a diverging scale from
+    ``color_A → transparent → color_B``.  Uncertain cells (low probability
+    for both lineages) become transparent and let the grey background show
+    through.  Only cells whose two dominant lineages match the current pair
+    are drawn, so each cell is plotted at most once per pair.
+
+    Parameters
+    ----------
+    adata
+        Annotated data matrix.
+    data
+        A :class:`~cellrank._utils._lineage.Lineage` with fate probabilities.
+    basis
+        Key in ``adata.obsm`` for the 2-D coordinates.
+    title
+        Plot title (list with a single element or string).
+    kwargs
+        Additional keyword arguments (``figsize``, ``dpi``, ``size``,
+        ``legend_loc``, ``show``, ``save`` are extracted; the rest is
+        ignored).
+    """
+    coords = adata.obsm[f"X_{basis}"]
+
+    figsize = kwargs.pop("figsize", None)
+    dpi = kwargs.pop("dpi", None)
+    s = kwargs.pop("size", kwargs.pop("s", None))
+    if s is None:
+        s = (120_000 / adata.n_obs + 20) / 2
+    show = kwargs.pop("show", None)
+    _save = kwargs.pop("save", None)
+    legend_loc = kwargs.pop("legend_loc", "right")
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    # Probability matrix: cells × lineages, clipped to [0, ∞)
+    vals = np.clip(data.X, 0, None)
+    names = list(data.names)
+    lin_colors = list(data.colors)
+    n_lineages = len(names)
+
+    # Background: all cells in light grey, very faint
+    ax.scatter(coords[:, 0], coords[:, 1], c="lightgrey", s=s, alpha=0.2, marker=".", edgecolors="none")
+
+    # For each cell, find its top-2 lineage indices
+    sorted_idx = np.argsort(vals, axis=1)[:, ::-1][:, :2]  # (n_cells, 2)
+
+    # Pairwise diverging colormap layers (scvelo approach)
+    for id0 in range(n_lineages):
+        for id1 in range(id0 + 1, n_lineages):
+            # Only cells whose top-2 lineages include this pair
+            cell_mask = np.array(
+                [(id0 in row and id1 in row) for row in sorted_idx],
+                dtype=bool,
+            )
+            if np.sum(cell_mask) < 2:
+                continue
+
+            # Diverging value: positive → id1, negative → id0
+            c_vals = vals[cell_mask, id1] - vals[cell_mask, id0]
+            c_coords = coords[cell_mask]
+
+            # Build diverging colormap: color_A → transparent white → color_B
+            rgba_a = np.array(to_rgba(lin_colors[id0]))
+            rgba_b = np.array(to_rgba(lin_colors[id1]))
+            cmap_colors = [
+                (*rgba_a[:3], 1.0),  # fully opaque color A
+                (1.0, 1.0, 1.0, 0.0),  # transparent white in the middle
+                (*rgba_b[:3], 1.0),  # fully opaque color B
+            ]
+            cmap = colors.LinearSegmentedColormap.from_list(f"_cr_{id0}_{id1}", cmap_colors, N=256)
+
+            # Normalise to [-1, 1] symmetric range, then map to [0, 1] for cmap
+            abs_max = np.max(np.abs(c_vals)) if np.max(np.abs(c_vals)) > 0 else 1.0
+            c_normed = (c_vals / abs_max + 1) / 2  # map [-1,1] → [0,1]
+
+            # Sort so high-magnitude cells are on top
+            order = np.argsort(np.abs(c_vals))
+            ax.scatter(
+                c_coords[order, 0],
+                c_coords[order, 1],
+                c=c_normed[order],
+                cmap=cmap,
+                vmin=0,
+                vmax=1,
+                s=s,
+                marker=".",
+                edgecolors="none",
+            )
+
+    # Legend
+    handles = [
+        plt.Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor=c,
+            label=n,
+            markersize=8,
+        )
+        for n, c in zip(names, lin_colors)
+    ]
+    if legend_loc not in (None, "none", "None", False):
+        if legend_loc == "right":
+            ax.legend(handles=handles, frameon=False, loc="center left", bbox_to_anchor=(1.0, 0.5))
+        elif legend_loc == "right margin":
+            ax.legend(handles=handles, frameon=False, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        elif legend_loc == "on data":
+            # Place labels at centroid of high-probability cells
+            for name in data.names:
+                col = data[:, name].X.ravel()
+                top_mask = col > np.percentile(col, 90)
+                if top_mask.any():
+                    cx, cy = coords[top_mask, 0].mean(), coords[top_mask, 1].mean()
+                    ax.text(cx, cy, name, fontsize=8, fontweight="bold", ha="center", va="center")
+        else:
+            ax.legend(handles=handles, frameon=False, loc=legend_loc)
+    if title:
+        ax.set_title(title[0] if isinstance(title, list) else title)
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    if _save is not None:
+        save_fig(fig, _save)
+    if show is True or (show is None and _save is None):
+        plt.show()

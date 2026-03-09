@@ -243,6 +243,7 @@ class FateProbsMixin:
         color: str | None = None,
         mode: Literal["embedding", "time"] = PlotMode.EMBEDDING,
         time_key: str | None = None,
+        basis: str = "umap",
         same_plot: bool = True,
         title: str | Sequence[str] | None = None,
         cmap: str = "viridis",
@@ -260,6 +261,8 @@ class FateProbsMixin:
             Whether to plot the probabilities in an embedding or along the pseudotime.
         time_key
             Key in :attr:`~anndata.AnnData.obs` where pseudotime is stored. Only used when ``mode = 'time'``.
+        basis
+            Key in :attr:`~anndata.AnnData.obsm` for the embedding to use, e.g. ``'umap'`` or ``'tsne'``.
         title
             Title of the plot.
         same_plot
@@ -268,7 +271,7 @@ class FateProbsMixin:
         cmap
             Colormap for continuous annotations.
         kwargs
-            Keyword arguments for :func:`~scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scanpy.pl.embedding`.
 
         Returns
         -------
@@ -285,6 +288,7 @@ class FateProbsMixin:
             color=color,
             mode=mode,
             time_key=time_key,
+            basis=basis,
             same_plot=same_plot,
             title=title,
             cmap=cmap,

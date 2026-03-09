@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
-import scvelo as scv
 from anndata import AnnData, Raw
 from matplotlib import patheffects, rc_context
 from matplotlib.axes import Axes
@@ -235,7 +234,7 @@ class LinDriversMixin(FateProbsMixin):
             with the actual values.
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`~scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scanpy.pl.embedding`.
 
         Returns
         -------
@@ -286,13 +285,17 @@ class LinDriversMixin(FateProbsMixin):
         )
         axes = np.ravel([axes])
 
+        basis = kwargs.pop("basis", "umap")
+        # scvelo compat: "right" means "right margin" in scanpy
+        if kwargs.get("legend_loc") == "right":
+            kwargs["legend_loc"] = "right margin"
         _i = 0
         for _i, (gene, ax) in enumerate(zip(genes.index, axes)):
             data = genes.loc[gene]
-            scv.pl.scatter(
+            sc.pl.embedding(
                 self.adata,
+                basis=basis,
                 color=gene,
-                ncols=ncols,
                 use_raw=use_raw,
                 ax=ax,
                 show=False,

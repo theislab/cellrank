@@ -8,7 +8,7 @@ from typing import Any, Literal
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scvelo as scv
+import scanpy as sc
 from anndata import AnnData
 from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap, LogNorm
@@ -148,7 +148,7 @@ def circular_projection(
         ``'X_fate_simplex_{fwd,bwd}'``, based on the ``backward``.
     %(plotting)s
     kwargs
-        Keyword arguments for :func:`~scvelo.pl.scatter`.
+        Keyword arguments for :func:`~scanpy.pl.embedding`.
 
     Returns
     -------
@@ -222,6 +222,11 @@ def circular_projection(
     y = np.sum(X * angle_vec_cos, axis=1)
     adata.obsm[key_added] = np.c_[x, y]
 
+    # scvelo's "right" placed the legend outside the axes; scanpy calls
+    # that "right margin".  Remap so existing user code keeps working.
+    if kwargs.get("legend_loc") == "right":
+        kwargs["legend_loc"] = "right margin"
+
     nrows = int(np.ceil(len(keys) / ncols))
     fig, ax = plt.subplots(
         nrows=nrows,
@@ -250,7 +255,7 @@ def circular_projection(
             # TODO(michalk8): parse the exception
             pass
 
-        scv.pl.scatter(
+        sc.pl.embedding(
             adata,
             basis=key_added,
             color=k,
@@ -258,7 +263,7 @@ def circular_projection(
             ax=ax,
             use_raw=use_raw,
             norm=LogNorm() if set_lognorm else None,
-            colorbar=colorbar,
+            colorbar_loc="right" if colorbar else None,
             **kwargs,
         )
         if colorbar and set_lognorm:

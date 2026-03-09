@@ -1,14 +1,9 @@
 """k-NN moment computation formerly imported from scVelo."""
 
-from __future__ import annotations
-
 import warnings
 
 import numpy as np
 import scipy.sparse as sp
-from anndata import AnnData
-
-__all__: list[str] = []
 
 
 def _knn_moments(
@@ -35,8 +30,8 @@ def _knn_moments(
     return mean, var
 
 
-def _row_normalize_connectivities(adata: AnnData) -> sp.csr_matrix:
-    """Build a row-normalized binary connectivities matrix from *adata*.
+def _row_normalize_connectivities(conn: sp.spmatrix) -> sp.csr_matrix:
+    """Build a row-normalized binary connectivities matrix.
 
     The transformation mirrors scVelo's ``get_connectivities``:
     binarize the graph, set the diagonal to 1 (self-loop), then
@@ -44,14 +39,14 @@ def _row_normalize_connectivities(adata: AnnData) -> sp.csr_matrix:
 
     Parameters
     ----------
-    adata
-        Must contain a neighbor graph in ``adata.obsp["connectivities"]``.
+    conn
+        Sparse connectivities matrix of shape ``(n_cells, n_cells)``.
 
     Returns
     -------
     Row-normalized sparse matrix of shape ``(n_cells, n_cells)``.
     """
-    C = adata.obsp["connectivities"].copy()
+    C = conn.copy()
 
     # binarize
     C = (C > 0).astype(np.float32)

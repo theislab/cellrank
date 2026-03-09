@@ -1,7 +1,5 @@
 """Private plotting utilities formerly imported from scVelo."""
 
-from __future__ import annotations
-
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -66,15 +64,19 @@ def _plot_outline(
     y: np.ndarray,
     *,
     outline_color: tuple[str, str] = ("black", "white"),
+    outline_width: tuple[float, float] = (0.3, 0.05),
     kwargs: dict[str, Any] | None = None,
     ax: Axes | None = None,
     **scatter_kwargs: Any,
 ) -> None:
     """Draw outlined scatter points using a double-scatter technique.
 
-    Draws three layers: a large background scatter (``outline_color[0]``),
-    a medium gap scatter (``outline_color[1]``), and optionally the caller
-    adds the actual data scatter on top.
+    Draws two layers: a large background scatter (``outline_color[0]``) and
+    a medium gap scatter (``outline_color[1]``).  The caller typically draws
+    the actual data scatter on top.
+
+    The outline sizes are computed from the base ``s`` value following scVelo's
+    quadratic formula so that ``outline_width`` controls the visual thickness.
 
     Parameters
     ----------
@@ -84,8 +86,10 @@ def _plot_outline(
         Y coordinates.
     outline_color
         Tuple of ``(background_color, gap_color)``.
+    outline_width
+        ``(bg_frac, gap_frac)`` relative to the dot radius.
     kwargs
-        Base keyword arguments for all three scatter calls (e.g. ``s``, ``alpha``).
+        Base keyword arguments for all scatter calls (e.g. ``s``, ``alpha``).
     ax
         Matplotlib axes to draw on. If :obj:`None`, uses current axes.
     **scatter_kwargs
@@ -97,13 +101,14 @@ def _plot_outline(
         kwargs = {}
 
     bg_color, gap_color = outline_color
+    bg_frac, gap_frac = outline_width
 
-    # background layer (larger points)
-    bg_kwargs = {**kwargs, **scatter_kwargs, "color": bg_color}
-    bg_kwargs["s"] = bg_kwargs.get("s", 20) * 1.4
-    ax.scatter(x, y, **bg_kwargs)
+    s = kwargs.pop("s", 20)
+    point = np.sqrt(s)
+    gap_size = (2 * point * gap_frac + point) ** 2
+    bg_size = (2 * point * bg_frac + np.sqrt(gap_size)) ** 2
 
-    # gap layer (medium points)
-    gap_kwargs = {**kwargs, **scatter_kwargs, "color": gap_color}
-    gap_kwargs["s"] = gap_kwargs.get("s", 20) * 1.1
-    ax.scatter(x, y, **gap_kwargs)
+    base = {**kwargs, **scatter_kwargs, "edgecolors": "none", "marker": "."}
+
+    ax.scatter(x, y, s=bg_size, color=bg_color, **base)
+    ax.scatter(x, y, s=gap_size, color=gap_color, **base)

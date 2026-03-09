@@ -19,7 +19,7 @@ def _setup_logger() -> logging.Logger:
     """Set up the ``"cellrank"`` logger with a :class:`~rich.logging.RichHandler`."""
     root = logging.getLogger(_LOGGER_NAME)
     if not root.handlers:
-        console = Console(stderr=True, force_terminal=True)
+        console = Console(stderr=False)
         if console.is_jupyter:
             console.is_jupyter = False
         handler = RichHandler(
@@ -32,6 +32,7 @@ def _setup_logger() -> logging.Logger:
         )
         root.addHandler(handler)
         root.setLevel(logging.INFO)
+    root.propagate = False
     return root
 
 

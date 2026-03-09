@@ -11,12 +11,12 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import scipy.sparse as sp
 import seaborn as sns
 from anndata import AnnData
 from matplotlib import cm, colors
 from scanpy.plotting import violin
-from scvelo.plotting import paga
 
 from cellrank._utils import Lineage
 from cellrank._utils._docs import d, inject_docs
@@ -77,8 +77,8 @@ def aggregate_fate_probabilities(
         Type of plot to show. Valid options are:
 
         - ``{m.BAR!r}`` - barplot, one panel per cluster. The whiskers correspond to the standard error of the mean.
-        - ``{m.PAGA!r}`` - :func:`~scvelo.pl.paga`, one per %(initial_or_terminal)s state, colored in by fate.
-        - ``{m.PAGA_PIE!r}`` - :func:`~scvelo.pl.paga` with pie charts indicating aggregated fates.
+        - ``{m.PAGA!r}`` - :func:`~scanpy.pl.paga`, one per %(initial_or_terminal)s state, colored in by fate.
+        - ``{m.PAGA_PIE!r}`` - :func:`~scanpy.pl.paga` with pie charts indicating aggregated fates.
         - ``{m.VIOLIN!r}`` - violin plots, one per %(initial_or_terminal)s state.
         - ``{m.HEATMAP!r}`` - a heatmap, showing average fates per cluster.
         - ``{m.CLUSTERMAP!r}`` - same as a heatmap, but with a dendrogram.
@@ -109,12 +109,21 @@ def aggregate_fate_probabilities(
         fate probabilities legend.
     %(plotting)s
     kwargs
-        Keyword arguments for :func:`~scvelo.pl.paga`, :func:`~scanpy.pl.violin` or
+        Keyword arguments for :func:`~scanpy.pl.paga`, :func:`~scanpy.pl.violin` or
         :func:`~matplotlib.pyplot.bar`, depending on the ``mode``.
 
     Returns
     -------
     %(just_plots)s
+
+    Notes
+    -----
+    For ``mode = 'paga_pie'``, directed edges are shown only when
+    ``adata.uns['paga']['transitions_confidence']`` is present. This key is
+    produced by scVelo's PAGA extension (:func:`~scvelo.tl.paga`), which
+    augments the standard scanpy PAGA graph with directed transition
+    confidences. When only scanpy's :func:`~scanpy.tl.paga` has been run,
+    edges are undirected.
     """
 
     @valuedispatch
@@ -178,21 +187,30 @@ def aggregate_fate_probabilities(
         axes = [axes] if not isinstance(axes, np.ndarray) else np.ravel(axes)
         vmin, vmax = np.inf, -np.inf
 
-        if basis is not None:
-            kwargs["basis"] = basis
-            kwargs["scatter_flag"] = True
-            kwargs["color"] = cluster_key
+        # scanpy's paga doesn't support scatter_flag/legend_loc; draw scatter separately
+        kwargs.pop("legend_loc", None)
 
         for i, (ax, lineage_name) in enumerate(zip(axes, probs.names)):
             cols = [v[0][i] for v in d.values()]
+
+            if basis is not None:
+                sc.pl.embedding(
+                    adata,
+                    basis=basis,
+                    color=cluster_key,
+                    ax=ax,
+                    show=False,
+                    legend_loc="none",
+                )
+
             kwargs["ax"] = ax
-            kwargs["colors"] = tuple(cols)
+            kwargs["color"] = tuple(cols)
             kwargs["title"] = f"{direction} {lineage_name}"
 
             vmin = np.min(cols + [vmin])
             vmax = np.max(cols + [vmax])
 
-            paga(adata, **kwargs)
+            sc.pl.paga(adata, **kwargs)
 
         if cbar:
             norm = colors.Normalize(vmin=vmin, vmax=vmax)
@@ -220,26 +238,34 @@ def aggregate_fate_probabilities(
         kwargs["ax"] = ax
         kwargs["show"] = False
         kwargs["colorbar"] = False  # has to be disabled
-        kwargs["show"] = False
-
-        kwargs["node_colors"] = colors
         kwargs.pop("save", None)  # we will handle saving
 
-        kwargs["transitions"] = kwargs.get("transitions", "transitions_confidence")
-        if "legend_loc" in kwargs:
-            orig_ll = kwargs["legend_loc"]
-            if orig_ll != "on data":
-                kwargs["legend_loc"] = "none"  # we will handle legend
-        else:
-            orig_ll = None
-            kwargs["legend_loc"] = "on data"
+        # Show directed edges when scVelo's PAGA has been run, which stores
+        # directed transition confidences in adata.uns["paga"]. Standard
+        # scanpy PAGA only has undirected connectivities.
+        if "transitions" not in kwargs:
+            paga_uns = adata.uns.get("paga", {})
+            if "transitions_confidence" in paga_uns:
+                kwargs["transitions"] = "transitions_confidence"
 
+        # Handle legend_loc separately (scanpy's paga doesn't accept it)
+        orig_ll = kwargs.pop("legend_loc") if "legend_loc" in kwargs else None
+
+        # Draw scatter background separately (scanpy's paga doesn't support scatter_flag)
         if basis is not None:
-            kwargs["basis"] = basis
-            kwargs["scatter_flag"] = True
-            kwargs["color"] = cluster_key
+            sc.pl.embedding(
+                adata,
+                basis=basis,
+                color=cluster_key,
+                ax=ax,
+                show=False,
+                legend_loc="on data" if orig_ll in (None, "on data") else "none",
+            )
 
-        ax = paga(adata, **kwargs)
+        # Use color for pie chart data (scanpy's paga accepts dict-of-dicts)
+        kwargs["color"] = colors
+
+        ax = sc.pl.paga(adata, **kwargs)
         ax.set_title(kwargs.get("title", cluster_key))
 
         if basis is not None and orig_ll not in ("none", "on data", None):
@@ -259,7 +285,7 @@ def aggregate_fate_probabilities(
             fig.add_artist(first_legend)
 
         if legend_kwargs.get("loc", None) not in ("none", "on data", None):
-            # we need to use these, because scvelo can have its own handles and
+            # we need to use these, because paga can have its own handles and
             # they would be plotted here
             handles = []
             for lineage_name, color in zip(probs.names, colors[0].keys()):
@@ -465,7 +491,7 @@ def aggregate_fate_probabilities(
         use_clustermap = True
         mode = mode.HEATMAP
     elif mode in (AggregationMode.PAGA, AggregationMode.PAGA_PIE) and "paga" not in adata.uns:
-        raise KeyError("Compute PAGA first as `scvelo.tl.paga()` or `scanpy.tl.paga()`.")
+        raise KeyError("Compute PAGA first as `scanpy.tl.paga()`.")
 
     fig = plot_violin_no_cluster_key() if mode == AggregationMode.VIOLIN and cluster_key is None else plot(mode)
 

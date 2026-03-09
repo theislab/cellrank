@@ -22,7 +22,18 @@ _adata_large = sc.read("tests/_ground_truth_adatas/adata_200.h5ad")
 def pytest_sessionstart(session: pytest.Session) -> None:
     matplotlib.use("Agg")
     matplotlib.rcParams["figure.max_open_warning"] = 0
+    matplotlib.rcParams["savefig.transparent"] = True
     np.random.seed(42)  # noqa: NPY002
+
+    _figdir = pathlib.Path(__file__).parent / "figures"
+    cr.settings.figdir = _figdir
+    sc.settings.figdir = _figdir
+    try:
+        import scvelo as scv
+
+        scv.settings.figdir = str(_figdir)
+    except ImportError:
+        pass
 
     # https://github.com/theislab/cellrank/issues/683
     warnings.simplefilter("ignore", NumbaPerformanceWarning)
