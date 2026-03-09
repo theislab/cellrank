@@ -5,8 +5,6 @@ import warnings
 import numpy as np
 import scipy.sparse as sp
 
-__all__: list[str] = []
-
 
 def _knn_moments(
     connectivities: sp.spmatrix,
