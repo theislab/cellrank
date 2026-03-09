@@ -1157,8 +1157,12 @@ class TestGPCCAIO:
         vk = VelocityKernel(adata_large).compute_transition_matrix(softmax_scale=4.0)
         g = cr.estimators.GPCCA(vk)
 
-        # Silence CellRank's own log output (goes to stdout via RichHandler)
-        # so we only capture SLEPc's iteration details, which verbose=False should suppress.
+        # Flush any stdout captured so far (e.g. CellRank INFO logs from
+        # compute_transition_matrix, which go to stdout via RichHandler).
+        capsys.readouterr()
+
+        # Silence CellRank's own log output so we only capture SLEPc's
+        # iteration details, which verbose=False should suppress.
         cr_logger = logging.getLogger("cellrank")
         prev_level = cr_logger.level
         cr_logger.setLevel(logging.WARNING)
