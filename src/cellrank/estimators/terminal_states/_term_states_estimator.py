@@ -443,7 +443,7 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
 
         same_plot = same_plot or len(names) == 1
         kwargs.setdefault("legend_loc", "on data")
-        # scvelo compat: "right" means "right margin" in scanpy
+        # "right" means "right margin" in scanpy
         if kwargs.get("legend_loc") == "right":
             kwargs["legend_loc"] = "right margin"
         kwargs.pop("color_map", None)
@@ -580,13 +580,12 @@ class TermStatesEstimator(BaseEstimator, abc.ABC):
             )
         elif mode == PlotMode.EMBEDDING:
             kwargs.setdefault("legend_loc", "on data")
-            # scvelo compat: "right" means "right margin" in scanpy
+            # "right" means "right margin" in scanpy
             if kwargs.get("legend_loc") == "right":
                 kwargs["legend_loc"] = "right margin"
 
             if same_plot:
                 if color:
-                    # https://github.com/theislab/scvelo/issues/673
                     logger.warning("Ignoring `color` when `mode='embedding'` and `same_plot=True`")
                 title = [_title] if title is None else title
                 _plot_color_gradients(self.adata, _data, basis=basis, title=title,

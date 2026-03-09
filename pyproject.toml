@@ -58,7 +58,6 @@ dependencies = [
   "scanpy>=1.11",
   "scikit-learn>=1.6",
   "scipy>=1.14",
-  "scvelo>=0.3",
   "seaborn>=0.13",
   "session-info2>=0.2",
   "wrapt>=1.16",
@@ -69,6 +68,7 @@ optional-dependencies.moscot = [ "moscot" ]
 optional-dependencies.petsc = [ "mpi4py", "petsc4py", "slepc4py" ]
 optional-dependencies.plot = [ "adjusttext" ]
 optional-dependencies.r = [ "rpy2>=3.3" ]
+optional-dependencies.scvelo = [ "scvelo>=0.3" ]
 urls."Bug Tracker" = "https://github.com/theislab/cellrank/issues"
 urls.Documentation = "https://cellrank.readthedocs.io"
 urls.Download = "https://cellrank.readthedocs.io/en/latest/installation.html"

@@ -226,7 +226,7 @@ class KernelExpression(IOMixin, abc.ABC):
         %(parallel)s
         %(plotting)s
         kwargs
-            Keyword arguments for :func:`~scvelo.pl.scatter`.
+            Keyword arguments for :func:`~scanpy.pl.embedding`.
 
         Returns
         -------

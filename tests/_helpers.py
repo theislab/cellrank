@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 import scanpy as sc
 import scipy.sparse as sp
-import scvelo as scv
 from anndata import AnnData
 from pandas.testing import assert_frame_equal, assert_series_equal
 from PIL import Image
@@ -20,6 +19,15 @@ from cellrank.kernels import ConnectivityKernel, PrecomputedKernel, VelocityKern
 def _jax_not_installed() -> bool:
     try:
         import jax  # noqa
+
+        return False
+    except ImportError:
+        return True
+
+
+def _scvelo_not_installed() -> bool:
+    try:
+        import scvelo  # noqa
 
         return False
     except ImportError:
@@ -362,6 +370,8 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
     -------
     The created adata object.
     """
+    import scvelo as scv
+
     np.random.seed(42)  # noqa: NPY002
     adata = scv.datasets.toy_data(n_obs=n_obs)
     adata.obs_names_make_unique()
@@ -396,6 +406,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 
 jax_not_installed_skip = pytest.mark.skipif(_jax_not_installed(), reason="JAX is not installed.")
 gamr_skip = pytest.mark.skipif(_rpy2_mgcv_not_installed(), reason="Cannot import `rpy2` or R's `mgcv` package.")
+scvelo_skip = pytest.mark.skipif(_scvelo_not_installed(), reason="scVelo is not installed.")
 
 if __name__ == "__main__":
     for size in [50, 100, 200]:
