@@ -25,6 +25,15 @@ def _jax_not_installed() -> bool:
         return True
 
 
+def _scvelo_not_installed() -> bool:
+    try:
+        import scvelo  # noqa
+
+        return False
+    except ImportError:
+        return True
+
+
 def _rpy2_mgcv_not_installed() -> bool:
     try:
         import rpy2
@@ -397,6 +406,7 @@ def _create_dummy_adata(n_obs: int) -> AnnData:
 
 jax_not_installed_skip = pytest.mark.skipif(_jax_not_installed(), reason="JAX is not installed.")
 gamr_skip = pytest.mark.skipif(_rpy2_mgcv_not_installed(), reason="Cannot import `rpy2` or R's `mgcv` package.")
+scvelo_skip = pytest.mark.skipif(_scvelo_not_installed(), reason="scVelo is not installed.")
 
 if __name__ == "__main__":
     for size in [50, 100, 200]:

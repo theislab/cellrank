@@ -41,6 +41,7 @@ from tests._helpers import (
     create_kernels,
     jax_not_installed_skip,
     random_transition_matrix,
+    scvelo_skip,
 )
 
 _rtol = 1e-6
@@ -950,6 +951,7 @@ class TestVelocityScheme:
         assert vk.params == bdata.uns[f"{key}_params"]["params"]
 
 
+@scvelo_skip
 class TestComputeProjection:
     def test_no_transition_matrix(self, adata: AnnData):
         with pytest.raises(RuntimeError, match=r"Compute transition matrix first as"):
@@ -1476,6 +1478,7 @@ class TestPrecomputedKernel:
         assert key in pk.params["origin"]
         np.testing.assert_array_equal(mat, pk.transition_matrix)
 
+    @scvelo_skip
     def test_projection_explicit_connectivities(self, adata: AnnData):
         mat = random_transition_matrix(adata.n_obs)
         pk = PrecomputedKernel(mat, adata=adata)

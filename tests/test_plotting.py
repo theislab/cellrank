@@ -24,6 +24,7 @@ from tests._helpers import (
     create_model,
     gamr_skip,
     resize_images_to_same_sizes,
+    scvelo_skip,
 )
 
 setup()
@@ -2253,6 +2254,7 @@ class TestGPCCA:
     def test_gpcca_fate_probs_cont_not_same(self, mc: GPCCA, fpath: str):
         mc.plot_fate_probabilities(color="clusters", same_plot=False, dpi=DPI, save=fpath)
 
+    @scvelo_skip
     @compare(kind="gpcca")
     def test_scvelo_transition_matrix_projection(self, mc: GPCCA, fpath: str):
         mc.kernel.plot_projection(
@@ -3335,6 +3337,7 @@ class TestMacrostateComposition:
         mc.plot_macrostate_composition("clusters_enlarged", dpi=DPI, save=fpath, legend_loc="upper left out")
 
 
+@scvelo_skip
 class TestProjectionEmbedding:
     @compare()
     def test_scvelo_connectivity_kernel_emb_stream(self, adata: AnnData, fpath: str):
