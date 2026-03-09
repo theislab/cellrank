@@ -261,15 +261,28 @@ hatch run docs:build
 hatch run docs:open
 ```
 
+For live preview with auto-rebuild on save:
+
+```bash
+hatch run docs:auto
+```
+
 ::::
 
 ::::{tab-item} uv
 :sync: uv
 
 ```bash
-cd docs
-uv run sphinx-build -M html . _build
-open _build/html/index.html  # macOS; use xdg-open on Linux
+uv sync --group docs
+source .venv/bin/activate
+sphinx-build -M html docs docs/_build
+open docs/_build/html/index.html  # macOS; use xdg-open on Linux
+```
+
+For live preview with auto-rebuild on save:
+
+```bash
+sphinx-autobuild docs docs/_build/html --open-browser --watch README.md
 ```
 
 ::::

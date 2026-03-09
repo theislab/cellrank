@@ -218,7 +218,7 @@ class RealTimeKernel(UnidirectionalKernel):
         copy: bool = False,
         **kwargs: Any,
     ) -> "RealTimeKernel":
-        """Construct the kernel from :mod:`moscot` :cite:`klein:23`.
+        """Construct the kernel from :mod:`moscot` :cite:`klein:25`.
 
         Parameters
         ----------

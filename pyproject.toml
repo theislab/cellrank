@@ -16,7 +16,8 @@ keywords = [
 license = "BSD-3-Clause"
 license-files = [ "LICENSE" ]
 maintainers = [
-  { name = "Michal Klein", email = "info@cellrank.org" },
+  { name = "Marius Lange", email = "mlange@ethz.ch" },
+  { name = "Philipp Weiler" },
 ]
 
 authors = [
@@ -93,6 +94,7 @@ docs = [
   "furo>=2024.8.6",
   "myst-nb>=1.2",
   "sphinx>=7.4",
+  "sphinx-autobuild",
   "sphinx-autodoc-typehints>=2.5",
   "sphinx-copybutton>=0.5",
   "sphinx-design>=0.6",
@@ -132,6 +134,7 @@ dependency-groups = [ "docs" ]
 scripts.build = "sphinx-build -M html docs docs/_build {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
+scripts.auto = "sphinx-autobuild docs docs/_build/html --open-browser --watch README.md {args}"
 
 [tool.ruff]
 line-length = 120
