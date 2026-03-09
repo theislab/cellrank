@@ -16,7 +16,8 @@ keywords = [
 license = "BSD-3-Clause"
 license-files = [ "LICENSE" ]
 maintainers = [
-  { name = "Michal Klein", email = "info@cellrank.org" },
+  { name = "Marius Lange", email = "mlange@ethz.ch" },
+  { name = "Philipp Weiler" },
 ]
 
 authors = [
