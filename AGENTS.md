@@ -59,7 +59,7 @@ This file only owns the project invariants and source-of-truth map below.
 - **AnnData key naming** goes through `src/cellrank/_utils/_key.py`. Don't hand-roll key strings.
 - **Logging.** `logging.getLogger(__name__)` with lazy `%` formatting — never f-strings in logger calls.
 - **Public API surface** = symbols re-exported from `src/cellrank/__init__.py` and the `cellrank.kernels` / `estimators` / `models` / `pl` / `datasets` namespaces. New top-level re-exports commit the project to an API.
-- **Optional dependencies** are pip extras: `jax`, `moscot`, `petsc`, `plot`, `r`, `scvelo`. Imports must be guarded and fail with a clear message when the extra is missing.
+- **Optional dependencies** are pip extras: `gam`, `jax`, `moscot`, `petsc`, `plot`, `r`, `scvelo`. Imports must be guarded and fail with a clear message when the extra is missing.
 - **Test layout is flat.** `tests/test_X.py` keyed by component, not a mirror of `src/cellrank/X/`.
 
 ## Development Commands

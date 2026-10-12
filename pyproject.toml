@@ -52,7 +52,6 @@ dependencies = [
   "numba>=0.60",
   "numpy>=2",
   "pandas>=2.2",
-  "pygam>=0.10",
   "pygpcca>=1.0.4",
   "rich>=13",
   "scanpy>=1.11",
@@ -62,6 +61,8 @@ dependencies = [
   "session-info2>=0.2",
   "wrapt>=1.16",
 ]
+# pyGAM caps scipy below the current release; only `cellrank.models.GAM` needs it.
+optional-dependencies.gam = [ "pygam>=0.10" ]
 optional-dependencies.jax = [ "jax", "jaxlib" ]
 optional-dependencies.moscot = [ "moscot" ]
 # petsc4py/slepc4py give pyGPCCA its fast `method='krylov'` solver for
@@ -90,6 +91,7 @@ test = [
   "jax",
   "moscot",
   "pillow>=10",
+  "pygam>=0.10",
   "pytest>=8",
   "pytest-cov>=6",
   "pytest-mock>=3.14",

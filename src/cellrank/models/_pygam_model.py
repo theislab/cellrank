@@ -1,4 +1,3 @@
-import collections
 import contextlib
 import copy
 import enum
@@ -10,19 +9,10 @@ from typing import Any, Literal
 
 import numpy as np
 from anndata import AnnData
-from pygam import GAM as pGAM
-from pygam import (
-    ExpectileGAM,
-    GammaGAM,
-    InvGaussGAM,
-    LinearGAM,
-    LogisticGAM,
-    PoissonGAM,
-    s,
-)
 
 from cellrank._utils._docs import d
 from cellrank._utils._enum import ModeEnum
+from cellrank._utils._import_utils import _check_module_importable
 from cellrank._utils._utils import _filter_kwargs
 from cellrank.models import BaseModel
 
@@ -47,21 +37,24 @@ class GamDistribution(ModeEnum):
     INV_GAUSS = enum.auto()
 
 
-_gams = collections.defaultdict(
-    lambda: pGAM,
-    {
-        (GamDistribution.NORMAL, GamLinkFunction.IDENTITY): LinearGAM,
-        (GamDistribution.BINOMIAL, GamLinkFunction.LOGIT): LogisticGAM,
-        (GamDistribution.POISSON, GamLinkFunction.LOG): PoissonGAM,
-        (GamDistribution.GAMMA, GamLinkFunction.LOG): GammaGAM,
-        (GamDistribution.INV_GAUSS, GamLinkFunction.LOG): InvGaussGAM,
-    },
-)
+def _gam_class(distribution: GamDistribution, link: GamLinkFunction) -> type:
+    """:mod:`pygam` class for a distribution and link function, the generic :class:`~pygam.pygam.GAM` otherwise."""
+    import pygam
+
+    return {
+        (GamDistribution.NORMAL, GamLinkFunction.IDENTITY): pygam.LinearGAM,
+        (GamDistribution.BINOMIAL, GamLinkFunction.LOGIT): pygam.LogisticGAM,
+        (GamDistribution.POISSON, GamLinkFunction.LOG): pygam.PoissonGAM,
+        (GamDistribution.GAMMA, GamLinkFunction.LOG): pygam.GammaGAM,
+        (GamDistribution.INV_GAUSS, GamLinkFunction.LOG): pygam.InvGaussGAM,
+    }.get((distribution, link), pygam.GAM)
 
 
 @d.dedent
 class GAM(BaseModel):
     """Fit Generalized Additive Models (GAMs) using :mod:`pygam`.
+
+    Requires the ``gam`` extra: ``pip install cellrank[gam]``.
 
     Parameters
     ----------
@@ -103,6 +96,9 @@ class GAM(BaseModel):
         spline_kwargs: Mapping[str, Any] = types.MappingProxyType({}),
         **kwargs: Any,
     ):
+        _check_module_importable("pygam", extra="gam")
+        from pygam import ExpectileGAM, s
+
         term = s(
             0,
             spline_order=spline_order,
@@ -127,7 +123,7 @@ class GAM(BaseModel):
             model = ExpectileGAM(term, expectile=expectile, max_iter=max_iter, verbose=False, **kwargs)
         else:
             # doing it like this ensures that user can specify scale
-            gam = _gams[distribution, link]
+            gam = _gam_class(distribution, link)
 
             filtered_kwargs = _filter_kwargs(gam.__init__, **kwargs)
             if len(kwargs) != len(filtered_kwargs):
