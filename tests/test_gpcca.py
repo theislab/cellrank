@@ -1074,6 +1074,13 @@ class TestGPCCASerialization:
         _assert_adata(adata, state, fwd=False)
         _assert_adata(adata, state, fwd=True)
 
+    def test_adata_without_x(self, adata_large: AnnData):
+        adata_large.X = None
+        g = _fit_gpcca(adata_large, State.FATE_PROBS)
+        adata = g.to_adata()
+        assert adata.X is None
+        _assert_adata(adata, State.FATE_PROBS, fwd=False)
+
     @pytest.mark.parametrize("copy", [False, True])
     @pytest.mark.parametrize("keep", ["X", ("obs", "obsm"), ("layers",)])
     def test_to_adata_keep(self, adata_large: AnnData, keep: str | Sequence[str], copy: bool):
