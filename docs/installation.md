@@ -22,6 +22,7 @@ uv pip install cellrank
 CellRank provides optional dependency groups for common workflows:
 
 ```bash
+pip install "cellrank[gam]"     # pyGAM for gene trends (cellrank.models.GAM)
 pip install "cellrank[moscot]"  # moscot for optimal transport (RealTimeKernel)
 pip install "cellrank[plot]"    # additional plotting dependencies
 ```
