@@ -114,7 +114,7 @@ def _create_solver(
     ksp.setOperators(A)
     ksp.setFromOptions()
 
-    x, b = A.getVecs()
+    x, b = A.createVecs()
 
     return ksp, x, b
 
