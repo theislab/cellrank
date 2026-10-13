@@ -3,6 +3,8 @@ import io
 import itertools
 import pathlib
 import pickle
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
@@ -16,7 +18,7 @@ from cellrank._utils import Lineage
 from cellrank._utils._key import Key
 from cellrank.models import GAM, GAMR, FittedModel, Gene, Obs, Obsm, SKLearnModel
 from cellrank.models._base_model import FailedModel, UnknownModelError
-from cellrank.models._pygam_model import GamDistribution, GamLinkFunction, _gams
+from cellrank.models._pygam_model import GamDistribution, GamLinkFunction, _gam_class
 from cellrank.models._utils import (
     _OFFSET_KEY,
     NormMode,
@@ -432,6 +434,15 @@ class TestSKLearnModel:
 
 
 class TestGAM:
+    def test_import_without_pygam(self):
+        code = "import sys; sys.modules['pygam'] = None; import cellrank; import cellrank.models"
+        subprocess.run([sys.executable, "-c", code], check=True)
+
+    def test_missing_pygam(self, adata: AnnData, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setitem(sys.modules, "pygam", None)
+        with pytest.raises(ModuleNotFoundError, match=r"cellrank\[gam\]"):
+            GAM(adata)
+
     def test_invalid_distribution(self, adata: AnnData):
         with pytest.raises(ValueError, match=r"Invalid option"):
             GAM(adata, distribution="foobar")
@@ -488,7 +499,7 @@ class TestGAM:
     def test_dist_link_combinations(self, adata_cflare: AnnData, dist: GamDistribution, link: GamLinkFunction):
         g = GAM(adata_cflare, link=link, distribution=dist)
 
-        expected_model_type = _gams[dist, link]
+        expected_model_type = _gam_class(dist, link)
 
         assert isinstance(g.model, expected_model_type)
         # don't test for link or dist equality (we have normal-gaussian alias, sometimes, they are not strings in pygam)
