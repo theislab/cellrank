@@ -58,7 +58,7 @@ class BaseEstimator(IOMixin, KernelMixin, AnnDataMixin, abc.ABC):
 
         self._params: dict[str, Any] = {}
         self._shadow_adata = AnnData(
-            X=sp.csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
+            X=None if self.adata.X is None else sp.csr_matrix(self.adata.shape, dtype=self.adata.X.dtype),
             obs=self.adata.obs[[]].copy(),
             var=self.adata.var[[]].copy(),
             raw=None if self.adata.raw is None else self.adata.raw.to_adata(),
